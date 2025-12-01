@@ -1,49 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DigRig 2</title>
+</head>
 
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>Dig Rig | A Game by Unstoppable Carl</title>
-        <link href="css/normalize.css" media="all" rel="stylesheet" type="text/css">
-        <link rel="stylesheet" type="text/css" href="debug.css">
-        <link href="css/style.css" media="all" rel="stylesheet" type="text/css">
-    
-        <script type="text/javascript" src="lib/impact/impact.js"></script>
-        <script type="text/javascript" src="lib/game/main.js"></script>
-    
-    </head>
-    <body>
-        <div class="page clearfix">
-            <div class="canvas-container">
-                <canvas id="canvas"></canvas>
-            </div>
-            <div id="level-list" class="block level-list">
-                <h3>Levels</h3>
-                <ul>
-                    <li>
-                        <a href="#" data-level-name="test">Test</a>
-                    </li>
-                    <li>
-                        <a href="#" data-level-name="tunnel">Tunnel Test</a>
-                    </li>
-                </ul>
-            </div>
-            <div class="block instructions">
-                <h3>Instructions</h3>
-                <p>
-                    <strong>Move:</strong> WASD , Arrow Keys<br>
-                    <strong>Jump:</strong> Space, Up,  W<br>
-                    <strong>Shoot Destroy:</strong> Click, hold to charge<br>
-                    <strong>Shoot Create:</strong> Right Click, hold to charge<br>
-                </p>
-            </div>
-            <div class="clear">
-                <p><a href="https://github.com/unstoppablecarl/DigRig">Github</a>, <a href="https://twitter.com/unstoppableCarl">@unstoppableCarl</a></p>
-            </div>
-            
-        </div>
-        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-        <script>window.jQuery || document.write('<script src="js/lib/jquery-1.9.2.min.js"><\/script>')</script>
-        <script type="text/javascript" src="js/change-level.js"></script>
-    </body>
+<body>
+    <div id="app">
+        <div id="game-container"></div>
+        <div id="fps"></div>
+        <div id="toaster-text"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+</body>
 </html>
-

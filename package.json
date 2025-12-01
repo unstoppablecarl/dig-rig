@@ -1,0 +1,36 @@
+{
+    "name": "template-vite-ts",
+    "description": "A Phaser 3 TypeScript template using Vite.",
+    "version": "1.4.0",
+    "type": "module",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/phaserjs/template-vite-ts.git"
+    },
+    "author": "Phaser Studio <support@phaser.io> (https://phaser.io/)",
+    "license": "MIT",
+    "licenseUrl": "http://www.opensource.org/licenses/mit-license.php",
+    "bugs": {
+        "url": "https://github.com/phaserjs/template-vite-ts/issues"
+    },
+    "homepage": "https://github.com/phaserjs/template-vite-ts#readme",
+    "scripts": {
+        "dev": "vite --config vite/config.dev.mjs",
+        "build": "tsc --noEmit && vite build --config vite/config.prod.mjs"
+    },
+    "devDependencies": {
+        "@tweakpane/core": "^2.0.5",
+        "@types/matter-js": "^0.20.2",
+        "sass": "^1.93.3",
+        "typescript": "~5.7.2",
+        "vite": "^6.3.1"
+    },
+    "dependencies": {
+        "@tweakpane/plugin-essentials": "^0.2.1",
+        "phaser": "4.0.0-rc.5",
+        "phaser-matter-collision-plugin": "^1.0.0",
+        "simplex-noise": "^4.0.3",
+        "terser": "^5.39.0",
+        "tweakpane": "^4.0.5"
+    }
+}

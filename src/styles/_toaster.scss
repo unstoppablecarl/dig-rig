@@ -1,0 +1,39 @@
+
+$toastColorA: rgba(0, 0, 0, 0.7);
+$toastColorB: rgba(50, 50, 50, 0.7);
+
+#toaster-text {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  max-width: 90%;
+
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+  font-size: 20px;
+  color: #fff;
+  text-align: center;
+  padding: 10px 15px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(#fff, 0.33);
+  border-radius: 3px;
+}
+
+#toaster-text.show {
+  opacity: 1;
+  animation: gentlePulse 2s ease-in-out infinite;
+}
+
+@keyframes gentlePulse {
+  0% {
+    background: $toastColorA;
+  }
+  50% {
+    background: $toastColorB;
+  }
+  100% {
+    background: $toastColorA;
+  }
+}
