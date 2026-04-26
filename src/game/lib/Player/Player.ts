@@ -1,20 +1,21 @@
-import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { MatterTank } from '../Matter/MatterTank.ts'
-import { clampVelocity, PositionOffset } from '../../helpers/_helpers.ts'
-import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { BodyType } from 'matter'
-import { GRAVITY, PLAYER_JUMP_POWER, PLAYER_MOVE_SPEED } from '../../config.ts'
+import { Animations, GameObjects, Math as PMath, Physics, Time } from 'phaser'
 import type { EventData } from 'phaser-matter-collision-plugin/src/collision-types.ts'
 import { CollidingObject } from 'phaser-matter-collision-plugin/src/valid-collision-object.ts'
-import { makePlayerInput, type PlayerInput } from './InputKeys.ts'
+import { GRAVITY, PLAYER_JUMP_POWER, PLAYER_MOVE_SPEED } from '../../config.ts'
+import { clampVelocity, PositionOffset } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
+import type { GameLevel } from '../../scenes/GameLevel.ts'
+import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import { MASK_PLAYER, MASK_TERRAIN } from '../Collision/BodyCategories.ts'
-import Sprite = Phaser.GameObjects.Sprite
-import Container = Phaser.GameObjects.Container
-import Animation = Phaser.Animations.Animation
-import AnimationFrame = Phaser.Animations.AnimationFrame
-import Image = Phaser.Physics.Matter.Image
-import BEFORE_UPDATE = Phaser.Physics.Matter.Events.BEFORE_UPDATE
+import { MatterTank } from '../Matter/MatterTank.ts'
+import { makePlayerInput, type PlayerInput } from './InputKeys.ts'
+import Animation = Animations.Animation
+import AnimationFrame = Animations.AnimationFrame
+import Container = GameObjects.Container
+import Sprite = GameObjects.Sprite
+import BEFORE_UPDATE = Physics.Matter.Events.BEFORE_UPDATE
+import Image = Physics.Matter.Image
 
 const PLAYER_WIDTH = 18
 const PLAYER_HEIGHT = 30
@@ -65,7 +66,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
   private backpackOffset = new PositionOffset(this, -6, -7)
   private sensors: { bottom: PlayerBodySensor, left: PlayerBodySensor, right: PlayerBodySensor }
   private canJump = true
-  private jumpCooldownTimer: Phaser.Time.TimerEvent
+  private jumpCooldownTimer: Time.TimerEvent
 
   constructor(
     public scene: GameLevel,
@@ -252,7 +253,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     this.arm.setOrigin(ARM_ORIGIN.x, ARM_ORIGIN.y)
     this.container.add(this.arm)
 
-    this.sprite.on(Phaser.Animations.Events.ANIMATION_UPDATE, (anim: Animation, frame: AnimationFrame) => {
+    this.sprite.on(Animations.Events.ANIMATION_UPDATE, (anim: Animation, frame: AnimationFrame) => {
       const newValue = (anim.key === 'walk') && (frame.index === 1 || frame.index === 2 || frame.index === 3)
       if (newValue !== this.armMove) {
         this.armMove = newValue
@@ -389,7 +390,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
       } else {
         vx = 0
       }
-      vx = Phaser.Math.Clamp(vx, -PLAYER_MOVE_SPEED, PLAYER_MOVE_SPEED)
+      vx = PMath.Clamp(vx, -PLAYER_MOVE_SPEED, PLAYER_MOVE_SPEED)
 
       container.setVelocityX(vx)
 
@@ -470,7 +471,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
       activePointer.y,
     )
 
-    this.arm.rotation = Phaser.Math.Angle.Between(
+    this.arm.rotation = PMath.Angle.Between(
       armPos.x,
       armPos.y,
       mousePos.x,
@@ -520,19 +521,19 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
 }
 
 // fixing phaser ts limitations
-export type PlayerContainer = Phaser.GameObjects.Container &
-  Phaser.Physics.Matter.Components.Bounce &
-  Phaser.Physics.Matter.Components.Collision &
-  Phaser.Physics.Matter.Components.Force &
-  Phaser.Physics.Matter.Components.Friction &
-  Phaser.Physics.Matter.Components.Gravity &
-  Phaser.Physics.Matter.Components.Mass &
-  Phaser.Physics.Matter.Components.Sensor &
-  Phaser.Physics.Matter.Components.SetBody &
-  Phaser.Physics.Matter.Components.Sleep &
-  Phaser.Physics.Matter.Components.Static &
-  Phaser.Physics.Matter.Components.Transform &
-  Phaser.Physics.Matter.Components.Velocity
+export type PlayerContainer = GameObjects.Container &
+  Physics.Matter.Components.Bounce &
+  Physics.Matter.Components.Collision &
+  Physics.Matter.Components.Force &
+  Physics.Matter.Components.Friction &
+  Physics.Matter.Components.Gravity &
+  Physics.Matter.Components.Mass &
+  Physics.Matter.Components.Sensor &
+  Physics.Matter.Components.SetBody &
+  Physics.Matter.Components.Sleep &
+  Physics.Matter.Components.Static &
+  Physics.Matter.Components.Transform &
+  Physics.Matter.Components.Velocity
 
 type PlayerBodySensor = MatterJS.BodyType & { isPlayerBodySensor: true }
 type PlayerBody = MatterJS.BodyType & { isPlayerBody: true }

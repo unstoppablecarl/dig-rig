@@ -1,7 +1,8 @@
-import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { Input } from 'phaser'
 import { SceneBound } from '../../helpers/SceneBound.ts'
+import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { InputController } from './InputManager.ts'
-import GAMEOBJECT_POINTER_WHEEL = Phaser.Input.Events.GAMEOBJECT_POINTER_WHEEL
+import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
 
 export class PlayerZoomInput extends SceneBound<GameLevel> implements InputController {
   private _enabled = false

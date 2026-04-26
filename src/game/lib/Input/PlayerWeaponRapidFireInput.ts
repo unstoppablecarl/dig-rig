@@ -1,9 +1,10 @@
-import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { Scenes } from 'phaser'
 import { FireMode } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
-import type { InputController } from './InputManager.ts'
+import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { ImmediateWeapon } from '../Player/Weapons/PlayerWeaponManager.ts'
-import UPDATE = Phaser.Scenes.Events.UPDATE
+import type { InputController } from './InputManager.ts'
+import UPDATE = Scenes.Events.UPDATE
 
 export class PlayerWeaponRapidFireInput extends SceneBound<GameLevel> implements InputController {
   private _enabled = false

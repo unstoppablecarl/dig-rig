@@ -1,8 +1,10 @@
-import EventEmitter = Phaser.Events.EventEmitter
-import BasePlugin = Phaser.Plugins.BasePlugin
-import PluginManager = Phaser.Plugins.PluginManager
+import { Core, Events, Plugins } from 'phaser'
 import type { EventMap } from '../events.ts'
-import DESTROY = Phaser.Core.Events.DESTROY
+import DESTROY = Core.Events.DESTROY
+
+import EventEmitter = Events.EventEmitter
+import BasePlugin = Plugins.BasePlugin
+import PluginManager = Plugins.PluginManager
 
 export class EventsPlugin extends BasePlugin {
   private static EVENTS: EventEmitter

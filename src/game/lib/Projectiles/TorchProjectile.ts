@@ -16,7 +16,6 @@ export class TorchProjectile extends BaseProjectile {
     matterTank: MatterTank,
     x: number,
     y: number,
-    tilesToModify: number,
     mode: FireMode,
   ) {
     super(
@@ -26,10 +25,8 @@ export class TorchProjectile extends BaseProjectile {
       matterTank,
       x,
       y,
-      tilesToModify,
       mode,
     )
-    this.setTilesToModify(tilesToModify)
 
     this.radius = 20
     scene.events.once('destroy', this.destroy, this)

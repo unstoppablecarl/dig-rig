@@ -4,7 +4,8 @@ import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { PlayerWeaponTorchInput } from '../../Input/PlayerWeaponTorchInput.ts'
 import { TorchProjectile } from '../../Projectiles/TorchProjectile.ts'
 import type { ContinuousWeapon } from './PlayerWeaponManager.ts'
-import UPDATE = Phaser.Scenes.Events.UPDATE
+import { Scenes } from 'phaser'
+import UPDATE = Scenes.Events.UPDATE
 
 export class TorchWeapon extends SceneBound implements ContinuousWeapon {
   private input: PlayerWeaponTorchInput

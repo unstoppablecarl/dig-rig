@@ -1,4 +1,4 @@
-import { Game, WEBGL } from 'phaser'
+import { Game, Scale, WEBGL } from 'phaser'
 import { BG_COLOR, GRAVITY } from './game/config.ts'
 import { pluginEventBusConfig } from './game/lib/plugins/events-plugin.ts'
 import { pluginMatterCollisionConfig } from './game/lib/plugins/matter-collision-plugin.ts'
@@ -13,7 +13,7 @@ const config: GameConfig = {
   width: 1024,
   height: 768,
   scale: {
-    mode: Phaser.Scale.EXPAND,
+    mode: Scale.EXPAND,
     autoRound: true,
   },
   dom: {

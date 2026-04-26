@@ -1,5 +1,6 @@
-import Color = Phaser.Display.Color
-import Interpolate = Phaser.Display.Color.Interpolate
+import { Display } from 'phaser'
+import Color = Display.Color
+import Interpolate = Display.Color.Interpolate
 
 export function interpolateColors(a: Color, b: Color, ratio: number): number {
   const result = Interpolate.ColorWithColor(

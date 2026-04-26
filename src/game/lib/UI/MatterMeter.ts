@@ -1,18 +1,18 @@
-import type { Scene } from 'phaser'
+import { GameObjects, Scene, Tweens } from 'phaser'
 import { CREATE_COLOR, DESTROY_COLOR, FireMode } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { ChargeableWeapon, Weapon } from '../Player/Weapons/PlayerWeaponManager.ts'
-import Tween = Phaser.Tweens.Tween
+import Tween = Tweens.Tween
 
 export class MatterMeter extends SceneBound {
-  private matter: Phaser.GameObjects.Rectangle
-  private destroyPending: Phaser.GameObjects.Rectangle
-  private createPending: Phaser.GameObjects.Rectangle
+  private matter: GameObjects.Rectangle
+  private destroyPending: GameObjects.Rectangle
+  private createPending: GameObjects.Rectangle
 
   private prevMatter: number
-  private charge: Phaser.GameObjects.Rectangle
-  private text: Phaser.GameObjects.DOMElement
+  private charge: GameObjects.Rectangle
+  private text: GameObjects.DOMElement
   private tween: Tween | null = null
 
   constructor(

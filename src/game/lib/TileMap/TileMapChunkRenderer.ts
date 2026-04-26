@@ -1,12 +1,13 @@
+import { GameObjects } from 'phaser'
 import { CHUNK_SIZE, DRAW_CHUNKS_DEBUG, TERRAIN_TYPE_TRANSITION_COLORS, TILE_SIZE } from '../../config.ts'
-import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { TerrainType } from './TileMap.ts'
 import { shiftColorValue } from '../../helpers/colors.ts'
+import { SceneBound } from '../../helpers/SceneBound.ts'
+import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Chunk } from './Chunk.ts'
 import { getChunkKey } from './ChunkManager.ts'
-import { SceneBound } from '../../helpers/SceneBound.ts'
-import Graphics = Phaser.GameObjects.Graphics
-import Layer = Phaser.GameObjects.Layer
+import { TerrainType } from './TileMap.ts'
+import Graphics = GameObjects.Graphics
+import Layer = GameObjects.Layer
 
 export class TileMapChunkRenderer extends SceneBound {
   public renderedCount: number

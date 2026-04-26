@@ -1,3 +1,4 @@
+import { BlendModes, GameObjects } from 'phaser'
 import { PROJECTILE_MODE_COLORS } from '../../config.ts'
 import type { BaseProjectile } from './BaseProjectile.ts'
 
@@ -6,16 +7,16 @@ export class ProjectileRenderer {
   public dirty = true
   public destroyed = false
 
-  private circle: Phaser.GameObjects.Graphics
-  private circleCenter: Phaser.GameObjects.Graphics
-  private container: Phaser.GameObjects.Container
+  private circle: GameObjects.Graphics
+  private circleCenter: GameObjects.Graphics
+  private container: GameObjects.Container
 
   constructor(
     public projectile: BaseProjectile,
   ) {
     const scene = projectile.scene
-    this.circle = scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD)
-    this.circleCenter = scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD)
+    this.circle = scene.add.graphics().setBlendMode(BlendModes.ADD)
+    this.circleCenter = scene.add.graphics().setBlendMode(BlendModes.ADD)
 
     this.container = scene.add.container().add([this.circle, this.circleCenter])
     scene.layers.projectile.add(this.container)

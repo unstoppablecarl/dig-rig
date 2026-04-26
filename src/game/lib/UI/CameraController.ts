@@ -1,7 +1,8 @@
-import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { Math as PMath, Scale } from 'phaser'
 import { getFactor } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
-import RESIZE = Phaser.Scale.Events.RESIZE
+import type { GameLevel } from '../../scenes/GameLevel.ts'
+import RESIZE = Scale.Events.RESIZE
 
 const INITIAL_ZOOM = 3
 
@@ -36,7 +37,7 @@ export class CameraController extends SceneBound {
   }
 
   setZoom(zoom: number) {
-    const z = Phaser.Math.Clamp(zoom, this.minZoom, this.maxZoom)
+    const z = PMath.Clamp(zoom, this.minZoom, this.maxZoom)
     this.scene.cameras.main.setZoom(z)
   }
 
@@ -57,8 +58,8 @@ export class CameraController extends SceneBound {
     let targetCenterX = playerContainer.x
     let targetCenterY = playerContainer.y
 
-    targetCenterX = Phaser.Math.Clamp(targetCenterX, worldBounds.left + halfViewWidth, worldBounds.right - halfViewWidth)
-    targetCenterY = Phaser.Math.Clamp(targetCenterY, worldBounds.top + halfViewHeight, worldBounds.bottom - halfViewHeight)
+    targetCenterX = PMath.Clamp(targetCenterX, worldBounds.left + halfViewWidth, worldBounds.right - halfViewWidth)
+    targetCenterY = PMath.Clamp(targetCenterY, worldBounds.top + halfViewHeight, worldBounds.bottom - halfViewHeight)
 
     camera.centerOn(targetCenterX, targetCenterY)
   }

@@ -1,7 +1,8 @@
+import { GameObjects, Physics } from 'phaser'
 import { TILE_SIZE } from '../config.ts'
 import type { ParticleTarget, Position } from '../types.ts'
-import Velocity = Phaser.Physics.Matter.Components.Velocity
-import GameObject = Phaser.GameObjects.GameObject
+import GameObject = GameObjects.GameObject
+import Velocity = Physics.Matter.Components.Velocity
 
 export function clampMaxInt(value: number, max: number) {
   let m = value

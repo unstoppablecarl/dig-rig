@@ -1,3 +1,4 @@
+import { Scenes } from 'phaser'
 import { FireMode } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
@@ -5,7 +6,7 @@ import { PlayerWeaponChargeInput } from '../../Input/PlayerWeaponChargeInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
 import { TerrainType } from '../../TileMap/TileMap.ts'
 import type { ChargeableWeapon } from './PlayerWeaponManager.ts'
-import UPDATE = Phaser.Scenes.Events.UPDATE
+import UPDATE = Scenes.Events.UPDATE
 
 export class BasicWeapon extends SceneBound implements ChargeableWeapon {
   private queued: Projectile | null

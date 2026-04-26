@@ -1,3 +1,4 @@
+import { Display } from 'phaser'
 import { TerrainType } from './lib/TileMap/TileMap.ts'
 
 export const TILE_SIZE = 1 as const
@@ -12,9 +13,8 @@ export const DESTROY_COLOR = 0xff0046
 export const CREATE_COLOR = 0x0046ff
 export const PERMANENT_COLOR = 0x00ffff
 
-export const CREATE_COLOR_RGB = Phaser.Display.Color.ValueToColor(CREATE_COLOR)
-export const DESTROY_COLOR_RGB = Phaser.Display.Color.ValueToColor(DESTROY_COLOR)
-
+export const CREATE_COLOR_RGB = Display.Color.ValueToColor(CREATE_COLOR)
+export const DESTROY_COLOR_RGB = Display.Color.ValueToColor(DESTROY_COLOR)
 
 export enum FireMode {
   CREATE,
@@ -38,4 +38,4 @@ export const DRAW_PARTICLE_DEBUG = false
 export const DRAW_CHUNKS_DEBUG = false
 export const DRAW_WORLD_BORDER_DEBUG = true
 export const DRAW_DEBUG_TILEMAP = false
-export const AUTO_START_LEVEL_INDEX = 1
+export const AUTO_START_LEVEL_INDEX = 0

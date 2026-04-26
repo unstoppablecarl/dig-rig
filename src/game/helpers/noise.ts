@@ -1,6 +1,7 @@
+import { Math } from 'phaser'
 import { createNoise3D } from 'simplex-noise'
 import type { Position } from '../types.ts'
-import Vector2 = Phaser.Math.Vector2
+import Vector2 = Math.Vector2
 
 export function makeSimplexNoise(scale: number, timeScale: number) {
   const noise = createNoise3D()

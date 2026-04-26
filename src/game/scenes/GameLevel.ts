@@ -1,25 +1,25 @@
-import { Scene } from 'phaser'
-import { Player } from '../lib/Player/Player.ts'
-import { Tilemap } from '../lib/TileMap/TileMap.ts'
-import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
-import { UIScene } from './Layers/UIScene.ts'
+import { GameObjects, Geom, Input, Scene } from 'phaser'
+import { DRAW_DEBUG_TILEMAP, DRAW_WORLD_BORDER_DEBUG, TILE_SIZE } from '../config.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
+import { makePatterns, type PatternStore } from '../helpers/patterns.ts'
+import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
+import { InputManager } from '../lib/Input/InputManager.ts'
+import { MatterManager } from '../lib/Matter/MatterManager.ts'
 import { ParticleManager } from '../lib/Particles/ParticleManager.ts'
+import { TerrainParticleManager } from '../lib/Particles/TerrainParticleManager.ts'
+import { Player } from '../lib/Player/Player.ts'
+import { PlayerWeaponManager } from '../lib/Player/Weapons/PlayerWeaponManager.ts'
+import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
+import { Tilemap } from '../lib/TileMap/TileMap.ts'
 import { TileMapBasicRenderer } from '../lib/TileMap/TileMapBasicRenderer.ts'
 import { TileMapChunkRenderer } from '../lib/TileMap/TileMapChunkRenderer.ts'
-import { makePatterns, type PatternStore } from '../helpers/patterns.ts'
 import { CameraController } from '../lib/UI/CameraController.ts'
 import { BgScene } from './Layers/BgScene.ts'
-import { DRAW_DEBUG_TILEMAP, DRAW_WORLD_BORDER_DEBUG, TILE_SIZE } from '../config.ts'
-import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
-import { MatterManager } from '../lib/Matter/MatterManager.ts'
-import { InputManager } from '../lib/Input/InputManager.ts'
-import { PlayerWeaponManager } from '../lib/Player/Weapons/PlayerWeaponManager.ts'
-import { TerrainParticleManager } from '../lib/Particles/TerrainParticleManager.ts'
-import Layer = Phaser.GameObjects.Layer
-import Group = Phaser.GameObjects.Group
-import Rectangle = Phaser.Geom.Rectangle
-import MouseManager = Phaser.Input.Mouse.MouseManager
+import { UIScene } from './Layers/UIScene.ts'
+import Group = GameObjects.Group
+import Layer = GameObjects.Layer
+import Rectangle = Geom.Rectangle
+import MouseManager = Input.Mouse.MouseManager
 
 type Layers = {
   bg: Layer,
@@ -50,7 +50,7 @@ export abstract class GameLevel extends Scene {
   public terrainChunkBodyManager: TerrainChunkBodyManager
   public tilemap: Tilemap
   public tilemapRenderer: TileMapChunkRenderer
-  public worldBounds: Phaser.Geom.Rectangle
+  public worldBounds: Geom.Rectangle
   public inputManager: InputManager
   public terrainParticleManager: TerrainParticleManager
 

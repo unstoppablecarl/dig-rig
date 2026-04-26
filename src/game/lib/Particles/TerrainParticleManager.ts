@@ -1,3 +1,4 @@
+import { GameObjects, Math as PMath } from 'phaser'
 import { TERRAIN_TYPE_TRANSITION_COLORS, TILE_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
@@ -6,7 +7,7 @@ import { TerrainParticle } from './TerrainParticle.ts'
 
 export class TerrainParticleManager extends SceneBound {
   public particles: TerrainParticle[] = []
-  private graphics: Phaser.GameObjects.Graphics
+  private graphics: GameObjects.Graphics
 
   constructor(public scene: GameLevel) {
     super(scene)
@@ -22,10 +23,10 @@ export class TerrainParticleManager extends SceneBound {
   ) {
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2
-      const force = Phaser.Math.FloatBetween(100, 200)
+      const force = PMath.FloatBetween(100, 200)
       const vx = Math.cos(angle) * force
       const vy = Math.sin(angle) * force * 0.7 // Less vertical spread
-      const radius = Phaser.Math.Between(2, 6)
+      const radius = PMath.Between(2, 6)
 
       this.particles.push(
         new TerrainParticle(centerX, centerY, vx, vy, type, radius),
@@ -75,7 +76,7 @@ export class TerrainParticleManager extends SceneBound {
 
       const lifespanPercent = particle.lifetimePercent()
 
-      const alpha = Phaser.Math.Linear(1, 0, lifespanPercent)
+      const alpha = PMath.Linear(1, 0, lifespanPercent)
 
       this.graphics.fillStyle(color, alpha)
       this.graphics.fillCircle(gridX, gridY, particle.radius)

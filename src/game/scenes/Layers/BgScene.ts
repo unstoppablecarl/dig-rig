@@ -1,10 +1,10 @@
-import { Scene } from 'phaser'
-import type { GameLevel } from '../GameLevel.ts'
+import { GameObjects, Math, Scale, Scene, Textures } from 'phaser'
 import { getFactor } from '../../helpers/_helpers.ts'
-import Graphics = Phaser.GameObjects.Graphics
-import TileSprite = Phaser.GameObjects.TileSprite
-import Linear = Phaser.Math.Linear
-import RESIZE = Phaser.Scale.Events.RESIZE
+import type { GameLevel } from '../GameLevel.ts'
+import Graphics = GameObjects.Graphics
+import TileSprite = GameObjects.TileSprite
+import Linear = Math.Linear
+import RESIZE = Scale.Events.RESIZE
 
 type Layer = {
   textureId: string,
@@ -55,7 +55,7 @@ export class BgScene extends Scene {
     this.gameScene = gameScene
 
     LAYERS.forEach(({ textureId }) => {
-      this.textures.get(textureId).setFilter(Phaser.Textures.FilterMode.NEAREST)
+      this.textures.get(textureId).setFilter(Textures.FilterMode.NEAREST)
     })
 
     this.parallaxLayers = LAYERS.map(({ textureId, id }) => {

@@ -1,3 +1,4 @@
+import { Input, Scenes } from 'phaser'
 import { FireMode } from '../../config.ts'
 import { getDeltaT } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
@@ -5,10 +6,10 @@ import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { EVENT_MESSAGE } from '../events.ts'
 import type { ChargeableWeapon } from '../Player/Weapons/PlayerWeaponManager.ts'
 import type { InputController } from './InputManager.ts'
-import POINTER_DOWN = Phaser.Input.Events.POINTER_DOWN
-import POINTER_UP = Phaser.Input.Events.POINTER_UP
-import Pointer = Phaser.Input.Pointer
-import UPDATE = Phaser.Scenes.Events.UPDATE
+import POINTER_DOWN = Input.Events.POINTER_DOWN
+import POINTER_UP = Input.Events.POINTER_UP
+import Pointer = Input.Pointer
+import UPDATE = Scenes.Events.UPDATE
 
 export class PlayerWeaponChargeInput extends SceneBound<GameLevel> implements InputController {
   // charge per second

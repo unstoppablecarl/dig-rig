@@ -1,14 +1,16 @@
-import Particle = Phaser.GameObjects.Particles.Particle
-import ParticleEmitter = Phaser.GameObjects.Particles.ParticleEmitter
-import Color = Phaser.Display.Color
-import DegToRad = Phaser.Math.DegToRad
-import Vector2 = Phaser.Math.Vector2
-import Bezier = Phaser.Math.Interpolation.Bezier
-import type { ParticleTarget, Position } from '../../types.ts'
-import { makeSimplexNoise } from '../../helpers/noise.ts'
-import { interpolateColors } from '../../helpers/colors.ts'
-import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { Display, GameObjects, Math as PMath } from 'phaser'
 import { DRAW_PARTICLE_DEBUG } from '../../config.ts'
+import { interpolateColors } from '../../helpers/colors.ts'
+import { makeSimplexNoise } from '../../helpers/noise.ts'
+import type { GameLevel } from '../../scenes/GameLevel.ts'
+import type { ParticleTarget, Position } from '../../types.ts'
+import Color = Display.Color
+
+import Particle = GameObjects.Particles.Particle
+import ParticleEmitter = GameObjects.Particles.ParticleEmitter
+import DegToRad = PMath.DegToRad
+import Bezier = PMath.Interpolation.Bezier
+import Vector2 = PMath.Vector2
 
 export const PARTICLE_SIZE = 16
 export const PARTICLE_BASE_SCALE = 1 / PARTICLE_SIZE
@@ -99,19 +101,19 @@ export class MatterParticle extends Particle {
     let initialSpeed: number
     if (staticTarget) {
       angle = Math.atan2(dy, dx)
-      angle += Phaser.Math.FloatBetween(-STATIC_ANGLE_VARIANCE, STATIC_ANGLE_VARIANCE)
-      initialSpeed = Phaser.Math.FloatBetween(STATIC_TARGET_INIT_SPEED_MIN, STATIC_TARGET_INIT_SPEED_MAX)
+      angle += PMath.FloatBetween(-STATIC_ANGLE_VARIANCE, STATIC_ANGLE_VARIANCE)
+      initialSpeed = PMath.FloatBetween(STATIC_TARGET_INIT_SPEED_MIN, STATIC_TARGET_INIT_SPEED_MAX)
     } else {
       // random angle
       angle = Math.random() * 2 * Math.PI
-      initialSpeed = Phaser.Math.FloatBetween(DYNAMIC_INIT_SPEED_MIN, DYNAMIC_INIT_SPEED_MAX)
+      initialSpeed = PMath.FloatBetween(DYNAMIC_INIT_SPEED_MIN, DYNAMIC_INIT_SPEED_MAX)
     }
 
     this.velocityX = Math.cos(angle) * initialSpeed
     this.velocityY = Math.sin(angle) * initialSpeed
 
-    this.localWindScale = Phaser.Math.FloatBetween(0.5, 1.5) * WIND_STRENGTH
-    this.localScale = Phaser.Math.FloatBetween(0.5, 1.5)
+    this.localWindScale = PMath.FloatBetween(0.5, 1.5) * WIND_STRENGTH
+    this.localScale = PMath.FloatBetween(0.5, 1.5)
   }
 
   public update(delta: number, step: number): boolean {
@@ -208,8 +210,8 @@ export class MatterParticle extends Particle {
     // smooth deceleration behavior for the final approach
     else {
       const directionToTarget = this.tempVec2.copy(toTarget).normalize()
-      let easeFactor = Phaser.Math.Easing.Sine.In(distance / ARRIVAL_DISTANCE)
-      easeFactor = Phaser.Math.Linear(easeFactor, 1, 0.1)
+      let easeFactor = PMath.Easing.Sine.In(distance / ARRIVAL_DISTANCE)
+      easeFactor = PMath.Linear(easeFactor, 1, 0.1)
       const newSpeed = STATIC_FINAL_HOMING_SPEED * easeFactor
       this.nextVelocity.copy(directionToTarget.scale(newSpeed))
     }
@@ -227,9 +229,6 @@ export class MatterParticle extends Particle {
     const toPredictedTarget = predictedTargetPosition.subtract(this)
     const predictedDistance = toPredictedTarget.length()
 
-
-
-
     const isFinalHoming = predictedDistance < DYNAMIC_FINAL_HOMING_DISTANCE || lifeT > 0.5
 
     if (isFinalHoming) {
@@ -239,10 +238,10 @@ export class MatterParticle extends Particle {
       const newProgress = this.homingTransitionProgress + step * DYNAMIC_FINAL_HOMING_TRANSITION_SPEED
       this.homingTransitionProgress = Math.min(1, newProgress)
 
-      const easedT = Phaser.Math.Easing.Sine.InOut(this.homingTransitionProgress)
+      const easedT = PMath.Easing.Sine.InOut(this.homingTransitionProgress)
 
-      const easedVelocityX = Phaser.Math.Linear(this.velocityX, targetHomingVelocity.x, easedT)
-      const easedVelocityY = Phaser.Math.Linear(this.velocityY, targetHomingVelocity.y, easedT)
+      const easedVelocityX = PMath.Linear(this.velocityX, targetHomingVelocity.x, easedT)
+      const easedVelocityY = PMath.Linear(this.velocityY, targetHomingVelocity.y, easedT)
 
       return this.nextVelocity.set(easedVelocityX, easedVelocityY)
     }
@@ -299,7 +298,7 @@ const attractDynamic = (() => {
 
   return (toTarget: Vector2, lifeT: number) => {
     const directionToPredictedTarget = v1.copy(toTarget).normalize()
-    const strength = Phaser.Math.Linear(ATTRACTION_STRENGTH, ATTRACTION_STRENGTH * 2, lifeT)
+    const strength = PMath.Linear(ATTRACTION_STRENGTH, ATTRACTION_STRENGTH * 2, lifeT)
 
     return directionToPredictedTarget.scale(strength)
   }

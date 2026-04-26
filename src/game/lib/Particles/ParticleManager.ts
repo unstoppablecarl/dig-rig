@@ -1,11 +1,12 @@
-import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { MatterParticle, PARTICLE_SIZE } from './MatterParticle.ts'
-import type { Position } from '../../types.ts'
+import { BlendModes, Display, GameObjects } from 'phaser'
 import { CREATE_COLOR_RGB, DESTROY_COLOR_RGB, DRAW_PARTICLE_DEBUG, MAX_MATTER_PARTICLES } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
-import ParticleEmitter = Phaser.GameObjects.Particles.ParticleEmitter
-import Color = Phaser.Display.Color
-import Graphics = Phaser.GameObjects.Graphics
+import type { GameLevel } from '../../scenes/GameLevel.ts'
+import type { Position } from '../../types.ts'
+import { MatterParticle, PARTICLE_SIZE } from './MatterParticle.ts'
+import Color = Display.Color
+import Graphics = GameObjects.Graphics
+import ParticleEmitter = GameObjects.Particles.ParticleEmitter
 
 export class ParticleManager extends SceneBound {
   public emitter: ParticleEmitter
@@ -42,7 +43,7 @@ export class ParticleManager extends SceneBound {
       frequency: -1,
       maxAliveParticles: MAX_MATTER_PARTICLES,
       emitting: false,
-      blendMode: Phaser.BlendModes.ADD,
+      blendMode: BlendModes.ADD,
     }))
   }
 

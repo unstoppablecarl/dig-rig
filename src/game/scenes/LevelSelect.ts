@@ -1,8 +1,8 @@
-import { Scene } from 'phaser'
+import { Input, Scene } from 'phaser'
 import { AUTO_START_LEVEL_INDEX } from '../config.ts'
 import { TestLevel } from './Levels/TestLevel.ts'
 import { TestLevel2 } from './Levels/TestLevel2.ts'
-import POINTER_DOWN = Phaser.Input.Events.POINTER_DOWN
+import POINTER_DOWN = Input.Events.POINTER_DOWN
 
 export const LEVEL_CLASSES = [
   TestLevel,

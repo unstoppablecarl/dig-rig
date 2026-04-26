@@ -1,4 +1,4 @@
-import type { Scene } from 'phaser'
+import { Input, type Scene } from 'phaser'
 
 export type PlayerInput = ReturnType<typeof makePlayerInput>
 
@@ -6,7 +6,7 @@ export function makePlayerInput(scene: Scene) {
 
   const bind = (keyId: KeyId | KeyId[]) => new MultiInput(scene, keyId)
 
-  const { LEFT, RIGHT, UP, DOWN, W, A, S, D, SPACE } = Phaser.Input.Keyboard.KeyCodes
+  const { LEFT, RIGHT, UP, DOWN, W, A, S, D, SPACE } = Input.Keyboard.KeyCodes
 
   return {
     left: bind([LEFT, A]),
@@ -19,7 +19,7 @@ export function makePlayerInput(scene: Scene) {
 type KeyId = string | number
 
 export class MultiInput {
-  private keys: Phaser.Input.Keyboard.Key[]
+  private keys: Input.Keyboard.Key[]
 
   constructor(scene: Scene, keys: KeyId | KeyId[]) {
     if (!Array.isArray(keys)) keys = [keys]

@@ -60,11 +60,11 @@ export function makeGUI(game: GameLevel) {
 
   const physics = {
     get bodies() {
-      return game.matter.world.getAllBodies()
+      return game.matter.world?.getAllBodies() ?? []
     },
 
     get total() {
-      return this.bodies.length
+      return this.bodies?.length
     },
 
     get static() {
@@ -79,7 +79,7 @@ export function makeGUI(game: GameLevel) {
     },
 
     get terrain() {
-      return game.terrainParticleManager.particles.length
+      return game.terrainParticleManager?.particles?.length ?? 0
     },
   }
 

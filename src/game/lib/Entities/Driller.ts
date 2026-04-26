@@ -2,10 +2,12 @@ import { FireMode } from '../../config.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { ParticleTarget } from '../../types.ts'
 import { MatterTank } from '../Matter/MatterTank.ts'
-import Container = Phaser.GameObjects.Container
-import GameObject = Phaser.GameObjects.GameObject
-import Vector2 = Phaser.Math.Vector2
-import TimerEvent = Phaser.Time.TimerEvent
+import { Time, GameObjects, Math as PMath } from 'phaser'
+
+import Container = GameObjects.Container
+import GameObject = GameObjects.GameObject
+import Vector2 = PMath.Vector2
+import TimerEvent = Time.TimerEvent
 
 export class Driller extends GameObject implements ParticleTarget {
   public matterTank: MatterTank
@@ -18,7 +20,7 @@ export class Driller extends GameObject implements ParticleTarget {
 
   private container: Container
   private timer: TimerEvent
-  private text: Phaser.GameObjects.DOMElement
+  private text: GameObjects.DOMElement
 
   constructor(
     public scene: GameLevel,

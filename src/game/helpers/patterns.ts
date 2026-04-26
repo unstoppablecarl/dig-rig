@@ -1,5 +1,6 @@
-import TextureManager = Phaser.Textures.TextureManager
-import CanvasTexture = Phaser.Textures.CanvasTexture
+import { Textures } from 'phaser'
+import CanvasTexture = Textures.CanvasTexture
+import TextureManager = Textures.TextureManager
 
 export type PatternRenderer = {
   (x: number, y: number): number,

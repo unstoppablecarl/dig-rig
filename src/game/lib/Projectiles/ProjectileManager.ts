@@ -79,9 +79,9 @@ export class ProjectileManager extends SceneBound {
       matterTank,
       x,
       y,
-      charge,
       mode,
     ) as T
+    projectile.setTilesToModify(charge)
     this.children.push(projectile)
     return projectile
   }
@@ -93,6 +93,7 @@ export class ProjectileManager extends SceneBound {
   }
 
   remove(projectile: BaseProjectile) {
+    if (!this.children) return // after destroyed
     this.children = this.children.filter(p => p !== projectile)
   }
 

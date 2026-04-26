@@ -1,3 +1,4 @@
+import { Time, Math as PMath } from 'phaser'
 import { FireMode, TILE_SIZE } from '../../config.ts'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
@@ -6,7 +7,7 @@ import type { MatterTank } from '../Matter/MatterTank.ts'
 import { TerrainType } from '../TileMap/TileMap.ts'
 import { BaseProjectile } from './BaseProjectile.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
-import TimerEvent = Phaser.Time.TimerEvent
+import TimerEvent = Time.TimerEvent
 
 const VELOCITY = 100
 const MIN_VELOCITY = 0.1 * VELOCITY
@@ -30,7 +31,6 @@ export class Projectile extends BaseProjectile {
     matterTank: MatterTank,
     x: number,
     y: number,
-    tilesToModify: number,
     mode: FireMode,
   ) {
     super(
@@ -42,7 +42,6 @@ export class Projectile extends BaseProjectile {
       y,
       mode,
     )
-    this.setTilesToModify(tilesToModify)
 
     scene.events.once('destroy', this.destroy, this)
   }
@@ -107,16 +106,16 @@ export class Projectile extends BaseProjectile {
 
         const DECAY_RADIUS = true
         if (DECAY_RADIUS) {
-          const easedValue = Phaser.Math.Easing.Circular.In(this.lifespanPercent)
+          const easedValue = PMath.Easing.Circular.In(this.lifespanPercent)
           const FINAL_DECAY_SCALE = 0.9
-          const decay = Phaser.Math.Linear(1, FINAL_DECAY_SCALE, easedValue)
+          const decay = PMath.Linear(1, FINAL_DECAY_SCALE, easedValue)
           this.radius = this.initialRadius * decay
           this.renderer.queueReRender()
         }
 
         const DECAY_VELOCITY = false
         if (DECAY_VELOCITY) {
-          const decay = 1 - Phaser.Math.Easing.Circular.In(this.lifespanPercent)
+          const decay = 1 - PMath.Easing.Circular.In(this.lifespanPercent)
           this.vx = this.initialVX * decay
           this.vy = this.initialVY * decay
 

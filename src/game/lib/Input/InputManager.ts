@@ -1,7 +1,8 @@
+import { Input } from 'phaser'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { PlayerZoomInput } from './PlayerZoomInput.ts'
 import { BrushInput } from './BrushInput.ts'
+import { PlayerZoomInput } from './PlayerZoomInput.ts'
 
 export enum InputMode {
   WEAPON,
@@ -47,11 +48,11 @@ export class InputManager extends SceneBound {
 
     // prevent default browser actions for arrow keys and space
     scene.input.keyboard!.addCapture([
-      Phaser.Input.Keyboard.KeyCodes.UP,
-      Phaser.Input.Keyboard.KeyCodes.DOWN,
-      Phaser.Input.Keyboard.KeyCodes.LEFT,
-      Phaser.Input.Keyboard.KeyCodes.RIGHT,
-      Phaser.Input.Keyboard.KeyCodes.SPACE,
+      Input.Keyboard.KeyCodes.UP,
+      Input.Keyboard.KeyCodes.DOWN,
+      Input.Keyboard.KeyCodes.LEFT,
+      Input.Keyboard.KeyCodes.RIGHT,
+      Input.Keyboard.KeyCodes.SPACE,
     ])
   }
 

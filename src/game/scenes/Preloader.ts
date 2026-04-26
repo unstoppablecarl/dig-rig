@@ -1,6 +1,6 @@
-import { Scene } from 'phaser'
-import NEAREST = Phaser.Textures.FilterMode.NEAREST
-import PROGRESS = Phaser.Loader.Events.PROGRESS
+import { Loader, Scene, Textures } from 'phaser'
+import PROGRESS = Loader.Events.PROGRESS
+import NEAREST = Textures.FilterMode.NEAREST
 
 export class Preloader extends Scene {
   constructor() {

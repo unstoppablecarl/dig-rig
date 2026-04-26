@@ -1,17 +1,19 @@
-import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { TerrainType } from '../TileMap/TileMap.ts'
+import { GameObjects, Input, Scenes } from 'phaser'
 import { TILE_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
+import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { TerrainType } from '../TileMap/TileMap.ts'
 import type { InputController } from './InputManager.ts'
-import Pointer = Phaser.Input.Pointer
-import UPDATE = Phaser.Scenes.Events.UPDATE
-import POINTER_MOVE = Phaser.Input.Events.POINTER_MOVE
-import POINTER_DOWN = Phaser.Input.Events.POINTER_DOWN
-import POINTER_UP = Phaser.Input.Events.POINTER_UP
-import GAMEOBJECT_POINTER_WHEEL = Phaser.Input.Events.GAMEOBJECT_POINTER_WHEEL
+import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
+import POINTER_DOWN = Input.Events.POINTER_DOWN
+import POINTER_MOVE = Input.Events.POINTER_MOVE
+import POINTER_UP = Input.Events.POINTER_UP
+
+import Pointer = Input.Pointer
+import UPDATE = Scenes.Events.UPDATE
 
 export class BrushInput extends SceneBound implements InputController {
-  public graphics: Phaser.GameObjects.Graphics
+  public graphics: GameObjects.Graphics
   private mouseX = 0
   private mouseY = 0
   private isDrawing = false

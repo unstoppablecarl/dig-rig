@@ -1,3 +1,4 @@
+import { Input } from 'phaser'
 import { type FireMode } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
@@ -8,7 +9,7 @@ import { BasicWeapon } from './BasicWeapon.ts'
 import { BurstWeapon } from './BurstWeapon.ts'
 import { RapidWeapon } from './RapidWeapon.ts'
 import { TorchWeapon } from './TorchWeapon.ts'
-import ANY_KEY_DOWN = Phaser.Input.Keyboard.Events.ANY_KEY_DOWN
+import ANY_KEY_DOWN = Input.Keyboard.Events.ANY_KEY_DOWN
 
 export interface Weapon {
   setEnabled(value: boolean): void,
