@@ -16,7 +16,6 @@ type BaseProjectileArgs = ConstructorParameters<typeof BaseProjectile>;
 
 export type BaseProjectileConstructor<T extends BaseProjectile> = new (...args: BaseProjectileArgs) => T;
 
-
 export abstract class BaseProjectile extends SceneBound {
   public tilesToModify: number = -1
   public radius = 0
@@ -38,13 +37,11 @@ export abstract class BaseProjectile extends SceneBound {
     public matterTank: MatterTank,
     public x: number,
     public y: number,
-    tilesToModify: number,
     public mode: FireMode,
   ) {
     super(scene)
 
     this.renderer = new ProjectileRenderer(this)
-    this.setTilesToModify(tilesToModify)
   }
 
   setTilesToModify(count: number) {
@@ -85,6 +82,10 @@ export abstract class BaseProjectile extends SceneBound {
 
     if (this.tilesModified > this.tilesToModify) {
       throw new Error('exceeded matter charge: ' + this.charge())
+    }
+
+    if (this.tilesToModify === -1) {
+      throw new Error('tilesToModify not set before first update')
     }
 
     this.lifespanPercent = (this.tilesModified / this.tilesToModify)

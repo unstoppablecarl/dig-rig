@@ -40,7 +40,6 @@ export class Projectile extends BaseProjectile {
       matterTank,
       x,
       y,
-      tilesToModify,
       mode,
     )
     this.setTilesToModify(tilesToModify)
