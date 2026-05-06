@@ -29,6 +29,7 @@
         "@tweakpane/plugin-essentials": "^0.2.1",
         "phaser": "4.0.0",
         "phaser-matter-collision-plugin": "^1.0.0",
+        "pixel-data-js": "^0.38.0",
         "simplex-noise": "^4.0.3",
         "terser": "^5.39.0",
         "tweakpane": "^4.0.5"

@@ -4,7 +4,6 @@ import { pluginEventBusConfig } from './game/lib/plugins/events-plugin.ts'
 import { pluginMatterCollisionConfig } from './game/lib/plugins/matter-collision-plugin.ts'
 import { Boot } from './game/scenes/Boot.ts'
 import { LevelSelect } from './game/scenes/LevelSelect.ts'
-import { Preloader } from './game/scenes/Preloader.ts'
 import './styles/main.scss'
 import GameConfig = Phaser.Types.Core.GameConfig
 
@@ -27,7 +26,7 @@ const config: GameConfig = {
   physics: {
     default: 'matter',
     matter: {
-      positionIterations: 10,
+      positionIterations: 20,
       gravity: { x: 0, y: GRAVITY },
       enableSleeping: false,
       debug: false,
@@ -41,7 +40,6 @@ const config: GameConfig = {
   },
   scene: [
     Boot,
-    Preloader,
     LevelSelect,
   ],
 }

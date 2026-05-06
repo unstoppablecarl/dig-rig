@@ -1,7 +1,7 @@
 import { CHUNK_SIZE } from '../../config.ts'
-import { Chunk } from './Chunk.ts'
-import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
+import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { Chunk } from './Chunk.ts'
 
 export class ChunkManager extends SceneBound {
   private chunks = new Map<string, Chunk>()
@@ -20,8 +20,9 @@ export class ChunkManager extends SceneBound {
 
     for (let cy = 0; cy < this.height; cy++) {
       for (let cx = 0; cx < this.width; cx++) {
+        const id = cy * this.width + cx
         const key = getChunkKey(cx, cy)
-        let chunk = new Chunk(cx, cy)
+        let chunk = new Chunk(id, cx, cy)
         this.chunks.set(key, chunk)
       }
     }

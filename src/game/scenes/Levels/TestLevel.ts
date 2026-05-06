@@ -1,7 +1,8 @@
-import { TerrainType, Tilemap } from '../../lib/TileMap/TileMap.ts'
 import { Driller } from '../../lib/Entities/Driller.ts'
-import { GameLevel } from '../GameLevel.ts'
 import { Player } from '../../lib/Player/Player.ts'
+import { makeMultiImagePatternRenderer } from '../../lib/Textures/PatternRenderer.ts'
+import { TerrainType, Tilemap } from '../../lib/TileMap/TileMap.ts'
+import { GameLevel } from '../GameLevel.ts'
 
 export class TestLevel extends GameLevel {
   static ID = 'LEVEL_1'
@@ -9,6 +10,26 @@ export class TestLevel extends GameLevel {
 
   constructor() {
     super(TestLevel.ID)
+  }
+
+  preload() {
+    super.preload()
+
+    this.load.setPath('assets')
+
+    this.loadPixelImage('scale', 'tiles/scale.png')
+    this.loadPixelImage('scale-2', 'tiles/scale2.png')
+
+    this.loadPixelImage('enemy', 'enemy-2.png')
+
+    this.preloadPlayer()
+  }
+
+  makeTileMapChunkPixelRenderer() {
+    return makeMultiImagePatternRenderer(this.textures, this.tilemap, {
+      'scale': 4,
+      'scale-2': 1,
+    })
   }
 
   makeTileMap() {

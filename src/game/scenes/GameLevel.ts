@@ -1,7 +1,6 @@
-import { GameObjects, Geom, Input, Scene } from 'phaser'
+import { GameObjects, Geom, Input, Scene, Textures } from 'phaser'
 import { DRAW_DEBUG_TILEMAP, DRAW_WORLD_BORDER_DEBUG, TILE_SIZE } from '../config.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
-import { makePatterns, type PatternStore } from '../helpers/patterns.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
 import { InputManager } from '../lib/Input/InputManager.ts'
 import { MatterManager } from '../lib/Matter/MatterManager.ts'
@@ -10,6 +9,7 @@ import { TerrainParticleManager } from '../lib/Particles/TerrainParticleManager.
 import { Player } from '../lib/Player/Player.ts'
 import { PlayerWeaponManager } from '../lib/Player/Weapons/PlayerWeaponManager.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
+import type { PatternRenderer } from '../lib/Textures/_pattern-types.ts'
 import { Tilemap } from '../lib/TileMap/TileMap.ts'
 import { TileMapBasicRenderer } from '../lib/TileMap/TileMapBasicRenderer.ts'
 import { TileMapChunkRenderer } from '../lib/TileMap/TileMapChunkRenderer.ts'
@@ -20,6 +20,7 @@ import Group = GameObjects.Group
 import Layer = GameObjects.Layer
 import Rectangle = Geom.Rectangle
 import MouseManager = Input.Mouse.MouseManager
+import NEAREST = Textures.FilterMode.NEAREST
 
 type Layers = {
   bg: Layer,
@@ -43,7 +44,6 @@ export abstract class GameLevel extends Scene {
   public entities: Group
   public matterManager: MatterManager
   public particleManager: ParticleManager
-  public patternStore: PatternStore
   public player: Player
   public playerWeaponManager: PlayerWeaponManager
   public projectiles: ProjectileManager
@@ -53,6 +53,9 @@ export abstract class GameLevel extends Scene {
   public worldBounds: Geom.Rectangle
   public inputManager: InputManager
   public terrainParticleManager: TerrainParticleManager
+  public tileMapChunkPixelRenderer: PatternRenderer
+
+  abstract makeTileMapChunkPixelRenderer(): PatternRenderer
 
   abstract startLevel(): void
 
@@ -75,21 +78,73 @@ export abstract class GameLevel extends Scene {
   }
 
   init() {
-    this.registerScene(UIScene)
-    this.registerScene(BgScene)
+    this.registerSubScene(UIScene)
+    this.registerSubScene(BgScene)
 
     const mouse = this.input.mouse as MouseManager
     mouse.disableContextMenu()
+  }
+
+  preload() {
+    const { width, height } = this.scale
+    const cx = width / 2
+    const cy = height / 2
+    const barW = 320
+    const barH = 24
+
+    const title = this.add.text(cx, cy - 60,
+      `Loading ${this.scene.key}...`,
+      { fontSize: '20px' }).setOrigin(0.5)
+
+    const outline = this.add.graphics()
+      .lineStyle(2, 0xffffff, 1)
+      .strokeRect(cx - barW / 2, cy - barH / 2, barW, barH)
+
+    const fill = this.add.graphics()
+    const pct = this.add.text(cx, cy + 40, '0%',
+      { fontSize: '18px' }).setOrigin(0.5)
+
+    this.load.on('progress', (v: number) => {
+      fill.clear()
+        .fillStyle(0x00b4ff, 1)
+        .fillRect(cx - barW / 2 + 2, cy - barH / 2 + 2,
+          (barW - 4) * v, barH - 4)
+      pct.setText(`${Math.round(v * 100)}%`)
+    })
+
+    // Clean up the UI once loading finishes, before create() runs
+    this.load.once('complete', () => {
+      title.destroy()
+      outline.destroy()
+      fill.destroy()
+      pct.destroy()
+    })
+  }
+
+  preloadPlayer() {
+    this.loadPixelSpritesheet('player', 'player.png', { frameWidth: 40, frameHeight: 40 })
+    this.loadPixelSpritesheet('player-arm', 'arm.png', { frameWidth: 18, frameHeight: 8 })
+  }
+
+  loadPixelImage(key: string, url: string) {
+    this.load.image(key, url)
+    this.load.once(`filecomplete-image-${key}`,
+      () => this.textures.get(key).setFilter(NEAREST))
+  }
+
+  loadPixelSpritesheet(key: string, url: string, config: Phaser.Types.Loader.FileTypes.ImageFrameConfig) {
+    this.load.spritesheet(key, url, config)
+    this.load.once(`filecomplete-spritesheet-${key}`,
+      () => this.textures.get(key).setFilter(NEAREST))
   }
 
   create() {
     this.layers = this.makeLayers()
 
     this.matterManager = new MatterManager(this)
-
     this.tilemap = this.makeTileMap()
-    this.patternStore = makePatterns(this.textures, this.tilemap)
 
+    this.tileMapChunkPixelRenderer = this.makeTileMapChunkPixelRenderer()
     this.worldBounds = new Rectangle(0, 0,
       this.tilemap.width * TILE_SIZE,
       this.tilemap.height * TILE_SIZE,
@@ -110,7 +165,9 @@ export abstract class GameLevel extends Scene {
       runChildUpdate: true,
     })
 
+    console.log('makePlayer before')
     this.player = this.makePlayer()
+    console.log('makePlayer after')
 
     this.matter.world.setBounds(
       0, 0,
@@ -153,9 +210,9 @@ export abstract class GameLevel extends Scene {
     this.tilemapRenderer.render()
   }
 
-  private registerScene(Def: { ID: string, new(): any }) {
-    if (this.scene.isActive(Def.ID)) return
-
+  private registerSubScene(Def: { ID: string, new(): any }) {
+    // remove if already exists
+    this.scene.remove(Def.ID)
     this.scene.add(Def.ID, new Def())
   }
 }

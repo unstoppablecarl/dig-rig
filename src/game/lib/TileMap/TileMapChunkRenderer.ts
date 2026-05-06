@@ -90,8 +90,10 @@ export class TileMapChunkRenderer extends SceneBound {
   private renderChunkToGraphics(graphics: Graphics, chunk: Chunk) {
     graphics.clear()
 
-    const startX = chunk.cx * CHUNK_SIZE
-    const startY = chunk.cy * CHUNK_SIZE
+    const cx = chunk.cx
+    const cy = chunk.cy
+    const startX = cx * CHUNK_SIZE
+    const startY = cy * CHUNK_SIZE
     const tilemap = this.scene.tilemap
     let isEmpty = true
 
@@ -106,7 +108,7 @@ export class TileMapChunkRenderer extends SceneBound {
         if (tileType === TerrainType.PERMANENT) {
           color = TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.PERMANENT]
         } else {
-          color = this.scene.patternStore.IMG_PATTERN(x, y)
+          color = this.scene.tileMapChunkPixelRenderer(x, y, cx, cy)
         }
 
         const isEdge =

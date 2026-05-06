@@ -17,6 +17,9 @@ importers:
       phaser-matter-collision-plugin:
         specifier: ^1.0.0
         version: 1.0.0(phaser@4.0.0)
+      pixel-data-js:
+        specifier: ^0.38.0
+        version: 0.38.0
       simplex-noise:
         specifier: ^4.0.3
         version: 4.0.3
@@ -539,6 +542,9 @@ packages:
     resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
     engines: {node: '>=12'}
 
+  pixel-data-js@0.38.0:
+    resolution: {integrity: sha512-lsmk5s12xPR4Mf698Zr+XJRcBqPb0XTwpWkxnXnwbT0O9aMhZ4Vx9sv8b08jIpyQOSb6gbQ/wgdKJdtRD7IFlg==}
+
   postcss@8.5.6:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
@@ -975,6 +981,8 @@ snapshots:
     optional: true
 
   picomatch@4.0.3: {}
+
+  pixel-data-js@0.38.0: {}
 
   postcss@8.5.6:
     dependencies:

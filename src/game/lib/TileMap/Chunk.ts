@@ -4,8 +4,9 @@ export class Chunk {
   public isEmpty: boolean = true
 
   constructor(
-    public readonly cx: number,
-    public readonly cy: number,
+    readonly id: number,
+    readonly cx: number,
+    readonly cy: number,
   ) {
   }
 
