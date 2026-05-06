@@ -85,10 +85,10 @@ export abstract class GameLevel extends Scene {
   create() {
     this.layers = this.makeLayers()
 
-    this.patternStore = makePatterns(this.textures)
     this.matterManager = new MatterManager(this)
 
     this.tilemap = this.makeTileMap()
+    this.patternStore = makePatterns(this.textures, this.tilemap)
 
     this.worldBounds = new Rectangle(0, 0,
       this.tilemap.width * TILE_SIZE,
