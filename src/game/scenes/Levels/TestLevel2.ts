@@ -9,11 +9,6 @@ export default class TestLevel2 extends GameLevel {
 
     this.load.setPath('assets')
 
-    this.loadPixelImage('scale', 'tiles/scale.png')
-    this.loadPixelImage('scale-2', 'tiles/scale2.png')
-
-    this.loadPixelImage('enemy', 'enemy-2.png')
-
     this.loadPixelImage('rock-tile', 'tiles/rock.png')
 
     this.preloadPlayer()
