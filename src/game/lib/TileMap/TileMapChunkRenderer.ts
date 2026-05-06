@@ -92,11 +92,11 @@ export class TileMapChunkRenderer extends SceneBound {
 
     const startX = chunk.cx * CHUNK_SIZE
     const startY = chunk.cy * CHUNK_SIZE
+    const tilemap = this.scene.tilemap
     let isEmpty = true
 
     for (let y = startY; y < startY + CHUNK_SIZE; y++) {
       for (let x = startX; x < startX + CHUNK_SIZE; x++) {
-        let tilemap = this.scene.tilemap
         const tileType = tilemap.getTile(x, y)
         if (tileType === TerrainType.EMPTY) continue
 
