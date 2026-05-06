@@ -6,6 +6,7 @@ body {
   color: rgba(255, 255, 255, 0.87);
   background-color: #0f0f0f;
   font-family: sans-serif;
+  overflow: hidden;
 }
 
 #app {
@@ -49,6 +50,13 @@ body {
   text-align: center;
   font-family: monospace;
   //width: 50px;
+}
+
+#game-container {
+  overflow: hidden;
+}
+#current-level {
+  font-size: 14px;
 }
 
 // tweak pane scrolling
