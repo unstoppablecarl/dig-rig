@@ -1,18 +1,53 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DigRig 2</title>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DigRig 2</title>
 </head>
 
 <body>
-    <div id="app">
-        <div id="game-container"></div>
-        <div id="fps"></div>
-        <div id="toaster-text"></div>
+<div id="app">
+  <div id="game-container"></div>
+  <div id="fps"></div>
+  <div id="toaster-text"></div>
+  <button role="button" id="btn-help">HELP</button>
+  <div id="help">
+    <div class="controls">
+      <div style="text-align: right">[Close X]</div>
+      <table class="table-controls">
+        <tbody>
+        <tr>
+          <th>Controls</th>
+          <td></td>
+        </tr>
+        <tr>
+          <th>Move</th>
+          <td>WASD / Arrow keys</td>
+        </tr>
+        <tr>
+          <th>Jump</th>
+          <td>WASD / Arrow keys / Space</td>
+        </tr>
+        <tr>
+          <th>Fire mode destroy</th>
+          <td>Left Mouse</td>
+        </tr>
+        <tr>
+          <th>Fire mode create</th>
+          <td>Right Mouse</td>
+        </tr>
+        <tr>
+          <th>Change weapon</th>
+          <td>Numbers 1, 2, 3, 4</td>
+        </tr>
+        </tbody>
+      </table>
+
     </div>
-    <script type="module" src="/src/main.ts"></script>
+  </div>
+</div>
+<script type="module" src="/src/main.ts"></script>
 </body>
 </html>

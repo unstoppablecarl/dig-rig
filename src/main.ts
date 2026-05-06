@@ -48,6 +48,16 @@ const config: GameConfig = {
 let game: Game
 document.addEventListener('DOMContentLoaded', () => {
   game = new Game({ ...config, parent: 'game-container' })
+
+  const help = document.getElementById('help')!
+  const btn = document.getElementById('btn-help')!
+
+  btn.addEventListener('click', () => {
+    help?.classList.add('show')
+  })
+  help.addEventListener('click', () => {
+    help?.classList.remove('show')
+  })
 })
 
 export async function launchLevel(id: LevelId) {

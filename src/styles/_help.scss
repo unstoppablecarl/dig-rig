@@ -1,0 +1,49 @@
+
+#btn-help {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, .25);
+  border-radius: 3px;
+  padding: 4px 8px;
+  color: #fff;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, .35);
+  }
+}
+
+#help {
+  display: none;
+  position: absolute;
+  background: rgba(0, 0, 0, .5);
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+
+  &.show {
+    display: block;
+  }
+  .controls {
+    margin: 20vh 20vh;
+    padding: 20px;
+    background: #000;
+    display: inline-block;
+  }
+
+  .table-controls {
+    th {
+      text-align: right;
+      padding: 4px 10px;
+    }
+
+    td {
+      text-align: left;
+      padding: 4px 10px;
+    }
+  }
+}

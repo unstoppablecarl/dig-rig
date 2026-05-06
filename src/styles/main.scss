@@ -1,4 +1,5 @@
 @use 'toaster';
+@use 'help';
 
 body {
   margin: 0;
@@ -58,6 +59,7 @@ body {
 #current-level {
   font-size: 14px;
 }
+
 
 // tweak pane scrolling
 .tp-dfwv {
