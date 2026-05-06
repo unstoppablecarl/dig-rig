@@ -3,19 +3,11 @@ import { makeImagePatternRenderer } from '../../lib/Textures/PatternRenderer.ts'
 import { TerrainType, Tilemap } from '../../lib/TileMap/TileMap.ts'
 import { GameLevel } from '../GameLevel.ts'
 
-export class TestLevel2 extends GameLevel {
-  static ID = 'LEVEL_2'
-  static DISPLAY_NAME = 'Test Level 2'
-
-  constructor() {
-    super(TestLevel2.ID)
-  }
-
+export default class TestLevel2 extends GameLevel {
   preload() {
     super.preload()
 
     this.load.setPath('assets')
-
 
     this.loadPixelImage('scale', 'tiles/scale.png')
     this.loadPixelImage('scale-2', 'tiles/scale2.png')

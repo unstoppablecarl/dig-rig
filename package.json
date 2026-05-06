@@ -16,6 +16,7 @@
     "homepage": "https://github.com/phaserjs/template-vite-ts#readme",
     "scripts": {
         "dev": "vite --config vite/config.dev.mjs",
+        "typecheck": "tsc --noEmit",
         "build": "tsc --noEmit && vite build --config vite/config.prod.mjs"
     },
     "devDependencies": {

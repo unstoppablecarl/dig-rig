@@ -4,14 +4,7 @@ import { makeMultiImagePatternRenderer } from '../../lib/Textures/PatternRendere
 import { TerrainType, Tilemap } from '../../lib/TileMap/TileMap.ts'
 import { GameLevel } from '../GameLevel.ts'
 
-export class TestLevel extends GameLevel {
-  static ID = 'LEVEL_1'
-  static DISPLAY_NAME = 'Test Level 1'
-
-  constructor() {
-    super(TestLevel.ID)
-  }
-
+export default class TestLevel extends GameLevel {
   preload() {
     super.preload()
 

@@ -1,14 +1,18 @@
 import * as EssentialsPlugin from '@tweakpane/plugin-essentials'
 import { Pane } from 'tweakpane'
+import { launchLevel } from '../main.ts'
 import { InputMode } from './lib/Input/InputManager.ts'
 import { GameLevel } from './scenes/GameLevel.ts'
+import { type LevelEntry, type LevelId, LEVELS } from './scenes/Levels'
 
 const formatInt = (v: number) => v.toFixed(0)
 
 export type GUI = ReturnType<typeof makeGUI>
 
 export function makeGUI(game: GameLevel) {
-  const pane = new Pane()
+  const pane = new Pane({
+    // container: document.getElementById('gui-container')!
+  })
   pane.registerPlugin(EssentialsPlugin)
 
   // prevent animation on initial load
@@ -160,21 +164,19 @@ export function makeGUI(game: GameLevel) {
       brushToggle.title = getBrushBtnLabel()
     })
 
-  controlsFolder.addButton({ title: 'LVL 1' })
-    .on('click', () => {
-      game.scene.start('LEVEL_1')
-    })
-
-  controlsFolder.addButton({ title: 'LVL 2' })
-    .on('click', () => {
-      game.scene.start('LEVEL_2')
-    })
-
   controlsFolder.addButton({ title: 'Clear Local Storage + Refresh' })
     .on('click', () => {
       localStorage.clear()
       window.location.reload()
     })
+
+  const levelsFolder = pane.addFolder({ title: 'Levels' })
+  for (const [id, lvl] of Object.entries(LEVELS) as [LevelId, LevelEntry][]) {
+    levelsFolder.addButton({ title: lvl.displayName })
+      .on('click', () => {
+        launchLevel(id)
+      })
+  }
 
   const localStorageKey = 'pane-state'
 

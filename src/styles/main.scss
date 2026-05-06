@@ -51,6 +51,14 @@ body {
   //width: 50px;
 }
 
+// tweak pane scrolling
+.tp-dfwv {
+  max-height: 98vh;
+  overflow-y: auto;
+  scrollbar-color: #888 transparent;
+  scrollbar-width: thin;
+}
+
 // gui hack
 .no-transition {
   *,

@@ -16,6 +16,7 @@ import { TileMapChunkRenderer } from '../lib/TileMap/TileMapChunkRenderer.ts'
 import { CameraController } from '../lib/UI/CameraController.ts'
 import { BgScene } from './Layers/BgScene.ts'
 import { UIScene } from './Layers/UIScene.ts'
+import type { LevelEntry } from './Levels'
 import Group = GameObjects.Group
 import Layer = GameObjects.Layer
 import Rectangle = Geom.Rectangle
@@ -35,9 +36,7 @@ type Layers = {
 }
 
 export abstract class GameLevel extends Scene {
-  static ID: string
-  static DISPLAY_NAME = 'Unnamed'
-
+  public displayName: string = 'Level Name Not Loaded'
   public layers: Layers
   public basicTilemapRenderer: TileMapBasicRenderer
   public cameraController: CameraController
@@ -77,7 +76,8 @@ export abstract class GameLevel extends Scene {
     }
   }
 
-  init() {
+  init(entry: LevelEntry) {
+    this.displayName = entry.displayName
     this.registerSubScene(UIScene)
     this.registerSubScene(BgScene)
 
@@ -211,8 +211,8 @@ export abstract class GameLevel extends Scene {
   }
 
   private registerSubScene(Def: { ID: string, new(): any }) {
-    // remove if already exists
-    this.scene.remove(Def.ID)
-    this.scene.add(Def.ID, new Def())
+    if (!this.scene.get(Def.ID)) {
+      this.scene.add(Def.ID, Def)
+    }
   }
 }

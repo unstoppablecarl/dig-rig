@@ -1,10 +1,10 @@
 import { Scene } from 'phaser'
-import type { GameLevel } from '../GameLevel.ts'
-import { MatterMeter } from '../../lib/UI/MatterMeter.ts'
-import { makeFPSText } from '../../lib/UI/text.ts'
 import { type GUI, makeGUI } from '../../gui.ts'
+import { MatterMeter } from '../../lib/UI/MatterMeter.ts'
 import { PlayerUI } from '../../lib/UI/PlayerUI.ts'
+import { makeFPSText } from '../../lib/UI/text.ts'
 import { Toaster } from '../../lib/UI/Toaster.ts'
+import type { GameLevel } from '../GameLevel.ts'
 
 export class UIScene extends Scene {
   static ID = 'UIScene'
@@ -20,6 +20,7 @@ export class UIScene extends Scene {
 
   init({ gameScene }: { gameScene: GameLevel }) {
     this.gui = makeGUI(gameScene)
+    this.initLevelDisplayName(gameScene.displayName)
   }
 
   create({ gameScene }: { gameScene: GameLevel }) {
@@ -34,6 +35,14 @@ export class UIScene extends Scene {
   update(_time: number, _delta: number) {
     this.matterMeter.update()
     this.fpsText()
+  }
+
+  initLevelDisplayName(displayName: string) {
+    const el = this.add.dom(120, 12)
+      .setOrigin(0, 1)
+      .createFromHTML('<div/>')
+    el.node.id = 'current-level'
+    el.node.innerHTML = displayName
   }
 
   destroy() {

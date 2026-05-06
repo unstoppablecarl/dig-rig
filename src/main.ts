@@ -3,6 +3,7 @@ import { BG_COLOR, GRAVITY } from './game/config.ts'
 import { pluginEventBusConfig } from './game/lib/plugins/events-plugin.ts'
 import { pluginMatterCollisionConfig } from './game/lib/plugins/matter-collision-plugin.ts'
 import { Boot } from './game/scenes/Boot.ts'
+import { type LevelId, LEVELS } from './game/scenes/Levels'
 import { LevelSelect } from './game/scenes/LevelSelect.ts'
 import './styles/main.scss'
 import GameConfig = Phaser.Types.Core.GameConfig
@@ -44,6 +45,29 @@ const config: GameConfig = {
   ],
 }
 
+let game: Game
 document.addEventListener('DOMContentLoaded', () => {
-  new Game({ ...config, parent: 'game-container' })
+  game = new Game({ ...config, parent: 'game-container' })
 })
+
+export async function launchLevel(id: LevelId) {
+  const entry = LEVELS[id]
+  if (!entry) {
+    console.warn(`Unknown level: ${id}`)
+    return
+  }
+
+  // Lazy-register on first use
+  if (!game.scene.getScene(id)) {
+    const module = await entry.load()
+    game.scene.add(id, module.default, false, entry)
+  }
+
+  // Stop whatever's currently running (menu, another level)
+  // so we don't end up with multiple active scenes layered.
+  for (const active of game.scene.getScenes(true)) {
+    if (active.scene.key !== id) active.scene.stop()
+  }
+
+  game.scene.start(id)
+}
