@@ -66,22 +66,6 @@ export class ChunkManager extends SceneBound {
     }
   }
 
-  checkAdjacent(chunk: Chunk, check: (other: Chunk | undefined) => boolean): boolean {
-    const x = chunk.cx
-    const y = chunk.cy
-
-    if (check(this.getChunk(x, y - 1))) return true
-    if (check(this.getChunk(x, y + 1))) return true
-    if (check(this.getChunk(x - 1, y))) return true
-    if (check(this.getChunk(x + 1, y))) return true
-    if (check(this.getChunk(x - 1, y - 1))) return true
-    if (check(this.getChunk(x + 1, y + 1))) return true
-    if (check(this.getChunk(x - 1, y + 1))) return true
-    if (check(this.getChunk(x + 1, y - 1))) return true
-
-    return false
-  }
-
   getChunkId(cx: number, cy: number): number {
     return cy * this.width + cx
   }
