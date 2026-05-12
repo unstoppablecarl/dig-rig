@@ -14,8 +14,13 @@ import NEAREST = Phaser.Textures.FilterMode.NEAREST
 export class TileMapChunkRenderer extends SceneBound {
   public visibleCount: number
 
-  private chunkTextures = new Map<Chunk, CanvasTexture>()
-  private chunkImages = new Map<Chunk, Image>()
+  private masterTexture: CanvasTexture
+  private masterImage: Image
+
+  // reusable per-chunk pixel buffer
+  private chunkBuffer = new ImageData(CHUNK_SIZE, CHUNK_SIZE)
+  private chunkPixels = new Uint32Array(this.chunkBuffer.data.buffer)
+
   private chunkDebugGraphics = new Map<Chunk, Graphics>()
   private visibleChunks = new Set<Chunk>()
   private prevVisibleChunks = new Set<Chunk>()
@@ -32,6 +37,11 @@ export class TileMapChunkRenderer extends SceneBound {
     this.scene = scene
     this.layer = scene.layers.terrain
     this.debugLayer = scene.layers.terrainDebug
+
+    const { width, height } = scene.tilemap
+    this.masterTexture = scene.textures.createCanvas('terrain_world', width, height)!
+    this.masterImage = scene.add.image(0, 0, 'terrain_world').setOrigin(0, 0)
+    this.layer.add(this.masterImage)
   }
 
   render() {
@@ -53,7 +63,7 @@ export class TileMapChunkRenderer extends SceneBound {
     const chunkManager = this.scene.tilemap.chunkManager
     const { width, height } = chunkManager
 
-    // Pass 1: collect visible/dirty chunks; show images re-entering view
+    // Pass 1: collect visible dirty chunks
     for (let dy = -viewRadiusY; dy <= viewRadiusY; dy++) {
       for (let dx = -viewRadiusX; dx <= viewRadiusX; dx++) {
         const cx = cxCenter + dx
@@ -63,13 +73,7 @@ export class TileMapChunkRenderer extends SceneBound {
         if (!chunk) continue
 
         this.visibleChunks.add(chunk)
-
-        if (chunk.renderDirty) {
-          changedChunks.add(chunk)
-        } else {
-          const img = this.chunkImages.get(chunk)
-          if (img && !img.active) img.setActive(true).setVisible(true)
-        }
+        if (chunk.renderDirty) changedChunks.add(chunk)
       }
     }
 
@@ -80,25 +84,31 @@ export class TileMapChunkRenderer extends SceneBound {
       let anyPartial = false
       const { cx, cy } = chunk
       outer:
-        for (let dx = -1; dx <= 1; dx++) {
-          for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue
-            const neighbor = chunkManager.getChunk(cx + dx, cy + dy)
-            if (!neighbor) continue
-            if (neighbor.type === ChunkType.EMPTY) anyEmpty = true
-            else if (neighbor.type === ChunkType.FULL) anyFull = true
-            else anyPartial = true
-            if (anyEmpty && anyFull && anyPartial) break outer
-          }
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (dx === 0 && dy === 0) continue
+          const neighbor = chunkManager.getChunk(cx + dx, cy + dy)
+          if (!neighbor) continue
+          if (neighbor.type === ChunkType.EMPTY) anyEmpty = true
+          else if (neighbor.type === ChunkType.FULL) anyFull = true
+          else anyPartial = true
+          if (anyEmpty && anyFull && anyPartial) break outer
         }
+      }
       chunk.hasAnyEmptyNeighbors = anyEmpty
       chunk.hasAnyFullNeighbors = anyFull
       chunk.hasAnyPartialNeighbors = anyPartial
     }
 
-    // Pass 3: render dirty chunks
+    // Pass 3: render dirty chunks into master canvas
     for (const chunk of changedChunks) {
-      this.renderChunkToTexture(chunk)
+      this.renderChunk(chunk)
+    }
+
+    // Upload master canvas to GPU once if anything changed
+    if (changedChunks.size > 0) {
+      this.masterTexture.refresh()
+      this.masterTexture.source[0].setFilter(NEAREST)
     }
 
     // Pass 4: debug only
@@ -108,55 +118,34 @@ export class TileMapChunkRenderer extends SceneBound {
         if (chunk.type !== ChunkType.EMPTY) renderedCount++
         this.getDebugGraphics(chunk).setVisible(chunk.type !== ChunkType.EMPTY)
       }
-    }
-
-    // Pass 5: hide chunks that left the view
-    for (const chunk of this.prevVisibleChunks) {
-      if (!this.visibleChunks.has(chunk)) {
-        const img = this.chunkImages.get(chunk)
-        if (img?.active) img.setActive(false).setVisible(false)
-        if (DRAW_CHUNKS_DEBUG) {
+      for (const chunk of this.prevVisibleChunks) {
+        if (!this.visibleChunks.has(chunk)) {
           this.chunkDebugGraphics.get(chunk)?.setVisible(false)
         }
       }
+      ;[this.visibleChunks, this.prevVisibleChunks] = [this.prevVisibleChunks, this.visibleChunks]
+      this.visibleChunks.clear()
     }
-
-    // swap for next frame
-    ;[this.visibleChunks, this.prevVisibleChunks] = [this.prevVisibleChunks, this.visibleChunks]
-    this.visibleChunks.clear()
 
     this.visibleCount = renderedCount
   }
 
-  private renderChunkToTexture(chunk: Chunk): void {
+  private renderChunk(chunk: Chunk): void {
     if (chunk.type === ChunkType.EMPTY) {
-      const img = this.chunkImages.get(chunk)
-      if (img?.active) img.setActive(false).setVisible(false)
+      this.masterTexture.context.clearRect(
+        chunk.cx * CHUNK_SIZE, chunk.cy * CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE,
+      )
     } else if (chunk.type === ChunkType.PARTIAL) {
       this.renderSolidChunk(chunk, true)
     } else {
+      // FULL: skip edge detection for interior chunks with no empty neighbors
       this.renderSolidChunk(chunk, chunk.hasAnyEmptyNeighbors)
     }
     chunk.renderDirty = false
   }
 
   private renderSolidChunk(chunk: Chunk, withEdgeDetection: boolean): void {
-    let texture = this.chunkTextures.get(chunk)
-    if (!texture) {
-      const key = 'chunk_' + chunk.id
-      texture = this.scene.textures.createCanvas(key, CHUNK_SIZE, CHUNK_SIZE)!
-      const img = this.scene.add.image(chunk.cx * CHUNK_SIZE, chunk.cy * CHUNK_SIZE, key)
-        .setOrigin(0, 0)
-      this.layer.add(img)
-      this.chunkImages.set(chunk, img)
-      this.chunkTextures.set(chunk, texture)
-    }
-
-    // image may have been hidden when chunk left the view
-    const img = this.chunkImages.get(chunk)!
-    if (!img.active) img.setActive(true).setVisible(true)
-
-    const pixels = texture.pixels
+    const pixels = this.chunkPixels
     pixels.fill(0)
 
     const cx = chunk.cx
@@ -197,10 +186,7 @@ export class TileMapChunkRenderer extends SceneBound {
       }
     }
 
-    texture.putData(texture.imageData, 0, 0)
-    texture.refresh()
-    // refresh() resets filter to LINEAR (antialias config), re-apply after every upload
-    texture.source[0].setFilter(NEAREST)
+    this.masterTexture.context.putImageData(this.chunkBuffer, offX, offY)
   }
 
   private getDebugGraphics(chunk: Chunk): Graphics {
@@ -221,16 +207,12 @@ export class TileMapChunkRenderer extends SceneBound {
   destroy() {
     super.destroy()
 
-    if (this.chunkTextures) {
-      for (const texture of this.chunkTextures.values()) {
-        texture.destroy()
-      }
-    }
+    this.masterTexture?.destroy()
 
     // @ts-expect-error: destroy
-    this.chunkTextures = null
+    this.masterTexture = null
     // @ts-expect-error: destroy
-    this.chunkImages = null
+    this.masterImage = null
     // @ts-expect-error: destroy
     this.chunkDebugGraphics = null
     // @ts-expect-error: destroy
