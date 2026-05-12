@@ -81,17 +81,17 @@ export class TileMapChunkRenderer extends SceneBound {
       let anyPartial = false
       const { cx, cy } = chunk
       outer:
-      for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-          if (dx === 0 && dy === 0) continue
-          const neighbor = chunkManager.getChunk(cx + dx, cy + dy)
-          if (!neighbor) continue
-          if (neighbor.type === ChunkType.EMPTY) anyEmpty = true
-          else if (neighbor.type === ChunkType.FULL) anyFull = true
-          else anyPartial = true
-          if (anyEmpty && anyFull && anyPartial) break outer
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue
+            const neighbor = chunkManager.getChunk(cx + dx, cy + dy)
+            if (!neighbor) continue
+            if (neighbor.type === ChunkType.EMPTY) anyEmpty = true
+            else if (neighbor.type === ChunkType.FULL) anyFull = true
+            else anyPartial = true
+            if (anyEmpty && anyFull && anyPartial) break outer
+          }
         }
-      }
       chunk.hasAnyEmptyNeighbors = anyEmpty
       chunk.hasAnyFullNeighbors = anyFull
       chunk.hasAnyPartialNeighbors = anyPartial
