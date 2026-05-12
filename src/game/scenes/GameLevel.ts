@@ -200,7 +200,7 @@ export abstract class GameLevel extends Scene {
     const dt = getDeltaT(delta)
 
     this.cameraController.update()
-    this.player.update(dt)
+    this.player.update()
     this.projectiles.update(dt)
     this.terrainChunkBodyManager.update()
     this.terrainParticleManager.update(dt)
