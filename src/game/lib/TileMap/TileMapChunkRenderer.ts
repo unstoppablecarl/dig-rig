@@ -12,7 +12,7 @@ import CanvasTexture = Phaser.Textures.CanvasTexture
 import NEAREST = Phaser.Textures.FilterMode.NEAREST
 
 export class TileMapChunkRenderer extends SceneBound {
-  public renderedCount: number
+  public visibleCount: number
 
   private chunkTextures = new Map<Chunk, CanvasTexture>()
   private chunkImages = new Map<Chunk, Image>()
@@ -54,11 +54,11 @@ export class TileMapChunkRenderer extends SceneBound {
     const cyCenter = Math.floor(cam.midPoint.y / CHUNK_SIZE)
 
     this.visibleChunks.clear()
-    let renderedCount = 0
 
     const chunkManager = this.scene.tilemap.chunkManager
     const { width, height } = chunkManager
 
+    // Pass 1: collect visible/dirty chunks; show images re-entering view
     for (let dy = -viewRadiusY; dy <= viewRadiusY; dy++) {
       for (let dx = -viewRadiusX; dx <= viewRadiusX; dx++) {
         const cx = cxCenter + dx
@@ -67,70 +67,96 @@ export class TileMapChunkRenderer extends SceneBound {
         const chunk = chunkManager.getChunk(cx, cy)
         if (!chunk) continue
 
-        const img = this.chunkImages.get(chunk)
-        if (img && !img.active) {
-          img.setActive(true).setVisible(true)
-        }
-
-        let isEmpty = chunk.type === ChunkType.EMPTY
         this.visibleChunks.add(chunk)
 
         if (chunk.renderDirty) {
-          isEmpty = this.renderChunkToTexture(chunk)
-          if (isEmpty) {
-            emptyChunks.add(chunk)
-          }
           changedChunks.add(chunk)
+        } else {
+          const img = this.chunkImages.get(chunk)
+          if (img && !img.active) img.setActive(true).setVisible(true)
         }
-
-        if (DRAW_CHUNKS_DEBUG) {
-          this.getDebugGraphics(chunk).setVisible(!isEmpty)
-        }
-
-        if (!isEmpty) renderedCount++
       }
     }
 
+    // Pass 2: classify dirty chunks so type is known before rendering
     for (const chunk of changedChunks) {
-      if (emptyChunks.has(chunk)) {
+      if (this.scanChunkEmpty(chunk)) {
         chunk.type = ChunkType.EMPTY
-        continue
+        emptyChunks.add(chunk)
       }
-
+    }
+    for (const chunk of changedChunks) {
+      if (emptyChunks.has(chunk)) continue
       const isEdge = chunkManager.checkAdjacent(chunk, (other) => {
-        if (other === undefined) return false
-        // use current frame result
+        if (!other) return false
         if (changedChunks.has(other)) return emptyChunks.has(other)
-        // use persisted type
         return other.type === ChunkType.EMPTY
       })
+      chunk.type = isEdge ? ChunkType.EDGE : ChunkType.CONTAINED
+    }
 
-      if (isEdge) {
-        chunk.type = ChunkType.EDGE
-      } else {
-        chunk.type = ChunkType.CONTAINED
+    // Pass 3: render dirty chunks using their now-final type
+    for (const chunk of changedChunks) {
+      this.renderChunkToTexture(chunk)
+    }
+
+    // Pass 4: debug only
+    let renderedCount = 0
+    if (DRAW_CHUNKS_DEBUG) {
+      for (const chunk of this.visibleChunks) {
+        if (chunk.type !== ChunkType.EMPTY) renderedCount++
+        this.getDebugGraphics(chunk).setVisible(chunk.type !== ChunkType.EMPTY)
       }
     }
 
+    // Pass 5: hide chunks that left the view
     for (const chunk of this.prevVisibleChunks) {
       if (!this.visibleChunks.has(chunk)) {
-        const g = this.chunkImages.get(chunk)
-        if (g?.active) g.setActive(false).setVisible(false)
-
+        const img = this.chunkImages.get(chunk)
+        if (img?.active) img.setActive(false).setVisible(false)
         if (DRAW_CHUNKS_DEBUG) {
-          this.chunkDebugGraphics.get(chunk)!.setVisible(false)
+          this.chunkDebugGraphics.get(chunk)?.setVisible(false)
         }
       }
     }
 
     // swap for next frame
-    [this.visibleChunks, this.prevVisibleChunks] = [this.prevVisibleChunks, this.visibleChunks]
+    ;[this.visibleChunks, this.prevVisibleChunks] = [this.prevVisibleChunks, this.visibleChunks]
     this.visibleChunks.clear()
 
-    this.renderedCount = renderedCount
+    this.visibleCount = renderedCount
   }
 
-  private renderChunkToTexture(chunk: Chunk): boolean {
+  private scanChunkEmpty(chunk: Chunk): boolean {
+    const tilemap = this.scene.tilemap
+    const offX = chunk.cx * CHUNK_SIZE
+    const offY = chunk.cy * CHUNK_SIZE
+    for (let y = 0; y < CHUNK_SIZE; y++) {
+      for (let x = 0; x < CHUNK_SIZE; x++) {
+        if (tilemap.getTile(offX + x, offY + y) !== TerrainType.EMPTY) return false
+      }
+    }
+    return true
+  }
+
+  private renderChunkToTexture(chunk: Chunk): void {
+    switch (chunk.type) {
+      case ChunkType.EMPTY: {
+        const img = this.chunkImages.get(chunk)
+        if (img?.active) img.setActive(false).setVisible(false)
+        break
+      }
+      case ChunkType.EDGE:
+        this.renderSolidChunk(chunk, true)
+        break
+      case ChunkType.CONTAINED:
+        this.renderSolidChunk(chunk, false)
+        break
+    }
+    chunk.renderDirty = false
+  }
+
+  private renderSolidChunk(chunk: Chunk, withEdgeDetection: boolean): void {
     let texture = this.chunkTextures.get(chunk)
     if (!texture) {
       const key = 'chunk_' + chunk.id
@@ -142,7 +168,10 @@ export class TileMapChunkRenderer extends SceneBound {
       this.chunkTextures.set(chunk, texture)
     }
 
-    // Uint32Array view of imageData.data
+    // image may have been hidden when chunk left the view
+    const img = this.chunkImages.get(chunk)!
+    if (!img.active) img.setActive(true).setVisible(true)
+
     const pixels = texture.pixels
     pixels.fill(0)
 
@@ -150,9 +179,7 @@ export class TileMapChunkRenderer extends SceneBound {
     const cy = chunk.cy
     const offX = cx * CHUNK_SIZE
     const offY = cy * CHUNK_SIZE
-
     const tilemap = this.scene.tilemap
-    let isEmpty = true
 
     for (let y = 0; y < CHUNK_SIZE; y++) {
       for (let x = 0; x < CHUNK_SIZE; x++) {
@@ -161,7 +188,6 @@ export class TileMapChunkRenderer extends SceneBound {
         const tileType = tilemap.getTile(tx, ty)
         if (tileType === TerrainType.EMPTY) continue
 
-        isEmpty = false
         let color: number
         if (tileType === TerrainType.PERMANENT) {
           color = TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.PERMANENT]
@@ -169,13 +195,14 @@ export class TileMapChunkRenderer extends SceneBound {
           color = this.scene.tileMapChunkPixelRenderer(tx, ty, cx, cy)
         }
 
-        const isEdge =
-          tilemap.getTile(tx, ty - 1) === TerrainType.EMPTY ||
-          tilemap.getTile(tx, ty + 1) === TerrainType.EMPTY ||
-          tilemap.getTile(tx - 1, ty) === TerrainType.EMPTY ||
-          tilemap.getTile(tx + 1, ty) === TerrainType.EMPTY
-
-        if (isEdge) color = shiftColorValue(color, -60)
+        if (withEdgeDetection) {
+          const isEdge =
+            tilemap.getTile(tx, ty - 1) === TerrainType.EMPTY ||
+            tilemap.getTile(tx, ty + 1) === TerrainType.EMPTY ||
+            tilemap.getTile(tx - 1, ty) === TerrainType.EMPTY ||
+            tilemap.getTile(tx + 1, ty) === TerrainType.EMPTY
+          if (isEdge) color = shiftColorValue(color, -60)
+        }
 
         // Phaser color is 0xRRGGBB; Uint32 on little-endian is 0xAABBGGRR
         pixels[y * CHUNK_SIZE + x] =
@@ -190,10 +217,6 @@ export class TileMapChunkRenderer extends SceneBound {
     texture.refresh()
     // refresh() resets filter to LINEAR (antialias config), re-apply after every upload
     texture.source[0].setFilter(NEAREST)
-
-    chunk.renderDirty = false
-
-    return isEmpty
   }
 
   private getDebugGraphics(chunk: Chunk): Graphics {
