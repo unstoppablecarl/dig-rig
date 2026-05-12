@@ -14,6 +14,7 @@ import Animation = Animations.Animation
 import AnimationFrame = Animations.AnimationFrame
 import Container = GameObjects.Container
 import Sprite = GameObjects.Sprite
+import AFTER_UPDATE = Physics.Matter.Events.AFTER_UPDATE
 import BEFORE_UPDATE = Physics.Matter.Events.BEFORE_UPDATE
 import Image = Physics.Matter.Image
 
@@ -193,6 +194,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     this.container.setFixedRotation()
 
     scene.matter.world.on(BEFORE_UPDATE, this.resetTouching, this)
+    scene.matter.world.on(AFTER_UPDATE, this.updateArm, this)
 
     const collideConfig = {
       objectA: Object.values(this.sensors),
@@ -346,8 +348,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     return angle
   }
 
-  public update(dt: number) {
-    this.updateArm(dt)
+  public update() {
     this.updateFacing()
     this.updatePosition()
   }
@@ -463,17 +464,14 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     }
   }
 
-  private updateArm(_dt: number) {
-    const armPos = this.arm.getWorldTransformMatrix().transformPoint(0, 0)
+  private updateArm() {
+    const cam = this.scene.cameras.main
     const activePointer = this.scene.input.activePointer
-    const mousePos = this.scene.cameras.main.getWorldPoint(
-      activePointer.x,
-      activePointer.y,
-    )
+    const mousePos = cam.getWorldPoint(activePointer.x, activePointer.y)
 
     this.arm.rotation = PMath.Angle.Between(
-      armPos.x,
-      armPos.y,
+      this.container.x + this.arm.x,
+      this.container.y + this.arm.y,
       mousePos.x,
       mousePos.y,
     )
@@ -485,6 +483,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
 
   destroy() {
     this.scene.matter.world?.off(BEFORE_UPDATE, this.resetTouching, this)
+    this.scene.matter.world?.off(AFTER_UPDATE, this.updateArm, this)
     const sensors = [this.sensors.bottom, this.sensors.left, this.sensors.right]
     this.scene.matterCollision.removeOnCollideStart({ objectA: sensors })
     this.scene.matterCollision.removeOnCollideActive({ objectA: sensors })
