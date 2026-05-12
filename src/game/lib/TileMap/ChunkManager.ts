@@ -1,10 +1,10 @@
 import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { Chunk } from './Chunk.ts'
+import { Chunk, type ChunkId } from './Chunk.ts'
 
 export class ChunkManager extends SceneBound {
-  private chunks = new Map<string, Chunk>()
+  private chunks = new Map<ChunkId, Chunk>()
   public readonly width: number
   public readonly height: number
 
@@ -20,20 +20,19 @@ export class ChunkManager extends SceneBound {
 
     for (let cy = 0; cy < this.height; cy++) {
       for (let cx = 0; cx < this.width; cx++) {
-        const id = cy * this.width + cx
-        const key = getChunkKey(cx, cy)
+        const id = (cy * this.width + cx) as ChunkId
         let chunk = new Chunk(id, cx, cy)
-        this.chunks.set(key, chunk)
+        this.chunks.set(id, chunk)
       }
     }
   }
 
   getChunk(cx: number, cy: number): Chunk | undefined {
-    return this.chunks.get(getChunkKey(cx, cy))
+    return this.chunks.get((cy * this.width + cx) as ChunkId)
   }
 
-  getChunkByKey(key: string): Chunk | undefined {
-    return this.chunks.get(key)
+  getChunkById(id: ChunkId): Chunk | undefined {
+    return this.chunks.get(id)
   }
 
   getChunkByTile(tx: number, ty: number): Chunk | undefined {
@@ -61,11 +60,29 @@ export class ChunkManager extends SceneBound {
     }
   }
 
+  checkAdjacent(chunk: Chunk, check: (other: Chunk | undefined) => boolean): boolean {
+    const x = chunk.cx
+    const y = chunk.cy
+
+    if (check(this.getChunk(x, y - 1))) return true
+    if (check(this.getChunk(x, y + 1))) return true
+    if (check(this.getChunk(x - 1, y))) return true
+    if (check(this.getChunk(x + 1, y))) return true
+    if (check(this.getChunk(x - 1, y - 1))) return true
+    if (check(this.getChunk(x + 1, y + 1))) return true
+    if (check(this.getChunk(x - 1, y + 1))) return true
+    if (check(this.getChunk(x + 1, y - 1))) return true
+
+    return false
+  }
+
+  getChunkId(cx: number, cy: number): number {
+    return cy * this.width + cx
+  }
+
   destroy() {
     super.destroy()
     // @ts-expect-error: destroy
     this.chunks = null
   }
 }
-
-export const getChunkKey = (cx: number, cy: number): string => `${cx},${cy}`

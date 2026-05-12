@@ -1,10 +1,17 @@
+export type ChunkId = number & { readonly __brandChunkId: unique symbol; }
+export enum ChunkType {
+  EMPTY,
+  EDGE,
+  CONTAINED
+}
+
 export class Chunk {
   public collisionDirty = true
   public renderDirty = true
-  public isEmpty: boolean = true
+  public type: ChunkType = ChunkType.EMPTY
 
   constructor(
-    readonly id: number,
+    readonly id: ChunkId,
     readonly cx: number,
     readonly cy: number,
   ) {

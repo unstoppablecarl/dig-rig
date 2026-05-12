@@ -1,7 +1,8 @@
-import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { CHUNK_SIZE, TILE_SIZE } from '../../config.ts'
-import type { Chunk } from '../TileMap/Chunk.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
+import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { type Chunk, ChunkType } from '../TileMap/Chunk.ts'
+import type { ChunkManager } from '../TileMap/ChunkManager.ts'
 import { MASK_TERRAIN } from './BodyCategories.ts'
 
 const FRICTION = 0.5
@@ -11,15 +12,16 @@ type Rect = { x: number, y: number, w: number, h: number }
 
 export class TerrainChunkBodyManager extends SceneBound {
 
-  private chunkBodies = new Map<string, MatterJS.BodyType[]>()
+  private chunkBodies = new Map<Chunk, MatterJS.BodyType[]>()
   // chunks with collision bodies currently active
-  private activeChunks = new Set<string>()
+  private activeChunks = new Set<Chunk>()
 
   private updateRadius: number = 100
 
-  // reusable to reduce memory CG pressure
-  private visitedChunks = new Set<string>()
+  private visitedTiles = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE)
   private rectangles: Array<Rect> = []
+  private chunkManager: ChunkManager
+  private chunksNeeded = new Set<Chunk>()
 
   constructor(
     public scene: GameLevel,
@@ -27,11 +29,11 @@ export class TerrainChunkBodyManager extends SceneBound {
   ) {
     super(scene)
     this.scene = scene
+    this.chunkManager = scene.tilemap.chunkManager
     this.updateRadius = updateRadius
   }
 
   update() {
-    const tilemap = this.scene.tilemap
     const dynamicBodies = this.scene.matter.world.getAllBodies()
       .filter((body: MatterJS.BodyType) => !body.isStatic)
 
@@ -41,7 +43,8 @@ export class TerrainChunkBodyManager extends SceneBound {
     }
 
     // chunks within updateRadius of a dynamic body
-    const chunksNeeded = new Set<string>()
+    const chunksNeeded = this.chunksNeeded
+    chunksNeeded.clear()
 
     for (const body of dynamicBodies) {
       const bounds = body.bounds
@@ -54,47 +57,48 @@ export class TerrainChunkBodyManager extends SceneBound {
 
       for (let cy = minCY; cy <= maxCY; cy++) {
         for (let cx = minCX; cx <= maxCX; cx++) {
-          const chunkKey = `${cx},${cy}`
-          chunksNeeded.add(chunkKey)
+          const c = this.chunkManager.getChunk(cx, cy)
+          if (c) {
+            chunksNeeded.add(c)
+          }
         }
       }
     }
 
     // clear collisions from chunks outside updateRadius
-    for (const chunkKey of this.activeChunks) {
-      if (!chunksNeeded.has(chunkKey)) {
-        this.clearChunkBodies(chunkKey)
+    for (const chunk of this.activeChunks) {
+      if (!chunksNeeded.has(chunk)) {
+        this.clearChunkBodies(chunk)
       }
     }
 
     // add/update collision bodies for chunks
-    for (const chunkKey of chunksNeeded) {
-      const chunk = tilemap.chunkManager.getChunkByKey(chunkKey)
+    for (const chunk of chunksNeeded) {
 
       if (!chunk) continue
 
-      if (chunk.isEmpty) {
-        if (this.activeChunks.has(chunkKey)) {
-          this.clearChunkBodies(chunkKey)
+      if (chunk.type === ChunkType.EMPTY) {
+        if (this.activeChunks.has(chunk)) {
+          this.clearChunkBodies(chunk)
         }
         continue
       }
 
       // create collision body if chunk is not active yet
-      if (!this.activeChunks.has(chunkKey)) {
-        this.createChunkBodies(chunkKey, chunk)
+      if (!this.activeChunks.has(chunk)) {
+        this.createChunkBodies(chunk)
         chunk.collisionDirty = false
       }
 
       // update collision body if chunk is dirty AND it has not been synced yet
       else if (chunk.collisionDirty) {
-        this.updateChunkCollision(chunkKey, chunk)
+        this.updateChunkCollision(chunk)
         chunk.collisionDirty = false
       }
     }
   }
 
-  private createChunkBodies(chunkKey: string, chunk: Chunk) {
+  private createChunkBodies(chunk: Chunk) {
     const startTX = chunk.cx * CHUNK_SIZE
     const startTY = chunk.cy * CHUNK_SIZE
     const endTX = Math.min(startTX + CHUNK_SIZE, this.scene.tilemap.width)
@@ -124,7 +128,7 @@ export class TerrainChunkBodyManager extends SceneBound {
           isStatic: true,
           friction: FRICTION,
           restitution: RESTITUTION,
-          label: `terrain_chunk_${chunkKey}`,
+          label: `terrain_chunk_${chunk.id}`,
           collisionFilter: {
             category: MASK_TERRAIN,
           },
@@ -134,27 +138,27 @@ export class TerrainChunkBodyManager extends SceneBound {
       bodies.push(body)
     }
 
-    this.chunkBodies.set(chunkKey, bodies)
-    this.activeChunks.add(chunkKey)
+    this.chunkBodies.set(chunk, bodies)
+    this.activeChunks.add(chunk)
   }
 
-  private clearChunkBodies(chunkKey: string) {
-    const bodies = this.chunkBodies.get(chunkKey)
+  private clearChunkBodies(chunk: Chunk) {
+    const bodies = this.chunkBodies.get(chunk)
     if (!bodies) return
 
     for (const body of bodies) {
       this.scene.matter.world.remove(body)
     }
 
-    this.chunkBodies.delete(chunkKey)
-    this.activeChunks.delete(chunkKey)
+    this.chunkBodies.delete(chunk)
+    this.activeChunks.delete(chunk)
   }
 
-  private updateChunkCollision(chunkKey: string, chunk: Chunk) {
-    this.clearChunkBodies(chunkKey)
+  private updateChunkCollision(chunk: Chunk) {
+    this.clearChunkBodies(chunk)
 
-    if (!chunk.isEmpty) {
-      this.createChunkBodies(chunkKey, chunk)
+    if (chunk.type !== ChunkType.EMPTY) {
+      this.createChunkBodies(chunk)
     }
   }
 
@@ -165,16 +169,16 @@ export class TerrainChunkBodyManager extends SceneBound {
     maxTX: number,
     maxTY: number,
   ) {
-    this.visitedChunks.clear()
-    const visited = this.visitedChunks
+    const visited = this.visitedTiles
+    visited.fill(0)
     this.rectangles = []
     const rectangles = this.rectangles
     const tilemap = this.scene.tilemap
+    const idx = (tx: number, ty: number) => (ty - minTY) * CHUNK_SIZE + (tx - minTX)
 
     for (let ty = minTY; ty < maxTY; ty++) {
       for (let tx = minTX; tx < maxTX; tx++) {
-        const key = `${tx},${ty}`
-        if (visited.has(key)) continue
+        if (visited[idx(tx, ty)]) continue
         if (!tilemap.isSolid(tx, ty)) continue
 
         // find width of horizontal run (stay within chunk bounds)
@@ -182,7 +186,7 @@ export class TerrainChunkBodyManager extends SceneBound {
         while (
           tx + width < maxTX &&
           tilemap.isSolid(tx + width, ty) &&
-          !visited.has(`${tx + width},${ty}`)
+          !visited[idx(tx + width, ty)]
           ) {
           width++
         }
@@ -194,7 +198,7 @@ export class TerrainChunkBodyManager extends SceneBound {
           for (let dx = 0; dx < width; dx++) {
             if (
               !tilemap.isSolid(tx + dx, ty + height) ||
-              visited.has(`${tx + dx},${ty + height}`)
+              visited[idx(tx + dx, ty + height)]
             ) {
               canExpand = false
               break
@@ -206,7 +210,7 @@ export class TerrainChunkBodyManager extends SceneBound {
         // mark tiles as visited
         for (let dy = 0; dy < height; dy++) {
           for (let dx = 0; dx < width; dx++) {
-            visited.add(`${tx + dx},${ty + dy}`)
+            visited[idx(tx + dx, ty + dy)] = 1
           }
         }
 
@@ -230,5 +234,13 @@ export class TerrainChunkBodyManager extends SceneBound {
     this.chunkBodies = null
     // @ts-expect-error: destroy
     this.activeChunks = null
+    // @ts-expect-error: destroy
+    this.visitedTiles = null
+    // @ts-expect-error: destroy
+    this.rectangles = null
+    // @ts-expect-error: destroy
+    this.chunkManager = null
+    // @ts-expect-error: destroy
+    this.chunksNeeded = null
   }
 }
