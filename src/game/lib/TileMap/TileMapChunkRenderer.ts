@@ -40,11 +40,10 @@ export class TileMapChunkRenderer extends SceneBound {
 
     const cam = this.scene.cameras.main
     const view = cam.worldView
-    const zoom = cam.zoom
-    const margin = 6
+    const margin = 1.25
 
-    const viewRadiusX = Math.ceil(view.width / 2 / CHUNK_SIZE / zoom) + margin
-    const viewRadiusY = Math.ceil(view.height / 2 / CHUNK_SIZE / zoom) + margin
+    const viewRadiusX = Math.ceil(view.width  / 2 / CHUNK_SIZE * margin)
+    const viewRadiusY = Math.ceil(view.height / 2 / CHUNK_SIZE * margin)
 
     const cxCenter = Math.floor(cam.midPoint.x / CHUNK_SIZE)
     const cyCenter = Math.floor(cam.midPoint.y / CHUNK_SIZE)
