@@ -12,11 +12,11 @@ importers:
         specifier: ^0.2.1
         version: 0.2.1(tweakpane@4.0.5)
       phaser:
-        specifier: 4.0.0
-        version: 4.0.0
+        specifier: 4.1.0
+        version: 4.1.0
       phaser-matter-collision-plugin:
         specifier: ^1.0.0
-        version: 1.0.0(phaser@4.0.0)
+        version: 1.0.0(phaser@4.1.0)
       pixel-data-js:
         specifier: ^0.38.0
         version: 0.38.0
@@ -528,8 +528,8 @@ packages:
     peerDependencies:
       phaser: ^3.55.2
 
-  phaser@4.0.0:
-    resolution: {integrity: sha512-f9oYpu3/UymB5JJDZRqOsNQm5FkMMC7u8eL8yQuqGAa54wTbgE2QbTOn70vgvlOVuYeQcw2mOQ52PpJHBSBkfQ==}
+  phaser@4.1.0:
+    resolution: {integrity: sha512-ZXv5Bhyg2BqJGAAxNI2xvmzGXW9q+TwUG1RLri5ZDBYGGtcma6aWUO/eJ7EbozeqRd5fKdpo4ycNMQt+Bi5iYg==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -967,11 +967,11 @@ snapshots:
   node-addon-api@7.1.1:
     optional: true
 
-  phaser-matter-collision-plugin@1.0.0(phaser@4.0.0):
+  phaser-matter-collision-plugin@1.0.0(phaser@4.1.0):
     dependencies:
-      phaser: 4.0.0
+      phaser: 4.1.0
 
-  phaser@4.0.0:
+  phaser@4.1.0:
     dependencies:
       eventemitter3: 5.0.4
 
