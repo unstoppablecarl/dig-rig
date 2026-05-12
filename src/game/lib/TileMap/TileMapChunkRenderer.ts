@@ -24,7 +24,6 @@ export class TileMapChunkRenderer extends SceneBound {
   private debugLayer: Layer
 
   private changedChunks = new Set<Chunk>()
-  private emptyChunks = new Set<Chunk>()
 
   public constructor(
     public scene: GameLevel,
@@ -37,10 +36,7 @@ export class TileMapChunkRenderer extends SceneBound {
 
   render() {
     const changedChunks = this.changedChunks
-    const emptyChunks = this.emptyChunks
-
     changedChunks.clear()
-    emptyChunks.clear()
 
     const cam = this.scene.cameras.main
     const view = cam.worldView
@@ -78,24 +74,30 @@ export class TileMapChunkRenderer extends SceneBound {
       }
     }
 
-    // Pass 2: classify dirty chunks so type is known before rendering
+    // Pass 2: update hasAny* neighbor flags — chunk.type is always current via solidTileCount
     for (const chunk of changedChunks) {
-      if (this.scanChunkEmpty(chunk)) {
-        chunk.type = ChunkType.EMPTY
-        emptyChunks.add(chunk)
+      let anyEmpty = false
+      let anyFull = false
+      let anyPartial = false
+      const { cx, cy } = chunk
+      outer:
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (dx === 0 && dy === 0) continue
+          const neighbor = chunkManager.getChunk(cx + dx, cy + dy)
+          if (!neighbor) continue
+          if (neighbor.type === ChunkType.EMPTY) anyEmpty = true
+          else if (neighbor.type === ChunkType.FULL) anyFull = true
+          else anyPartial = true
+          if (anyEmpty && anyFull && anyPartial) break outer
+        }
       }
-    }
-    for (const chunk of changedChunks) {
-      if (emptyChunks.has(chunk)) continue
-      const isEdge = chunkManager.checkAdjacent(chunk, (other) => {
-        if (!other) return false
-        if (changedChunks.has(other)) return emptyChunks.has(other)
-        return other.type === ChunkType.EMPTY
-      })
-      chunk.type = isEdge ? ChunkType.EDGE : ChunkType.CONTAINED
+      chunk.hasAnyEmptyNeighbors = anyEmpty
+      chunk.hasAnyFullNeighbors = anyFull
+      chunk.hasAnyPartialNeighbors = anyPartial
     }
 
-    // Pass 3: render dirty chunks using their now-final type
+    // Pass 3: render dirty chunks
     for (const chunk of changedChunks) {
       this.renderChunkToTexture(chunk)
     }
@@ -127,31 +129,14 @@ export class TileMapChunkRenderer extends SceneBound {
     this.visibleCount = renderedCount
   }
 
-  private scanChunkEmpty(chunk: Chunk): boolean {
-    const tilemap = this.scene.tilemap
-    const offX = chunk.cx * CHUNK_SIZE
-    const offY = chunk.cy * CHUNK_SIZE
-    for (let y = 0; y < CHUNK_SIZE; y++) {
-      for (let x = 0; x < CHUNK_SIZE; x++) {
-        if (tilemap.getTile(offX + x, offY + y) !== TerrainType.EMPTY) return false
-      }
-    }
-    return true
-  }
-
   private renderChunkToTexture(chunk: Chunk): void {
-    switch (chunk.type) {
-      case ChunkType.EMPTY: {
-        const img = this.chunkImages.get(chunk)
-        if (img?.active) img.setActive(false).setVisible(false)
-        break
-      }
-      case ChunkType.EDGE:
-        this.renderSolidChunk(chunk, true)
-        break
-      case ChunkType.CONTAINED:
-        this.renderSolidChunk(chunk, false)
-        break
+    if (chunk.type === ChunkType.EMPTY) {
+      const img = this.chunkImages.get(chunk)
+      if (img?.active) img.setActive(false).setVisible(false)
+    } else if (chunk.type === ChunkType.PARTIAL) {
+      this.renderSolidChunk(chunk, true)
+    } else {
+      this.renderSolidChunk(chunk, chunk.hasAnyEmptyNeighbors)
     }
     chunk.renderDirty = false
   }

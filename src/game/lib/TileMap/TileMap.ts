@@ -60,8 +60,10 @@ export class Tilemap extends SceneBound {
   // before calling this
   public setTile(x: number, y: number, value: TerrainType) {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false
-    this.tiles[y * this.width + x] = value
-    this.chunkManager.setDirty(x, y)
+    const id = y * this.width + x
+    const prev = this.tiles[id]
+    this.tiles[id] = value
+    this.chunkManager.setDirty(x, y, prev, value)
     if (value === TerrainType.EMPTY) this.matter--
     if (value === TerrainType.SOLID) this.matter++
     return true

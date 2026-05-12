@@ -1,14 +1,27 @@
+import { CHUNK_SIZE } from '../../config.ts'
+
 export type ChunkId = number & { readonly __brandChunkId: unique symbol; }
+
 export enum ChunkType {
   EMPTY,
-  EDGE,
-  CONTAINED
+  FULL,
+  PARTIAL
 }
 
 export class Chunk {
   public collisionDirty = true
   public renderDirty = true
-  public type: ChunkType = ChunkType.EMPTY
+  public solidTileCount: number = 0
+
+  get type(): ChunkType {
+    if (this.solidTileCount === 0) return ChunkType.EMPTY
+    if (this.solidTileCount === CHUNK_SIZE * CHUNK_SIZE) return ChunkType.FULL
+    return ChunkType.PARTIAL
+  }
+
+  public hasAnyEmptyNeighbors = true
+  public hasAnyFullNeighbors = true
+  public hasAnyPartialNeighbors = true
 
   constructor(
     readonly id: ChunkId,

@@ -2,6 +2,7 @@ import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { Chunk, type ChunkId } from './Chunk.ts'
+import { TerrainType } from './TileMap.ts'
 
 export class ChunkManager extends SceneBound {
   private chunks = new Map<ChunkId, Chunk>()
@@ -41,9 +42,14 @@ export class ChunkManager extends SceneBound {
     return this.getChunk(cx, cy)
   }
 
-  setDirty(tx: number, ty: number) {
+  setDirty(tx: number, ty: number, oldType: TerrainType, newType: TerrainType) {
     const chunk = this.getChunkByTile(tx, ty)
     if (!chunk) return
+
+    const wasSolid = oldType !== TerrainType.EMPTY
+    const isSolid  = newType !== TerrainType.EMPTY
+    if (isSolid && !wasSolid) chunk.solidTileCount++
+    if (wasSolid && !isSolid) chunk.solidTileCount--
 
     const { cx, cy } = chunk
 
@@ -52,9 +58,9 @@ export class ChunkManager extends SceneBound {
     // mark adjacent dirty outlines may be invalid
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
-        const chunk = this.getChunk(cx + dx, cy + dy)
-        if (chunk) {
-          chunk.renderDirty = true
+        const neighbor = this.getChunk(cx + dx, cy + dy)
+        if (neighbor) {
+          neighbor.renderDirty = true
         }
       }
     }
