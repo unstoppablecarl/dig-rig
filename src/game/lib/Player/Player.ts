@@ -2,7 +2,7 @@ import type { BodyType } from 'matter'
 import { Animations, GameObjects, Math as PMath, Physics, Time } from 'phaser'
 import type { EventData } from 'phaser-matter-collision-plugin/src/collision-types.ts'
 import { CollidingObject } from 'phaser-matter-collision-plugin/src/valid-collision-object.ts'
-import { GRAVITY, PLAYER_JUMP_POWER, PLAYER_MOVE_SPEED } from '../../config.ts'
+import { GRAVITY, PLAYER_JUMP_POWER, PLAYER_MATTER_TANK_SIZE, PLAYER_MOVE_SPEED } from '../../config.ts'
 import { clampVelocity, PositionOffset } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
@@ -77,7 +77,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     super(scene)
 
     this.matterTank = scene.matterManager.makePlayerMatterTank(
-      5000,
+      PLAYER_MATTER_TANK_SIZE,
       400,
       500,
     )
