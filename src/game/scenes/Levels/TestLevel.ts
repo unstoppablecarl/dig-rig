@@ -51,13 +51,14 @@ export default class TestLevel extends GameLevel {
     const tilemap = new Tilemap(
       this,
       2000,
-      600,
+      1000,
     )
 
-    tilemap.setRect(0, 500, tilemap.width, 50, TerrainType.SOLID)
-    tilemap.setRect(200, 440, 100, 60, TerrainType.SOLID)
-    tilemap.setRect(230, 400, 60, 60, TerrainType.SOLID)
-    tilemap.setRect(450, 380, 60, 60, TerrainType.SOLID)
+    let ref = 600
+    tilemap.setRect(0, ref - 100, tilemap.width, 500, TerrainType.SOLID)
+    tilemap.setRect(200, ref - 160, 160, 60, TerrainType.SOLID)
+    tilemap.setRect(230, ref - 200, 60, 60, TerrainType.SOLID)
+    tilemap.setRect(450, ref - 220, 60, 60, TerrainType.SOLID)
 
     return tilemap
   }

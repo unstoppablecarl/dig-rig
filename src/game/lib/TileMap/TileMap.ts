@@ -1,13 +1,16 @@
-import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { Geom } from 'phaser'
 import { TILE_SIZE } from '../../config.ts'
-import { makeTerrainEffect } from '../makeTerrainEffect.ts'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
-import type { Position } from '../../types.ts'
-import { ChunkManager } from './ChunkManager.ts'
-import { SceneBound } from '../../helpers/SceneBound.ts'
 import { truncateArrayRandomly } from '../../helpers/array.ts'
+import { SceneBound } from '../../helpers/SceneBound.ts'
+import type { GameLevel } from '../../scenes/GameLevel.ts'
+import type { Position } from '../../types.ts'
+import { makeTerrainEffect } from '../makeTerrainEffect.ts'
+import { ChunkManager } from './ChunkManager.ts'
+import Rectangle = Geom.Rectangle
 
 export type Tile = { x: number, y: number }
+
 export enum TerrainType {
   EMPTY,
   SOLID,
@@ -38,13 +41,19 @@ export class Tilemap extends SceneBound {
     height: number,
     value: TerrainType,
   ): void {
-    if (startY < 0 || startX < 0 || startY > this.height || startX > this.width) {
+    const rect = Rectangle.Intersection(
+      new Rectangle(startX, startY, width, height),
+      new Rectangle(0, 0, this.width, this.height),
+    )
+
+    if (rect.width === 0 || rect.height === 0) {
       throw new Error('Starting coordinates are outside the grid boundaries.')
-      return
     }
 
-    for (let y = startY; y < startY + height; y++) {
-      for (let x = startX; x < startX + width; x++) {
+    const { x: sx, y: sy, width: w, height: h } = rect
+
+    for (let y = sy; y < sy + h; y++) {
+      for (let x = sx; x < sx + w; x++) {
         if (this.getTile(x, y) !== value) {
           this.setTile(x, y, value)
         }
