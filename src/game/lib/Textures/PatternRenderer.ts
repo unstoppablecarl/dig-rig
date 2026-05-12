@@ -40,14 +40,14 @@ export function makeMultiImagePatternRenderer(textures: TextureManager, tilemap:
   }
 
   return (x: number, y: number): number => {
-    const tx = Math.ceil(x / width)
-    const ty = Math.ceil(y / height)
+    const tx = Math.floor(x / width)
+    const ty = Math.floor(y / height)
 
     const textureIndex = idxToTextureIndex[ty * imgTilesWidth + tx]!
     const data32 = imagesArr[textureIndex].data
 
     const px = x % width
-    const py = y % width
+    const py = y % height
     const idx = py * width + px
 
     const color = data32[idx]
