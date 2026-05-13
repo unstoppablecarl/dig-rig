@@ -1,9 +1,11 @@
 import { FireMode } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
+import type { Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
 import type { BaseProjectile, BaseProjectileConstructor } from './BaseProjectile.ts'
-import { Projectile, type ProjectileSource } from './Projectile.ts'
+import { type ProjectileSource } from './Projectile.ts'
+import { type IProjectileRenderer } from './ProjectileRenderer.ts'
 
 export class ProjectileManager extends SceneBound {
   public children: BaseProjectile[] = []
@@ -14,75 +16,45 @@ export class ProjectileManager extends SceneBound {
     super(scene)
   }
 
-  fireForPlayer(
+  add<T extends BaseProjectile>(
+    Constructor: BaseProjectileConstructor<T>,
+    source: ProjectileSource,
+    matterTank: MatterTank,
+    x: number,
+    y: number,
+    charge: number,
+    mode: FireMode,
+    renderer?: IProjectileRenderer,
+  ): T {
+    const projectile = new Constructor(this.scene, this, source, matterTank, x, y, mode, renderer)
+
+    projectile.setTilesToModify(charge)
+    this.children.push(projectile)
+    return projectile
+  }
+
+  private _startPos: Position = { x: 0, y: 0 }
+
+  fireForPlayer<T extends BaseProjectile>(
+    Constructor: BaseProjectileConstructor<T>,
     charge: number,
     mode: FireMode,
     velocity?: number,
-  ): Projectile | undefined;
-
-  fireForPlayer<T extends BaseProjectile>(
-    charge: number,
-    mode: FireMode,
-    velocity: number | undefined,
-    ctor: BaseProjectileConstructor<T>,
-  ): T | undefined;
-
-  fireForPlayer(charge: number, mode: FireMode, velocity?: number, Constructor: BaseProjectileConstructor<BaseProjectile> = Projectile,
+    pos?: Position,
+    angle?: number,
+    renderer?: IProjectileRenderer,
   ) {
     const player = this.scene.player
     if (!player.matterTank.hasChargeAvailable(charge, mode)) {
       console.log('Not enough charge!')
       return
     }
-    const pos = player.getProjectilePosition()
-    const angle = player.getProjectileAngle()
+    const startPos = pos ?? player.getProjectilePosition(0, this._startPos)
+    const startAngle = angle ?? player.getProjectileAngle()
 
-    const projectile = this.add(pos.x, pos.y, player, player.matterTank, charge, mode, Constructor)
+    const projectile = this.add(Constructor, player, player.matterTank, startPos.x, startPos.y, charge, mode, renderer)
+    projectile.fire(startAngle, velocity)
 
-    projectile.fire(angle, velocity)
-
-    return projectile
-  }
-
-  add(
-    x: number,
-    y: number,
-    source: ProjectileSource,
-    matterTank: MatterTank,
-    charge: number,
-    mode: FireMode,
-  ): Projectile;
-
-  add<T extends BaseProjectile>(
-    x: number,
-    y: number,
-    source: ProjectileSource,
-    matterTank: MatterTank,
-    charge: number,
-    mode: FireMode,
-    ctor: BaseProjectileConstructor<T>,
-  ): T;
-
-  add<T extends BaseProjectile>(
-    x: number,
-    y: number,
-    source: ProjectileSource,
-    matterTank: MatterTank,
-    charge: number,
-    mode: FireMode,
-    Constructor: BaseProjectileConstructor<BaseProjectile> = Projectile,
-  ): T {
-    const projectile = new Constructor(
-      this.scene,
-      this,
-      source,
-      matterTank,
-      x,
-      y,
-      mode,
-    ) as T
-    projectile.setTilesToModify(charge)
-    this.children.push(projectile)
     return projectile
   }
 
@@ -93,7 +65,8 @@ export class ProjectileManager extends SceneBound {
   }
 
   remove(projectile: BaseProjectile) {
-    if (!this.children) return // after destroyed
+    // after destroyed
+    if (!this.children) return
     this.children = this.children.filter(p => p !== projectile)
   }
 

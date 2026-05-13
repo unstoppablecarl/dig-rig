@@ -27,6 +27,8 @@ const PLAYER_BODY_CONFIG = {
   friction: 0,
   mass: 0.0001,
 }
+const PLAYER_PROJECTILE_ORIGIN_X = 18
+const PLAYER_PROJECTILE_ORIGIN_Y = 3
 
 const ARM_OFFSET = {
   x: -4,
@@ -133,8 +135,8 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     return this.backpackOffset
   }
 
-  matterParticleEmitPosition(): Position {
-    return this.getProjectilePosition()
+  matterParticleEmitPosition(out: Position): Position {
+    return this.getProjectilePosition(0, out)
   }
 
   private initCollisionBody() {
@@ -330,13 +332,22 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     this.backpackOffset.flipX = facing === Facing.LEFT
   }
 
-  public getProjectilePosition(radius: number = 0) {
-    let x = 18 + radius
+  public getProjectilePosition(offset: number = 0, out: Position) {
+    let x = PLAYER_PROJECTILE_ORIGIN_X + offset
     if (this.facing === Facing.LEFT) {
       x *= -1
     }
 
-    return this.arm.getWorldTransformMatrix().transformPoint(x, -3)
+    return this.arm.getWorldTransformMatrix().transformPoint(x, -PLAYER_PROJECTILE_ORIGIN_Y, out)
+  }
+
+  public getInverseProjectilePosition(offset: number = 0, out: Position) {
+    let x = -(PLAYER_PROJECTILE_ORIGIN_X + offset)
+    if (this.facing === Facing.LEFT) {
+      x *= -1
+    }
+
+    return this.arm.getWorldTransformMatrix().transformPoint(x, PLAYER_PROJECTILE_ORIGIN_Y, out)
   }
 
   public getProjectileAngle() {

@@ -5,8 +5,9 @@ import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
 import { TerrainType } from '../TileMap/TileMap.ts'
-import { BaseProjectile } from './BaseProjectile.ts'
+import { BaseProjectile, tilesToRadius } from './BaseProjectile.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
+import { type IProjectileRenderer } from './ProjectileRenderer.ts'
 import TimerEvent = Time.TimerEvent
 
 const VELOCITY = 100
@@ -15,11 +16,10 @@ const EXPAND_RATE_MS = 100
 const EXPAND_AMOUNT = TILE_SIZE
 const EXPAND_START_RADIUS = 2
 
-const tilesToRadius = (tiles: number) => TILE_SIZE * Math.sqrt(tiles / Math.PI) * .9
-
 export type ProjectileSource = (MatterExchanger | Position) & ParticleTarget
 
 export class Projectile extends BaseProjectile {
+  public expandRateMs = EXPAND_RATE_MS
 
   private expandTimer: TimerEvent | null = null
   private initialRadius: number
@@ -32,6 +32,7 @@ export class Projectile extends BaseProjectile {
     x: number,
     y: number,
     mode: FireMode,
+    renderer?: IProjectileRenderer,
   ) {
     super(
       scene,
@@ -41,6 +42,7 @@ export class Projectile extends BaseProjectile {
       x,
       y,
       mode,
+      renderer,
     )
 
     scene.events.once('destroy', this.destroy, this)
@@ -126,9 +128,9 @@ export class Projectile extends BaseProjectile {
     super.update(dt)
   }
 
-  private startExpandTimer() {
+  public startExpandTimer() {
     return this.scene.time.addEvent({
-      delay: EXPAND_RATE_MS,
+      delay: this.expandRateMs,
       callbackScope: this,
       loop: true,
       callback: () => {

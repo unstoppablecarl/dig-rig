@@ -6,9 +6,11 @@ import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
 import { TerrainType } from '../TileMap/TileMap.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
-import { ProjectileRenderer } from './ProjectileRenderer.ts'
+import { type IProjectileRenderer, ProjectileRenderer } from './ProjectileRenderer.ts'
 
-const VELOCITY = 100
+const RADIUS_DECAY = 0.9
+export const tilesToRadius = (tiles: number) => TILE_SIZE * Math.sqrt(tiles / Math.PI) * RADIUS_DECAY
+export const radiusToTiles = (radius: number) => Math.floor(Math.PI * Math.pow(radius / (TILE_SIZE * RADIUS_DECAY), 2))
 
 export type ProjectileSource = (MatterExchanger | Position) & ParticleTarget
 
@@ -24,11 +26,12 @@ export abstract class BaseProjectile extends SceneBound {
   protected vy: number = 0
   protected tilesModified = 0
   protected fired = false
-  protected renderer: ProjectileRenderer
   protected initialVX: number
   protected initialVY: number
   protected lifespanPercent = 0
   public destroyed = false
+
+  protected DEFAULT_VELOCITY = 100
 
   constructor(
     public scene: GameLevel,
@@ -38,10 +41,11 @@ export abstract class BaseProjectile extends SceneBound {
     public x: number,
     public y: number,
     public mode: FireMode,
+    protected renderer: IProjectileRenderer = new ProjectileRenderer(),
   ) {
     super(scene)
 
-    this.renderer = new ProjectileRenderer(this)
+    this.renderer.attachToProjectile(this)
   }
 
   setTilesToModify(count: number) {
@@ -52,13 +56,13 @@ export abstract class BaseProjectile extends SceneBound {
     return changed
   }
 
-  fire(angle: number, velocity = VELOCITY) {
+  fire(angle: number, velocity?: number) {
     const vx = Math.cos(angle)
     const vy = Math.sin(angle)
     this.fireRaw(vx, vy, velocity)
   }
 
-  fireRaw(vx: number, vy: number, velocity = VELOCITY) {
+  fireRaw(vx: number, vy: number, velocity = this.DEFAULT_VELOCITY) {
     this.initialVX = this.vx = vx * velocity
     this.initialVY = this.vy = vy * velocity
     this.fired = true
@@ -91,6 +95,8 @@ export abstract class BaseProjectile extends SceneBound {
     this.lifespanPercent = (this.tilesModified / this.tilesToModify)
   }
 
+  private _emitPos = { x: 0, y: 0 }
+
   protected createTiles(count: number) {
     const tiles = this.scene.tilemap.applyEffect(
       this.x / TILE_SIZE,
@@ -105,7 +111,7 @@ export abstract class BaseProjectile extends SceneBound {
 
     let source: Position
     if ('matterParticleEmitPosition' in this.source) {
-      source = this.source.matterParticleEmitPosition()
+      source = this.source.matterParticleEmitPosition(this._emitPos)
     } else {
       source = this.source
     }

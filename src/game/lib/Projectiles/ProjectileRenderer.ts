@@ -1,19 +1,29 @@
 import { BlendModes, GameObjects } from 'phaser'
 import { PROJECTILE_MODE_COLORS } from '../../config.ts'
+import type { Position } from '../../types.ts'
 import type { BaseProjectile } from './BaseProjectile.ts'
 
-export class ProjectileRenderer {
-  public fading = false
-  public dirty = true
+export interface IProjectileRenderer {
+  destroyed: boolean
+  attachToProjectile<T extends BaseProjectile>(projectile: T): void
+  queueReRender(): void
+  fadeOutAndDestroy(): void
+  update(pos: Position): void
+  destroy(): void
+}
+
+export class ProjectileRenderer implements IProjectileRenderer {
+  protected fading = false
+  protected dirty = true
   public destroyed = false
 
   private circle: GameObjects.Graphics
   private circleCenter: GameObjects.Graphics
   private container: GameObjects.Container
+  private projectile: BaseProjectile
 
-  constructor(
-    public projectile: BaseProjectile,
-  ) {
+  attachToProjectile<T extends BaseProjectile>(projectile: T) {
+    this.projectile = projectile
     const scene = projectile.scene
     this.circle = scene.add.graphics().setBlendMode(BlendModes.ADD)
     this.circleCenter = scene.add.graphics().setBlendMode(BlendModes.ADD)
@@ -39,7 +49,7 @@ export class ProjectileRenderer {
     })
   }
 
-  update(pos: { x: number, y: number }) {
+  update(pos: Position) {
     if (this.destroyed || this.fading) return
     this.container.x = pos.x
     this.container.y = pos.y
@@ -91,4 +101,17 @@ export class ProjectileRenderer {
 
     this.destroyed = true
   }
+}
+
+const noop = () => {
+}
+
+export class NoopProjectileRenderer implements IProjectileRenderer {
+  attachToProjectile = noop
+  queueReRender = noop
+  fadeOutAndDestroy = noop
+  update = noop
+  destroy = noop
+
+  destroyed = false
 }

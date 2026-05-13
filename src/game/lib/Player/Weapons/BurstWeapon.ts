@@ -3,11 +3,14 @@ import { throttle } from '../../../helpers/_helpers.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { PlayerWeaponSingleFireInput } from '../../Input/PlayerWeaponSingleFireInput.ts'
+import { Projectile } from '../../Projectiles/Projectile.ts'
 import type { ImmediateWeapon } from './PlayerWeaponManager.ts'
 
 const BURST_SHOTS = 5
 const BETWEEN_SHOTS_MS = 100
 const THROTTLE_MS = BURST_SHOTS * BETWEEN_SHOTS_MS
+const VELOCITY = 300
+const CHARGE = 10
 
 export class BurstWeapon extends SceneBound implements ImmediateWeapon {
   private input: PlayerWeaponSingleFireInput
@@ -45,6 +48,6 @@ export class BurstWeapon extends SceneBound implements ImmediateWeapon {
   }
 
   fireOnce(mode: FireMode) {
-    this.scene.projectiles.fireForPlayer(10, mode)
+    this.scene.projectiles.fireForPlayer(Projectile, CHARGE, mode, VELOCITY)
   }
 }

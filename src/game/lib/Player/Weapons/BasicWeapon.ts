@@ -2,6 +2,7 @@ import { Scenes } from 'phaser'
 import { FireMode } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
+import type { Position } from '../../../types.ts'
 import { PlayerWeaponChargeInput } from '../../Input/PlayerWeaponChargeInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
 import { TerrainType } from '../../TileMap/TileMap.ts'
@@ -43,14 +44,16 @@ export class BasicWeapon extends SceneBound implements ChargeableWeapon {
     }
   }
 
+  private _pos: Position = { x: 0, y: 0 }
+
   getQueuedProjectile(mode: FireMode) {
     if (this.queued && this.queued.mode !== mode) {
       this.queued.destroy()
       this.queued = null
     }
     if (!this.queued) {
-      const pos = this.scene.player.getProjectilePosition()
-      this.queued = this.scene.projectiles.add(pos.x, pos.y, this.scene.player, this.scene.player.matterTank, 1, mode)
+      const pos = this.scene.player.getProjectilePosition(0, this._pos)
+      this.queued = this.scene.projectiles.add(Projectile, this.scene.player, this.scene.player.matterTank, pos.x, pos.y, 1, mode)
     }
     return this.queued
   }
@@ -75,7 +78,7 @@ export class BasicWeapon extends SceneBound implements ChargeableWeapon {
 
   public update() {
     if (this.queued) {
-      const pos = this.scene.player.getProjectilePosition(this.queued.radius)
+      const pos = this.scene.player.getProjectilePosition(this.queued.radius, this._pos)
       this.queued.x = pos.x
       this.queued.y = pos.y
     }

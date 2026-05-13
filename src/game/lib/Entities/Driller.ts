@@ -1,9 +1,9 @@
+import { GameObjects, Math as PMath, Time } from 'phaser'
 import { FireMode } from '../../config.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { ParticleTarget } from '../../types.ts'
 import { MatterTank } from '../Matter/MatterTank.ts'
-import { Time, GameObjects, Math as PMath } from 'phaser'
-
+import { Projectile } from '../Projectiles/Projectile.ts'
 import Container = GameObjects.Container
 import GameObject = GameObjects.GameObject
 import Vector2 = PMath.Vector2
@@ -64,7 +64,7 @@ export class Driller extends GameObject implements ParticleTarget {
   }
 
   private queue(charge: number, mode: FireMode) {
-    return this.scene.projectiles.add(this.x, this.y, this, this.matterTank, charge, mode)
+    return this.scene.projectiles.add(Projectile, this, this.matterTank, this.x, this.y, charge, mode)
   }
 
   private attemptFire() {

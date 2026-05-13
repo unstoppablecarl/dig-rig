@@ -9,6 +9,7 @@ import { BasicWeapon } from './BasicWeapon.ts'
 import { BurstWeapon } from './BurstWeapon.ts'
 import { RapidWeapon } from './RapidWeapon.ts'
 import { TorchWeapon } from './TorchWeapon.ts'
+import { TunnelWeapon } from './TunnelWeapon.ts'
 import ANY_KEY_DOWN = Input.Keyboard.Events.ANY_KEY_DOWN
 
 export interface Weapon {
@@ -47,6 +48,7 @@ export class PlayerWeaponManager extends SceneBound<GameLevel> implements InputC
       BurstWeapon,
       RapidWeapon,
       TorchWeapon,
+      TunnelWeapon,
     ]
 
     for (const [index, Def] of weapons.entries()) {
