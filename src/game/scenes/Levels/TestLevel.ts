@@ -91,6 +91,7 @@ export default class TestLevel extends GameLevel {
 
     const sprite = this.add.rectangle(x, y, 20, 20, 0x8B4513)
 
+    this.layers.physicsObjects.add(sprite)
     this.matter.add.gameObject(sprite, crate)
 
     return crate
