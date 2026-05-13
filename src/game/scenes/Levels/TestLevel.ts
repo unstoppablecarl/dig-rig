@@ -74,14 +74,14 @@ export default class TestLevel extends GameLevel {
     driller.y = 350
 
     this.entities.add(driller)
-    this.createTestCrate(90, 50)
-    this.createTestCrate(100, 0)
+    this.makeTestCrate(90, 50)
+    this.makeTestCrate(100, 0)
 
-    this.createTestCrate(80, 100)
-    this.createTestCrate(120, 100)
+    this.makeTestCrate(80, 100)
+    this.makeTestCrate(120, 100)
   }
 
-  createTestCrate(x: number, y: number) {
+  makeTestCrate(x: number, y: number) {
     const crate = this.matter.add.rectangle(x, y, 20, 20, {
       friction: 10000,
       frictionStatic: 10000,
