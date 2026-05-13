@@ -11,6 +11,7 @@ export type GUI = ReturnType<typeof makeGUI>
 
 export function makeGUI(game: GameLevel) {
   const pane = new Pane({
+   title: 'Debug'
     // container: document.getElementById('app')!
   })
   pane.registerPlugin(EssentialsPlugin)
