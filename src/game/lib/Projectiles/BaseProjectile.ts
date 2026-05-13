@@ -28,7 +28,7 @@ export abstract class BaseProjectile extends SceneBound {
   protected initialVX: number
   protected initialVY: number
   protected lifespanPercent = 0
-  protected destroyed = false
+  public destroyed = false
 
   constructor(
     public scene: GameLevel,
