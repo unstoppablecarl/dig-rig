@@ -1,4 +1,4 @@
-import { Time, Math as PMath } from 'phaser'
+import { Math as PMath, Time } from 'phaser'
 import { FireMode, TILE_SIZE } from '../../config.ts'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
@@ -81,19 +81,7 @@ export class Projectile extends BaseProjectile {
           this.vx = 0
           this.vy = 0
 
-          this.expandTimer = this.scene.time.addEvent({
-            delay: EXPAND_RATE_MS,
-            callbackScope: this,
-            loop: true,
-            callback: () => {
-              this.radius += EXPAND_AMOUNT
-
-              if (this.charge() > 0) {
-                this.createTiles(this.charge())
-                this.renderer.queueReRender()
-              }
-            },
-          })
+          this.expandTimer = this.startExpandTimer()
 
           break
         }
@@ -136,6 +124,23 @@ export class Projectile extends BaseProjectile {
     this.y += this.vy * dt
 
     super.update(dt)
+  }
+
+  private startExpandTimer() {
+    return this.scene.time.addEvent({
+      delay: EXPAND_RATE_MS,
+      callbackScope: this,
+      loop: true,
+      callback: () => {
+        this.radius += EXPAND_AMOUNT
+
+        let charge = this.charge()
+        if (charge > 0) {
+          this.createTiles(charge)
+          this.renderer.queueReRender()
+        }
+      },
+    })
   }
 
   destroy() {
