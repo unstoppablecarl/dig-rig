@@ -65,7 +65,7 @@ export class ParticleManager extends SceneBound {
     const particle = this.emitter.emitParticleAt(source.x, source.y, 1) as MatterParticle
 
     if (!particle) {
-      console.warn('not getting particles')
+      // console.warn('not getting particles')
     }
 
     particle?.init(target, staticTarget, colorFrom, colorTo)
