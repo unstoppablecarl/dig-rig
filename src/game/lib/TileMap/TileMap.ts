@@ -1,4 +1,5 @@
 import { Geom } from 'phaser'
+import { type Color32, type PixelData, unpackAlpha } from 'pixel-data-js'
 import { TILE_SIZE } from '../../config.ts'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import { truncateArrayRandomly } from '../../helpers/array.ts'
@@ -238,5 +239,27 @@ export class Tilemap extends SceneBound {
 
     // @ts-expect-error: destroy
     this.chunkManager = null
+  }
+
+  static makeFromPixelData(scene: GameLevel, solidData: PixelData, permanentData: PixelData) {
+    if (solidData.w !== permanentData.w || solidData.h !== permanentData.h) {
+      throw new Error('solidData and permanentData must be the same dimensions')
+    }
+
+    const { w, h } = solidData
+    const tilemap = new Tilemap(scene, w, h)
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = y * w + x
+        if (unpackAlpha(permanentData.data[idx] as Color32) > 0) {
+          tilemap.setTile(x, y, TerrainType.PERMANENT)
+        } else if (unpackAlpha(solidData.data[idx] as Color32) > 0) {
+          tilemap.setTile(x, y, TerrainType.SOLID)
+        }
+      }
+    }
+
+    return tilemap
   }
 }

@@ -1,5 +1,6 @@
 import { Driller } from '../../lib/Entities/Driller.ts'
 import { Player } from '../../lib/Player/Player.ts'
+import { makePatternTerrainTexture } from '../../lib/Textures/makePatternTerrainTexture.ts'
 import { makeMultiImagePatternRenderer } from '../../lib/Textures/PatternRenderer.ts'
 import { TerrainType, Tilemap } from '../../lib/TileMap/TileMap.ts'
 import { GameLevel } from '../GameLevel.ts'
@@ -29,8 +30,8 @@ export default class TestLevel extends GameLevel {
     this.preloadPlayer()
   }
 
-  makeTileMapChunkPixelRenderer() {
-    return makeMultiImagePatternRenderer(this.textures, this.tilemap, {
+  getTerrainTexture() {
+    const texture = makeMultiImagePatternRenderer(this.textures, this.tilemap, {
       'scale1': 50,
       'scale2': 1,
       'scale3': 1,
@@ -45,6 +46,7 @@ export default class TestLevel extends GameLevel {
       'scale2-2': 1,
       'scale2-3': 1,
     })
+    return makePatternTerrainTexture(this, texture)
   }
 
   makeTileMap() {

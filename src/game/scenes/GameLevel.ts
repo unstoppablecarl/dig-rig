@@ -1,5 +1,5 @@
 import { GameObjects, Geom, Input, Scene, Textures } from 'phaser'
-import { DRAW_DEBUG_TILEMAP, DRAW_WORLD_BORDER_DEBUG, TILE_SIZE } from '../config.ts'
+import { DRAW_WORLD_BORDER_DEBUG, TILE_SIZE } from '../config.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
 import { InputManager } from '../lib/Input/InputManager.ts'
@@ -9,10 +9,8 @@ import { TerrainParticleManager } from '../lib/Particles/TerrainParticleManager.
 import { Player } from '../lib/Player/Player.ts'
 import { PlayerWeaponManager } from '../lib/Player/Weapons/PlayerWeaponManager.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
-import type { PatternRenderer } from '../lib/Textures/_pattern-types.ts'
+import { TilemapRenderer } from '../lib/TileMap/TilemapRenderer.ts'
 import { Tilemap } from '../lib/TileMap/TileMap.ts'
-import { TileMapBasicRenderer } from '../lib/TileMap/TileMapBasicRenderer.ts'
-import { TileMapChunkRenderer } from '../lib/TileMap/TileMapChunkRenderer.ts'
 import { CameraController } from '../lib/UI/CameraController.ts'
 import { BgScene } from './Layers/BgScene.ts'
 import { UIScene } from './Layers/UIScene.ts'
@@ -21,6 +19,7 @@ import Group = GameObjects.Group
 import Layer = GameObjects.Layer
 import Rectangle = Geom.Rectangle
 import MouseManager = Input.Mouse.MouseManager
+import Texture = Phaser.Textures.Texture
 import NEAREST = Textures.FilterMode.NEAREST
 
 type Layers = {
@@ -39,7 +38,6 @@ type Layers = {
 export abstract class GameLevel extends Scene {
   public displayName: string = 'Level Name Not Loaded'
   public layers: Layers
-  public basicTilemapRenderer: TileMapBasicRenderer
   public cameraController: CameraController
   public entities: Group
   public matterManager: MatterManager
@@ -49,15 +47,19 @@ export abstract class GameLevel extends Scene {
   public projectiles: ProjectileManager
   public terrainChunkBodyManager: TerrainChunkBodyManager
   public tilemap: Tilemap
-  public tilemapRenderer: TileMapChunkRenderer
+  public tilemapRenderer: TilemapRenderer
   public worldBounds: Geom.Rectangle
   public inputManager: InputManager
   public terrainParticleManager: TerrainParticleManager
-  public tileMapChunkPixelRenderer: PatternRenderer
 
-  abstract makeTileMapChunkPixelRenderer(): PatternRenderer
+  protected makeTerrainRenderer() {
+    return new TilemapRenderer(this, this.getTerrainTexture())
+  }
 
-  abstract startLevel(): void
+  protected abstract getTerrainTexture(): Texture
+
+  startLevel() {
+  }
 
   abstract makeTileMap(): Tilemap
 
@@ -95,8 +97,9 @@ export abstract class GameLevel extends Scene {
     const barH = 24
 
     const title = this.add.text(cx, cy - 60,
-      `Loading ${this.scene.key}...`,
-      { fontSize: '20px' }).setOrigin(0.5)
+      `Loading ${this.displayName}...`,
+      { fontSize: '20px' })
+      .setOrigin(0.5)
 
     const outline = this.add.graphics()
       .lineStyle(2, 0xffffff, 1)
@@ -141,22 +144,38 @@ export abstract class GameLevel extends Scene {
   }
 
   create() {
+    this.preCreateLevel()
+
+    this.startLevel()
+
+    this.createUI()
+  }
+
+  private createUI() {
+    this.scene
+      .launch(UIScene.ID, { gameScene: this })
+      .bringToTop(UIScene.ID)
+      .launch(BgScene.ID, { gameScene: this })
+      .sendToBack(BgScene.ID)
+
+    if (this.matter.world.debugGraphic) {
+      this.matter.world.debugGraphic.alpha = 0.75
+    }
+  }
+
+  private preCreateLevel() {
     this.layers = this.makeLayers()
 
     this.matterManager = new MatterManager(this)
     this.tilemap = this.makeTileMap()
 
-    this.tileMapChunkPixelRenderer = this.makeTileMapChunkPixelRenderer()
     this.worldBounds = new Rectangle(0, 0,
       this.tilemap.width * TILE_SIZE,
       this.tilemap.height * TILE_SIZE,
     )
 
-    if (DRAW_DEBUG_TILEMAP) {
-      this.basicTilemapRenderer = new TileMapBasicRenderer(this)
-    }
     this.terrainParticleManager = new TerrainParticleManager(this)
-    this.tilemapRenderer = new TileMapChunkRenderer(this)
+    this.tilemapRenderer = this.makeTerrainRenderer()
     this.terrainChunkBodyManager = new TerrainChunkBodyManager(this)
     this.projectiles = new ProjectileManager(this)
     this.playerWeaponManager = new PlayerWeaponManager(this)
@@ -167,9 +186,7 @@ export abstract class GameLevel extends Scene {
       runChildUpdate: true,
     })
 
-    console.log('makePlayer before')
     this.player = this.makePlayer()
-    console.log('makePlayer after')
 
     this.matter.world.setBounds(
       0, 0,
@@ -186,16 +203,6 @@ export abstract class GameLevel extends Scene {
         .lineStyle(1, 0x00ff00, 1)
         .strokeRect(0, 0, worldWidth, worldHeight)
     }
-
-    this.startLevel()
-
-    this.scene.launch(UIScene.ID, { gameScene: this })
-    this.scene.launch(BgScene.ID, { gameScene: this })
-      .sendToBack(BgScene.ID)
-
-    if (this.matter.world.debugGraphic) {
-      this.matter.world.debugGraphic.alpha = 0.75
-    }
   }
 
   update(_time: number, delta: number) {
@@ -206,8 +213,6 @@ export abstract class GameLevel extends Scene {
     this.projectiles.update(dt)
     this.terrainChunkBodyManager.update()
     this.terrainParticleManager.update(dt)
-
-    if (DRAW_DEBUG_TILEMAP) this.basicTilemapRenderer.render()
 
     this.tilemapRenderer.render()
   }

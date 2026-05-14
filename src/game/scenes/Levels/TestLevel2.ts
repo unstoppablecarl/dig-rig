@@ -1,4 +1,5 @@
 import { Player } from '../../lib/Player/Player.ts'
+import { makePatternTerrainTexture } from '../../lib/Textures/makePatternTerrainTexture.ts'
 import { makeImagePatternRenderer } from '../../lib/Textures/PatternRenderer.ts'
 import { TerrainType, Tilemap } from '../../lib/TileMap/TileMap.ts'
 import { GameLevel } from '../GameLevel.ts'
@@ -14,8 +15,9 @@ export default class TestLevel2 extends GameLevel {
     this.preloadPlayer()
   }
 
-  makeTileMapChunkPixelRenderer() {
-    return makeImagePatternRenderer(this.textures, 'rock-tile')
+  getTerrainTexture() {
+    const texture = makeImagePatternRenderer(this.textures, 'rock-tile')
+    return makePatternTerrainTexture(this, texture)
   }
 
   makeTileMap() {
@@ -37,9 +39,5 @@ export default class TestLevel2 extends GameLevel {
 
   makePlayer() {
     return new Player(this, 100, 300)
-  }
-
-  startLevel() {
-
   }
 }

@@ -38,5 +38,4 @@ export const PLAYER_MATTER_TANK_SIZE = 5000
 export const DRAW_PARTICLE_DEBUG = false
 export const DRAW_CHUNKS_DEBUG = false
 export const DRAW_WORLD_BORDER_DEBUG = true
-export const DRAW_DEBUG_TILEMAP = false
 export const AUTO_START_LEVEL_INDEX = 0
