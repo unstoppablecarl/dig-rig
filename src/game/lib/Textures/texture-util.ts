@@ -8,8 +8,8 @@ export function textureToPixelData(textures: TextureManager, key: string) {
 
   canvasTexture.draw(0, 0, img)
 
-  let context = canvasTexture.canvas.getContext('2d') as CanvasRenderingContext2D
-  const imageData = context.getImageData(0, 0, img.width, img.height)
+  const ctx = canvasTexture.canvas.getContext('2d') as CanvasRenderingContext2D
+  const imageData = ctx.getImageData(0, 0, img.width, img.height)
   canvasTexture.destroy()
 
   return makePixelData(imageData)
