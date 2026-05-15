@@ -68,11 +68,11 @@ export class MatterManager extends SceneBound {
     this.matterTanks?.delete(tank)
   }
 
-  onDestroy() {
+  protected onDestroy() {
+    this.playerMatterTank?.destroy()
     for (const tank of this.matterTanks) {
       tank.destroy()
     }
-
     // @ts-expect-error: destroy
     this.playerMatterTank = null
     // @ts-expect-error: destroy

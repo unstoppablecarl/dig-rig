@@ -31,7 +31,7 @@ export class MatterTank {
   }
 
   set(value: number) {
-    this._matter -= clampMaxInt(value, this.matterMax)
+    this._matter = clampMaxInt(value, this.matterMax)
   }
 
   remove(value: number) {
