@@ -35,4 +35,8 @@ export class PlayerUI extends SceneBound {
   weaponSelected(weapon: Weapon) {
     this.currentWeapon.setHTML(`<strong>Weapon: </strong> [${weapon.slot}] ${weapon.displayName}`)
   }
+
+  protected onDestroy() {
+    this.scene.EVENTS.off(EVENT_WEAPON_SELECTED, this.weaponSelected, this)
+  }
 }
