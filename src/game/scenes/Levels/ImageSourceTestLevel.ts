@@ -25,7 +25,7 @@ export default class ImageSourceTestLevel extends GameLevel {
     const solidData = textureToPixelData(this.textures, 'solid')
     const permanentData = textureToPixelData(this.textures, 'permanent')
 
-    return Tilemap.makeFromPixelData(this, solidData, permanentData)
+    return Tilemap.makeFromSolidAndPermanentPixelData(this, solidData, permanentData)
   }
 
   makePlayer() {

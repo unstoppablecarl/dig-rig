@@ -33,6 +33,8 @@ export class TerrainEffectSystem extends SceneBound {
 
   private effectMap = new Map<number, EffectEntry>()
 
+  public destroyed = false
+
   constructor(public scene: GameLevel) {
     super(scene)
     const { width, height } = scene.tilemap
@@ -107,7 +109,10 @@ export class TerrainEffectSystem extends SceneBound {
   }
 
   destroy() {
+    if(this.destroyed) return
     this.effectTexture?.destroy()
     super.destroy()
+
+    this.destroyed = true
   }
 }

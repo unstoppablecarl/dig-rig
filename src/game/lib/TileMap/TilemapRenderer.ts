@@ -1,5 +1,5 @@
 import { GameObjects } from 'phaser'
-import { TERRAIN_TYPE_TRANSITION_COLORS } from '../../config.ts'
+import { PERMANENT_COLOR, TERRAIN_TYPE_TRANSITION_COLORS } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { TerrainType } from './TileMap.ts'
@@ -8,6 +8,9 @@ import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'
 import Shader = GameObjects.Shader
 import Texture = Phaser.Textures.Texture
 
+const OUTLINE_OPACITY = 0.5
+const GLOW_COLOR = [0, 0, 0]
+const GLOW_STRENGTH = 0.5
 const toVec3 = (c: number): [number, number, number] => [
   ((c >> 16) & 0xFF) / 255,
   ((c >> 8) & 0xFF) / 255,
@@ -16,51 +19,94 @@ const toVec3 = (c: number): [number, number, number] => [
 
 // language=GLSL
 const FRAG_SHADER = `
-#ifdef GL_FRAGMENT_PRECISION_HIGH
-precision highp float;
-#else
-precision mediump float;
-#endif
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    #else
+    precision mediump float;
+    #endif
 
-uniform sampler2D uTerrain;
-uniform sampler2D uMask;
-uniform sampler2D uGlow;
-uniform sampler2D uEffect;
-uniform vec3 uGlowColor;
-uniform float uInnerGlowStrength;
-uniform vec3 uDestroyColor;
-uniform vec3 uCreateColor;
-uniform vec3 uPermanentColor;
+    uniform sampler2D uTerrain;
+    uniform sampler2D uMask;
+    uniform sampler2D uGlow;
+    uniform sampler2D uEffect;
+    
+    uniform float uInnerGlowStrength;
+    uniform vec3 uGlowColor;
+    
+    uniform float uOutlineOpacity;
+    
+    uniform vec3 uDestroyColor;
+    uniform vec3 uCreateColor;
+    uniform vec3 uPermanentColor;
+   
+    uniform vec3 uPermanentTileColor;
 
-varying vec2 outTexCoord;
+    // phaser framework variable
+    varying vec2 outTexCoord;
 
-void main() {
-  float mask = texture2D(uMask, outTexCoord).r;
-  float glow = texture2D(uGlow, outTexCoord).g;
-  vec4 color;
+    void main() {
+        // uMask encodes tile type in the R channel:
+        //   R ≈ 0.00  →  EMPTY      (transparent, discarded)
+        //   R ≈ 0.50  →  SOLID      (samples terrain texture)
+        //   R = 1.00  →  PERMANENT  (fixed cyan base color)
+        float mask = texture2D(uMask, outTexCoord).r;
 
-  if (mask > 0.75) {
-    color = vec4(mix(vec3(0.0, 1.0, 1.0), uGlowColor, glow * uInnerGlowStrength), 1.0);
-  } else if (mask > 0.25) {
-    color = texture2D(uTerrain, outTexCoord);
-    if (glow > 0.01) {
-      color.rgb = mix(color.rgb, uGlowColor, glow * uInnerGlowStrength);
+        // uGlow is written by the CPU distance-transform each time terrain changes:
+        //   G = gradient intensity 0→1, where 1 is the immediate border and it fades
+        //       to 0 at GLOW_RADIUS tiles depth — drives the soft inner glow
+        //   R = 1px outline flag: 1.0 only on border tiles (distance == 1), else 0
+        vec4 glowTex = texture2D(uGlow, outTexCoord);
+        float glow = glowTex.g;
+        float outline = glowTex.r;
+
+        vec4 color;
+
+        // PERMANENT
+        if (mask > 0.75) {
+            // permanent color tinted toward uGlowColor near empty space
+            color = vec4(mix(uPermanentTileColor, uGlowColor, glow * uInnerGlowStrength), 1.0);
+            // is outline pixel
+            if (outline > 0.5) {
+                color.rgb = mix(color.rgb, uGlowColor, uOutlineOpacity);
+            }
+        }
+        // SOLID
+        else if (mask > 0.25) {
+            // SOLID — terrain texture, soft glow gradient, crisp 1px outline on top
+            color = texture2D(uTerrain, outTexCoord);
+            // is glow pixel
+            if (glow > 0.01)   {
+                color.rgb = mix(color.rgb, uGlowColor, glow * uInnerGlowStrength);
+            }
+            // is outline pixel
+            if (outline > 0.5) {
+                color.rgb = mix(color.rgb, uGlowColor, uOutlineOpacity);
+            }
+        }
+        // EMPTY — fully transparent
+        else { 
+            color = vec4(0.0, 0.0, 0.0, 0.0);
+        }
+
+        // uEffect carries timed transition colors (dig/fill animations).
+        // R = intensity fading 1→0 over EFFECT_DURATION_MS.
+        // G = color selector: <0.25 → destroy color, <0.75 → create color, else permanent color.
+        vec4 eff = texture2D(uEffect, outTexCoord);
+        float intensity = eff.r;
+        if (intensity > 0.01) {
+            float ci = eff.g;
+            vec3 effectColor = uPermanentColor;
+            if(ci < 0.25){
+                effectColor = uDestroyColor;
+            } else if(ci < 0.75){
+                effectColor = uCreateColor;
+            }
+            color = mix(color, vec4(effectColor, 1.0), intensity);
+        }
+
+        if (color.a < 0.01) discard;
+        gl_FragColor = color;
     }
-  } else {
-    color = vec4(0.0, 0.0, 0.0, 0.0);
-  }
-
-  vec4 eff = texture2D(uEffect, outTexCoord);
-  float ei = eff.r;
-  if (ei > 0.01) {
-    float ci = eff.g;
-    vec3 ec = ci < 0.25 ? uDestroyColor : (ci < 0.75 ? uCreateColor : uPermanentColor);
-    color = mix(color, vec4(ec, 1.0), ei);
-  }
-
-  if (color.a < 0.01) discard;
-  gl_FragColor = color;
-}
 `
 
 export class TilemapRenderer extends SceneBound {
@@ -88,8 +134,10 @@ export class TilemapRenderer extends SceneBound {
           setUniform('uMask',    1)
           setUniform('uGlow',    2)
           setUniform('uEffect',  3)
-          setUniform('uGlowColor',        [0, 0, 0])
-          setUniform('uInnerGlowStrength', 0.5)
+          setUniform('uGlowColor',        GLOW_COLOR)
+          setUniform('uInnerGlowStrength', GLOW_STRENGTH)
+          setUniform('uOutlineOpacity',    OUTLINE_OPACITY)
+          setUniform('uPermanentTileColor', toVec3(PERMANENT_COLOR))
           setUniform('uDestroyColor',   toVec3(TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.EMPTY] as number))
           setUniform('uCreateColor',    toVec3(TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.SOLID] as number))
           setUniform('uPermanentColor', toVec3(TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.PERMANENT] as number))

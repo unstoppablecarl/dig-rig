@@ -238,7 +238,21 @@ export class Tilemap extends SceneBound {
     this.chunkManager = null
   }
 
-  static makeFromPixelData(scene: GameLevel, solidData: PixelData, permanentData: PixelData) {
+  setFromPixelDataAlpha(pixelData: PixelData, value: TerrainType) {
+    if (this.width !== pixelData.w || this.height !== pixelData.h) {
+      throw new Error('pixelData must match w/h of tilemap')
+    }
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        const idx = y * this.width + x
+        if (unpackAlpha(pixelData.data[idx] as Color32) > 0) {
+          this.setTile(x, y, value)
+        }
+      }
+    }
+  }
+
+  static makeFromSolidAndPermanentPixelData(scene: GameLevel, solidData: PixelData, permanentData: PixelData) {
     if (solidData.w !== permanentData.w || solidData.h !== permanentData.h) {
       throw new Error('solidData and permanentData must be the same dimensions')
     }
