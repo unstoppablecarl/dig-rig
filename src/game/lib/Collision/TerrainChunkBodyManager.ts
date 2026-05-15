@@ -28,7 +28,6 @@ export class TerrainChunkBodyManager extends SceneBound {
     updateRadius: number = 100,
   ) {
     super(scene)
-    this.scene = scene
     this.chunkManager = scene.tilemap.chunkManager
     this.updateRadius = updateRadius
   }
@@ -74,8 +73,6 @@ export class TerrainChunkBodyManager extends SceneBound {
 
     // add/update collision bodies for chunks
     for (const chunk of chunksNeeded) {
-
-      if (!chunk) continue
 
       if (chunk.type === ChunkType.EMPTY) {
         if (this.activeChunks.has(chunk)) {
@@ -171,7 +168,7 @@ export class TerrainChunkBodyManager extends SceneBound {
   ) {
     const visited = this.visitedTiles
     visited.fill(0)
-    this.rectangles = []
+    this.rectangles.length = 0
     const rectangles = this.rectangles
     const tilemap = this.scene.tilemap
     const idx = (tx: number, ty: number) => (ty - minTY) * CHUNK_SIZE + (tx - minTX)
@@ -227,7 +224,8 @@ export class TerrainChunkBodyManager extends SceneBound {
     }
   }
 
-  onDestroy() {
+  protected onDestroy() {
+    this.clearAllCollision()
     // @ts-expect-error: destroy
     this.chunkBodies = null
     // @ts-expect-error: destroy
