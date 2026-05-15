@@ -22,7 +22,7 @@ export class ChunkManager extends SceneBound {
     for (let cy = 0; cy < this.height; cy++) {
       for (let cx = 0; cx < this.width; cx++) {
         const id = (cy * this.width + cx) as ChunkId
-        let chunk = new Chunk(id, cx, cy)
+        const chunk = new Chunk(id, cx, cy)
         this.chunks.set(id, chunk)
       }
     }
@@ -55,22 +55,17 @@ export class ChunkManager extends SceneBound {
 
     chunk.setDirty()
 
-    // mark adjacent dirty outlines may be invalid
+    // mark adjacent chunks dirty — glow/outline may cross chunk boundaries
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue
         const neighbor = this.getChunk(cx + dx, cy + dy)
-        if (neighbor) {
-          neighbor.renderDirty = true
-        }
+        if (neighbor) neighbor.renderDirty = true
       }
     }
   }
 
-  getChunkId(cx: number, cy: number): number {
-    return cy * this.width + cx
-  }
-
-  onDestroy() {
+  protected onDestroy() {
     // @ts-expect-error: destroy
     this.chunks = null
   }

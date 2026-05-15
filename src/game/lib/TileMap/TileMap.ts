@@ -80,11 +80,11 @@ export class Tilemap extends SceneBound {
 
   public getTile(x: number, y: number): TerrainType {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return TerrainType.PERMANENT
-    return this.tiles[y * this.width + x] ?? TerrainType.EMPTY
+    return this.tiles[y * this.width + x]
   }
 
   public isSolid(x: number, y: number) {
-    let value = this.getTile(Math.floor(x), Math.floor(y))
+    const value = this.getTile(Math.floor(x), Math.floor(y))
     return value === TerrainType.SOLID || value === TerrainType.PERMANENT
   }
 
@@ -188,7 +188,7 @@ export class Tilemap extends SceneBound {
 
     const startTime = this.scene.time.now
 
-    for (let { x, y } of tiles) {
+    for (const { x, y } of tiles) {
       this.scene.tilemapRenderer.addEffect(x, y, newValue, startTime)
       this.setTile(x, y, newValue)
     }
@@ -228,7 +228,7 @@ export class Tilemap extends SceneBound {
     }
   }
 
-  onDestroy() {
+  protected onDestroy() {
     // @ts-expect-error: destroy
     this.tiles = null
 

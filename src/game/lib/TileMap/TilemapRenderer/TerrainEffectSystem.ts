@@ -58,7 +58,6 @@ export class TerrainEffectSystem extends SceneBound {
 
     const { width, height } = this.scene.tilemap
     const now = this.scene.time.now
-    const toDelete: number[] = []
     let minX = width
     let maxX = 0
     let minY = height
@@ -68,7 +67,7 @@ export class TerrainEffectSystem extends SceneBound {
       const elapsed = now - startTime
       if (elapsed >= EFFECT_DURATION_MS) {
         this.effectBuffer.data[idx] = 0
-        toDelete.push(idx)
+        this.effectMap.delete(idx)
       } else {
         // R=intensity
         const r = Math.floor(255 * (1 - elapsed / EFFECT_DURATION_MS))
@@ -80,8 +79,6 @@ export class TerrainEffectSystem extends SceneBound {
       if (ty < minY) minY = ty
       if (ty > maxY) maxY = ty
     }
-
-    for (const idx of toDelete) this.effectMap.delete(idx)
 
     const bw = maxX - minX + 1
     const bh = maxY - minY + 1

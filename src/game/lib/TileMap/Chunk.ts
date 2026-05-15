@@ -19,10 +19,6 @@ export class Chunk {
     return ChunkType.PARTIAL
   }
 
-  public hasAnyEmptyNeighbors = true
-  public hasAnyFullNeighbors = true
-  public hasAnyPartialNeighbors = true
-
   constructor(
     readonly id: ChunkId,
     readonly cx: number,
