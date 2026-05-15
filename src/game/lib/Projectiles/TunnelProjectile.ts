@@ -1,8 +1,7 @@
 import { FireMode } from '../../config.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
-import type { TunnelWeapon } from '../Player/Weapons/TunnelWeapon.ts'
-import { BaseProjectile, type ProjectileSource, radiusToTiles, tilesToRadius } from './BaseProjectile.ts'
+import { BaseProjectile, type ProjectileSource, radiusToTiles } from './BaseProjectile.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
 
 const MAX_RADIUS = 20
@@ -11,8 +10,8 @@ export class TunnelProjectile extends BaseProjectile {
   readonly mode = FireMode.DESTROY as const
 
   static MAX_TILES_TO_MOD = radiusToTiles(MAX_RADIUS)
-
-  public weapon: TunnelWeapon | null = null
+  active = false
+  fired = true
 
   constructor(
     scene: GameLevel,
@@ -32,30 +31,35 @@ export class TunnelProjectile extends BaseProjectile {
       FireMode.DESTROY,
     )
 
+    this.radius = MAX_RADIUS
+    // this.tilesToModify = TunnelProjectile.MAX_TILES_TO_MOD
+    this.renderer.queueReRender()
   }
 
-  setTilesToModify(count: number): boolean {
-    count = Math.min(TunnelProjectile.MAX_TILES_TO_MOD, count)
-
-    const changed = super.setTilesToModify(count)
-    if (changed) {
-      this.radius = tilesToRadius(count)
-      this.renderer.queueReRender()
-    }
-
-    return changed
+  setTilesToModify(): boolean {
+    return false
   }
 
-  update(dt: number) {
+  recharge() {
+    this.tilesModified = 0
+    this.tilesToModify = this.matterTank.chargeAvailable(FireMode.DESTROY)
+    this.matterTank.addPendingCharge(FireMode.DESTROY, this.tilesToModify)
+  }
+
+  fire() {
+    this.recharge()
+  }
+
+  update() {
+    this.renderer.setVisible(this.active)
+    if (!this.active) return
     this.renderer.update(this)
-    if (!this.fired) return
-    if (this.charge() > 0) {
-      this.weapon!.destroyedTilesToTransfer += this.destroyTiles(this.charge())
-    }
 
-    super.update(dt)
-    if (!this.charge()) {
-      this.destroy()
+    const charge = this.charge()
+    if (charge > 0) {
+      this.destroyTiles(charge)
+    } else {
+      this.recharge()
     }
   }
 }

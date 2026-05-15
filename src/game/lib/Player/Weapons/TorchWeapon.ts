@@ -3,13 +3,13 @@ import { FireMode } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
-import { PlayerWeaponTorchInput } from '../../Input/PlayerWeaponTorchInput.ts'
+import { PlayerWeaponConstantInput } from '../../Input/PlayerWeaponConstantInput.ts'
 import { TorchProjectile } from '../../Projectiles/TorchProjectile.ts'
 import type { ContinuousWeapon } from './PlayerWeaponManager.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 export class TorchWeapon extends SceneBound implements ContinuousWeapon {
-  private input: PlayerWeaponTorchInput
+  private input: PlayerWeaponConstantInput
   public displayName = 'Torch'
 
   private projectile: TorchProjectile | null = null
@@ -19,7 +19,7 @@ export class TorchWeapon extends SceneBound implements ContinuousWeapon {
     readonly slot: number,
   ) {
     super(scene)
-    this.input = new PlayerWeaponTorchInput(scene, this)
+    this.input = new PlayerWeaponConstantInput(scene, this)
 
   }
 

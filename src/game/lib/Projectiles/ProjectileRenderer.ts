@@ -10,6 +10,7 @@ export interface IProjectileRenderer {
   fadeOutAndDestroy(): void
   update(pos: Position): void
   destroy(): void
+  setVisible(visible: boolean): void
 }
 
 export class ProjectileRenderer implements IProjectileRenderer {
@@ -33,6 +34,11 @@ export class ProjectileRenderer implements IProjectileRenderer {
 
     this.circleCenter.lineStyle(0.5, 0xffffff, 0.8)
     this.circleCenter.strokeCircle(0, 0, 1)
+  }
+
+  setVisible(visible: boolean) {
+    this.container.visible = visible
+    this.container.active = visible
   }
 
   queueReRender() {
@@ -112,6 +118,7 @@ export class NoopProjectileRenderer implements IProjectileRenderer {
   fadeOutAndDestroy = noop
   update = noop
   destroy = noop
+  setVisible = noop
 
   destroyed = false
 }

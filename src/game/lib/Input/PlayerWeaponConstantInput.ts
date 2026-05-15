@@ -10,7 +10,7 @@ import POINTER_UP = Input.Events.POINTER_UP
 import Pointer = Input.Pointer
 import UPDATE = Scenes.Events.UPDATE
 
-export class PlayerWeaponTorchInput extends SceneBound<GameLevel> implements InputController {
+export class PlayerWeaponConstantInput extends SceneBound<GameLevel> implements InputController {
 
   public mode: FireMode = FireMode.DESTROY
 

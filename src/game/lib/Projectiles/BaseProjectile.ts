@@ -55,7 +55,7 @@ export abstract class BaseProjectile extends SceneBound {
     return changed
   }
 
-  fire(angle: number, velocity?: number) {
+  fire(angle = 0, velocity?: number) {
     const vx = Math.cos(angle)
     const vy = Math.sin(angle)
     this.fireRaw(vx, vy, velocity)
@@ -69,30 +69,7 @@ export abstract class BaseProjectile extends SceneBound {
     this.matterTank.addPendingCharge(this.mode, this.tilesToModify)
   }
 
-  update(_dt: number) {
-    if (!this.fired) return
-
-    if (this.tilesModified === this.tilesToModify) {
-      this.destroy()
-      return
-    }
-
-    // restore lost charge
-    if (!this.scene.worldBounds.contains(this.x, this.y)) {
-      this.destroy()
-      return
-    }
-
-    if (this.tilesModified > this.tilesToModify) {
-      throw new Error('exceeded matter charge: ' + this.charge())
-    }
-
-    if (this.tilesToModify === -1) {
-      throw new Error('tilesToModify not set before first update')
-    }
-
-    this.lifespanPercent = (this.tilesModified / this.tilesToModify)
-  }
+  abstract update(dt: number): void
 
   private _emitPos = { x: 0, y: 0 }
 
