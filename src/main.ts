@@ -13,7 +13,7 @@ const config: GameConfig = {
   width: 1024,
   height: 768,
   scale: {
-    mode: Scale.EXPAND,
+    mode: Scale.RESIZE,
     autoRound: true,
   },
   dom: {
