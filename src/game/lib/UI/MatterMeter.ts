@@ -1,18 +1,24 @@
-import { GameObjects, Scene, Tweens } from 'phaser'
+import { GameObjects, type Scene, Tweens } from 'phaser'
 import { CREATE_COLOR, DESTROY_COLOR, FireMode } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { ChargeableWeapon, Weapon } from '../Player/Weapons/PlayerWeaponManager.ts'
+import Rectangle = GameObjects.Rectangle
 import Tween = Tweens.Tween
+import DOMElement = GameObjects.DOMElement
+
+const TWEEN_RATE = 300
+const TWEEN_START_DELAY = 50
+const SHOW_TWEEN = true
 
 export class MatterMeter extends SceneBound {
-  private matter: GameObjects.Rectangle
-  private destroyPending: GameObjects.Rectangle
-  private createPending: GameObjects.Rectangle
+  private matter: Rectangle
+  private destroyPending: Rectangle
+  private createPending: Rectangle
 
   private prevMatter: number
-  private charge: GameObjects.Rectangle
-  private text: GameObjects.DOMElement
+  private charge: Rectangle
+  private text: DOMElement
   private tween: Tween | null = null
 
   constructor(
@@ -28,29 +34,21 @@ export class MatterMeter extends SceneBound {
     const METER_COLOR = 0xffffff
     const PENDING_ALPHA = 0.5
     const TEXT_BG_HEIGHT = 30
+    const margin = 2
 
-    // margin2
-    const m2 = 2
     const borderR = {
       x: 40,
       y: 60,
       w: 40,
       h: 300,
     }
-
     const fillR = {
       x: borderR.x,
-      y: borderR.y - m2 + borderR.h,
-      w: borderR.w - m2 * 2 - 1,
-      h: borderR.h - m2 * 2 - 1,
+      y: borderR.y - margin + borderR.h,
+      w: borderR.w - margin * 2 - 1,
+      h: borderR.h - margin * 2 - 1,
     }
-
-    const chargeR = {
-      x: borderR.x,
-      y: fillR.y,
-      w: 20,
-      h: fillR.h,
-    }
+    const chargeR = { x: borderR.x, y: fillR.y, w: 20, h: fillR.h }
 
     const border = scene.add.rectangle(borderR.x, borderR.y, borderR.w, borderR.h)
       .setOrigin(0.5, 0)
@@ -94,34 +92,25 @@ export class MatterMeter extends SceneBound {
   }
 
   update() {
-    // units per second
-    const TWEEN_RATE = 300
-    const TWEEN_START_DELAY = 50
-    const SHOW_TWEEN = true
-
     const matterTank = this.gameLevel.player.matterTank
 
     let diffY: number
     if (SHOW_TWEEN) {
       const matterChanged = this.prevMatter !== matterTank.matterContained()
       if (matterChanged) {
-        let displayedMatter = matterTank.matterContained()
-        if (this.tween) {
-          displayedMatter = this.matter.scaleY * matterTank.matterMax
-          this.tween.stop()
-        }
+        if (this.tween) this.tween.stop()
 
-        const distance = Math.abs(this.prevMatter - displayedMatter)
+        const displayedPercent = this.matter.scaleY
+        const distance = Math.abs(displayedPercent - matterTank.percent()) * matterTank.matterMax
         const duration = (distance / TWEEN_RATE) * 1000
 
-        // tween already uses delta time
         this.tween = this.scene.tweens.add({
           targets: this.matter,
           scaleY: matterTank.percent(),
-          duration: duration,
+          duration,
           delay: TWEEN_START_DELAY,
           ease: 'Linear',
-          onComplete: () => this.tween = null,
+          onComplete: () => { this.tween = null },
         })
       }
       diffY = this.matter.scaleY - matterTank.percent()
@@ -145,7 +134,6 @@ export class MatterMeter extends SceneBound {
     this.createPending.scaleY = Math.max(matterTank.getPendingChargePercent(FireMode.CREATE) + diffY, 0)
 
     const weapon = this.gameLevel.playerWeaponManager.activeWeapon() as Weapon | ChargeableWeapon
-
     if ('getChargePercent' in weapon) {
       const chargePercent = weapon.getChargePercent()
       const mode = weapon.getFireMode()
@@ -153,21 +141,21 @@ export class MatterMeter extends SceneBound {
       if (mode === FireMode.DESTROY) {
         this.charge.setOrigin(0.5, 1)
         this.charge.y = this.destroyPending.getBounds().y
-        this.charge.scaleY = chargePercent * (matterTank.getChargeAvailablePercent(FireMode.DESTROY))
+        this.charge.scaleY = chargePercent * matterTank.getChargeAvailablePercent(FireMode.DESTROY)
         this.charge.fillColor = DESTROY_COLOR
-      }
-
-      if (mode === FireMode.CREATE) {
+      } else if (mode === FireMode.CREATE) {
         this.charge.setOrigin(0.5, 0)
         this.charge.y = this.createPending.getBounds().bottom
-        this.charge.scaleY = chargePercent * (matterTank.getChargeAvailablePercent(FireMode.CREATE))
+        this.charge.scaleY = chargePercent * matterTank.getChargeAvailablePercent(FireMode.CREATE)
         this.charge.fillColor = CREATE_COLOR
       }
     }
+
     this.prevMatter = matterTank.matterContained()
   }
 
-  onDestroy() {
+  protected onDestroy() {
+    this.tween?.stop()
     // @ts-expect-error: destroy
     this.gameLevel = null
   }

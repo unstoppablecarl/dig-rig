@@ -25,7 +25,7 @@ export class UIScene extends Scene {
 
   create({ gameScene }: { gameScene: GameLevel }) {
     this.matterMeter = new MatterMeter(this, gameScene)
-    this.toast = new Toaster(this, gameScene)
+    this.toast = new Toaster(this)
     this.gui.setScene(gameScene)
     this.fpsText = makeFPSText(this)
 
@@ -38,11 +38,8 @@ export class UIScene extends Scene {
   }
 
   initLevelDisplayName(displayName: string) {
-    const el = this.add.dom(120, 12)
-      .setOrigin(0, 1)
-      .createFromHTML('<div/>')
-    el.node.id = 'current-level'
-    el.node.innerHTML = displayName
+    const el = document.getElementById('current-level-text')!
+    el.innerHTML = displayName
   }
 
   destroy() {

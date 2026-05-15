@@ -19,8 +19,8 @@ body {
   align-items: center;
 }
 
-#fps {
-  position: absolute;
+#fps-text {
+  position: fixed;
   top: 10px;
   left: 10px;
   font-size: 12px;
@@ -34,10 +34,13 @@ body {
 }
 
 #current-weapon-text {
-  font-size: 22px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  font-size: 12px;
   color: #fff;
   text-align: left;
-  padding: 20px;
+  padding: 10px;
   background: rgba(0, 0, 0, 0.7);
 }
 
@@ -56,10 +59,13 @@ body {
 #game-container {
   overflow: hidden;
 }
-#current-level {
-  font-size: 14px;
-}
 
+#current-level-text {
+  position: fixed;
+  top: 10px;
+  left: 80px;
+  font-size: 12px;
+}
 
 // tweak pane scrolling
 .tp-dfwv {
