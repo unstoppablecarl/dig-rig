@@ -83,13 +83,11 @@ export class TerrainParticleManager extends SceneBound {
     }
   }
 
-  destroy() {
+  onDestroy() {
     this.graphics.destroy()
     // @ts-expect-error: destroy
     this.graphics = null
     // @ts-expect-error: destroy
     this.particles = null
-
-    super.destroy()
   }
 }

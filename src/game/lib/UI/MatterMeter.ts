@@ -167,9 +167,7 @@ export class MatterMeter extends SceneBound {
     this.prevMatter = matterTank.matterContained()
   }
 
-  destroy() {
-    super.destroy()
-
+  onDestroy() {
     // @ts-expect-error: destroy
     this.gameLevel = null
   }

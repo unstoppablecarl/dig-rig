@@ -46,11 +46,10 @@ export class PlayerWeaponSingleFireInput extends SceneBound<GameLevel> implement
     this.weapon.fire(mode)
   }
 
-  destroy() {
+  onDestroy() {
     this.setInputEnabled(false)
 
     // @ts-expect-error: destroy
     this.weapon = null
-    super.destroy()
   }
 }

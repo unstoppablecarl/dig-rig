@@ -33,7 +33,6 @@ export class TerrainEffectSystem extends SceneBound {
 
   private effectMap = new Map<number, EffectEntry>()
 
-  public destroyed = false
 
   constructor(public scene: GameLevel) {
     super(scene)
@@ -108,11 +107,7 @@ export class TerrainEffectSystem extends SceneBound {
     gl.bindTexture(gl.TEXTURE_2D, null)
   }
 
-  destroy() {
-    if(this.destroyed) return
-    this.effectTexture?.destroy()
-    super.destroy()
-
-    this.destroyed = true
+  protected onDestroy() {
+    this.effectTexture.destroy()
   }
 }

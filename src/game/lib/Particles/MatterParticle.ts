@@ -260,7 +260,7 @@ export class MatterParticle extends Particle {
     this.target = null
   }
 
-  public destroy() {
+  destroy() {
     super.destroy()
     this.target = null
 

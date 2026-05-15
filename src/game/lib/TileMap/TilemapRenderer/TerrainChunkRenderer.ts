@@ -30,8 +30,6 @@ export class TerrainChunkRenderer extends SceneBound {
   // Reusable distance-transform buffer covering the EXT×EXT extended region.
   private readonly distBuf = new Uint8Array(EXT * EXT)
 
-  public destroyed = false
-
   constructor(public scene: GameLevel) {
     super(scene)
     const { width, height } = scene.tilemap
@@ -183,11 +181,8 @@ export class TerrainChunkRenderer extends SceneBound {
     this.uploadChunk(this.glowTexture, offX, offY)
   }
 
-  destroy() {
-    if (this.destroyed) return
-    this.maskTexture?.destroy()
-    this.glowTexture?.destroy()
-    super.destroy()
-    this.destroyed = true
+  protected onDestroy() {
+    this.maskTexture.destroy()
+    this.glowTexture.destroy()
   }
 }

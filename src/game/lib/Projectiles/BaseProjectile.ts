@@ -29,7 +29,6 @@ export abstract class BaseProjectile extends SceneBound {
   protected initialVX: number
   protected initialVY: number
   protected lifespanPercent = 0
-  public destroyed = false
 
   protected DEFAULT_VELOCITY = 100
 
@@ -160,10 +159,8 @@ export abstract class BaseProjectile extends SceneBound {
     return this.tilesToModify - this.tilesModified
   }
 
-  destroy() {
-    if (this.destroyed) return
+  protected onDestroy() {
     this.matterTank.removePendingCharge(this.mode, this.charge())
-
     this.manager?.remove(this)
     this.renderer?.destroy()
 
@@ -175,8 +172,5 @@ export abstract class BaseProjectile extends SceneBound {
     this.source = null
     // @ts-expect-error: destroy
     this.matterTank = null
-
-    super.destroy()
-    this.destroyed = true
   }
 }

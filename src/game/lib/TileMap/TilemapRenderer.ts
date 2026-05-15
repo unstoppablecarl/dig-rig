@@ -112,7 +112,6 @@ const FRAG_SHADER = `
 export class TilemapRenderer extends SceneBound {
   private chunkRenderer: TerrainChunkRenderer
   private effectSystem: TerrainEffectSystem
-  private destroyed = false
 
   constructor(
     public scene: GameLevel,
@@ -183,10 +182,8 @@ export class TilemapRenderer extends SceneBound {
     this.effectSystem.update()
   }
 
-  destroy() {
-    this.destroyed = true
+  protected onDestroy() {
     this.chunkRenderer.destroy()
     this.effectSystem.destroy()
-    super.destroy()
   }
 }

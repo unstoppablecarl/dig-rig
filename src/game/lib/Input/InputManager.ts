@@ -73,11 +73,10 @@ export class InputManager extends SceneBound {
     }
   }
 
-  destroy() {
+  onDestroy() {
     // @ts-expect-error: destroy
     this.allControllers = null
     // @ts-expect-error: destroy
     this.modeControllers = null
-    super.destroy()
   }
 }

@@ -228,9 +228,7 @@ export class Tilemap extends SceneBound {
     }
   }
 
-  destroy() {
-    super.destroy()
-
+  onDestroy() {
     // @ts-expect-error: destroy
     this.tiles = null
 

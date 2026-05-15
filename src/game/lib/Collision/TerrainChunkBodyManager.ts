@@ -227,9 +227,7 @@ export class TerrainChunkBodyManager extends SceneBound {
     }
   }
 
-  destroy() {
-    super.destroy()
-
+  onDestroy() {
     // @ts-expect-error: destroy
     this.chunkBodies = null
     // @ts-expect-error: destroy

@@ -119,9 +119,7 @@ export class BrushInput extends SceneBound implements InputController {
     this.scene.tilemap.applyEffect(tileX, tileY, this.radius, newValue, Number.MAX_VALUE)
   }
 
-  destroy() {
-    super.destroy()
-
+  onDestroy() {
     // @ts-expect-error: destroy
     this.graphics = null
   }

@@ -70,8 +70,7 @@ export class ChunkManager extends SceneBound {
     return cy * this.width + cx
   }
 
-  destroy() {
-    super.destroy()
+  onDestroy() {
     // @ts-expect-error: destroy
     this.chunks = null
   }

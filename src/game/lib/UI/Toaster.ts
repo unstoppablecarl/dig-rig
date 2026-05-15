@@ -36,11 +36,9 @@ export class Toaster extends SceneBound {
     this.element.classList.remove('show')
   }
 
-  destroy() {
+  onDestroy() {
     // @ts-expect-error: destroy
     this.gameLevel = null
     this.scene.EVENTS.off(EVENT_MESSAGE, this.message, this)
-
-    super.destroy()
   }
 }

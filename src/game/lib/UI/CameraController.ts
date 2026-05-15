@@ -64,8 +64,7 @@ export class CameraController extends SceneBound {
     camera.centerOn(targetCenterX, targetCenterY)
   }
 
-  destroy() {
+  onDestroy() {
     this.scene.game.scale.off(RESIZE, this.calcMinZoom, this)
-    super.destroy()
   }
 }

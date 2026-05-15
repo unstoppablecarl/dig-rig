@@ -70,9 +70,7 @@ export class ProjectileManager extends SceneBound {
     this.children = this.children.filter(p => p !== projectile)
   }
 
-  destroy() {
-    super.destroy()
-
+  onDestroy() {
     // @ts-expect-error: destroy
     this.children = null
   }

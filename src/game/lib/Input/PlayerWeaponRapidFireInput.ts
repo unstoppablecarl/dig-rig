@@ -47,11 +47,10 @@ export class PlayerWeaponRapidFireInput extends SceneBound<GameLevel> implements
     this.weapon.fire(mode)
   }
 
-  destroy() {
+  onDestroy() {
     this.setInputEnabled(false)
 
     // @ts-expect-error: destroy
     this.weapon = null
-    super.destroy()
   }
 }

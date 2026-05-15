@@ -71,9 +71,7 @@ export class ParticleManager extends SceneBound {
     particle?.init(target, staticTarget, colorFrom, colorTo)
   }
 
-  destroy() {
-    super.destroy()
-
+  onDestroy() {
     this.debugGraphics = null
     // @ts-expect-error: destroy
     this.emitter = null

@@ -492,7 +492,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     }
   }
 
-  destroy() {
+  onDestroy() {
     this.scene.matter.world?.off(BEFORE_UPDATE, this.resetTouching, this)
     this.scene.matter.world?.off(AFTER_UPDATE, this.updateArm, this)
     const sensors = [this.sensors.bottom, this.sensors.left, this.sensors.right]
@@ -504,8 +504,6 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     this.container.destroy()
     this.arm.destroy()
     this.matterTank.destroy()
-
-    super.destroy()
 
     // @ts-expect-error: destroy
     this.input = null
