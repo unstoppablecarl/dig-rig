@@ -7,7 +7,8 @@ import Rectangle = GameObjects.Rectangle
 import Tween = Tweens.Tween
 import DOMElement = GameObjects.DOMElement
 
-const TWEEN_RATE = 300
+// Fraction of tank per second (1.0 = full range in 1 s).
+const TWEEN_RATE = 0.3
 const TWEEN_START_DELAY = 50
 const SHOW_TWEEN = true
 
@@ -101,7 +102,7 @@ export class MatterMeter extends SceneBound {
         if (this.tween) this.tween.stop()
 
         const displayedPercent = this.matter.scaleY
-        const distance = Math.abs(displayedPercent - matterTank.percent()) * matterTank.matterMax
+        const distance = Math.abs(displayedPercent - matterTank.percent())
         const duration = (distance / TWEEN_RATE) * 1000
 
         this.tween = this.scene.tweens.add({
