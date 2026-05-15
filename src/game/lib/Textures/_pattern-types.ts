@@ -1,4 +1,5 @@
 
+// Returns color as 0xRRGGBB. makePatternTerrainTexture expects this format.
 export type PatternRenderer = {
   (
     // pixel x
@@ -9,6 +10,5 @@ export type PatternRenderer = {
     cx: number,
     // chunk y
     cy: number,
-    // color
   ): number,
 }

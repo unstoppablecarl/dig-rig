@@ -20,13 +20,11 @@ export function makeImagePatternRenderer(textures: TextureManager, texture: stri
 }
 
 export function makeMultiImagePatternRenderer(textures: TextureManager, tilemap: Tilemap, textureWeights: Record<string, number>): PatternRenderer {
-  let keys = Object.keys(textureWeights)
+  const keys = Object.keys(textureWeights)
   const { width, height, images } = makeMultiImagePattern(textures, keys)
 
-  const imgTilesWidth = Math.ceil(tilemap.width / width!)
-  const imgTilesHeight = Math.ceil(tilemap.height / height!)
-
-  const imagesArr = Object.values(images)
+  const imgTilesWidth = Math.ceil(tilemap.width / width)
+  const imgTilesHeight = Math.ceil(tilemap.height / height)
   const length = imgTilesWidth * imgTilesHeight
 
   const get = createWeightedRandom(
@@ -35,8 +33,8 @@ export function makeMultiImagePatternRenderer(textures: TextureManager, tilemap:
   )
 
   const idxToTextureIndex = new Uint32Array(length)
-  for (const index in idxToTextureIndex) {
-    idxToTextureIndex[index] = get()
+  for (let i = 0; i < idxToTextureIndex.length; i++) {
+    idxToTextureIndex[i] = get()
   }
 
   return (x: number, y: number): number => {
@@ -44,7 +42,7 @@ export function makeMultiImagePatternRenderer(textures: TextureManager, tilemap:
     const ty = Math.floor(y / height)
 
     const textureIndex = idxToTextureIndex[ty * imgTilesWidth + tx]!
-    const data32 = imagesArr[textureIndex].data
+    const data32 = images[textureIndex].data
 
     const px = x % width
     const py = y % height
@@ -62,30 +60,18 @@ function makeMultiImagePattern(
 ): {
   width: number,
   height: number,
-  images: Record<string, PixelData>
+  images: PixelData[]
 } {
+  if (keys.length === 0) throw new Error('textureWeights must not be empty')
 
-  let width: number | null = null
-  let height: number | null = null
+  const images: PixelData[] = keys.map(key => textureToPixelData(textures, key))
+  const { w: width, h: height } = images[0]
 
-  const images: Record<string, PixelData> = {}
-
-  for (const key of keys) {
-    let pixelData = textureToPixelData(textures, key)
-    if (width === null || height === null) {
-      width = pixelData.w
-      height = pixelData.h
-    } else {
-      if (width !== pixelData.w || height !== pixelData.h) {
-        throw new Error(`All textures must be the same size`)
-      }
+  for (let i = 1; i < images.length; i++) {
+    if (images[i].w !== width || images[i].h !== height) {
+      throw new Error('All textures must be the same size')
     }
-    images[key] = pixelData
   }
 
-  return {
-    width: width!,
-    height: height!,
-    images,
-  }
+  return { width, height, images }
 }
