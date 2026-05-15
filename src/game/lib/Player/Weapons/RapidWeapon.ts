@@ -7,6 +7,8 @@ import { Projectile } from '../../Projectiles/Projectile.ts'
 import type { ImmediateWeapon } from './PlayerWeaponManager.ts'
 
 const BETWEEN_SHOTS_MS = 100
+const RAPID_CHARGE = 100
+const RAPID_VELOCITY = 300
 
 export class RapidWeapon extends SceneBound implements ImmediateWeapon {
   private input: PlayerWeaponRapidFireInput
@@ -21,7 +23,7 @@ export class RapidWeapon extends SceneBound implements ImmediateWeapon {
     this.input = new PlayerWeaponRapidFireInput(scene, this)
 
     this.fire = throttle((mode: FireMode) => {
-      this.scene.projectiles.fireForPlayer(Projectile, 100, mode, 300)
+      this.scene.projectiles.fireForPlayer(Projectile, RAPID_CHARGE, mode, RAPID_VELOCITY)
     }, BETWEEN_SHOTS_MS)
   }
 
@@ -31,5 +33,9 @@ export class RapidWeapon extends SceneBound implements ImmediateWeapon {
 
   setEnabled(value: boolean) {
     this.input.setInputEnabled(value)
+  }
+
+  protected onDestroy() {
+    this.input.destroy()
   }
 }

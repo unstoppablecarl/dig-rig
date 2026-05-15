@@ -17,6 +17,7 @@ import Sprite = GameObjects.Sprite
 import AFTER_UPDATE = Physics.Matter.Events.AFTER_UPDATE
 import BEFORE_UPDATE = Physics.Matter.Events.BEFORE_UPDATE
 import Image = Physics.Matter.Image
+import Vector2 = Phaser.Math.Vector2
 
 const PLAYER_WIDTH = 18
 const PLAYER_HEIGHT = 30
@@ -69,7 +70,8 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
   private backpackOffset = new PositionOffset(this, -6, -7)
   private sensors: { bottom: PlayerBodySensor, left: PlayerBodySensor, right: PlayerBodySensor }
   private canJump = true
-  private jumpCooldownTimer: Time.TimerEvent
+  private jumpCooldownTimer: Time.TimerEvent | undefined
+  private _mouseWorld = { x: 0, y: 0 }
 
   constructor(
     public scene: GameLevel,
@@ -228,7 +230,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
 
     this.sprite.anims.create({
       key: 'walk-reverse',
-      frames: this.scene.anims.generateFrameNumbers('player', { frames: walkFrames.reverse() }),
+      frames: this.scene.anims.generateFrameNumbers('player', { frames: [...walkFrames].reverse() }),
       frameRate: 14,
       repeat: -1,
     })
@@ -299,14 +301,6 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     this.isTouching.left = false
     this.isTouching.right = false
     this.isTouching.ground = false
-  }
-
-  private setFacingLeft() {
-    this.setFacing(Facing.LEFT)
-  }
-
-  private setFacingRight() {
-    this.setFacing(Facing.RIGHT)
   }
 
   private updateArmPosition() {
@@ -427,12 +421,9 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
 
   private updateFacing() {
     const activePointer = this.scene.input.activePointer
-    const mousePos = this.scene.cameras.main.getWorldPoint(
-      activePointer.x,
-      activePointer.y,
-    )
+    this.scene.cameras.main.getWorldPoint(activePointer.x, activePointer.y, this._mouseWorld as Vector2)
 
-    const mouseLeftOfPlayer = mousePos.x < this.x
+    const mouseLeftOfPlayer = this._mouseWorld.x < this.x
     const mouseRightOfPlayer = !mouseLeftOfPlayer
     const body = this.container.body as BodyType
 
@@ -468,23 +459,18 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
       }
     }
 
-    if (mouseLeftOfPlayer) {
-      this.setFacingLeft()
-    } else {
-      this.setFacingRight()
-    }
+    this.setFacing(mouseLeftOfPlayer ? Facing.LEFT : Facing.RIGHT)
   }
 
   private updateArm() {
-    const cam = this.scene.cameras.main
     const activePointer = this.scene.input.activePointer
-    const mousePos = cam.getWorldPoint(activePointer.x, activePointer.y)
+    this.scene.cameras.main.getWorldPoint(activePointer.x, activePointer.y, this._mouseWorld as Vector2)
 
     this.arm.rotation = PMath.Angle.Between(
       this.container.x + this.arm.x,
       this.container.y + this.arm.y,
-      mousePos.x,
-      mousePos.y,
+      this._mouseWorld.x,
+      this._mouseWorld.y,
     )
 
     if (this.facing === Facing.LEFT) {
@@ -492,7 +478,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     }
   }
 
-  onDestroy() {
+  protected onDestroy() {
     this.scene.matter.world?.off(BEFORE_UPDATE, this.resetTouching, this)
     this.scene.matter.world?.off(AFTER_UPDATE, this.updateArm, this)
     const sensors = [this.sensors.bottom, this.sensors.left, this.sensors.right]

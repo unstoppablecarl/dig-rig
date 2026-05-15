@@ -5,12 +5,11 @@ import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import { PlayerWeaponChargeInput } from '../../Input/PlayerWeaponChargeInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
-import { TerrainType } from '../../TileMap/TileMap.ts'
 import type { ChargeableWeapon } from './PlayerWeaponManager.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 export class BasicWeapon extends SceneBound implements ChargeableWeapon {
-  private queued: Projectile | null
+  private queued: Projectile | null = null
   private chargeInput: PlayerWeaponChargeInput
   public displayName = 'Basic'
 
@@ -64,14 +63,6 @@ export class BasicWeapon extends SceneBound implements ChargeableWeapon {
     }
 
     const player = this.scene.player
-    const tilemap = this.scene.tilemap
-
-    const debugUnstuck = false
-
-    if (debugUnstuck) {
-      const { x, y } = tilemap.getTilePosFromWorld(player.x, player.y)
-      tilemap.applyEffect(x, y, 18, TerrainType.EMPTY, Number.MAX_VALUE)
-    }
     this.queued.fire(player.getProjectileAngle())
     this.queued = null
   }
@@ -82,5 +73,12 @@ export class BasicWeapon extends SceneBound implements ChargeableWeapon {
       this.queued.x = pos.x
       this.queued.y = pos.y
     }
+  }
+
+  protected onDestroy() {
+    this.chargeInput.destroy()
+    this.queued?.destroy()
+    this.queued = null
+    this.scene.events.off(UPDATE, this.update, this)
   }
 }

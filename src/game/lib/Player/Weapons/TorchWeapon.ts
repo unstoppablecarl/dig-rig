@@ -57,4 +57,11 @@ export class TorchWeapon extends SceneBound implements ContinuousWeapon {
     this.projectile.x = pos.x
     this.projectile.y = pos.y
   }
+
+  protected onDestroy() {
+    this.input.destroy()
+    this.projectile?.destroy()
+    this.projectile = null
+    this.scene.events.off(UPDATE, this.update, this)
+  }
 }

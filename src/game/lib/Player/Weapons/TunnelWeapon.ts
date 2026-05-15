@@ -84,4 +84,11 @@ export class TunnelWeapon extends SceneBound implements ContinuousWeapon {
     projectile.expandRateMs = DESTROY_PROJECTILE_EXPAND_RATE_MS
     projectile.startExpandTimer()
   }
+
+  protected onDestroy() {
+    this.input.destroy()
+    this.projectileDestroy?.destroy()
+    this.projectileDestroy = null
+    this.scene.events.off(UPDATE, this.update, this)
+  }
 }

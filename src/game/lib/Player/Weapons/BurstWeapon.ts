@@ -50,4 +50,8 @@ export class BurstWeapon extends SceneBound implements ImmediateWeapon {
   fireOnce(mode: FireMode) {
     this.scene.projectiles.fireForPlayer(Projectile, CHARGE, mode, VELOCITY)
   }
+
+  protected onDestroy() {
+    this.input.destroy()
+  }
 }

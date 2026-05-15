@@ -13,21 +13,22 @@ import { TunnelWeapon } from './TunnelWeapon.ts'
 import ANY_KEY_DOWN = Input.Keyboard.Events.ANY_KEY_DOWN
 
 export interface Weapon {
-  setEnabled(value: boolean): void,
-  enabled: boolean,
-  displayName: string,
-  readonly slot: number,
+  setEnabled(value: boolean): void
+  enabled: boolean
+  displayName: string
+  readonly slot: number
+  destroy(): void
 }
 
 export interface ImmediateWeapon extends Weapon {
-  fire(mode: FireMode): void,
+  fire(mode: FireMode): void
 }
 
 export interface ChargeableWeapon extends Weapon {
-  getQueuedProjectile(mode: FireMode): Projectile,
-  getChargePercent(): number,
-  fireQueued(): void,
-  getFireMode(): FireMode,
+  getQueuedProjectile(mode: FireMode): Projectile
+  getChargePercent(): number
+  fireQueued(): void
+  getFireMode(): FireMode
 }
 
 export interface ContinuousWeapon extends Weapon {
@@ -37,7 +38,7 @@ export interface ContinuousWeapon extends Weapon {
 export class PlayerWeaponManager extends SceneBound<GameLevel> implements InputController {
   private readonly weapons = new Map<number, Weapon | ChargeableWeapon>()
 
-  private _enabled: boolean
+  private _enabled = false
   private _active: Weapon | ChargeableWeapon
 
   constructor(scene: GameLevel) {
@@ -105,5 +106,12 @@ export class PlayerWeaponManager extends SceneBound<GameLevel> implements InputC
 
   activeWeapon(): Weapon | ChargeableWeapon {
     return this._active
+  }
+
+  protected onDestroy() {
+    this.setInputEnabled(false)
+    for (const weapon of this.weapons.values()) {
+      weapon.destroy()
+    }
   }
 }
