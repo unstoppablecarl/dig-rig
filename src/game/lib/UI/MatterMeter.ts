@@ -3,9 +3,9 @@ import { CREATE_COLOR, DESTROY_COLOR, FireMode } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { ChargeableWeapon, Weapon } from '../Player/Weapons/PlayerWeaponManager.ts'
+import DOMElement = GameObjects.DOMElement
 import Rectangle = GameObjects.Rectangle
 import Tween = Tweens.Tween
-import DOMElement = GameObjects.DOMElement
 
 // Fraction of tank per second (1.0 = full range in 1 s).
 const TWEEN_RATE = 0.3
@@ -51,24 +51,24 @@ export class MatterMeter extends SceneBound {
     }
     const chargeR = { x: borderR.x, y: fillR.y, w: 20, h: fillR.h }
 
-    const border = scene.add.rectangle(borderR.x, borderR.y, borderR.w, borderR.h)
+    const border = scene.add.rectangle(borderR.x + 0.5, borderR.y + 0.5, borderR.w, borderR.h)
       .setOrigin(0.5, 0)
       .setStrokeStyle(1, BORDER_COLOR)
 
-    this.matter = scene.add.rectangle(fillR.x, fillR.y, fillR.w, fillR.h)
+    this.matter = scene.add.rectangle(fillR.x + 0.5, fillR.y, fillR.w, fillR.h)
       .setOrigin(0.5, 1)
       .setFillStyle(METER_COLOR)
       .setScale(1, matterTank.matterStart / matterTank.matterMax)
 
-    this.charge = scene.add.rectangle(chargeR.x, chargeR.y, chargeR.w, chargeR.h)
+    this.charge = scene.add.rectangle(chargeR.x + 1, chargeR.y, chargeR.w, chargeR.h)
       .setOrigin(0.5, 1)
       .setFillStyle(0xffffff, 1)
 
-    this.destroyPending = scene.add.rectangle(chargeR.x, chargeR.y, 30, chargeR.h)
+    this.destroyPending = scene.add.rectangle(chargeR.x+1, chargeR.y, 30, chargeR.h)
       .setOrigin(0.5, 1)
       .setFillStyle(DESTROY_COLOR, PENDING_ALPHA)
 
-    this.createPending = scene.add.rectangle(chargeR.x, chargeR.y, 30, chargeR.h)
+    this.createPending = scene.add.rectangle(chargeR.x+1, chargeR.y, 30, chargeR.h)
       .setOrigin(0.5, 0)
       .setFillStyle(CREATE_COLOR, PENDING_ALPHA)
 
@@ -77,7 +77,7 @@ export class MatterMeter extends SceneBound {
       .createFromHTML('<div/>')
     this.text.node.id = 'matter-meter-text'
 
-    const textBG = scene.add.rectangle(border.x, border.getBounds().bottom + 1, borderR.w, TEXT_BG_HEIGHT)
+    const textBG = scene.add.rectangle(borderR.x+0.5, borderR.y + borderR.h + 1, borderR.w+ 1, TEXT_BG_HEIGHT + 1)
       .setOrigin(0.5, 0)
       .setFillStyle(BORDER_COLOR, 1)
 
@@ -111,7 +111,9 @@ export class MatterMeter extends SceneBound {
           duration,
           delay: TWEEN_START_DELAY,
           ease: 'Linear',
-          onComplete: () => { this.tween = null },
+          onComplete: () => {
+            this.tween = null
+          },
         })
       }
       diffY = this.matter.scaleY - matterTank.percent()

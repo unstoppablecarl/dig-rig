@@ -30,9 +30,6 @@ export class UIScene extends Scene {
     this.fpsText = makeFPSText(this)
 
     new PlayerUI(this, gameScene)
-
-    this.cameras.main.setScroll(0, 0)
-    this.cameras.main.roundPixels = true
   }
 
   update(_time: number, _delta: number) {
