@@ -52,9 +52,7 @@ export class PlayerWeaponChargeInput extends SceneBound<GameLevel> implements In
     if (pointer.rightButtonDown()) {
       this.isCharging = true
       this.mode = FireMode.CREATE
-    }
-
-    if (pointer.leftButtonDown()) {
+    } else if (pointer.leftButtonDown()) {
       this.isCharging = true
       this.mode = FireMode.DESTROY
     }
@@ -70,49 +68,34 @@ export class PlayerWeaponChargeInput extends SceneBound<GameLevel> implements In
       this.charge = 0
     }
   }
-
   getChargePercent() {
-    if (this.getMaxCharge() === 0) {
-      return 0
-    }
-    return this.charge / this.getMaxCharge()
+    const max = this.getMaxCharge()
+    return max === 0 ? 0 : this.charge / max
   }
 
   update(_time: number, delta: number) {
-    const dt = getDeltaT(delta)
+    if (!this.isCharging) return
 
-    if (!this._enabled) return
+    const maxCharge = this.getMaxCharge()
 
-    if (this.isCharging) {
-      if (!this.getMaxCharge()) {
-        if (this.mode === FireMode.DESTROY) {
-          console.log('no destroy capacity')
-          this.scene.EVENTS.emit(EVENT_MESSAGE, 'Matter Tank Full!')
-        }
-
-        if (this.mode === FireMode.CREATE) {
-          console.log('no create capacity')
-          this.scene.EVENTS.emit(EVENT_MESSAGE, 'Matter Tank Empty!')
-        }
-
-        return
-      }
-      this.charge += Math.floor(this.chargeRate * dt)
-
-      const maxCharge = this.getMaxCharge()
-      this.charge = Math.min(this.charge, maxCharge)
-
-      if (this.charge === maxCharge) {
-        console.log('Max charge reached.', maxCharge)
-      }
-
-      this.weapon
-        .getQueuedProjectile(this.mode)
-        .setTilesToModify(this.charge)
+    if (!maxCharge) {
+      if (this.mode === FireMode.DESTROY) this.scene.EVENTS.emit(EVENT_MESSAGE, 'Matter Tank Full!')
+      if (this.mode === FireMode.CREATE)  this.scene.EVENTS.emit(EVENT_MESSAGE, 'Matter Tank Empty!')
+      return
     }
+
+    const dt = getDeltaT(delta)
+    this.charge = Math.min(this.charge + Math.floor(this.chargeRate * dt), maxCharge)
+    this.weapon.getQueuedProjectile(this.mode).setTilesToModify(this.charge)
   }
 
   getMaxCharge(): number {
     return this.scene.player.matterTank.chargeAvailable(this.mode)
+  }
+
+  protected onDestroy() {
+    this.setInputEnabled(false)
+    // @ts-expect-error: destroy
+    this.weapon = null
   }
 }

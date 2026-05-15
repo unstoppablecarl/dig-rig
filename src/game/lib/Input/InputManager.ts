@@ -73,7 +73,10 @@ export class InputManager extends SceneBound {
     }
   }
 
-  onDestroy() {
+  protected onDestroy() {
+    for (const controller of this.allControllers) {
+      controller.setInputEnabled(false)
+    }
     // @ts-expect-error: destroy
     this.allControllers = null
     // @ts-expect-error: destroy

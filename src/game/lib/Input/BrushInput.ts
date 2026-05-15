@@ -63,6 +63,7 @@ export class BrushInput extends SceneBound implements InputController {
   pointermove(pointer: Pointer) {
     this.mouseX = pointer.worldX
     this.mouseY = pointer.worldY
+    this.brushDirty = true
 
     // dragging
     if (this.isDrawing) {
@@ -98,16 +99,12 @@ export class BrushInput extends SceneBound implements InputController {
   }
 
   update() {
-    if (!this._enabled) return
     if (!this.brushDirty) return
+    this.brushDirty = false
 
     this.graphics.clear()
     this.graphics.lineStyle(4, 0xffff00, 1)
-    this.graphics.strokeCircle(
-      this.mouseX,
-      this.mouseY,
-      this.radius * TILE_SIZE,
-    )
+    this.graphics.strokeCircle(this.mouseX, this.mouseY, this.radius * TILE_SIZE)
   }
 
   apply(tileX: number, tileY: number) {
@@ -119,7 +116,8 @@ export class BrushInput extends SceneBound implements InputController {
     this.scene.tilemap.applyEffect(tileX, tileY, this.radius, newValue, Number.MAX_VALUE)
   }
 
-  onDestroy() {
+  protected onDestroy() {
+    this.setInputEnabled(false)
     // @ts-expect-error: destroy
     this.graphics = null
   }

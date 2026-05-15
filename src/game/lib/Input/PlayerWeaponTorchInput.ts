@@ -15,7 +15,7 @@ export class PlayerWeaponTorchInput extends SceneBound<GameLevel> implements Inp
   public mode: FireMode = FireMode.DESTROY
 
   private _enabled = false
-  private firing: boolean
+  private firing = false
 
   constructor(
     public scene: GameLevel,
@@ -63,7 +63,12 @@ export class PlayerWeaponTorchInput extends SceneBound<GameLevel> implements Inp
   }
 
   update(_time: number, _delta: number) {
-    if (!this._enabled) return
     this.weapon.firing(this.firing, this.mode)
+  }
+
+  protected onDestroy() {
+    this.setInputEnabled(false)
+    // @ts-expect-error: destroy
+    this.weapon = null
   }
 }

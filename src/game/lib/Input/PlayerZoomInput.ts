@@ -22,7 +22,11 @@ export class PlayerZoomInput extends SceneBound<GameLevel> implements InputContr
     this._enabled = value
   }
 
-  wheel(_p: any, _dx: number, _dy: number, dz: number) {
-    this.scene.cameraController.adjustZoom(dz * 0.001)
+  wheel(_pointer: any, _gameObjects: any, _deltaX: number, deltaY: number) {
+    this.scene.cameraController.adjustZoom(deltaY * 0.001)
+  }
+
+  protected onDestroy() {
+    this.setInputEnabled(false)
   }
 }
