@@ -1,6 +1,5 @@
 import { debounce, type DebouncedFunction } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
-import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { UIScene } from '../../scenes/Layers/UIScene.ts'
 import { EVENT_MESSAGE } from '../events.ts'
 
@@ -8,10 +7,7 @@ export class Toaster extends SceneBound {
   private element: HTMLElement
   private queueFadeOut: DebouncedFunction<() => void>
 
-  constructor(
-    public scene: UIScene,
-    public gameLevel: GameLevel,
-  ) {
+  constructor(public scene: UIScene) {
     super(scene)
 
     this.element = document.getElementById('toaster-text')!
@@ -36,9 +32,7 @@ export class Toaster extends SceneBound {
     this.element.classList.remove('show')
   }
 
-  onDestroy() {
-    // @ts-expect-error: destroy
-    this.gameLevel = null
+  protected onDestroy() {
     this.scene.EVENTS.off(EVENT_MESSAGE, this.message, this)
   }
 }
