@@ -8,7 +8,7 @@ const INITIAL_ZOOM = 3
 
 export class CameraController extends SceneBound {
 
-  private minZoom: number
+  private minZoom = 0
   private maxZoom = 10
 
   constructor(
@@ -64,7 +64,7 @@ export class CameraController extends SceneBound {
     camera.centerOn(targetCenterX, targetCenterY)
   }
 
-  onDestroy() {
+  protected onDestroy() {
     this.scene.game.scale.off(RESIZE, this.calcMinZoom, this)
   }
 }
