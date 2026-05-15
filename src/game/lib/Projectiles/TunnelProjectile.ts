@@ -1,12 +1,9 @@
 import { FireMode } from '../../config.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
-import { MatterTank } from '../Matter/MatterTank.ts'
+import type { MatterTank } from '../Matter/MatterTank.ts'
 import type { TunnelWeapon } from '../Player/Weapons/TunnelWeapon.ts'
-import { BaseProjectile, radiusToTiles, tilesToRadius } from './BaseProjectile.ts'
+import { BaseProjectile, type ProjectileSource, radiusToTiles, tilesToRadius } from './BaseProjectile.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
-
-export type ProjectileSource = (MatterExchanger | Position) & ParticleTarget
 
 const MAX_RADIUS = 20
 
@@ -35,7 +32,6 @@ export class TunnelProjectile extends BaseProjectile {
       FireMode.DESTROY,
     )
 
-    scene.events.once('destroy', this.destroy, this)
   }
 
   setTilesToModify(count: number): boolean {

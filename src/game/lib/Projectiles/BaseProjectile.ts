@@ -30,7 +30,7 @@ export abstract class BaseProjectile extends SceneBound {
   protected initialVY: number
   protected lifespanPercent = 0
 
-  protected DEFAULT_VELOCITY = 100
+  protected readonly DEFAULT_VELOCITY = 100
 
   constructor(
     public scene: GameLevel,
@@ -116,7 +116,7 @@ export abstract class BaseProjectile extends SceneBound {
     }
 
     const shuffled = shuffleArray(tiles)
-    for (let tile of shuffled) {
+    for (const tile of shuffled) {
       const target = {
         x: tile.x * TILE_SIZE,
         y: tile.y * TILE_SIZE,
@@ -143,7 +143,7 @@ export abstract class BaseProjectile extends SceneBound {
       }
 
       const shuffled = shuffleArray(tiles)
-      for (let tile of shuffled) {
+      for (const tile of shuffled) {
         const source = {
           x: tile.x * TILE_SIZE,
           y: tile.y * TILE_SIZE,

@@ -3,8 +3,7 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
-import type { BaseProjectile, BaseProjectileConstructor } from './BaseProjectile.ts'
-import { type ProjectileSource } from './Projectile.ts'
+import type { BaseProjectile, BaseProjectileConstructor, ProjectileSource } from './BaseProjectile.ts'
 import { type IProjectileRenderer } from './ProjectileRenderer.ts'
 
 export class ProjectileManager extends SceneBound {
@@ -46,7 +45,6 @@ export class ProjectileManager extends SceneBound {
   ) {
     const player = this.scene.player
     if (!player.matterTank.hasChargeAvailable(charge, mode)) {
-      console.log('Not enough charge!')
       return
     }
     const startPos = pos ?? player.getProjectilePosition(0, this._startPos)
@@ -65,12 +63,16 @@ export class ProjectileManager extends SceneBound {
   }
 
   remove(projectile: BaseProjectile) {
-    // after destroyed
+    // already destroyed
     if (!this.children) return
-    this.children = this.children.filter(p => p !== projectile)
+    const i = this.children.indexOf(projectile)
+    if (i !== -1) {
+      this.children[i] = this.children[this.children.length - 1]
+      this.children.pop()
+    }
   }
 
-  onDestroy() {
+  protected onDestroy() {
     // @ts-expect-error: destroy
     this.children = null
   }

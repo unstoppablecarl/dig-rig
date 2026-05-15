@@ -1,11 +1,8 @@
 import { FireMode } from '../../config.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
-import { BaseProjectile } from './BaseProjectile.ts'
+import { BaseProjectile, type ProjectileSource } from './BaseProjectile.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
-
-export type ProjectileSource = (MatterExchanger | Position) & ParticleTarget
 
 export class TorchProjectile extends BaseProjectile {
 
@@ -29,7 +26,6 @@ export class TorchProjectile extends BaseProjectile {
     )
 
     this.radius = 20
-    scene.events.once('destroy', this.destroy, this)
   }
 
   update(dt: number) {
@@ -37,11 +33,9 @@ export class TorchProjectile extends BaseProjectile {
     if (!this.fired) return
 
     if (this.charge() > 0) {
-      if (this.mode == FireMode.CREATE) {
+      if (this.mode === FireMode.CREATE) {
         this.createTiles(this.charge())
-      }
-
-      if (this.mode == FireMode.DESTROY) {
+      } else if (this.mode === FireMode.DESTROY) {
         this.destroyTiles(this.charge())
       }
     }
