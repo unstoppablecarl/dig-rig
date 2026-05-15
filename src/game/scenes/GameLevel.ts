@@ -9,8 +9,8 @@ import { TerrainParticleManager } from '../lib/Particles/TerrainParticleManager.
 import { Player } from '../lib/Player/Player.ts'
 import { PlayerWeaponManager } from '../lib/Player/Weapons/PlayerWeaponManager.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
-import { TilemapRenderer } from '../lib/TileMap/TilemapRenderer.ts'
 import { Tilemap } from '../lib/TileMap/TileMap.ts'
+import { TilemapRenderer } from '../lib/TileMap/TilemapRenderer.ts'
 import { CameraController } from '../lib/UI/CameraController.ts'
 import { BgScene } from './Layers/BgScene.ts'
 import { UIScene } from './Layers/UIScene.ts'
@@ -127,6 +127,8 @@ export abstract class GameLevel extends Scene {
   }
 
   preloadPlayer() {
+    this.load.setPath('assets')
+
     this.loadPixelSpritesheet('player', 'player.png', { frameWidth: 40, frameHeight: 40 })
     this.loadPixelSpritesheet('player-arm', 'arm.png', { frameWidth: 18, frameHeight: 8 })
   }
@@ -215,6 +217,15 @@ export abstract class GameLevel extends Scene {
     this.terrainParticleManager.update(dt)
 
     this.tilemapRenderer.render()
+  }
+
+  initCanvasTexture(key: string, width: number, height: number) {
+    if (this.textures.exists(key)) this.textures.remove(key)
+    const effectTexture = this.textures.createCanvas(key, width, height)!
+    effectTexture.refresh()
+    effectTexture.source[0].setFilter(NEAREST)
+
+    return effectTexture
   }
 
   private registerSubScene(Def: { ID: string, new(): any }) {

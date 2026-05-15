@@ -6,7 +6,6 @@ import { truncateArrayRandomly } from '../../helpers/array.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
-import { makeTerrainEffect } from '../makeTerrainEffect.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
 
@@ -187,14 +186,12 @@ export class Tilemap extends SceneBound {
       return tiles
     }
 
-    const effect = makeTerrainEffect(this.scene)
+    const startTime = this.scene.time.now
 
     for (let { x, y } of tiles) {
-      effect.addTile(x, y, newValue)
+      this.scene.tilemapRenderer.addEffect(x, y, newValue, startTime)
       this.setTile(x, y, newValue)
     }
-
-    effect.start()
 
     return tiles
   }

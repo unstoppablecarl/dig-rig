@@ -1,22 +1,20 @@
 import { GameObjects } from 'phaser'
-import { CHUNK_SIZE } from '../../config.ts'
+import { TERRAIN_TYPE_TRANSITION_COLORS } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import type { Chunk } from './Chunk.ts'
 import { TerrainType } from './TileMap.ts'
+import { TerrainChunkRenderer } from './TilemapRenderer/TerrainChunkRenderer.ts'
+import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'
 import Shader = GameObjects.Shader
-import CanvasTexture = Phaser.Textures.CanvasTexture
-import NEAREST = Phaser.Textures.FilterMode.NEAREST
 import Texture = Phaser.Textures.Texture
 
-// R channel encodes tile state; A is always 255 to avoid premultiplied alpha side effects.
-// Little-endian Uint32: 0xAABBGGRR
-// Little-endian ABGR pixel values. R channel encodes state; A is always 255.
-const MASK_EMPTY = 0xFF000000 // R=0   → 0.00 in shader (empty mask, glow off)
-const MASK_SOLID = 0xFF000080 // R=128 → ~0.50 in shader
-const MASK_PERM = 0xFF0000FF // R=255 → 1.00 in shader
-const GLOW_ON = 0xFF0000FF  // R=255 → 1.00 in shader
+const toVec3 = (c: number): [number, number, number] => [
+  ((c >> 16) & 0xFF) / 255,
+  ((c >> 8) & 0xFF) / 255,
+  (c & 0xFF) / 255,
+]
 
+// language=GLSL
 const FRAG_SHADER = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -27,32 +25,47 @@ precision mediump float;
 uniform sampler2D uTerrain;
 uniform sampler2D uMask;
 uniform sampler2D uGlow;
+uniform sampler2D uEffect;
 uniform vec3 uGlowColor;
+uniform float uInnerGlowStrength;
+uniform vec3 uDestroyColor;
+uniform vec3 uCreateColor;
+uniform vec3 uPermanentColor;
 
 varying vec2 outTexCoord;
 
 void main() {
   float mask = texture2D(uMask, outTexCoord).r;
+  float glow = texture2D(uGlow, outTexCoord).g;
+  vec4 color;
 
   if (mask > 0.75) {
-    gl_FragColor = vec4(0.0, 1.0, 1.0, 1.0);
+    color = vec4(mix(vec3(0.0, 1.0, 1.0), uGlowColor, glow * uInnerGlowStrength), 1.0);
   } else if (mask > 0.25) {
-    gl_FragColor = texture2D(uTerrain, outTexCoord);
+    color = texture2D(uTerrain, outTexCoord);
+    if (glow > 0.01) {
+      color.rgb = mix(color.rgb, uGlowColor, glow * uInnerGlowStrength);
+    }
   } else {
-    float glow = texture2D(uGlow, outTexCoord).r;
-    if (glow < 0.01) discard;
-    gl_FragColor = vec4(uGlowColor, glow);
+    color = vec4(0.0, 0.0, 0.0, 0.0);
   }
+
+  vec4 eff = texture2D(uEffect, outTexCoord);
+  float ei = eff.r;
+  if (ei > 0.01) {
+    float ci = eff.g;
+    vec3 ec = ci < 0.25 ? uDestroyColor : (ci < 0.75 ? uCreateColor : uPermanentColor);
+    color = mix(color, vec4(ec, 1.0), ei);
+  }
+
+  if (color.a < 0.01) discard;
+  gl_FragColor = color;
 }
 `
 
 export class TilemapRenderer extends SceneBound {
-  private maskTexture: CanvasTexture
-  private glowTexture: CanvasTexture
-
-  private chunkBuf = new ImageData(CHUNK_SIZE, CHUNK_SIZE)
-  private chunkPixels = new Uint32Array(this.chunkBuf.data.buffer)
-
+  private chunkRenderer: TerrainChunkRenderer
+  private effectSystem: TerrainEffectSystem
   private destroyed = false
 
   constructor(
@@ -61,12 +74,10 @@ export class TilemapRenderer extends SceneBound {
   ) {
     super(scene)
 
-    const { width, height } = scene.tilemap
+    this.chunkRenderer = new TerrainChunkRenderer(scene)
+    this.effectSystem = new TerrainEffectSystem(scene)
 
-    if (scene.textures.exists('terrain_mask')) scene.textures.remove('terrain_mask')
-    if (scene.textures.exists('terrain_glow')) scene.textures.remove('terrain_glow')
-    this.maskTexture = scene.textures.createCanvas('terrain_mask', width, height)!
-    this.glowTexture = scene.textures.createCanvas('terrain_glow', width, height)!
+    const { width, height } = scene.tilemap
 
     const shader: Shader = scene.add.shader(
       {
@@ -74,9 +85,14 @@ export class TilemapRenderer extends SceneBound {
         fragmentSource: FRAG_SHADER,
         setupUniforms: (setUniform: (name: string, value: any) => void) => {
           setUniform('uTerrain', 0)
-          setUniform('uMask', 1)
-          setUniform('uGlow', 2)
-          setUniform('uGlowColor', [0.2, 0.8, 1.0])
+          setUniform('uMask',    1)
+          setUniform('uGlow',    2)
+          setUniform('uEffect',  3)
+          setUniform('uGlowColor',        [0, 0, 0])
+          setUniform('uInnerGlowStrength', 0.5)
+          setUniform('uDestroyColor',   toVec3(TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.EMPTY] as number))
+          setUniform('uCreateColor',    toVec3(TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.SOLID] as number))
+          setUniform('uPermanentColor', toVec3(TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.PERMANENT] as number))
         },
       },
       0, 0,
@@ -84,84 +100,45 @@ export class TilemapRenderer extends SceneBound {
     )
     shader.setOrigin(0, 0)
     // setTextures accepts Texture[] at runtime but the TS type only declares string[]
-    shader.setTextures([terrainTexture, this.maskTexture, this.glowTexture] as any)
+    shader.setTextures([
+      terrainTexture,
+      this.chunkRenderer.maskTexture,
+      this.chunkRenderer.glowTexture,
+      this.effectSystem.effectTexture,
+    ] as any)
     scene.layers.terrain.add(shader)
+
+    // Force shader compilation now (during create) to avoid a stall on the first rendered frame.
+    // ShaderQuad.run() normally triggers this lazily; calling it here moves the GPU compile cost
+    // to scene setup
+    ;(shader as any).renderNode?.programManager?.getCurrentProgramSuite?.()
+  }
+
+  addEffect(tx: number, ty: number, value: TerrainType, startTime?: number) {
+    this.effectSystem.addEffect(tx, ty, value, startTime)
   }
 
   render() {
     if (this.destroyed) return
+
     const chunkManager = this.scene.tilemap.chunkManager
-    let anyDirty = false
 
     for (let cy = 0; cy < chunkManager.height; cy++) {
       for (let cx = 0; cx < chunkManager.width; cx++) {
         const chunk = chunkManager.getChunk(cx, cy)
         if (!chunk?.renderDirty) continue
-        anyDirty = true
-        this.renderChunkMask(chunk)
-        this.renderChunkGlow(chunk)
+        this.chunkRenderer.renderChunk(chunk)
         chunk.renderDirty = false
       }
     }
 
-    if (anyDirty) {
-      this.maskTexture.refresh()
-      this.maskTexture.source[0].setFilter(NEAREST)
-      this.glowTexture.refresh()
-      this.glowTexture.source[0].setFilter(NEAREST)
-    }
-  }
-
-  private renderChunkMask(chunk: Chunk) {
-    const pixels = this.chunkPixels
-    const tilemap = this.scene.tilemap
-    const offX = chunk.cx * CHUNK_SIZE
-    const offY = chunk.cy * CHUNK_SIZE
-
-    for (let y = 0; y < CHUNK_SIZE; y++) {
-      for (let x = 0; x < CHUNK_SIZE; x++) {
-        const tile = tilemap.getTile(offX + x, offY + y)
-        pixels[y * CHUNK_SIZE + x] =
-          tile === TerrainType.PERMANENT ? MASK_PERM :
-          tile === TerrainType.SOLID     ? MASK_SOLID :
-          MASK_EMPTY
-      }
-    }
-
-    this.maskTexture.context.putImageData(this.chunkBuf, offX, offY)
-  }
-
-  private renderChunkGlow(chunk: Chunk) {
-    const pixels = this.chunkPixels
-    const tilemap = this.scene.tilemap
-    const offX = chunk.cx * CHUNK_SIZE
-    const offY = chunk.cy * CHUNK_SIZE
-
-    for (let y = 0; y < CHUNK_SIZE; y++) {
-      for (let x = 0; x < CHUNK_SIZE; x++) {
-        const tx = offX + x
-        const ty = offY + y
-        const hasGlow =
-          tilemap.getTile(tx, ty) === TerrainType.EMPTY &&
-          (tilemap.getTile(tx - 1, ty) !== TerrainType.EMPTY ||
-            tilemap.getTile(tx + 1, ty) !== TerrainType.EMPTY ||
-            tilemap.getTile(tx, ty - 1) !== TerrainType.EMPTY ||
-            tilemap.getTile(tx, ty + 1) !== TerrainType.EMPTY)
-        pixels[y * CHUNK_SIZE + x] = hasGlow ? GLOW_ON : MASK_EMPTY
-      }
-    }
-
-    this.glowTexture.context.putImageData(this.chunkBuf, offX, offY)
+    this.effectSystem.update()
   }
 
   destroy() {
     this.destroyed = true
-    this.maskTexture?.destroy()
-    this.glowTexture?.destroy()
-    // @ts-expect-error: destroy
-    this.maskTexture = null
-    // @ts-expect-error: destroy
-    this.glowTexture = null
+    this.chunkRenderer.destroy()
+    this.effectSystem.destroy()
     super.destroy()
   }
 }

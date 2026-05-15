@@ -7,14 +7,13 @@ export default class ImageSourceTestLevel extends GameLevel {
   preload() {
     super.preload()
 
-    this.load.setPath('assets/level-data')
+    this.load.setPath('level-data')
 
     this.loadPixelImage('terrain', 'terrain.png')
 
     this.loadPixelImage('permanent', 'permanent.png')
     this.loadPixelImage('solid', 'solid.png')
 
-    this.load.setPath('assets')
     this.preloadPlayer()
   }
 
