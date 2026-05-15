@@ -144,7 +144,7 @@ export class TerrainChunkBodyManager extends SceneBound {
     if (!bodies) return
 
     for (const body of bodies) {
-      this.scene.matter.world.remove(body)
+      this.scene.matter?.world?.remove(body)
     }
 
     this.chunkBodies.delete(chunk)

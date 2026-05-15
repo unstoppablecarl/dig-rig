@@ -123,7 +123,7 @@ export class MatterTank {
   }
 
   destroy() {
-    this.manager.remove(this)
+    this.manager?.remove(this)
 
     // @ts-expect-error: destroy
     this.manager = null
