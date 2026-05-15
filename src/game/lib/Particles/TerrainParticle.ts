@@ -1,8 +1,6 @@
 import { TerrainType } from '../TileMap/TileMap.ts'
-import { TILE_SIZE } from '../../config.ts'
 
 export class TerrainParticle {
-  readonly size: number
   public lifetime: number = 0
 
   constructor(
@@ -14,7 +12,6 @@ export class TerrainParticle {
     readonly radius: number = 1,
     readonly maxLifetimeSeconds = 10,
   ) {
-    this.size = (1 + radius * 2) * TILE_SIZE
   }
 
   lifetimePercent() {

@@ -35,7 +35,11 @@ export class TerrainParticleManager extends SceneBound {
   }
 
   update(dt: number) {
-    this.particles = this.particles.filter((d) => this.updateParticle(d, dt))
+    let alive = 0
+    for (let i = 0; i < this.particles.length; i++) {
+      if (this.updateParticle(this.particles[i], dt)) this.particles[alive++] = this.particles[i]
+    }
+    this.particles.length = alive
 
     this.render()
   }
@@ -83,7 +87,7 @@ export class TerrainParticleManager extends SceneBound {
     }
   }
 
-  onDestroy() {
+  protected onDestroy() {
     this.graphics.destroy()
     // @ts-expect-error: destroy
     this.graphics = null

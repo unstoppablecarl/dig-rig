@@ -10,7 +10,7 @@ import ParticleEmitter = GameObjects.Particles.ParticleEmitter
 
 export class ParticleManager extends SceneBound {
   public emitter: ParticleEmitter
-  declare debugGraphics: Graphics | null
+  debugGraphics: Graphics | null = null
 
   public constructor(public scene: GameLevel) {
     super(scene)
@@ -63,15 +63,10 @@ export class ParticleManager extends SceneBound {
     colorTo: Color,
   ) {
     const particle = this.emitter.emitParticleAt(source.x, source.y, 1) as MatterParticle
-
-    if (!particle) {
-      // console.warn('not getting particles')
-    }
-
     particle?.init(target, staticTarget, colorFrom, colorTo)
   }
 
-  onDestroy() {
+  protected onDestroy() {
     this.debugGraphics = null
     // @ts-expect-error: destroy
     this.emitter = null
