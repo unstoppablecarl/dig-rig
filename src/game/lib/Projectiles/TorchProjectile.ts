@@ -28,7 +28,7 @@ export class TorchProjectile extends BaseProjectile {
     this.radius = 20
   }
 
-  update(dt: number) {
+  update() {
     this.renderer.update(this)
     if (!this.fired) return
 
@@ -40,7 +40,6 @@ export class TorchProjectile extends BaseProjectile {
       }
     }
 
-    super.update(dt)
     if (!this.charge()) {
       this.destroy()
     }

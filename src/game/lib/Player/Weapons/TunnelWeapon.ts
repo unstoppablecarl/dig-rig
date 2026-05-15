@@ -35,7 +35,7 @@ export class TunnelWeapon extends SceneBound implements ContinuousWeapon {
   _startPos: Position = { x: 0, y: 0 }
 
   firing(value: boolean): void {
-    this.projectileDestroy!.fired = value
+    this.projectileDestroy!.active = value
     this.addCreateProjectile()
   }
 
