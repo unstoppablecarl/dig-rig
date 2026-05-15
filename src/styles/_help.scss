@@ -4,16 +4,17 @@
   right: 10px;
   bottom: 10px;
   font-size: 14px;
-  background: rgba(255, 255, 255, .25);
-  border-radius: 3px;
+  background: rgba(0, 0, 0, .5);
+  border-radius: 5px;
   padding: 4px 8px;
-  color: #fff;
+  color: rgba(255, 255, 255, .75);
   text-decoration: none;
   border: none;
   cursor: pointer;
 
   &:hover {
-    background: rgba(255, 255, 255, .35);
+    color: rgba(255, 255, 255, .95);
+    background: rgba(0, 0, 0, .75);
   }
 }
 
@@ -28,6 +29,7 @@
   &.show {
     display: block;
   }
+
   .controls {
     margin: 20vh 20vh;
     padding: 20px;
