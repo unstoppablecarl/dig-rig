@@ -3,6 +3,7 @@ import { PERMANENT_COLOR, TERRAIN_TYPE_TRANSITION_COLORS } from '../../config.ts
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { TerrainType } from './TileMap.ts'
+import { TerrainChunkGlowRenderer } from './TilemapRenderer/TerrainChunkGlowRenderer.ts'
 import { TerrainChunkRenderer } from './TilemapRenderer/TerrainChunkRenderer.ts'
 import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'
 import Shader = GameObjects.Shader
@@ -29,16 +30,15 @@ const FRAG_SHADER = `
     uniform sampler2D uMask;
     uniform sampler2D uGlow;
     uniform sampler2D uEffect;
-    
+
     uniform float uInnerGlowStrength;
     uniform vec3 uGlowColor;
-    
+
     uniform float uOutlineOpacity;
-    
+
     uniform vec3 uDestroyColor;
     uniform vec3 uCreateColor;
-    uniform vec3 uPermanentColor;
-   
+
     uniform vec3 uPermanentTileColor;
 
     // phaser framework variable
@@ -84,24 +84,20 @@ const FRAG_SHADER = `
             }
         }
         // EMPTY — fully transparent
-        else { 
+        else {
             color = vec4(0.0, 0.0, 0.0, 0.0);
         }
 
         // uEffect carries timed transition colors (dig/fill animations).
-        // R = intensity fading 1→0 over EFFECT_DURATION_MS.
-        // G = color selector: <0.25 → destroy color, <0.75 → create color, else permanent color.
+        // R = destroy (EMPTY) intensity, G = create (SOLID) intensity, both fade 1→0.
+        // Both channels can be non-zero on the same tile simultaneously.
+        // Weighted average of the active colors, then mix into terrain by total intensity,
+        // so each effect contributes proportionally rather than the last one dominating.
         vec4 eff = texture2D(uEffect, outTexCoord);
-        float intensity = eff.r;
-        if (intensity > 0.01) {
-            float ci = eff.g;
-            vec3 effectColor = uPermanentColor;
-            if(ci < 0.25){
-                effectColor = uDestroyColor;
-            } else if(ci < 0.75){
-                effectColor = uCreateColor;
-            }
-            color = mix(color, vec4(effectColor, 1.0), intensity);
+        float totalI = eff.r + eff.g;
+        if (totalI > 0.01) {
+            vec3 effectColor = (uDestroyColor * eff.r + uCreateColor * eff.g) / totalI;
+            color = mix(color, vec4(effectColor, 1.0), min(totalI, 1.0));
         }
 
         if (color.a < 0.01) discard;
@@ -110,8 +106,9 @@ const FRAG_SHADER = `
 `
 
 export class TilemapRenderer extends SceneBound {
-  private chunkRenderer: TerrainChunkRenderer
-  private effectSystem: TerrainEffectSystem
+  private readonly chunkRenderer: TerrainChunkRenderer
+  private readonly effectSystem: TerrainEffectSystem
+  private readonly glowRenderer: TerrainChunkGlowRenderer
 
   constructor(
     public scene: GameLevel,
@@ -121,6 +118,7 @@ export class TilemapRenderer extends SceneBound {
 
     this.chunkRenderer = new TerrainChunkRenderer(scene)
     this.effectSystem = new TerrainEffectSystem(scene)
+    this.glowRenderer = new TerrainChunkGlowRenderer(scene)
 
     const { width, height } = scene.tilemap
 
@@ -130,33 +128,32 @@ export class TilemapRenderer extends SceneBound {
         fragmentSource: FRAG_SHADER,
         setupUniforms: (setUniform: (name: string, value: any) => void) => {
           setUniform('uTerrain', 0)
-          setUniform('uMask',    1)
-          setUniform('uGlow',    2)
-          setUniform('uEffect',  3)
-          setUniform('uGlowColor',        GLOW_COLOR)
+          setUniform('uMask', 1)
+          setUniform('uGlow', 2)
+          setUniform('uEffect', 3)
+          setUniform('uGlowColor', GLOW_COLOR)
           setUniform('uInnerGlowStrength', GLOW_STRENGTH)
-          setUniform('uOutlineOpacity',    OUTLINE_OPACITY)
+          setUniform('uOutlineOpacity', OUTLINE_OPACITY)
           setUniform('uPermanentTileColor', toVec3(PERMANENT_COLOR))
-          setUniform('uDestroyColor',   toVec3(TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.EMPTY] as number))
-          setUniform('uCreateColor',    toVec3(TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.SOLID] as number))
-          setUniform('uPermanentColor', toVec3(TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.PERMANENT] as number))
+          setUniform('uDestroyColor', toVec3(TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.EMPTY] as number))
+          setUniform('uCreateColor', toVec3(TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.SOLID] as number))
         },
       },
       0, 0,
       width, height,
     )
+
     shader.setOrigin(0, 0)
-    // setTextures accepts Texture[] at runtime but the TS type only declares string[]
     shader.setTextures([
       terrainTexture,
       this.chunkRenderer.maskTexture,
-      this.chunkRenderer.glowTexture,
+      this.glowRenderer.glowTexture,
       this.effectSystem.effectTexture,
-    ] as any)
+    ])
     scene.layers.terrain.add(shader)
 
     // Force shader compilation now (during create) to avoid a stall on the first rendered frame.
-    // ShaderQuad.run() normally triggers this lazily; calling it here moves the GPU compile cost
+    // ShaderQuad.run() normally triggers this lazily; calling it here moves the GPU compile
     // to scene setup
     ;(shader as any).renderNode?.programManager?.getCurrentProgramSuite?.()
   }
@@ -175,15 +172,18 @@ export class TilemapRenderer extends SceneBound {
         const chunk = chunkManager.getChunk(cx, cy)
         if (!chunk?.renderDirty) continue
         this.chunkRenderer.renderChunk(chunk)
+        this.glowRenderer.renderChunk(chunk)
         chunk.renderDirty = false
       }
     }
 
+    this.glowRenderer.updateTransitions()
     this.effectSystem.update()
   }
 
   protected onDestroy() {
     this.chunkRenderer.destroy()
     this.effectSystem.destroy()
+    this.glowRenderer.destroy()
   }
 }

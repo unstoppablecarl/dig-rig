@@ -37,8 +37,12 @@ export const TERRAIN_TYPE_TRANSITION_COLORS = {
 export const MAX_MATTER_PARTICLES = 1500
 
 export const PLAYER_MATTER_TANK_SIZE = 5000
-export const DRAW_PARTICLE_DEBUG = false
-export const DRAW_WORLD_BORDER_DEBUG = true
+
 export const GLOW_ENABLED = true
 export const GLOW_RADIUS = 10
+export const GLOW_TRANSITION_ANIMATION_ENABLED = true
+export const GLOW_TRANSITION_MS = 400
+
+export const DRAW_PARTICLE_DEBUG = false
+export const DRAW_WORLD_BORDER_DEBUG = true
 export const AUTO_START_LEVEL_INDEX = 0
