@@ -78,13 +78,17 @@ const FRAG_SHADER = `
         return base < 0.5 ? (2.0 * base * blend) : (1.0 - 2.0 * (1.0 - base) * (1.0 - blend));
     }
 
-    // Full Overlay vector function
-    vec3 blendOverlay(vec3 base, vec3 blend) {
-        return vec3(
-        blendOverlay(base.r, blend.r),
-        blendOverlay(base.g, blend.g),
-        blendOverlay(base.b, blend.b)
+    vec3 blendOverlay(vec3 base, vec3 blend, float ratio) {
+        vec3 blended =  vec3(
+            blendOverlay(base.r, blend.r),
+            blendOverlay(base.g, blend.g),
+            blendOverlay(base.b, blend.b)
         );
+
+       
+        blended.rgb = mix(base.rgb, blended, ratio);
+        
+        return blended;
     }
     
     void main() {
@@ -106,11 +110,12 @@ const FRAG_SHADER = `
 
         // PERMANENT
         if (mask > 0.75) {
+            color = texture2D(uTerrain, outTexCoord);
             // permanent color tinted toward uGlowColor near empty space
-            color = vec4(mix(uPermanentTileColor, uGlowColor, glow * uInnerGlowStrength), 1.0);
+            color.rgb = blendOverlay(color.rgb, uPermanentTileColor, 0.80);
             // is outline pixel
             if (outline > 0.5) {
-                color.rgb = mix(color.rgb, uGlowColor, uOutlineOpacity);
+                color.rgb = mix(color.rgb, uPermanentTileColor, uOutlineOpacity);
             }
         }
         // SOLID
@@ -120,8 +125,7 @@ const FRAG_SHADER = `
 
             // is outline pixel
             if (outline > 0.5) {
-                vec3 blended = blendOverlay(color.rgb, uOutlineColor);
-                color.rgb = mix(color.rgb, blended, uOutlineOpacity);
+                color.rgb = blendOverlay(color.rgb, uOutlineColor, uOutlineOpacity);
                 color.rgb = mix(color.rgb, uOutlineColor, 0.45);
             }
 
@@ -170,6 +174,7 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
   readonly glowStrength = CONFIG_DEFAULTS.glowStrength
   readonly outlineColor = CONFIG_DEFAULTS.outlineColor
   readonly outlineOpacity = CONFIG_DEFAULTS.outlineOpacity
+  readonly permanentOutlineMask: CanvasTexture
 
   constructor(
     public scene: GameLevel,
@@ -180,8 +185,11 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
 
     Object.assign(this, config)
 
+    const { width, height } = scene.tilemap
+
     this.chunkRenderer = new TerrainChunkRenderer(scene)
     this.effectSystem = new TerrainEffectSystem(scene)
+    this.permanentOutlineMask = this.scene.initCanvasTexture('permanent_outline', width, height)
 
     this.glowRenderer = new TerrainChunkGlowRenderer(scene, {
       glowRadius: this.glowRadius,
@@ -190,7 +198,7 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
       glowTransitionMS: this.glowTransitionMS,
     })
 
-    const { width, height } = scene.tilemap
+
 
     const shader: Shader = scene.add.shader(
       {

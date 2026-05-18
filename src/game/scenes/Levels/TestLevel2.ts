@@ -42,6 +42,8 @@ export default class TestLevel2 extends GameLevel {
     tilemap.setRect(230, ref - 200, 60, 60, TerrainType.SOLID)
     tilemap.setRect(450, ref - 220, 60, 60, TerrainType.SOLID)
 
+    tilemap.setRect(200, ref - 100, 60, 60, TerrainType.PERMANENT)
+
     return tilemap
   }
 
