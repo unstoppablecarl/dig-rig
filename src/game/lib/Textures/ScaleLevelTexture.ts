@@ -45,18 +45,18 @@ export class ScaleLevelTexture {
   generate(tilemap: Tilemap): CanvasTexture {
     const texture = makeMultiImagePatternRenderer(this.scene.textures, tilemap, {
       'scale1': 50,
-      // 'scale2': 1,
-      // 'scale3': 1,
-      // 'scale4': 2,
-      // 'scale5': 6,
-      // 'scale6': 5,
-      // 'scale7': 4,
-      // 'scale8': 3,
-      // 'scale9': 3,
-      // 'scale10': 3,
-      // 'scale2-1': 1,
-      // 'scale2-2': 1,
-      // 'scale2-3': 1,
+      'scale2': 1,
+      'scale3': 1,
+      'scale4': 2,
+      'scale5': 6,
+      'scale6': 5,
+      'scale7': 4,
+      'scale8': 3,
+      'scale9': 3,
+      'scale10': 3,
+      'scale2-1': 1,
+      'scale2-2': 1,
+      'scale2-3': 1,
     })
     const result = makePatternTerrainTexture(this.scene, texture)
 

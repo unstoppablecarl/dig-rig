@@ -5,6 +5,10 @@ export interface LevelEntry {
   load: () => Promise<{ default: new () => Scene }>
 }
 
+export interface LevelEntryWithId extends LevelEntry {
+  id: LevelId
+}
+
 export type LevelId = keyof typeof LEVELS
 
 export const LEVELS = {

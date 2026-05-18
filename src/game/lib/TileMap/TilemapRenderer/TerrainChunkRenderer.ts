@@ -82,6 +82,8 @@ export class TerrainChunkRenderer extends SceneBound {
   }
 
   protected onDestroy() {
-    this.maskTexture.destroy()
+    if (this.maskTexture.manager) {
+      this.maskTexture.destroy()
+    }
   }
 }

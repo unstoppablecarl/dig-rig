@@ -221,6 +221,8 @@ export class TerrainChunkGlowRenderer extends SceneBound implements TerrainChunk
   }
 
   protected onDestroy() {
-    this.glowTexture.destroy()
+    if (this.glowTexture.manager) {
+      this.glowTexture.destroy()
+    }
   }
 }

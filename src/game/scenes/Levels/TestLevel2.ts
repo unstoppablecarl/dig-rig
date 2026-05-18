@@ -5,12 +5,14 @@ import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
 export default class TestLevel2 extends GameLevel {
+  private TERRAIN: string
+
   preload() {
     super.preload()
 
     this.load.setPath('level-data')
 
-    this.loadPixelImage('terrain', 'level-4.png')
+    this.TERRAIN = this.loadPrefixedPixelImage('terrain', 'level-4.png')
 
     this.preloadPlayer()
   }
@@ -19,12 +21,12 @@ export default class TestLevel2 extends GameLevel {
     return {
       glowStrength: 0.99,
       glowRadius: 12,
-      outlineOpacity: 0.2
+      outlineOpacity: 0.4,
     }
   }
 
   getTerrainTexture() {
-    return this.textures.get('terrain') as CanvasTexture
+    return this.textures.get(this.TERRAIN) as CanvasTexture
   }
 
   makeTileMap() {

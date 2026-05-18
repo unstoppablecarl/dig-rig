@@ -98,6 +98,8 @@ export class TerrainEffectSystem extends SceneBound {
   }
 
   protected onDestroy() {
-    this.effectTexture.destroy()
+    if (this.effectTexture.manager) {
+      this.effectTexture.destroy()
+    }
   }
 }

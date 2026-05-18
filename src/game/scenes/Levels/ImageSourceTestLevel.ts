@@ -5,26 +5,29 @@ import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
 export default class ImageSourceTestLevel extends GameLevel {
+  private TERRAIN: string
+  private PERMANENT: string
+  private SOLID: string
+
   preload() {
     super.preload()
 
     this.load.setPath('level-data')
 
-    this.loadPixelImage('terrain', 'terrain.png')
-
-    this.loadPixelImage('permanent', 'permanent.png')
-    this.loadPixelImage('solid', 'solid.png')
+    this.TERRAIN = this.loadPrefixedPixelImage('terrain', 'terrain.png')
+    this.PERMANENT = this.loadPrefixedPixelImage('permanent', 'permanent.png')
+    this.SOLID = this.loadPrefixedPixelImage('solid', 'solid.png')
 
     this.preloadPlayer()
   }
 
   getTerrainTexture() {
-    return this.textures.get('terrain') as CanvasTexture
+    return this.textures.get(this.TERRAIN) as CanvasTexture
   }
 
   makeTileMap() {
-    const solidData = textureToPixelData(this.textures, 'solid')
-    const permanentData = textureToPixelData(this.textures, 'permanent')
+    const solidData = textureToPixelData(this.textures, this.SOLID)
+    const permanentData = textureToPixelData(this.textures, this.PERMANENT)
 
     return Tilemap.makeFromSolidAndPermanentPixelData(this, solidData, permanentData)
   }

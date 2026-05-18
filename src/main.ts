@@ -72,7 +72,7 @@ export async function launchLevel(id: LevelId) {
   // Lazy-register on first use
   if (!game.scene.getScene(id)) {
     const module = await entry.load()
-    game.scene.add(id, module.default, false, entry)
+    game.scene.add(id, module.default, false, { ...entry, id })
   }
 
   // Stop whatever's currently running (menu, another level)

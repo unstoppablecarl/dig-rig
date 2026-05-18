@@ -14,7 +14,7 @@ import { TilemapRenderer, type TilemapRendererConfig } from '../lib/TileMap/Tile
 import { CameraController } from '../lib/UI/CameraController.ts'
 import { BgScene } from './Layers/BgScene.ts'
 import { UIScene } from './Layers/UIScene.ts'
-import type { LevelEntry } from './Levels'
+import type { LevelEntryWithId, LevelId } from './Levels'
 import Group = GameObjects.Group
 import Layer = GameObjects.Layer
 import Rectangle = Geom.Rectangle
@@ -51,6 +51,7 @@ export abstract class GameLevel extends Scene {
   public worldBounds: Geom.Rectangle
   public inputManager: InputManager
   public terrainParticleManager: TerrainParticleManager
+  protected id: LevelId
 
   protected makeTilemapRenderer(tilemap: Tilemap): TilemapRenderer {
     return new TilemapRenderer(this, this.getTerrainTexture(tilemap), this.tilemapRendererConfig())
@@ -84,7 +85,8 @@ export abstract class GameLevel extends Scene {
     }
   }
 
-  init(entry: LevelEntry) {
+  init(entry: LevelEntryWithId) {
+    this.id = entry.id
     this.displayName = entry.displayName
     this.registerSubScene(UIScene)
     this.registerSubScene(BgScene)
@@ -135,6 +137,14 @@ export abstract class GameLevel extends Scene {
 
     this.loadPixelSpritesheet('player', 'player.png', { frameWidth: 40, frameHeight: 40 })
     this.loadPixelSpritesheet('player-arm', 'arm.png', { frameWidth: 18, frameHeight: 8 })
+  }
+
+  loadPrefixedPixelImage(key: string, url: string) {
+    const id = this.id + '_' + key
+
+    this.loadPixelImage(id, url)
+
+    return id
   }
 
   loadPixelImage(key: string, url: string) {
