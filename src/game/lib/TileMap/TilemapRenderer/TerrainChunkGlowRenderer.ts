@@ -148,31 +148,23 @@ export class TerrainChunkGlowRenderer extends SceneBound implements TerrainChunk
       }
     }
 
-    // 2. Forward pass (TL→BR): inherit min distance from upper/left neighbours
+    // 2. Forward pass (TL→BR): 4-connected only (no diagonals) to avoid interior-corner artifacts
     for (let y = 0; y < EXT; y++) {
       for (let x = 0; x < EXT; x++) {
         let d = dist[y * EXT + x]
         if (d === 0) continue
-        if (y > 0) {
-          if (x > 0) d = Math.min(d, dist[(y - 1) * EXT + (x - 1)] + 1)
-          d = Math.min(d, dist[(y - 1) * EXT + x] + 1)
-          if (x < EXT - 1) d = Math.min(d, dist[(y - 1) * EXT + (x + 1)] + 1)
-        }
+        if (y > 0) d = Math.min(d, dist[(y - 1) * EXT + x] + 1)
         if (x > 0) d = Math.min(d, dist[y * EXT + (x - 1)] + 1)
         dist[y * EXT + x] = d
       }
     }
 
-    // 3. Backward pass (BR→TL): inherit min distance from lower/right neighbours
+    // 3. Backward pass (BR→TL): 4-connected only
     for (let y = EXT - 1; y >= 0; y--) {
       for (let x = EXT - 1; x >= 0; x--) {
         let d = dist[y * EXT + x]
         if (d === 0) continue
-        if (y < EXT - 1) {
-          if (x < EXT - 1) d = Math.min(d, dist[(y + 1) * EXT + (x + 1)] + 1)
-          d = Math.min(d, dist[(y + 1) * EXT + x] + 1)
-          if (x > 0) d = Math.min(d, dist[(y + 1) * EXT + (x - 1)] + 1)
-        }
+        if (y < EXT - 1) d = Math.min(d, dist[(y + 1) * EXT + x] + 1)
         if (x < EXT - 1) d = Math.min(d, dist[y * EXT + (x + 1)] + 1)
         dist[y * EXT + x] = d
       }

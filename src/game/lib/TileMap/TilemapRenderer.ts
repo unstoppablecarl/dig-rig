@@ -164,8 +164,6 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
   private readonly effectSystem: TerrainEffectSystem
   private readonly glowRenderer: TerrainChunkGlowRenderer
 
-  static CONFIG_DEFAULTS = CONFIG_DEFAULTS
-
   readonly glowRadius = CONFIG_DEFAULTS.glowRadius
   readonly glowEnabled = CONFIG_DEFAULTS.glowEnabled
   readonly glowTransitionAnimation = CONFIG_DEFAULTS.glowTransitionAnimation
