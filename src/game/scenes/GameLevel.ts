@@ -10,7 +10,7 @@ import { Player } from '../lib/Player/Player.ts'
 import { PlayerWeaponManager } from '../lib/Player/Weapons/PlayerWeaponManager.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
 import { Tilemap } from '../lib/TileMap/TileMap.ts'
-import { TilemapRenderer } from '../lib/TileMap/TilemapRenderer.ts'
+import { TilemapRenderer, type TilemapRendererConfig } from '../lib/TileMap/TilemapRenderer.ts'
 import { CameraController } from '../lib/UI/CameraController.ts'
 import { BgScene } from './Layers/BgScene.ts'
 import { UIScene } from './Layers/UIScene.ts'
@@ -19,7 +19,7 @@ import Group = GameObjects.Group
 import Layer = GameObjects.Layer
 import Rectangle = Geom.Rectangle
 import MouseManager = Input.Mouse.MouseManager
-import Texture = Phaser.Textures.Texture
+import CanvasTexture = Phaser.Textures.CanvasTexture
 import NEAREST = Textures.FilterMode.NEAREST
 
 type Layers = {
@@ -52,11 +52,15 @@ export abstract class GameLevel extends Scene {
   public inputManager: InputManager
   public terrainParticleManager: TerrainParticleManager
 
-  protected makeTerrainRenderer() {
-    return new TilemapRenderer(this, this.getTerrainTexture())
+  protected makeTilemapRenderer(tilemap: Tilemap): TilemapRenderer {
+    return new TilemapRenderer(this, this.getTerrainTexture(tilemap), this.tilemapRendererConfig())
   }
 
-  protected abstract getTerrainTexture(): Texture
+  protected tilemapRendererConfig(): Partial<TilemapRendererConfig> {
+    return {}
+  }
+
+  protected abstract getTerrainTexture(tilemap: Tilemap): CanvasTexture
 
   startLevel() {
   }
@@ -177,7 +181,7 @@ export abstract class GameLevel extends Scene {
     )
 
     this.terrainParticleManager = new TerrainParticleManager(this)
-    this.tilemapRenderer = this.makeTerrainRenderer()
+    this.tilemapRenderer = this.makeTilemapRenderer(this.tilemap)
     this.terrainChunkBodyManager = new TerrainChunkBodyManager(this)
     this.projectiles = new ProjectileManager(this)
     this.playerWeaponManager = new PlayerWeaponManager(this)

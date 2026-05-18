@@ -1,3 +1,6 @@
+// numbers must be 0-1
+export type RGBShaderColor = [number, number, number];
+
 export interface Position {
   x: number,
   y: number,

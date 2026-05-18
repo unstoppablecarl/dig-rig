@@ -2,6 +2,7 @@ import { Player } from '../../lib/Player/Player.ts'
 import { textureToPixelData } from '../../lib/Textures/texture-util.ts'
 import { Tilemap } from '../../lib/TileMap/TileMap.ts'
 import { GameLevel } from '../GameLevel.ts'
+import CanvasTexture = Phaser.Textures.CanvasTexture
 
 export default class ImageSourceTestLevel extends GameLevel {
   preload() {
@@ -18,7 +19,7 @@ export default class ImageSourceTestLevel extends GameLevel {
   }
 
   getTerrainTexture() {
-    return this.textures.get('terrain')
+    return this.textures.get('terrain') as CanvasTexture
   }
 
   makeTileMap() {

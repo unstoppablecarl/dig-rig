@@ -1,22 +1,51 @@
 import { GameObjects } from 'phaser'
-import { PERMANENT_COLOR, TERRAIN_TYPE_TRANSITION_COLORS } from '../../config.ts'
+import {
+  CREATE_COLOR,
+  DESTROY_COLOR,
+  GLOW_ENABLED,
+  GLOW_TRANSITION_ANIMATION_ENABLED,
+  PERMANENT_COLOR,
+} from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
+import type { RGBShaderColor } from '../../types.ts'
 import { TerrainType } from './TileMap.ts'
 import { TerrainChunkGlowRenderer } from './TilemapRenderer/TerrainChunkGlowRenderer.ts'
 import { TerrainChunkRenderer } from './TilemapRenderer/TerrainChunkRenderer.ts'
 import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'
 import Shader = GameObjects.Shader
-import Texture = Phaser.Textures.Texture
+import CanvasTexture = Phaser.Textures.CanvasTexture
 
-const OUTLINE_OPACITY = 0.5
-const GLOW_COLOR = [0, 0, 0]
-const GLOW_STRENGTH = 0.5
 const toVec3 = (c: number): [number, number, number] => [
   ((c >> 16) & 0xFF) / 255,
   ((c >> 8) & 0xFF) / 255,
   (c & 0xFF) / 255,
 ]
+
+export type TilemapRendererConfig = {
+  readonly outlineColor: RGBShaderColor,
+  // 0-1
+  readonly outlineOpacity: number,
+  readonly glowColor: RGBShaderColor,
+  // 0-1
+  readonly glowStrength: number,
+  readonly glowRadius: number,
+  readonly glowEnabled: boolean,
+  readonly glowTransitionAnimation: boolean,
+  readonly glowTransitionMS: number,
+}
+
+const CONFIG_DEFAULTS: TilemapRendererConfig = {
+  glowRadius: 10,
+  glowEnabled: GLOW_ENABLED,
+  glowTransitionAnimation: GLOW_TRANSITION_ANIMATION_ENABLED,
+  glowTransitionMS: 400,
+  glowColor: [60, 5, 5].map((v: number) => v / 255) as RGBShaderColor,
+  glowStrength: 0.5,
+
+  outlineColor: [255, 200, 200].map((v: number) => v / 255) as RGBShaderColor,
+  outlineOpacity: 0.75,
+}
 
 // language=GLSL
 const FRAG_SHADER = `
@@ -33,6 +62,7 @@ const FRAG_SHADER = `
 
     uniform float uInnerGlowStrength;
     uniform vec3 uGlowColor;
+    uniform vec3 uOutlineColor;
 
     uniform float uOutlineOpacity;
 
@@ -76,11 +106,13 @@ const FRAG_SHADER = `
             color = texture2D(uTerrain, outTexCoord);
             // is glow pixel
             if (glow > 0.01)   {
-                color.rgb = mix(color.rgb, uGlowColor, glow * uInnerGlowStrength);
+                vec3 multiplyColor = color.rgb * uGlowColor;
+
+                color.rgb = mix(color.rgb, multiplyColor, glow * uInnerGlowStrength);
             }
             // is outline pixel
             if (outline > 0.5) {
-                color.rgb = mix(color.rgb, uGlowColor, uOutlineOpacity);
+                color.rgb = mix(color.rgb, uOutlineColor, uOutlineOpacity);
             }
         }
         // EMPTY — fully transparent
@@ -105,20 +137,40 @@ const FRAG_SHADER = `
     }
 `
 
-export class TilemapRenderer extends SceneBound {
+export class TilemapRenderer extends SceneBound implements TilemapRendererConfig {
   private readonly chunkRenderer: TerrainChunkRenderer
   private readonly effectSystem: TerrainEffectSystem
   private readonly glowRenderer: TerrainChunkGlowRenderer
 
+  static CONFIG_DEFAULTS = CONFIG_DEFAULTS
+
+  readonly glowRadius = CONFIG_DEFAULTS.glowRadius
+  readonly glowEnabled = CONFIG_DEFAULTS.glowEnabled
+  readonly glowTransitionAnimation = CONFIG_DEFAULTS.glowTransitionAnimation
+  readonly glowTransitionMS = CONFIG_DEFAULTS.glowTransitionMS
+  readonly glowColor = CONFIG_DEFAULTS.glowColor
+  readonly glowStrength = CONFIG_DEFAULTS.glowStrength
+  readonly outlineColor = CONFIG_DEFAULTS.outlineColor
+  readonly outlineOpacity = CONFIG_DEFAULTS.outlineOpacity
+
   constructor(
     public scene: GameLevel,
-    terrainTexture: Texture,
+    readonly terrainTexture: CanvasTexture,
+    config: Partial<TilemapRendererConfig> = {},
   ) {
     super(scene)
 
+    Object.assign(this, config)
+
     this.chunkRenderer = new TerrainChunkRenderer(scene)
     this.effectSystem = new TerrainEffectSystem(scene)
-    this.glowRenderer = new TerrainChunkGlowRenderer(scene)
+
+    this.glowRenderer = new TerrainChunkGlowRenderer(scene, {
+      glowRadius: this.glowRadius,
+      glowEnabled: this.glowEnabled,
+      glowTransitionAnimation: this.glowTransitionAnimation,
+      glowTransitionMS: this.glowTransitionMS,
+    })
 
     const { width, height } = scene.tilemap
 
@@ -131,12 +183,13 @@ export class TilemapRenderer extends SceneBound {
           setUniform('uMask', 1)
           setUniform('uGlow', 2)
           setUniform('uEffect', 3)
-          setUniform('uGlowColor', GLOW_COLOR)
-          setUniform('uInnerGlowStrength', GLOW_STRENGTH)
-          setUniform('uOutlineOpacity', OUTLINE_OPACITY)
+          setUniform('uGlowColor', this.glowColor)
+          setUniform('uOutlineColor', this.outlineColor)
+          setUniform('uInnerGlowStrength', this.glowStrength)
+          setUniform('uOutlineOpacity', this.outlineOpacity)
           setUniform('uPermanentTileColor', toVec3(PERMANENT_COLOR))
-          setUniform('uDestroyColor', toVec3(TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.EMPTY] as number))
-          setUniform('uCreateColor', toVec3(TERRAIN_TYPE_TRANSITION_COLORS[TerrainType.SOLID] as number))
+          setUniform('uDestroyColor', toVec3(DESTROY_COLOR as number))
+          setUniform('uCreateColor', toVec3(CREATE_COLOR as number))
         },
       },
       0, 0,

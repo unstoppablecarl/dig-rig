@@ -28,3 +28,11 @@ export function createWeightedRandom<T>(
     return items[items.length - 1]
   }
 }
+
+export function randomArrayIndex(array: any[], rng: () => number = Math.random): number {
+  return Math.floor(rng() * array.length)
+}
+
+export function randomArrayValue<T>(array: T[], rng: () => number = Math.random): T {
+  return array[Math.floor(rng() * array.length)]
+}

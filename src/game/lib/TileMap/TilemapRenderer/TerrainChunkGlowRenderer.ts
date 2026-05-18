@@ -1,14 +1,9 @@
-import {
-  CHUNK_SIZE,
-  GLOW_ENABLED,
-  GLOW_RADIUS,
-  GLOW_TRANSITION_ANIMATION_ENABLED,
-  GLOW_TRANSITION_MS,
-} from '../../../config.ts'
+import { CHUNK_SIZE } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Chunk, ChunkId } from '../Chunk.ts'
 import { TerrainType } from '../TileMap.ts'
+import { type TilemapRendererConfig } from '../TilemapRenderer.ts'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
@@ -19,7 +14,6 @@ import CanvasTexture = Phaser.Textures.CanvasTexture
 const GLOW_EMPTY = 0xFF000000
 
 // extended distance transform region
-const EXT = CHUNK_SIZE + 2 * GLOW_RADIUS
 const GLOW_BYTES = CHUNK_SIZE * CHUNK_SIZE * 4
 
 // Per-chunk state for CPU-side lerp transitions.
@@ -35,18 +29,28 @@ type ChunkGlowState = {
   chunk: Chunk
 }
 
-export class TerrainChunkGlowRenderer extends SceneBound {
+interface TerrainChunkGlowRendererConfig extends Pick<TilemapRendererConfig, 'glowRadius' | 'glowTransitionMS' | 'glowEnabled' | 'glowTransitionAnimation'> {
+}
+
+export class TerrainChunkGlowRenderer extends SceneBound implements TerrainChunkGlowRendererConfig {
   readonly glowTexture: CanvasTexture
 
   private readonly glowUploadBuf: Uint8Array
   private readonly partialUploadBuf = new Uint8Array(GLOW_BYTES)
-  private readonly distBuf = new Uint8Array(EXT * EXT)
+  private readonly distBuf: Uint8Array
   // Uint32 view of glowUploadBuf
   private readonly glowPixels: Uint32Array
 
   private readonly glowStates = new Map<ChunkId, ChunkGlowState>()
 
-  constructor(public scene: GameLevel) {
+  readonly glowRadius: number
+  readonly glowTransitionMS: number
+  readonly glowEnabled: boolean
+  readonly glowTransitionAnimation: boolean
+
+  readonly EXT: number
+
+  constructor(public scene: GameLevel, config: TerrainChunkGlowRendererConfig) {
     super(scene)
     const { width, height } = scene.tilemap
 
@@ -55,14 +59,22 @@ export class TerrainChunkGlowRenderer extends SceneBound {
     const buf = new ArrayBuffer(GLOW_BYTES)
     this.glowUploadBuf = new Uint8Array(buf)
     this.glowPixels = new Uint32Array(buf)
+    this.glowRadius = config.glowRadius
+    this.glowEnabled = config.glowEnabled
+    this.glowTransitionAnimation = config.glowTransitionAnimation
+    this.glowTransitionMS = config.glowTransitionMS
+
+    this.EXT = CHUNK_SIZE + 2 * this.glowRadius
+
+    this.distBuf = new Uint8Array(this.EXT * this.EXT)
   }
 
   renderChunk(chunk: Chunk) {
-    if (!GLOW_ENABLED) return
+    if (!this.glowEnabled) return
 
     this.computeGlow(chunk)
 
-    if (!GLOW_TRANSITION_ANIMATION_ENABLED) {
+    if (!this.glowTransitionAnimation) {
       this.upload(chunk.cx * CHUNK_SIZE, chunk.cy * CHUNK_SIZE)
       return
     }
@@ -86,7 +98,7 @@ export class TerrainChunkGlowRenderer extends SceneBound {
     // Capture the currently-displayed glow into prev.
     if (state.active) {
       // Mid-transition: lerp to the current displayed value in-place.
-      const t = Math.min(1, (this.scene.time.now - state.startTime) / GLOW_TRANSITION_MS)
+      const t = Math.min(1, (this.scene.time.now - state.startTime) / this.glowTransitionMS)
       for (let i = 0; i < GLOW_BYTES; i++) {
         state.prev[i] = (state.prev[i] + (state.current[i] - state.prev[i]) * t) | 0
       }
@@ -102,12 +114,12 @@ export class TerrainChunkGlowRenderer extends SceneBound {
 
   // Lerp active transitions each frame and upload the interpolated result.
   updateTransitions() {
-    if (!GLOW_ENABLED) return
-    if (!GLOW_TRANSITION_ANIMATION_ENABLED) return
+    if (!this.glowEnabled) return
+    if (!this.glowTransitionAnimation) return
     const now = this.scene.time.now
     for (const state of this.glowStates.values()) {
       if (!state.active) continue
-      const t = Math.min(1, (now - state.startTime) / GLOW_TRANSITION_MS)
+      const t = Math.min(1, (now - state.startTime) / this.glowTransitionMS)
       const { prev, current } = state
       for (let i = 0; i < GLOW_BYTES; i++) {
         this.glowUploadBuf[i] = (prev[i] + (current[i] - prev[i]) * t) | 0
@@ -124,8 +136,10 @@ export class TerrainChunkGlowRenderer extends SceneBound {
     const offY = chunk.cy * CHUNK_SIZE
     const tilemap = this.scene.tilemap
     const dist = this.distBuf
+    const GLOW_RADIUS = this.glowRadius
     const startX = offX - GLOW_RADIUS
     const startY = offY - GLOW_RADIUS
+    const EXT = this.EXT
 
     // 1. Init: empty=0 (seed), solid=255 (infinity sentinel)
     for (let y = 0; y < EXT; y++) {
