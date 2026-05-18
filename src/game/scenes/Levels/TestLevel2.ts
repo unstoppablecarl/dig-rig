@@ -1,5 +1,6 @@
 import { Player } from '../../lib/Player/Player.ts'
 import { TerrainType, Tilemap } from '../../lib/TileMap/TileMap.ts'
+import type { TilemapRendererConfig } from '../../lib/TileMap/TilemapRenderer.ts'
 import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
@@ -12,6 +13,14 @@ export default class TestLevel2 extends GameLevel {
     this.loadPixelImage('terrain', 'level-4.png')
 
     this.preloadPlayer()
+  }
+
+  protected tilemapRendererConfig(): Partial<TilemapRendererConfig> {
+    return {
+      glowStrength: 0.99,
+      glowRadius: 12,
+      outlineOpacity: 0.2
+    }
   }
 
   getTerrainTexture() {

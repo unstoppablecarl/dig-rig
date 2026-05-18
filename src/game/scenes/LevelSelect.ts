@@ -12,6 +12,12 @@ export class LevelSelect extends Scene {
   }
 
   create() {
+    const lastLevelId = localStorage.getItem('level') as null | LevelId
+    if (lastLevelId) {
+      launchLevel(lastLevelId)
+      return
+    }
+
     if (AUTO_START_LEVEL_INDEX > -1) {
       launchLevel(Object.keys(LEVELS)[AUTO_START_LEVEL_INDEX] as LevelId)
       return

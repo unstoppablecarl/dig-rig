@@ -67,6 +67,8 @@ export async function launchLevel(id: LevelId) {
     return
   }
 
+  localStorage.setItem('level', id)
+
   // Lazy-register on first use
   if (!game.scene.getScene(id)) {
     const module = await entry.load()
