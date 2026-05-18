@@ -5,6 +5,7 @@ import { truncateArrayRandomly } from '../../helpers/array.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
+import { PLAYER_HEIGHT, PLAYER_WIDTH } from '../Player/Player.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
 
@@ -15,6 +16,9 @@ export enum TerrainType {
   SOLID,
   PERMANENT,
 }
+
+const PLAYER_RADIUS_X = PLAYER_WIDTH * 0.5
+const PLAYER_RADIUS_Y = PLAYER_HEIGHT * 0.5
 
 export class Tilemap extends SceneBound {
   private tiles: Uint8Array<ArrayBuffer>
@@ -166,6 +170,15 @@ export class Tilemap extends SceneBound {
   }
 
   public applyEffect(tileX: number, tileY: number, tileRadius: number, newValue: TerrainType, tilesToModify = Number.MAX_VALUE) {
+    const { x: px, y: py } = this.scene.player
+    const velocity = this.scene.player.container.body?.velocity
+    const vx = velocity?.x ?? 0
+    const vy = velocity?.y ?? 0
+    const MAX_VEL_EXTEND = 8
+    const velLeft = Math.max(Math.min(vx, 0), -MAX_VEL_EXTEND)
+    const velRight = Math.min(Math.max(vx, 0), MAX_VEL_EXTEND)
+    const velUp = Math.max(Math.min(vy, 0), -MAX_VEL_EXTEND)
+    const velDown = Math.min(Math.max(vy, 0), MAX_VEL_EXTEND)
 
     let tiles: Tile[] = []
     this.getCircle(tileX, tileY, tileRadius, (x, y) => {
@@ -173,6 +186,13 @@ export class Tilemap extends SceneBound {
 
       if (value === TerrainType.PERMANENT) return
       if (newValue === value) return
+      if (
+        newValue === TerrainType.SOLID &&
+        x > px - PLAYER_RADIUS_X + velLeft &&
+        x < px + PLAYER_RADIUS_X + velRight &&
+        y > py - PLAYER_RADIUS_Y + velUp &&
+        y < py + PLAYER_RADIUS_Y + velDown
+      ) return
 
       tiles.push({ x, y })
     })

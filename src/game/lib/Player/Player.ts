@@ -19,8 +19,8 @@ import BEFORE_UPDATE = Physics.Matter.Events.BEFORE_UPDATE
 import Image = Physics.Matter.Image
 import Vector2 = Phaser.Math.Vector2
 
-const PLAYER_WIDTH = 18
-const PLAYER_HEIGHT = 30
+export const PLAYER_WIDTH = 18
+export const PLAYER_HEIGHT = 30
 
 const PLAYER_BODY_CONFIG = {
   frictionStatic: 0,
