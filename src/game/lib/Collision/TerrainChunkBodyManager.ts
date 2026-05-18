@@ -1,4 +1,4 @@
-import { CHUNK_SIZE, TILE_SIZE } from '../../config.ts'
+import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { type Chunk, ChunkType } from '../TileMap/Chunk.ts'
@@ -47,12 +47,12 @@ export class TerrainChunkBodyManager extends SceneBound {
 
     for (const body of dynamicBodies) {
       const bounds = body.bounds
-      const margin = this.updateRadius / TILE_SIZE
+      const margin = this.updateRadius
 
-      const minCX = Math.floor((bounds.min.x / TILE_SIZE - margin) / CHUNK_SIZE)
-      const maxCX = Math.ceil((bounds.max.x / TILE_SIZE + margin) / CHUNK_SIZE)
-      const minCY = Math.floor((bounds.min.y / TILE_SIZE - margin) / CHUNK_SIZE)
-      const maxCY = Math.ceil((bounds.max.y / TILE_SIZE + margin) / CHUNK_SIZE)
+      const minCX = Math.floor((bounds.min.x - margin) / CHUNK_SIZE)
+      const maxCX = Math.ceil((bounds.max.x + margin) / CHUNK_SIZE)
+      const minCY = Math.floor((bounds.min.y - margin) / CHUNK_SIZE)
+      const maxCY = Math.ceil((bounds.max.y + margin) / CHUNK_SIZE)
 
       for (let cy = minCY; cy <= maxCY; cy++) {
         for (let cx = minCX; cx <= maxCX; cx++) {
@@ -111,10 +111,10 @@ export class TerrainChunkBodyManager extends SceneBound {
     const bodies: MatterJS.BodyType[] = []
 
     for (const rect of rectangles) {
-      const worldX = rect.x * TILE_SIZE + (rect.w * TILE_SIZE) / 2
-      const worldY = rect.y * TILE_SIZE + (rect.h * TILE_SIZE) / 2
-      const width = rect.w * TILE_SIZE
-      const height = rect.h * TILE_SIZE
+      const worldX = rect.x + (rect.w) / 2
+      const worldY = rect.y + (rect.h) / 2
+      const width = rect.w
+      const height = rect.h
 
       const body = this.scene.matter.add.rectangle(
         worldX,

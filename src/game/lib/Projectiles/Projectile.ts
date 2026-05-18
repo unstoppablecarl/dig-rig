@@ -1,5 +1,5 @@
 import { Math as PMath, Time } from 'phaser'
-import { FireMode, TILE_SIZE } from '../../config.ts'
+import { FireMode } from '../../config.ts'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
@@ -10,7 +10,7 @@ import { type IProjectileRenderer } from './ProjectileRenderer.ts'
 import TimerEvent = Time.TimerEvent
 
 const EXPAND_RATE_MS = 100
-const EXPAND_AMOUNT = TILE_SIZE
+const EXPAND_AMOUNT = 1
 const EXPAND_START_RADIUS = 2
 const FINAL_DECAY_SCALE = 0.9
 

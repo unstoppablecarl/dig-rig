@@ -1,4 +1,4 @@
-import { FireMode, TILE_SIZE } from '../../config.ts'
+import { FireMode } from '../../config.ts'
 import { shuffleArray } from '../../helpers/array.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
@@ -9,8 +9,8 @@ import type { ProjectileManager } from './ProjectileManager.ts'
 import { type IProjectileRenderer, ProjectileRenderer } from './ProjectileRenderer.ts'
 
 const RADIUS_DECAY = 0.9
-export const tilesToRadius = (tiles: number) => TILE_SIZE * Math.sqrt(tiles / Math.PI) * RADIUS_DECAY
-export const radiusToTiles = (radius: number) => Math.floor(Math.PI * Math.pow(radius / (TILE_SIZE * RADIUS_DECAY), 2))
+export const tilesToRadius = (tiles: number) => Math.sqrt(tiles / Math.PI) * RADIUS_DECAY
+export const radiusToTiles = (radius: number) => Math.floor(Math.PI * Math.pow(radius / RADIUS_DECAY, 2))
 
 export type ProjectileSource = (MatterExchanger | Position) & ParticleTarget
 
@@ -75,8 +75,8 @@ export abstract class BaseProjectile extends SceneBound {
 
   protected createTiles(count: number) {
     const tiles = this.scene.tilemap.applyEffect(
-      this.x / TILE_SIZE,
-      this.y / TILE_SIZE,
+      this.x,
+      this.y,
       this.radius,
       TerrainType.SOLID,
       count,
@@ -95,8 +95,8 @@ export abstract class BaseProjectile extends SceneBound {
     const shuffled = shuffleArray(tiles)
     for (const tile of shuffled) {
       const target = {
-        x: tile.x * TILE_SIZE,
-        y: tile.y * TILE_SIZE,
+        x: tile.x,
+        y: tile.y,
       }
       this.scene.particleManager.spawnMatter(source, target, true)
     }
@@ -106,8 +106,8 @@ export abstract class BaseProjectile extends SceneBound {
   }
 
   protected destroyTiles(count: number) {
-    const tileX = this.x / TILE_SIZE
-    const tileY = this.y / TILE_SIZE
+    const tileX = this.x
+    const tileY = this.y
     const tiles = this.scene.tilemap.applyEffect(tileX, tileY, this.radius, TerrainType.EMPTY, count)
     const changed = tiles.length
     this.tilesModified += changed
@@ -122,8 +122,8 @@ export abstract class BaseProjectile extends SceneBound {
       const shuffled = shuffleArray(tiles)
       for (const tile of shuffled) {
         const source = {
-          x: tile.x * TILE_SIZE,
-          y: tile.y * TILE_SIZE,
+          x: tile.x,
+          y: tile.y,
         }
         this.scene.particleManager.spawnMatter(source, target, false)
       }

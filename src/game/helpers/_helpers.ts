@@ -1,5 +1,4 @@
 import { GameObjects, Physics } from 'phaser'
-import { TILE_SIZE } from '../config.ts'
 import type { ParticleTarget, Position } from '../types.ts'
 import GameObject = GameObjects.GameObject
 import Velocity = Physics.Matter.Components.Velocity
@@ -17,8 +16,8 @@ export function getCollisionSteps(vx: number, vy: number, dt: number, scale = 1)
   const dy = vy * dt
 
   // sub-stepping: tile-sized steps for collision checks
-  const stepsX = Math.ceil(Math.abs(dx) / TILE_SIZE * scale)
-  const stepsY = Math.ceil(Math.abs(dy) / TILE_SIZE * scale)
+  const stepsX = Math.ceil(Math.abs(dx) * scale)
+  const stepsY = Math.ceil(Math.abs(dy) * scale)
   const totalSteps = Math.max(stepsX, stepsY, 1)
 
   return {

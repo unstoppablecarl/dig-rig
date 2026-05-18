@@ -3,13 +3,11 @@ import { TerrainType } from './lib/TileMap/TileMap.ts'
 import GetColor = Display.Color.GetColor
 import ValueToColor = Display.Color.ValueToColor
 
-export const TILE_SIZE = 1 as const
 export const CHUNK_SIZE = 64 as const
 
-export const MOVEMENT_MULTIPLIER = TILE_SIZE
 export const GRAVITY: number = 1
-export const PLAYER_JUMP_POWER = -7 * MOVEMENT_MULTIPLIER
-export const PLAYER_MOVE_SPEED = 3.5 * MOVEMENT_MULTIPLIER
+export const PLAYER_JUMP_POWER = -7
+export const PLAYER_MOVE_SPEED = 3.5
 
 export const DESTROY_COLOR = GetColor(255, 0, 70)
 export const CREATE_COLOR = GetColor(0, 70, 255)

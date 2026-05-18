@@ -1,6 +1,5 @@
 import { Geom } from 'phaser'
 import { type Color32, type PixelData, unpackAlpha } from 'pixel-data-js'
-import { TILE_SIZE } from '../../config.ts'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import { truncateArrayRandomly } from '../../helpers/array.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
@@ -90,15 +89,15 @@ export class Tilemap extends SceneBound {
 
   public getTileFromWorld(worldX: number, worldY: number): TerrainType {
     return this.getTile(
-      Math.round(worldX / TILE_SIZE),
-      Math.round(worldY / TILE_SIZE),
+      Math.round(worldX),
+      Math.round(worldY),
     )
   }
 
   public getTilePosFromWorld(worldX: number, worldY: number): Position {
     return {
-      x: Math.round(worldX / TILE_SIZE),
-      y: Math.round(worldY / TILE_SIZE),
+      x: Math.round(worldX),
+      y: Math.round(worldY),
     }
   }
 

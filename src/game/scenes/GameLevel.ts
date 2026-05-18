@@ -1,5 +1,5 @@
 import { GameObjects, Geom, Input, Scene, Textures } from 'phaser'
-import { DRAW_WORLD_BORDER_DEBUG, TILE_SIZE } from '../config.ts'
+import { DRAW_WORLD_BORDER_DEBUG } from '../config.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
 import { InputManager } from '../lib/Input/InputManager.ts'
@@ -186,8 +186,8 @@ export abstract class GameLevel extends Scene {
     this.tilemap = this.makeTileMap()
 
     this.worldBounds = new Rectangle(0, 0,
-      this.tilemap.width * TILE_SIZE,
-      this.tilemap.height * TILE_SIZE,
+      this.tilemap.width,
+      this.tilemap.height,
     )
 
     this.terrainParticleManager = new TerrainParticleManager(this)

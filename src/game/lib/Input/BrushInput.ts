@@ -1,5 +1,4 @@
 import { GameObjects, Input, Scenes } from 'phaser'
-import { TILE_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { TerrainType } from '../TileMap/TileMap.ts'
@@ -67,8 +66,8 @@ export class BrushInput extends SceneBound implements InputController {
 
     // dragging
     if (this.isDrawing) {
-      const tileX = this.mouseX / TILE_SIZE
-      const tileY = this.mouseY / TILE_SIZE
+      const tileX = this.mouseX
+      const tileY = this.mouseY
 
       this.apply(tileX, tileY)
     }
@@ -79,8 +78,8 @@ export class BrushInput extends SceneBound implements InputController {
     const destroying = (pointer.leftButtonDown() && pointer.event.shiftKey) || pointer.rightButtonDown()
     this.isCreating = !destroying
 
-    const tileX = pointer.worldX / TILE_SIZE
-    const tileY = pointer.worldY / TILE_SIZE
+    const tileX = pointer.worldX
+    const tileY = pointer.worldY
 
     this.apply(tileX, tileY)
   }
@@ -104,7 +103,7 @@ export class BrushInput extends SceneBound implements InputController {
 
     this.graphics.clear()
     this.graphics.lineStyle(4, 0xffff00, 1)
-    this.graphics.strokeCircle(this.mouseX, this.mouseY, this.radius * TILE_SIZE)
+    this.graphics.strokeCircle(this.mouseX, this.mouseY, this.radius)
   }
 
   apply(tileX: number, tileY: number) {
