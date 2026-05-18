@@ -13,7 +13,7 @@ export default class TestLevel extends GameLevel {
     this.scaleLevelTexture = new ScaleLevelTexture(this)
     this.scaleLevelTexture.preload()
     this.load.setPath('assets')
-
+    this.loadPixelImage('crate', 'crate.png')
     this.loadPixelImage('enemy', 'enemy-2.png')
 
     this.preloadPlayer()
@@ -65,7 +65,8 @@ export default class TestLevel extends GameLevel {
       density: 0.001,
     })
 
-    const sprite = this.add.rectangle(x, y, 20, 20, 0x8B4513)
+
+    const sprite = this.add.sprite(x, y, 'crate')
 
     this.layers.physicsObjects.add(sprite)
     this.matter.add.gameObject(sprite, crate)
