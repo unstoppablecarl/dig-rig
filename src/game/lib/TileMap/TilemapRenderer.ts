@@ -74,6 +74,19 @@ const FRAG_SHADER = `
     // phaser framework variable
     varying vec2 outTexCoord;
 
+    float blendOverlay(float base, float blend) {
+        return base < 0.5 ? (2.0 * base * blend) : (1.0 - 2.0 * (1.0 - base) * (1.0 - blend));
+    }
+
+    // Full Overlay vector function
+    vec3 blendOverlay(vec3 base, vec3 blend) {
+        return vec3(
+        blendOverlay(base.r, blend.r),
+        blendOverlay(base.g, blend.g),
+        blendOverlay(base.b, blend.b)
+        );
+    }
+    
     void main() {
         // uMask encodes tile type in the R channel:
         //   R ≈ 0.00  →  EMPTY      (transparent, discarded)
@@ -104,16 +117,21 @@ const FRAG_SHADER = `
         else if (mask > 0.25) {
             // SOLID — terrain texture, soft glow gradient, crisp 1px outline on top
             color = texture2D(uTerrain, outTexCoord);
+
+            // is outline pixel
+            if (outline > 0.5) {
+                vec3 blended = blendOverlay(color.rgb, uOutlineColor);
+                color.rgb = mix(color.rgb, blended, uOutlineOpacity);
+                color.rgb = mix(color.rgb, uOutlineColor, 0.45);
+            }
+
             // is glow pixel
-            if (glow > 0.01)   {
+            else if (glow > 0.01)   {
                 vec3 multiplyColor = color.rgb * uGlowColor;
 
                 color.rgb = mix(color.rgb, multiplyColor, glow * uInnerGlowStrength);
             }
-            // is outline pixel
-            if (outline > 0.5) {
-                color.rgb = mix(color.rgb, uOutlineColor, uOutlineOpacity);
-            }
+
         }
         // EMPTY — fully transparent
         else {
