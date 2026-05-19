@@ -2,6 +2,7 @@ import { Player } from '../../lib/Player/Player.ts'
 import { TerrainType, Tilemap } from '../../lib/TileMap/TileMap.ts'
 import type { TilemapRendererConfig } from '../../lib/TileMap/TilemapRenderer.ts'
 import { GameLevel } from '../GameLevel.ts'
+import terrain from './TestLevel2/TestLevel2.png'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
 export default class TestLevel2 extends GameLevel {
@@ -10,9 +11,7 @@ export default class TestLevel2 extends GameLevel {
   preload() {
     super.preload()
 
-    this.load.setPath('level-data')
-
-    this.TERRAIN = this.loadPrefixedPixelImage('terrain', 'level-4.png')
+    this.TERRAIN = this.loadPrefixedPixelImage('terrain', terrain)
 
     this.preloadPlayer()
   }

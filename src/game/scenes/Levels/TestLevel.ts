@@ -14,7 +14,7 @@ export default class TestLevel extends GameLevel {
     this.scaleLevelTexture.preload()
     this.load.setPath('assets')
     this.loadPixelImage('crate', 'crate.png')
-    this.loadPixelImage('enemy', 'enemy-2.png')
+    this.loadPixelImage('enemy', 'enemy.png')
 
     this.preloadPlayer()
   }
