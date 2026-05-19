@@ -6,16 +6,11 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import { PLAYER_HEIGHT, PLAYER_WIDTH } from '../Player/Player.ts'
+import { TerrainType } from './_Tilemap-types.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
 
 export type Tile = { x: number, y: number }
-
-export enum TerrainType {
-  EMPTY,
-  SOLID,
-  PERMANENT,
-}
 
 const PLAYER_RADIUS_X = PLAYER_WIDTH * 0.5
 const PLAYER_RADIUS_Y = PLAYER_HEIGHT * 0.5

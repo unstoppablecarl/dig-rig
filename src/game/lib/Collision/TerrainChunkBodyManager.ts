@@ -1,8 +1,8 @@
 import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { type Chunk, ChunkType } from '../TileMap/Chunk.ts'
-import type { ChunkManager } from '../TileMap/ChunkManager.ts'
+import { type Chunk, ChunkType } from '../Tilemap/Chunk.ts'
+import type { ChunkManager } from '../Tilemap/ChunkManager.ts'
 import { MASK_TERRAIN } from './BodyCategories.ts'
 
 const FRICTION = 0.5

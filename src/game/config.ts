@@ -1,5 +1,5 @@
 import { Display } from 'phaser'
-import { TerrainType } from './lib/Tilemap/Tilemap.ts'
+import { TerrainType } from './lib/Tilemap/_Tilemap-types.ts'
 import GetColor = Display.Color.GetColor
 import ValueToColor = Display.Color.ValueToColor
 

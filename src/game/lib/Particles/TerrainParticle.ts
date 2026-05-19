@@ -1,4 +1,4 @@
-import { TerrainType } from '../Tilemap/Tilemap.ts'
+import { TerrainType } from '../Tilemap/_Tilemap-types.ts'
 
 export class TerrainParticle {
   public lifetime: number = 0

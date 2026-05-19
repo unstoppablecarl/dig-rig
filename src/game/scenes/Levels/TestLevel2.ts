@@ -1,6 +1,7 @@
 import { Player } from '../../lib/Player/Player.ts'
-import { TerrainType, Tilemap } from '../../lib/Tilemap/Tilemap.ts'
-import type { TilemapRendererConfig } from '../../lib/TileMap/TilemapRenderer.ts'
+import { TerrainType } from '../../lib/Tilemap/_Tilemap-types.ts'
+import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
+import type { TilemapRendererConfig } from '../../lib/Tilemap/TilemapRenderer.ts'
 import { GameLevel } from '../GameLevel.ts'
 import terrain from './TestLevel2/TestLevel2.png'
 import CanvasTexture = Phaser.Textures.CanvasTexture

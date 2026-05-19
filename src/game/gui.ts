@@ -1,6 +1,6 @@
 import * as EssentialsPlugin from '@tweakpane/plugin-essentials'
 import { Pane } from 'tweakpane'
-import { launchLevel } from '../main.ts'
+import { launchLevel } from './launcher.ts'
 import { InputMode } from './lib/Input/InputManager.ts'
 import { GameLevel } from './scenes/GameLevel.ts'
 import { type LevelEntry, type LevelId, LEVELS } from './scenes/Levels'

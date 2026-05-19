@@ -1,8 +1,8 @@
 import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { TerrainType } from './_Tilemap-types.ts'
 import { Chunk, type ChunkId } from './Chunk.ts'
-import { TerrainType } from './Tilemap.ts'
 
 export class ChunkManager extends SceneBound {
   private chunks = new Map<ChunkId, Chunk>()

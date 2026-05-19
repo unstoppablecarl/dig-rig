@@ -4,7 +4,7 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
-import { TerrainType } from '../Tilemap/Tilemap.ts'
+import { TerrainType } from '../Tilemap/_Tilemap-types.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
 import { type IProjectileRenderer, ProjectileRenderer } from './ProjectileRenderer.ts'
 
