@@ -13,9 +13,9 @@ function getValueImports(sourceFile: ts.SourceFile, filePath: string): string[] 
   function visit(node: ts.Node) {
     if (ts.isImportDeclaration(node)) {
       // Check if import is type-only
-      // const isTypeOnly = node.importClause?.isTypeOnly
+      const isTypeOnly = node.importClause?.isTypeOnly
 
-      if (node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
+      if (!isTypeOnly && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
         const importPath = node.moduleSpecifier.text
 
         // Resolve relative imports
