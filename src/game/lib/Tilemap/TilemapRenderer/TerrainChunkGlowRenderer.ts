@@ -3,7 +3,6 @@ import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { TerrainType } from '../_Tilemap-types.ts'
 import type { Chunk, ChunkId } from '../Chunk.ts'
-import { type TilemapRendererConfig } from '../TilemapRenderer.ts'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
@@ -29,7 +28,11 @@ type ChunkGlowState = {
   chunk: Chunk
 }
 
-interface TerrainChunkGlowRendererConfig extends Pick<TilemapRendererConfig, 'glowRadius' | 'glowTransitionMS' | 'glowEnabled' | 'glowTransitionAnimation'> {
+export type TerrainChunkGlowRendererConfig = {
+  readonly glowRadius: number,
+  readonly glowEnabled: boolean,
+  readonly glowTransitionAnimation: boolean,
+  readonly glowTransitionMS: number,
 }
 
 export class TerrainChunkGlowRenderer extends SceneBound implements TerrainChunkGlowRendererConfig {
