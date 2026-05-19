@@ -18,11 +18,13 @@
     "scripts": {
         "dev": "vite --config vite/config.dev.mjs",
         "typecheck": "tsc --noEmit",
-        "build": "tsc --noEmit && vite build --config vite/config.prod.mjs"
+        "build": "tsc --noEmit && vite build --config vite/config.prod.mjs",
+        "check-circ": "tsx _scripts/check-circular.ts"
     },
     "devDependencies": {
         "@tweakpane/core": "^2.0.5",
         "@types/matter-js": "^0.20.2",
+        "@types/node": "^25.9.0",
         "sass": "^1.93.3",
         "typescript": "~5.7.2",
         "vite": "^6.3.1"
