@@ -99,6 +99,11 @@ export function makeGUI(game: GameLevel) {
       game.terrainParticleManager.explode(game.player.x, game.player.y - 100, 100)
     })
 
+  physicsFolder.addButton({ title: 'Add Sand' })
+    .on('click', () => {
+      game.sandBridge.placeSand(game.player.x, game.player.y - 100)
+    })
+
   const particles = {
     get count() {
       return game?.particleManager?.emitter?.getAliveParticleCount()

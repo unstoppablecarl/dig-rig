@@ -7,10 +7,12 @@ import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
 // Mask pixel layout (little-endian Uint32: 0xAABBGGRR):
-//   R ≈ 0.00 → EMPTY, R ≈ 0.50 → SOLID, R = 1.00 → PERMANENT
+//   R = 0.00 → EMPTY, R ≈ 0.16 → SAND, R ≈ 0.50 → SOLID, R = 1.00 → PERMANENT
+//   Shader bands: >0.75 PERMANENT, >0.42 SOLID, >0.08 SAND, else EMPTY
 const MASK_EMPTY = 0xFF000000
-const MASK_SOLID = 0xFF000080
-const MASK_PERM = 0xFF0000FF
+const MASK_SAND  = 0xFF000028  // R=40  (0.157)
+const MASK_SOLID = 0xFF000080  // R=128 (0.502)
+const MASK_PERM  = 0xFF0000FF  // R=255 (1.000)
 
 const CHUNK_BYTES = CHUNK_SIZE * CHUNK_SIZE * 4
 
@@ -46,8 +48,9 @@ export class TerrainChunkRenderer extends SceneBound {
         const tile = tilemap.getTile(offX + x, offY + y)
         pixels[flippedRow + x] =
           tile === TerrainType.PERMANENT ? MASK_PERM :
-            tile === TerrainType.SOLID ? MASK_SOLID :
-              MASK_EMPTY
+          tile === TerrainType.SOLID ? MASK_SOLID :
+          tile === TerrainType.SAND ? MASK_SAND :
+          MASK_EMPTY
       }
     }
 

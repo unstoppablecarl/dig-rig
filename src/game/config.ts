@@ -31,6 +31,7 @@ export const TERRAIN_TYPE_TRANSITION_COLORS = {
   [TerrainType.EMPTY]: DESTROY_COLOR,
   [TerrainType.SOLID]: CREATE_COLOR,
   [TerrainType.PERMANENT]: PERMANENT_COLOR,
+  [TerrainType.SAND]: GetColor(0, 70, 255),
 }
 export const MAX_MATTER_PARTICLES = 1500
 

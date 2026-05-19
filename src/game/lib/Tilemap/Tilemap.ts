@@ -16,8 +16,10 @@ const PLAYER_RADIUS_X = PLAYER_WIDTH * 0.5
 const PLAYER_RADIUS_Y = PLAYER_HEIGHT * 0.5
 
 export class Tilemap extends SceneBound {
-  private tiles: Uint8Array<ArrayBuffer>
+  private readonly sab: SharedArrayBuffer
+  private tiles: Uint8Array<SharedArrayBuffer>
   public chunkManager: ChunkManager
+  public onTileEmpty?: (tx: number, ty: number) => void
 
   private matter = 0
 
@@ -27,10 +29,13 @@ export class Tilemap extends SceneBound {
     readonly height: number,
   ) {
     super(scene)
-    this.tiles = new Uint8Array(width * height)
+    this.sab = new SharedArrayBuffer(width * height)
+    this.tiles = new Uint8Array(this.sab)
 
     this.chunkManager = new ChunkManager(scene, width, height)
   }
+
+  get tilesBuffer(): SharedArrayBuffer { return this.sab }
 
   public setRect(
     startX: number,
@@ -73,6 +78,7 @@ export class Tilemap extends SceneBound {
     this.chunkManager.setDirty(x, y, prev, value)
     if (value === TerrainType.EMPTY) this.matter--
     if (value === TerrainType.SOLID) this.matter++
+    if (value === TerrainType.EMPTY) this.onTileEmpty?.(x, y)
     return true
   }
 
@@ -243,9 +249,11 @@ export class Tilemap extends SceneBound {
   }
 
   protected onDestroy() {
+    this.onTileEmpty = undefined
     // @ts-expect-error: destroy
     this.tiles = null
-
+    // @ts-expect-error: destroy
+    this.sab = null
     // @ts-expect-error: destroy
     this.chunkManager = null
   }

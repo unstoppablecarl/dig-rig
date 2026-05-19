@@ -93,9 +93,10 @@ const FRAG_SHADER = `
     
     void main() {
         // uMask encodes tile type in the R channel:
-        //   R ≈ 0.00  →  EMPTY      (transparent, discarded)
-        //   R ≈ 0.50  →  SOLID      (samples terrain texture)
-        //   R = 1.00  →  PERMANENT  (fixed cyan base color)
+        //   R = 0.00  →  EMPTY     (transparent, discarded)
+        //   R ≈ 0.16  →  SAND      (falling, rendered as create color)
+        //   R ≈ 0.50  →  SOLID     (samples terrain texture)
+        //   R = 1.00  →  PERMANENT (fixed cyan base color)
         float mask = texture2D(uMask, outTexCoord).r;
 
         // uGlow is written by the CPU distance-transform each time terrain changes:
@@ -119,7 +120,7 @@ const FRAG_SHADER = `
             }
         }
         // SOLID
-        else if (mask > 0.25) {
+        else if (mask > 0.42) {
             // SOLID — terrain texture, soft glow gradient, crisp 1px outline on top
             color = texture2D(uTerrain, outTexCoord);
 
@@ -135,7 +136,10 @@ const FRAG_SHADER = `
 
                 color.rgb = mix(color.rgb, multiplyColor, glow * uInnerGlowStrength);
             }
-
+        }
+        // SAND (falling)
+        else if (mask > 0.08) {
+            color = vec4(uCreateColor, 1.0);
         }
         // EMPTY — fully transparent
         else {

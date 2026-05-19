@@ -4,6 +4,7 @@ import { PLAYER_SPRITE_SHEET_ASSETS } from '../../assets/player/player-sprite-sh
 import { DRAW_WORLD_BORDER_DEBUG } from '../config.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
+import { SandBridge } from '../lib/Sand/SandBridge.ts'
 import { InputManager } from '../lib/Input/InputManager.ts'
 import { MatterManager } from '../lib/Matter/MatterManager.ts'
 import { ParticleManager } from '../lib/Particles/ParticleManager.ts'
@@ -53,6 +54,7 @@ export abstract class GameLevel extends Scene {
   public worldBounds: Geom.Rectangle
   public inputManager: InputManager
   public terrainParticleManager: TerrainParticleManager
+  public sandBridge: SandBridge
   protected id: LevelId
 
   protected makeTilemapRenderer(tilemap: Tilemap): TilemapRenderer {
@@ -191,6 +193,7 @@ export abstract class GameLevel extends Scene {
 
     this.terrainParticleManager = new TerrainParticleManager(this)
     this.tilemapRenderer = this.makeTilemapRenderer(this.tilemap)
+    this.sandBridge = new SandBridge(this)
     this.terrainChunkBodyManager = new TerrainChunkBodyManager(this)
     this.projectiles = new ProjectileManager(this)
     this.playerWeaponManager = new PlayerWeaponManager(this)
@@ -223,6 +226,7 @@ export abstract class GameLevel extends Scene {
   update(_time: number, delta: number) {
     const dt = getDeltaT(delta)
 
+    this.sandBridge.update()
     this.cameraController.update()
     this.player.update()
     this.projectiles.update(dt)
