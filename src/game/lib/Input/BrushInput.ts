@@ -1,7 +1,7 @@
 import { GameObjects, Input, Scenes } from 'phaser'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { TerrainType } from '../TileMap/TileMap.ts'
+import { TerrainType } from '../Tilemap/Tilemap.ts'
 import type { InputController } from './InputManager.ts'
 import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
 import POINTER_DOWN = Input.Events.POINTER_DOWN

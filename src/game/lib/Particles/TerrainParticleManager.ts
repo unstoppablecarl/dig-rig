@@ -2,7 +2,7 @@ import { GameObjects, Math as PMath } from 'phaser'
 import { TERRAIN_TYPE_TRANSITION_COLORS } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { TerrainType } from '../TileMap/TileMap.ts'
+import { TerrainType } from '../Tilemap/Tilemap.ts'
 import { TerrainParticle } from './TerrainParticle.ts'
 
 export class TerrainParticleManager extends SceneBound {

@@ -1,7 +1,7 @@
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import { randomArrayIndex, randomArrayValue } from '../Random/rng.ts'
-import { Tilemap } from '../TileMap/TileMap.ts'
+import { Tilemap } from '../Tilemap/Tilemap.ts'
 import { makePatternTerrainTexture } from './makePatternTerrainTexture.ts'
 import { makeMultiImagePatternRenderer } from './PatternRenderer.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture

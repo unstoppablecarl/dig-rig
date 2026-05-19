@@ -9,7 +9,7 @@ import {
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { RGBShaderColor } from '../../types.ts'
-import { TerrainType } from './TileMap.ts'
+import { TerrainType } from './Tilemap.ts'
 import { TerrainChunkGlowRenderer } from './TilemapRenderer/TerrainChunkGlowRenderer.ts'
 import { TerrainChunkRenderer } from './TilemapRenderer/TerrainChunkRenderer.ts'
 import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'

@@ -2,7 +2,7 @@ import { CHUNK_SIZE } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Chunk, ChunkId } from '../Chunk.ts'
-import { TerrainType } from '../TileMap.ts'
+import { TerrainType } from '../Tilemap.ts'
 import { type TilemapRendererConfig } from '../TilemapRenderer.ts'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import CanvasTexture = Phaser.Textures.CanvasTexture

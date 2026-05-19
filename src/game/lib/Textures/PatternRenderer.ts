@@ -1,6 +1,6 @@
 import { type PixelData } from 'pixel-data-js'
 import { createWeightedRandom } from '../Random/rng'
-import type { Tilemap } from '../TileMap/TileMap.ts'
+import type { Tilemap } from '../Tilemap/Tilemap.ts'
 import type { PatternRenderer } from './_pattern-types.ts'
 import { textureToPixelData } from './texture-util'
 import TextureManager = Phaser.Textures.TextureManager

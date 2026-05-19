@@ -9,7 +9,7 @@ import { TerrainParticleManager } from '../lib/Particles/TerrainParticleManager.
 import { Player } from '../lib/Player/Player.ts'
 import { PlayerWeaponManager } from '../lib/Player/Weapons/PlayerWeaponManager.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
-import { Tilemap } from '../lib/TileMap/TileMap.ts'
+import { Tilemap } from '../lib/Tilemap/Tilemap.ts'
 import { TilemapRenderer, type TilemapRendererConfig } from '../lib/TileMap/TilemapRenderer.ts'
 import { CameraController } from '../lib/UI/CameraController.ts'
 import { BgScene } from './Layers/BgScene.ts'
