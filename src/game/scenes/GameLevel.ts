@@ -1,4 +1,6 @@
 import { GameObjects, Geom, Input, Scene, Textures } from 'phaser'
+import { loadPixelSpriteSheets } from '../../assets/asset-loader.ts'
+import { PLAYER_SPRITE_SHEET_ASSETS } from '../../assets/player/player-sprite-sheet-assets.ts'
 import { DRAW_WORLD_BORDER_DEBUG } from '../config.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
@@ -133,10 +135,7 @@ export abstract class GameLevel extends Scene {
   }
 
   preloadPlayer() {
-    this.load.setPath('assets')
-
-    this.loadPixelSpritesheet('player', 'player.png', { frameWidth: 40, frameHeight: 40 })
-    this.loadPixelSpritesheet('player-arm', 'arm.png', { frameWidth: 18, frameHeight: 8 })
+    loadPixelSpriteSheets(this, PLAYER_SPRITE_SHEET_ASSETS)
   }
 
   loadPrefixedPixelImage(key: string, url: string) {

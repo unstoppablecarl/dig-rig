@@ -2,6 +2,7 @@ import type { BodyType } from 'matter'
 import { Animations, GameObjects, Math as PMath, Physics, Time } from 'phaser'
 import type { EventData } from 'phaser-matter-collision-plugin/src/collision-types.ts'
 import { CollidingObject } from 'phaser-matter-collision-plugin/src/valid-collision-object.ts'
+import { PlayerSpriteSheetAssets } from '../../../assets/player/player-sprite-sheet-assets.ts'
 import { GRAVITY, PLAYER_JUMP_POWER, PLAYER_MATTER_TANK_SIZE, PLAYER_MOVE_SPEED } from '../../config.ts'
 import { clampVelocity, PositionOffset } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
@@ -211,11 +212,13 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
 
   private initSprite() {
 
-    this.sprite = this.scene.add.sprite(0, 0, 'player')
+    const PLAYER = PlayerSpriteSheetAssets.player
+
+    this.sprite = this.scene.add.sprite(0, 0, PLAYER)
 
     this.sprite.anims.create({
       key: 'idle',
-      frames: this.scene.anims.generateFrameNumbers('player', { frames: [0] }),
+      frames: this.scene.anims.generateFrameNumbers(PLAYER, { frames: [0] }),
       frameRate: 8,
       repeat: -1,
     })
@@ -223,39 +226,39 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     const walkFrames = [0, 1, 2, 3, 4, 5]
     this.sprite.anims.create({
       key: 'walk',
-      frames: this.scene.anims.generateFrameNumbers('player', { frames: walkFrames }),
+      frames: this.scene.anims.generateFrameNumbers(PLAYER, { frames: walkFrames }),
       frameRate: 14,
       repeat: -1,
     })
 
     this.sprite.anims.create({
       key: 'walk-reverse',
-      frames: this.scene.anims.generateFrameNumbers('player', { frames: [...walkFrames].reverse() }),
+      frames: this.scene.anims.generateFrameNumbers(PLAYER, { frames: [...walkFrames].reverse() }),
       frameRate: 14,
       repeat: -1,
     })
 
     this.sprite.anims.create({
       key: 'hurt',
-      frames: this.scene.anims.generateFrameNumbers('player', { frames: [12, 13] }),
+      frames: this.scene.anims.generateFrameNumbers(PLAYER, { frames: [12, 13] }),
       frameRate: 2,
       repeat: -1,
     })
 
     this.sprite.anims.create({
       key: 'fall',
-      frames: this.scene.anims.generateFrameNumbers('player', { frames: [7] }),
+      frames: this.scene.anims.generateFrameNumbers(PLAYER, { frames: [7] }),
     })
 
     this.sprite.anims.create({
       key: 'jump',
-      frames: this.scene.anims.generateFrameNumbers('player', { frames: [6] }),
+      frames: this.scene.anims.generateFrameNumbers(PLAYER, { frames: [6] }),
     })
 
     this.sprite.play('idle')
     this.container.add(this.sprite)
 
-    this.arm = this.scene.add.sprite(ARM_OFFSET.x, ARM_OFFSET.y, 'player-arm')
+    this.arm = this.scene.add.sprite(ARM_OFFSET.x, ARM_OFFSET.y, PlayerSpriteSheetAssets.player_arm)
     this.arm.setOrigin(ARM_ORIGIN.x, ARM_ORIGIN.y)
     this.container.add(this.arm)
 
