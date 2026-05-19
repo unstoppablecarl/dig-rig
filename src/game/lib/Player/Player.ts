@@ -2,7 +2,7 @@ import type { BodyType } from 'matter'
 import { Animations, GameObjects, Math as PMath, Physics, Time } from 'phaser'
 import type { EventData } from 'phaser-matter-collision-plugin/src/collision-types.ts'
 import { CollidingObject } from 'phaser-matter-collision-plugin/src/valid-collision-object.ts'
-import { PlayerSpriteSheetAssets } from '../../../assets/player/player-sprite-sheet-assets.ts'
+import { makePlayerSprite, PlayerSpriteSheetAssets } from '../../../assets/player/player-sprite-sheet-assets.ts'
 import { GRAVITY, PLAYER_JUMP_POWER, PLAYER_MATTER_TANK_SIZE, PLAYER_MOVE_SPEED } from '../../config.ts'
 import { clampVelocity, PositionOffset } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
@@ -15,10 +15,10 @@ import Animation = Animations.Animation
 import AnimationFrame = Animations.AnimationFrame
 import Container = GameObjects.Container
 import Sprite = GameObjects.Sprite
+import Vector2 = Phaser.Math.Vector2
 import AFTER_UPDATE = Physics.Matter.Events.AFTER_UPDATE
 import BEFORE_UPDATE = Physics.Matter.Events.BEFORE_UPDATE
 import Image = Physics.Matter.Image
-import Vector2 = Phaser.Math.Vector2
 
 export const PLAYER_WIDTH = 18
 export const PLAYER_HEIGHT = 30
@@ -212,49 +212,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
 
   private initSprite() {
 
-    const PLAYER = PlayerSpriteSheetAssets.player
-
-    this.sprite = this.scene.add.sprite(0, 0, PLAYER)
-
-    this.sprite.anims.create({
-      key: 'idle',
-      frames: this.scene.anims.generateFrameNumbers(PLAYER, { frames: [0] }),
-      frameRate: 8,
-      repeat: -1,
-    })
-
-    const walkFrames = [0, 1, 2, 3, 4, 5]
-    this.sprite.anims.create({
-      key: 'walk',
-      frames: this.scene.anims.generateFrameNumbers(PLAYER, { frames: walkFrames }),
-      frameRate: 14,
-      repeat: -1,
-    })
-
-    this.sprite.anims.create({
-      key: 'walk-reverse',
-      frames: this.scene.anims.generateFrameNumbers(PLAYER, { frames: [...walkFrames].reverse() }),
-      frameRate: 14,
-      repeat: -1,
-    })
-
-    this.sprite.anims.create({
-      key: 'hurt',
-      frames: this.scene.anims.generateFrameNumbers(PLAYER, { frames: [12, 13] }),
-      frameRate: 2,
-      repeat: -1,
-    })
-
-    this.sprite.anims.create({
-      key: 'fall',
-      frames: this.scene.anims.generateFrameNumbers(PLAYER, { frames: [7] }),
-    })
-
-    this.sprite.anims.create({
-      key: 'jump',
-      frames: this.scene.anims.generateFrameNumbers(PLAYER, { frames: [6] }),
-    })
-
+    this.sprite = makePlayerSprite(this.scene)
     this.sprite.play('idle')
     this.container.add(this.sprite)
 
