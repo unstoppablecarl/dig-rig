@@ -32,8 +32,8 @@ export function loadPixelSpriteSheets(
   scene: Pick<Scene, 'load' | 'textures'>,
   spriteSheets: Record<string, SpriteSheetLoader>,
 ) {
+  scene.load.setPath('')
   for (const [key, { url, config }] of Object.entries(spriteSheets)) {
-    console.log(key, url, config)
     loadPixelSpritesheet(scene, key, url, config)
   }
 }
