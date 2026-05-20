@@ -144,10 +144,11 @@ export class TerrainChunkGlowRenderer extends SceneBound implements TerrainChunk
     const startY = offY - GLOW_RADIUS
     const EXT = this.EXT
 
-    // 1. Init: empty=0 (seed), solid=255 (infinity sentinel)
+    // 1. Init: empty/water=0 (seed), solid=255 (infinity sentinel)
     for (let y = 0; y < EXT; y++) {
       for (let x = 0; x < EXT; x++) {
-        dist[y * EXT + x] = tilemap.getTile(startX + x, startY + y) === TerrainType.EMPTY ? 0 : 255
+        const t = tilemap.getTile(startX + x, startY + y)
+        dist[y * EXT + x] = (t === TerrainType.EMPTY || t === TerrainType.WATER) ? 0 : 255
       }
     }
 
