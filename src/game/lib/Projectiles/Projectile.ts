@@ -71,12 +71,14 @@ export class Projectile extends BaseProjectile {
         ) !== TerrainType.EMPTY
 
         if (collision) {
+          this.x = stepX - stepDx
+          this.y = stepY - stepDy
+
           this.renderer.fadeOutAndDestroy()
           this.radius = EXPAND_START_RADIUS
           // stop
           this.vx = 0
           this.vy = 0
-
           this.expandTimer = this.startExpandTimer()
 
           break
