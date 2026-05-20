@@ -8,7 +8,7 @@ export class TerrainParticle {
     public y: number,
     public vx: number,
     public vy: number,
-    readonly terrainType: TerrainType = TerrainType.SOLID,
+    readonly terrainType: TerrainType.SOLID | TerrainType.EMPTY = TerrainType.SOLID,
     readonly radius: number = 1,
     readonly maxLifetimeSeconds = 10,
   ) {

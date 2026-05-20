@@ -19,7 +19,7 @@ export class TerrainParticleManager extends SceneBound {
     centerX: number,
     centerY: number,
     count: number = 20,
-    type: TerrainType = TerrainType.SOLID,
+    type: TerrainType.SOLID | TerrainType.EMPTY = TerrainType.SOLID,
   ) {
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2
