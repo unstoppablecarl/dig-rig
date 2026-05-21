@@ -6,7 +6,7 @@ import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
 import { TerrainType } from '../Tilemap/_Tilemap-types.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
-import { type IProjectileRenderer, ProjectileRenderer } from './ProjectileRenderer.ts'
+import { ProjectileRenderer } from './ProjectileRenderer.ts'
 
 const RADIUS_DECAY = 0.9
 export const tilesToRadius = (tiles: number) => Math.sqrt(tiles / Math.PI) * RADIUS_DECAY
@@ -40,11 +40,11 @@ export abstract class BaseProjectile extends SceneBound {
     public x: number,
     public y: number,
     public mode: FireMode,
-    protected renderer: IProjectileRenderer = new ProjectileRenderer(),
+    protected renderer: ProjectileRenderer | null = null,
   ) {
     super(scene)
 
-    this.renderer.attachToProjectile(this)
+    this.renderer?.attachToProjectile(this)
   }
 
   setTilesToModify(count: number) {
@@ -141,7 +141,6 @@ export abstract class BaseProjectile extends SceneBound {
     this.manager?.remove(this)
     this.renderer?.destroy()
 
-    // @ts-expect-error: destroy
     this.renderer = null
     // @ts-expect-error: destroy
     this.manager = null

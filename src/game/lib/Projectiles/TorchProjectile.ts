@@ -1,35 +1,11 @@
 import { FireMode } from '../../config.ts'
-import type { GameLevel } from '../../scenes/GameLevel.ts'
-import type { MatterTank } from '../Matter/MatterTank.ts'
-import { BaseProjectile, type ProjectileSource } from './BaseProjectile.ts'
-import type { ProjectileManager } from './ProjectileManager.ts'
+import { BaseProjectile } from './BaseProjectile.ts'
 
 export class TorchProjectile extends BaseProjectile {
 
-  constructor(
-    scene: GameLevel,
-    manager: ProjectileManager,
-    source: ProjectileSource,
-    matterTank: MatterTank,
-    x: number,
-    y: number,
-    mode: FireMode,
-  ) {
-    super(
-      scene,
-      manager,
-      source,
-      matterTank,
-      x,
-      y,
-      mode,
-    )
-
-    this.radius = 20
-  }
+  radius = 20
 
   update() {
-    this.renderer.update(this)
     if (!this.fired) return
 
     if (this.charge() > 0) {

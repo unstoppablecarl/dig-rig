@@ -4,7 +4,7 @@ import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
 import type { BaseProjectile, BaseProjectileConstructor, ProjectileSource } from './BaseProjectile.ts'
-import { type IProjectileRenderer } from './ProjectileRenderer.ts'
+import { ProjectileRenderer } from './ProjectileRenderer.ts'
 
 export class ProjectileManager extends SceneBound {
   public children: BaseProjectile[] = []
@@ -23,7 +23,7 @@ export class ProjectileManager extends SceneBound {
     y: number,
     charge: number,
     mode: FireMode,
-    renderer?: IProjectileRenderer,
+    renderer: null | ProjectileRenderer = new ProjectileRenderer(this.scene),
   ): T {
     const projectile = new Constructor(this.scene, this, source, matterTank, x, y, mode, renderer)
 
@@ -41,7 +41,7 @@ export class ProjectileManager extends SceneBound {
     velocity?: number,
     pos?: Position,
     angle?: number,
-    renderer?: IProjectileRenderer,
+    renderer: null | ProjectileRenderer = new ProjectileRenderer(this.scene),
   ) {
     const player = this.scene.player
     if (!player.matterTank.hasChargeAvailable(charge, mode)) {
