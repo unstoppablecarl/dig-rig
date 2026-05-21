@@ -2,6 +2,7 @@ import { Display } from 'phaser'
 import { TerrainType } from './lib/Tilemap/_Tilemap-types.ts'
 import GetColor = Display.Color.GetColor
 import ValueToColor = Display.Color.ValueToColor
+import Interpolate = Display.Color.Interpolate
 
 export const CHUNK_SIZE = 64 as const
 
