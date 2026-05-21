@@ -1,5 +1,6 @@
 import { Scenes } from 'phaser'
 import { FireMode, PROJECTILE_MODE_COLORS } from '../../../config.ts'
+import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
@@ -14,6 +15,7 @@ import type { ImmediateWeapon } from './PlayerWeaponManager.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 const MIN_CHARGE = 10
+
 export abstract class InstantWeapon extends SceneBound implements ImmediateWeapon {
   readonly abstract displayName: string
 
@@ -95,7 +97,10 @@ export abstract class InstantWeapon extends SceneBound implements ImmediateWeapo
 
   protected setCharge(val: number): boolean {
     val = Math.max(MIN_CHARGE, val)
-    const charge = this.scene.player.matterTank.clampToChargeAvailable(val, this.mode)
+    let charge = val
+    if (isMatterTankFireMode(this.mode)) {
+      charge = this.scene.player.matterTank.clampToChargeAvailable(val, this.mode)
+    }
     if (charge === this.charge) return false
     this.charge = charge
     const radius = tilesToRadius(charge)

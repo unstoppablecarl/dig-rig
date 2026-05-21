@@ -1,4 +1,4 @@
-import { FireMode } from '../../config.ts'
+import { FireMode, MatterTankFireMode } from '../../config.ts'
 import { clampMaxInt } from '../../helpers/_helpers.ts'
 import type { MatterManager } from './MatterManager.ts'
 
@@ -51,23 +51,23 @@ export class MatterTank {
     this._matter -= value
   }
 
-  getPendingCharge(mode: FireMode) {
+  getPendingCharge(mode: MatterTankFireMode) {
     return this.pending[mode]
   }
 
-  getPendingChargePercent(mode: FireMode) {
+  getPendingChargePercent(mode: MatterTankFireMode) {
     return this.getPendingCharge(mode) / this.matterMax
   }
 
-  getChargeAvailablePercent(mode: FireMode) {
+  getChargeAvailablePercent(mode: MatterTankFireMode) {
     return this.chargeAvailable(mode) / this.matterMax
   }
 
-  setPendingCharge(mode: FireMode, value: number) {
+  setPendingCharge(mode: MatterTankFireMode, value: number) {
     this.pending[mode] = clampMaxInt(value, this.chargeAvailable(mode))
   }
 
-  addPendingCharge(mode: FireMode, value: number) {
+  addPendingCharge(mode: MatterTankFireMode, value: number) {
     const available = this.chargeAvailable(mode)
     if (available < value) {
       throw new Error(`[${FireMode[mode]}] pending: attempting to add ${value} when there is only ${available} can be added`)
@@ -76,7 +76,7 @@ export class MatterTank {
     this.pending[mode] += value
   }
 
-  removePendingCharge(mode: FireMode, value: number) {
+  removePendingCharge(mode: MatterTankFireMode, value: number) {
     const existing = this.getPendingCharge(mode)
     if (existing < value) {
       throw new Error(`[${FireMode[mode]}] pending: attempting to remove ${value} when only ${existing} exists`)
@@ -84,7 +84,7 @@ export class MatterTank {
     this.pending[mode] -= value
   }
 
-  applyPendingCharge(mode: FireMode, value: number) {
+  applyPendingCharge(mode: MatterTankFireMode, value: number) {
     this.removePendingCharge(mode, value)
 
     if (mode === FireMode.DESTROY) {
@@ -92,21 +92,21 @@ export class MatterTank {
       return
     }
 
-    // if (mode === FireMode.CREATE) {
-    return this.remove(value)
-    // }
+    if (mode === FireMode.CREATE) {
+      return this.remove(value)
+    }
   }
 
-  hasChargeAvailable(charge: number, mode: FireMode) {
+  hasChargeAvailable(charge: number, mode: MatterTankFireMode) {
     return this.chargeAvailable(mode) >= charge
   }
 
-  clampToChargeAvailable(charge: number, mode: FireMode) {
+  clampToChargeAvailable(charge: number, mode: MatterTankFireMode) {
     const available = this.chargeAvailable(mode)
     return Math.min(charge, available)
   }
 
-  chargeAvailable(mode: FireMode) {
+  chargeAvailable(mode: MatterTankFireMode) {
     if (mode === FireMode.DESTROY) {
       return this.destroyAvailable()
     }

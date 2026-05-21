@@ -1,4 +1,5 @@
 import { FireMode } from '../../config.ts'
+import { isMatterTankFireMode } from '../../helpers/_helpers.ts'
 import { BaseProjectile } from './BaseProjectile.ts'
 import { tilesToRadius } from './projectile-radius'
 
@@ -15,8 +16,9 @@ export class InstantProjectile extends BaseProjectile {
 
   fire() {
     const charge = this.charge()
-    this.matterTank.addPendingCharge(this.mode, charge)
-
+    if (isMatterTankFireMode(this.mode)) {
+      this.matterTank.addPendingCharge(this.mode, charge)
+    }
     if (this.mode === FireMode.DESTROY) {
       this.destroyTiles(charge)
     } else if (this.mode === FireMode.CREATE) {

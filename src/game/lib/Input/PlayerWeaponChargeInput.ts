@@ -1,6 +1,6 @@
 import { Input, Scenes } from 'phaser'
 import { FireMode } from '../../config.ts'
-import { getDeltaT } from '../../helpers/_helpers.ts'
+import { getDeltaT, isMatterTankFireMode } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { GameEvent } from '../events.ts'
@@ -91,7 +91,11 @@ export class PlayerWeaponChargeInput extends SceneBound<GameLevel> implements In
   }
 
   getMaxCharge(): number {
-    return this.scene.player.matterTank.chargeAvailable(this.mode)
+    let charge = Infinity
+    if (isMatterTankFireMode(this.mode)) {
+      charge = this.scene.player.matterTank.chargeAvailable(this.mode)
+    }
+    return charge
   }
 
   protected onDestroy() {

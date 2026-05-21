@@ -1,4 +1,5 @@
 import { GameObjects, Physics } from 'phaser'
+import { FireMode, type MatterTankFireMode } from '../config.ts'
 import type { ParticleTarget, Position } from '../types.ts'
 import GameObject = GameObjects.GameObject
 import Velocity = Physics.Matter.Components.Velocity
@@ -158,3 +159,5 @@ export function makeBitmaskIncrementer() {
     return result
   }
 }
+
+export const isMatterTankFireMode = (mode: FireMode): mode is MatterTankFireMode => mode === FireMode.CREATE || mode === FireMode.DESTROY

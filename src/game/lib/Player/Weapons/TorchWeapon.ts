@@ -1,5 +1,6 @@
 import { Scenes } from 'phaser'
 import { FireMode } from '../../../config.ts'
+import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
@@ -26,7 +27,10 @@ export class TorchWeapon extends SceneBound implements ContinuousWeapon {
 
   firing(value: boolean, mode: FireMode): void {
     if (value && !this.projectile) {
-      const charge = this.scene.player.matterTank.chargeAvailable(mode)
+      let charge = Infinity
+      if (isMatterTankFireMode(mode)) {
+        charge = this.scene.player.matterTank.chargeAvailable(mode)
+      }
       this.projectile = this.scene.projectiles.fireForPlayer(TorchProjectile, charge, mode, 0) ?? null
     }
 
@@ -50,6 +54,7 @@ export class TorchWeapon extends SceneBound implements ContinuousWeapon {
       this.projectile?.destroy()
     }
   }
+
   private _pos: Position = { x: 0, y: 0 }
 
   public update() {

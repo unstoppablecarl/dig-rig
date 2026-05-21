@@ -1,4 +1,5 @@
 import { FireMode } from '../../config.ts'
+import { isMatterTankFireMode } from '../../helpers/_helpers.ts'
 import { shuffleArray } from '../../helpers/array.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
@@ -62,7 +63,9 @@ export abstract class BaseProjectile extends SceneBound {
     this.initialVY = this.vy = vy * velocity
     this.fired = true
 
-    this.matterTank.addPendingCharge(this.mode, this.tilesToModify)
+    if (isMatterTankFireMode(this.mode)) {
+      this.matterTank.addPendingCharge(this.mode, this.tilesToModify)
+    }
   }
 
   abstract update(dt: number): void
@@ -96,8 +99,9 @@ export abstract class BaseProjectile extends SceneBound {
       }
       this.scene.particleManager.spawnMatter(source, target, true)
     }
-
-    this.matterTank.applyPendingCharge(this.mode, changed)
+    if (isMatterTankFireMode(this.mode)) {
+      this.matterTank.applyPendingCharge(this.mode, changed)
+    }
     return tiles.length
   }
 
@@ -123,7 +127,10 @@ export abstract class BaseProjectile extends SceneBound {
         }
         this.scene.particleManager.spawnMatter(source, target, false)
       }
-      this.matterTank.applyPendingCharge(this.mode, tiles.length)
+
+      if (isMatterTankFireMode(this.mode)) {
+        this.matterTank.applyPendingCharge(this.mode, tiles.length)
+      }
     }
     return changed
   }
@@ -133,7 +140,9 @@ export abstract class BaseProjectile extends SceneBound {
   }
 
   protected onDestroy() {
-    this.matterTank.removePendingCharge(this.mode, this.charge())
+    if (isMatterTankFireMode(this.mode)) {
+      this.matterTank.removePendingCharge(this.mode, this.charge())
+    }
     this.manager?.remove(this)
     this.renderer?.destroy()
 

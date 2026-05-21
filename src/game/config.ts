@@ -1,8 +1,8 @@
 import { Display } from 'phaser'
 import { TerrainType } from './lib/Tilemap/_Tilemap-types.ts'
 import GetColor = Display.Color.GetColor
-import ValueToColor = Display.Color.ValueToColor
 import Interpolate = Display.Color.Interpolate
+import ValueToColor = Display.Color.ValueToColor
 
 export const CHUNK_SIZE = 64 as const
 
@@ -14,6 +14,9 @@ export const DESTROY_COLOR = GetColor(255, 0, 70)
 export const CREATE_COLOR = GetColor(0, 70, 255)
 export const PERMANENT_COLOR = GetColor(0, 255, 255)
 
+export const MELT_COLOR = GetColor(255, 70, 0)
+export const SOLIDIFY_COLOR = GetColor(70, 255, 0)
+
 export const CREATE_COLOR_RGB = ValueToColor(CREATE_COLOR)
 export const DESTROY_COLOR_RGB = ValueToColor(DESTROY_COLOR)
 export const CREATE_DESTROY_MIX_COLOR_RGB = Interpolate.ColorWithColor(CREATE_COLOR_RGB, DESTROY_COLOR_RGB, 100, 50)
@@ -22,13 +25,21 @@ export const CREATE_DESTROY_MIX_COLOR = CREATE_DESTROY_MIX_COLOR_RGB.color
 export enum FireMode {
   CREATE,
   DESTROY,
+  // solid -> sand -> water
+  MELT,
+  //water -> sand -> solid
+  SOLIDIFY,
 }
+
+export type MatterTankFireMode = FireMode.CREATE | FireMode.DESTROY;
 
 export const BG_COLOR = GetColor(79, 86, 99)
 
-export const PROJECTILE_MODE_COLORS = {
+export const PROJECTILE_MODE_COLORS: Record<FireMode, number> = {
   [FireMode.CREATE]: CREATE_COLOR,
   [FireMode.DESTROY]: DESTROY_COLOR,
+  [FireMode.MELT]: MELT_COLOR,
+  [FireMode.SOLIDIFY]: SOLIDIFY_COLOR,
 }
 export const TERRAIN_TYPE_TRANSITION_COLORS = {
   [TerrainType.EMPTY]: DESTROY_COLOR,

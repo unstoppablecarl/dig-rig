@@ -1,4 +1,5 @@
 import { FireMode } from '../../config.ts'
+import { isMatterTankFireMode } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
@@ -44,7 +45,7 @@ export class ProjectileManager extends SceneBound {
     renderer: null | ProjectileRenderer = new ProjectileRenderer(this.scene),
   ) {
     const player = this.scene.player
-    if (!player.matterTank.hasChargeAvailable(charge, mode)) {
+    if (isMatterTankFireMode(mode) && !player.matterTank.hasChargeAvailable(charge, mode)) {
       return
     }
     const startPos = pos ?? player.getProjectilePosition(0, this._startPos)
