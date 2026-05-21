@@ -9,6 +9,9 @@ export class ChunkManager extends SceneBound {
   public readonly width: number
   public readonly height: number
 
+  private permanentChunkIds = new Set<ChunkId>()
+  private anchoringInitialized = false
+
   constructor(
     public scene: GameLevel,
     tilemapWidth: number,
@@ -63,6 +66,105 @@ export class ChunkManager extends SceneBound {
         if (neighbor) neighbor.renderDirty = true
       }
     }
+  }
+
+  // BFS at chunk level from permanent/boundary sources.
+  // After this call every chunk.anchored flag is correct: true means a solid
+  // tile-level path exists from that chunk to permanent terrain or the world edge.
+  // Cost: O(numChunks * CHUNK_SIZE) border checks — ~33k tile reads for a typical world,
+  // orders of magnitude cheaper than a tile-level BFS through full terrain.
+  computeAnchored(): void {
+    if (!this.anchoringInitialized) {
+      this.initPermanentChunks()
+      this.anchoringInitialized = true
+    }
+
+    for (const chunk of this.chunks.values()) chunk.anchored = false
+
+    const queue: Chunk[] = []
+    for (const id of this.permanentChunkIds) {
+      const chunk = this.chunks.get(id)
+      if (!chunk) continue
+      chunk.anchored = true
+      queue.push(chunk)
+    }
+
+    let head = 0
+    while (head < queue.length) {
+      const chunk = queue[head++]
+      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+        const neighbor = this.getChunk(chunk.cx + dx, chunk.cy + dy)
+        if (!neighbor || neighbor.anchored) continue
+        if (this.hasSolidBorder(chunk, dx, dy)) {
+          neighbor.anchored = true
+          queue.push(neighbor)
+        }
+      }
+    }
+  }
+
+  // Scan once at level load to find which chunks are permanent sources.
+  // Boundary chunks are always sources (adjacent to out-of-bounds = PERMANENT).
+  // Interior chunks are sources only if they contain a PERMANENT tile.
+  private initPermanentChunks(): void {
+    const { tilemap } = this.scene
+
+    for (let cy = 0; cy < this.height; cy++) {
+      for (let cx = 0; cx < this.width; cx++) {
+        if (cx === 0 || cx === this.width - 1 || cy === 0 || cy === this.height - 1) {
+          this.permanentChunkIds.add((cy * this.width + cx) as ChunkId)
+          continue
+        }
+        const x0 = cx * CHUNK_SIZE, y0 = cy * CHUNK_SIZE
+        const x1 = Math.min(x0 + CHUNK_SIZE, tilemap.width)
+        const y1 = Math.min(y0 + CHUNK_SIZE, tilemap.height)
+        scan: for (let y = y0; y < y1; y++) {
+          for (let x = x0; x < x1; x++) {
+            if (tilemap.getTile(x, y) === TerrainType.PERMANENT) {
+              this.permanentChunkIds.add((cy * this.width + cx) as ChunkId)
+              break scan
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Returns true if there is at least one pair of adjacent SOLID tiles straddling
+  // the shared border between `chunk` and its neighbour in direction (dx, dy).
+  private hasSolidBorder(chunk: Chunk, dx: number, dy: number): boolean {
+    const { tilemap } = this.scene
+    const x0 = chunk.cx * CHUNK_SIZE
+    const y0 = chunk.cy * CHUNK_SIZE
+    const xEnd = Math.min(x0 + CHUNK_SIZE, tilemap.width)
+    const yEnd = Math.min(y0 + CHUNK_SIZE, tilemap.height)
+
+    if (dx === 1) {
+      const ax = xEnd - 1, bx = xEnd
+      for (let y = y0; y < yEnd; y++) {
+        if (tilemap.getTile(ax, y) === TerrainType.SOLID &&
+            tilemap.getTile(bx, y) === TerrainType.SOLID) return true
+      }
+    } else if (dx === -1) {
+      const ax = x0, bx = x0 - 1
+      for (let y = y0; y < yEnd; y++) {
+        if (tilemap.getTile(ax, y) === TerrainType.SOLID &&
+            tilemap.getTile(bx, y) === TerrainType.SOLID) return true
+      }
+    } else if (dy === 1) {
+      const ay = yEnd - 1, by = yEnd
+      for (let x = x0; x < xEnd; x++) {
+        if (tilemap.getTile(x, ay) === TerrainType.SOLID &&
+            tilemap.getTile(x, by) === TerrainType.SOLID) return true
+      }
+    } else {
+      const ay = y0, by = y0 - 1
+      for (let x = x0; x < xEnd; x++) {
+        if (tilemap.getTile(x, ay) === TerrainType.SOLID &&
+            tilemap.getTile(x, by) === TerrainType.SOLID) return true
+      }
+    }
+    return false
   }
 
   protected onDestroy() {

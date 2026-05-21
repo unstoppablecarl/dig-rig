@@ -20,6 +20,7 @@ export class Tilemap extends SceneBound {
   private tiles: Uint8Array<SharedArrayBuffer>
   public chunkManager: ChunkManager
   public onTileEmpty?: (tx: number, ty: number) => void
+  public onIslandDetected?: (tiles: Tile[]) => void
 
   private matter = 0
 
@@ -35,7 +36,9 @@ export class Tilemap extends SceneBound {
     this.chunkManager = new ChunkManager(scene, width, height)
   }
 
-  get tilesBuffer(): SharedArrayBuffer { return this.sab }
+  get tilesBuffer(): SharedArrayBuffer {
+    return this.sab
+  }
 
   public setRect(
     startX: number,
@@ -76,8 +79,8 @@ export class Tilemap extends SceneBound {
     const prev = this.tiles[id]
     this.tiles[id] = value
     this.chunkManager.setDirty(x, y, prev, value)
-    if (value === TerrainType.EMPTY) this.matter--
-    if (value === TerrainType.SOLID) this.matter++
+    if (prev === TerrainType.SOLID && value !== TerrainType.SOLID) this.matter--
+    if (prev !== TerrainType.SOLID && value === TerrainType.SOLID) this.matter++
     if (value === TerrainType.EMPTY) this.onTileEmpty?.(x, y)
     return true
   }
@@ -89,7 +92,7 @@ export class Tilemap extends SceneBound {
 
   public isSolid(x: number, y: number) {
     const value = this.getTile(Math.floor(x), Math.floor(y))
-    return value === TerrainType.SOLID || value === TerrainType.PERMANENT
+    return value === TerrainType.SOLID || value === TerrainType.PERMANENT || value === TerrainType.SAND_SETTLED
   }
 
   public getTileFromWorld(worldX: number, worldY: number): TerrainType {
@@ -170,6 +173,121 @@ export class Tilemap extends SceneBound {
     }
   }
 
+  private isFluid(t: TerrainType): boolean {
+    return t === TerrainType.SAND || t === TerrainType.SAND_SETTLED || t === TerrainType.WATER
+  }
+
+  // Returns the subset of newTiles that form a floating island (not connected to any
+  // PERMANENT tile or world boundary via solid).  Relies on chunkManager.anchored
+  // flags being current before this is called.
+  //
+  // Three cases, cheapest first:
+  //   1. No existing solid neighbour          → trivially an island, no BFS
+  //   2. Neighbour is in an anchored chunk    → trivially anchored, no BFS
+  //   3. Neighbour is in an unanchored chunk  → tile BFS, but bounded to the
+  //                                             unanchored region (typically tiny)
+  public findIslandTiles(newTiles: Tile[]): Tile[] {
+    if (newTiles.length === 0) return []
+
+    const newSet = new Set<number>(newTiles.map(({ x, y }) => y * this.width + x))
+
+    let touchesAnchoredSolid = false
+    let touchesUnanchoredSolid = false
+
+    for (const { x, y } of newTiles) {
+      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+        const nx = x + dx, ny = y + dy
+        const nidx = ny * this.width + nx
+        if (newSet.has(nidx)) continue
+        const nTile = this.getTile(nx, ny)
+        if (nTile === TerrainType.PERMANENT) return []
+        if (nTile !== TerrainType.SOLID) continue
+        if (this.chunkManager.getChunkByTile(nx, ny)?.anchored) {
+          touchesAnchoredSolid = true
+        } else {
+          touchesUnanchoredSolid = true
+        }
+      }
+      if (touchesAnchoredSolid) break
+    }
+
+    if (touchesAnchoredSolid) return []
+    if (!touchesUnanchoredSolid) return newTiles
+
+    // Touches only unanchored solid — BFS stays within the unanchored region
+    const visited = new Set<number>(newSet)
+    const queue: [number, number][] = newTiles.map(({ x, y }) => [x, y] as [number, number])
+    let head = 0
+    let anchored = false
+
+    outer: while (head < queue.length) {
+      const [x, y] = queue[head++]
+      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+        const nx = x + dx, ny = y + dy
+        if (nx < 0 || nx >= this.width || ny < 0 || ny >= this.height) { anchored = true; break outer }
+        const nidx = ny * this.width + nx
+        if (visited.has(nidx)) continue
+        visited.add(nidx)
+        const nTile = this.getTile(nx, ny)
+        if (nTile === TerrainType.PERMANENT) { anchored = true; break outer }
+        if (nTile === TerrainType.SOLID) {
+          if (this.chunkManager.getChunkByTile(nx, ny)?.anchored) { anchored = true; break outer }
+          queue.push([nx, ny])
+        }
+      }
+    }
+
+    return anchored ? [] : newTiles
+  }
+
+  // After solid tiles are destroyed, checks adjacent solid for disconnection.
+  // Only TerrainType.SOLID forms structural connections — SAND, SAND_SETTLED, and
+  // WATER are transparent to this BFS (neither a connection nor a blocking wall).
+  // No BFS cap: connected terrain always finds PERMANENT in a small number of hops
+  // because PERMANENT tiles exist at the world boundary which is never far from
+  // any solid tile.  Genuine islands exhaust their component and are detected
+  // regardless of size.
+  private findNewlyDisconnectedByDestruction(destroyedTiles: Tile[]): Tile[] {
+    const globalVisited = new Set<number>()
+    const islandTiles: Tile[] = []
+
+    for (const { x: dx, y: dy } of destroyedTiles) {
+      for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+        const sx = dx + ox, sy = dy + oy
+        if (sx < 0 || sx >= this.width || sy < 0 || sy >= this.height) continue
+        const sidx = sy * this.width + sx
+        if (globalVisited.has(sidx)) continue
+        if (this.getTile(sx, sy) !== TerrainType.SOLID) continue
+
+        const component: Tile[] = []
+        const queue: [number, number][] = [[sx, sy]]
+        let head = 0
+        const localVisited = new Set<number>([sidx])
+        let anchored = false
+
+        outer: while (head < queue.length) {
+          const [cx, cy] = queue[head++]
+          component.push({ x: cx, y: cy })
+
+          for (const [ndx, ndy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+            const nx = cx + ndx, ny = cy + ndy
+            if (nx < 0 || nx >= this.width || ny < 0 || ny >= this.height) { anchored = true; break outer }
+            const nidx = ny * this.width + nx
+            if (localVisited.has(nidx)) continue
+            const nTile = this.getTile(nx, ny)
+            if (nTile === TerrainType.PERMANENT) { anchored = true; break outer }
+            if (nTile === TerrainType.SOLID) { localVisited.add(nidx); queue.push([nx, ny]) }
+          }
+        }
+
+        for (const { x, y } of component) globalVisited.add(y * this.width + x)
+        if (!anchored) for (const tile of component) islandTiles.push(tile)
+      }
+    }
+
+    return islandTiles
+  }
+
   public applyEffect(tileX: number, tileY: number, tileRadius: number, newValue: TerrainType, tilesToModify = Number.MAX_VALUE) {
     const { x: px, y: py } = this.scene.player
     const velocity = this.scene.player.container.body?.velocity
@@ -181,37 +299,59 @@ export class Tilemap extends SceneBound {
     const velUp = Math.max(Math.min(vy, 0), -MAX_VEL_EXTEND)
     const velDown = Math.min(Math.max(vy, 0), MAX_VEL_EXTEND)
 
-    let tiles: Tile[] = []
-    this.getCircle(tileX, tileY, tileRadius, (x, y) => {
-      const value = this.getTile(x, y)
+    // SOLID creation: geometric circle through EMPTY tiles only — water is a hard wall.
+    // Island detection fires onIslandDetected for any tiles not connected to permanent
+    // terrain or world bounds so they can be converted to sand.
+    if (newValue === TerrainType.SOLID) {
+      let tiles: Tile[] = []
+      this.getCircle(tileX, tileY, tileRadius, (x, y) => {
+        const value = this.getTile(x, y)
+        if (value !== TerrainType.EMPTY) return
+        if (
+          x > px - PLAYER_RADIUS_X + velLeft && x < px + PLAYER_RADIUS_X + velRight &&
+          y > py - PLAYER_RADIUS_Y + velUp && y < py + PLAYER_RADIUS_Y + velDown
+        ) return
+        tiles.push({ x, y })
+      })
 
-      if (value === TerrainType.PERMANENT) return
-      if (newValue === value) return
-      if (
-        newValue === TerrainType.SOLID &&
-        x > px - PLAYER_RADIUS_X + velLeft &&
-        x < px + PLAYER_RADIUS_X + velRight &&
-        y > py - PLAYER_RADIUS_Y + velUp &&
-        y < py + PLAYER_RADIUS_Y + velDown
-      ) return
+      if (tilesToModify < tiles.length) tiles = truncateArrayRandomly(tiles, tilesToModify)
+      if (!tiles.length) return tiles
 
-      tiles.push({ x, y })
-    })
+      const startTime = this.scene.time.now
+      for (const { x, y } of tiles) {
+        this.scene.tilemapRenderer.addEffect(x, y, newValue, startTime)
+        this.setTile(x, y, newValue)
+      }
 
-    if (tilesToModify < tiles.length) {
-      tiles = truncateArrayRandomly(tiles, tilesToModify)
-    }
+      this.chunkManager.computeAnchored()
+      const islands = this.findIslandTiles(tiles)
+      if (islands.length) this.onIslandDetected?.(islands)
 
-    if (!tiles.length) {
       return tiles
     }
 
-    const startTime = this.scene.time.now
+    // DESTROY: geometric circle, skip fluid.
+    // After removing tiles, check if any adjacent solid became disconnected.
+    let tiles: Tile[] = []
+    this.getCircle(tileX, tileY, tileRadius, (x, y) => {
+      const value = this.getTile(x, y)
+      if (value === TerrainType.PERMANENT) return
+      if (newValue === value) return
+      if (this.isFluid(value)) return
+      tiles.push({ x, y })
+    })
 
+    if (tilesToModify < tiles.length) tiles = truncateArrayRandomly(tiles, tilesToModify)
+    if (!tiles.length) return tiles
+
+    const startTime = this.scene.time.now
     for (const { x, y } of tiles) {
       this.scene.tilemapRenderer.addEffect(x, y, newValue, startTime)
       this.setTile(x, y, newValue)
     }
+
+    const newIslands = this.findNewlyDisconnectedByDestruction(tiles)
+    if (newIslands.length) this.onIslandDetected?.(newIslands)
 
     return tiles
   }
@@ -250,6 +390,7 @@ export class Tilemap extends SceneBound {
 
   protected onDestroy() {
     this.onTileEmpty = undefined
+    this.onIslandDetected = undefined
     // @ts-expect-error: destroy
     this.tiles = null
     // @ts-expect-error: destroy

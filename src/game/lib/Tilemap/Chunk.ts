@@ -12,6 +12,7 @@ export class Chunk {
   public collisionDirty = true
   public renderDirty = true
   public solidTileCount: number = 0
+  public anchored = false
 
   get type(): ChunkType {
     if (this.solidTileCount === 0) return ChunkType.EMPTY

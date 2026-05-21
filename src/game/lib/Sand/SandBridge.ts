@@ -44,9 +44,27 @@ export class SandBridge extends SceneBound {
       }
     }
 
+    tilemap.onTileEmpty = (tx, ty) => {
+      this.worker.postMessage({ type: 'check', tx, ty })
+    }
+
+    tilemap.onIslandDetected = (islands) => {
+      for (const { x, y } of islands) {
+        tilemap.setTile(x, y, TerrainType.SAND)
+      }
+      this.activateTiles(islands)
+    }
   }
 
-  placeSand(tx: number, ty: number, radius = 8) {
+  activateTiles(tiles: { x: number, y: number }[]) {
+    const { tilemap } = this.scene
+    const indices = tiles.map(({ x, y }) => y * tilemap.width + x)
+    if (indices.length) {
+      this.worker.postMessage({ type: 'activate', indices })
+    }
+  }
+
+  placeWater(tx: number, ty: number, radius = 8) {
     const { tilemap } = this.scene
     tx = Math.floor(tx)
     ty = Math.floor(ty)
@@ -57,6 +75,30 @@ export class SandBridge extends SceneBound {
         const x = tx + dx
         const y = ty + dy
         if (tilemap.getTile(x, y) !== TerrainType.EMPTY) continue
+        tilemap.setTile(x, y, TerrainType.WATER)
+        indices.push(y * tilemap.width + x)
+      }
+    }
+    if (indices.length) {
+      this.worker.postMessage({ type: 'activate', indices })
+    }
+  }
+
+  placeSand(tx: number, ty: number, radius = 8, maxTiles = Number.MAX_SAFE_INTEGER) {
+    const { tilemap } = this.scene
+    tx = Math.floor(tx)
+    ty = Math.floor(ty)
+    const indices: number[] = []
+    // Place a tall column above (tx, ty) so grains fall in sequence, producing a
+    // visible stream rather than a single burst that sinks too fast to see.
+    const halfW = Math.max(1, Math.ceil(radius / 2))
+    const colHeight = radius * 2
+    outer: for (let dy = -colHeight; dy < 0; dy++) {
+      for (let dx = -halfW; dx <= halfW; dx++) {
+        if (indices.length >= maxTiles) break outer
+        const x = tx + dx
+        const y = ty + dy
+        if (tilemap.getTile(x, y) !== TerrainType.EMPTY) continue
         tilemap.setTile(x, y, TerrainType.SAND)
         indices.push(y * tilemap.width + x)
       }
@@ -64,6 +106,7 @@ export class SandBridge extends SceneBound {
     if (indices.length) {
       this.worker.postMessage({ type: 'activate', indices })
     }
+    return indices.length
   }
 
   update() {
@@ -105,13 +148,15 @@ export class SandBridge extends SceneBound {
     const y1 = Math.min(y0 + CHUNK_SIZE, tilemap.height)
     for (let y = y0; y < y1; y++) {
       for (let x = x0; x < x1; x++) {
-        if (tilemap.getTile(x, y) !== TerrainType.EMPTY) count++
+        if (tilemap.isSolid(x, y)) count++
       }
     }
     chunk.solidTileCount = count
   }
 
   protected onDestroy() {
+    this.scene.tilemap.onTileEmpty = undefined
+    this.scene.tilemap.onIslandDetected = undefined
     this.worker.terminate()
     // @ts-expect-error: destroy
     this.worker = null
