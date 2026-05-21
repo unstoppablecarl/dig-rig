@@ -71,6 +71,10 @@ export class ProjectileRenderer extends SceneBound {
     this.draw()
   }
 
+  get radius(): number {
+    return this._radius
+  }
+
   setRadius(radius: number) {
     if (radius === this._radius) return
     this._radius = radius

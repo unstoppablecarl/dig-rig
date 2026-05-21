@@ -3,7 +3,7 @@ import { FireMode } from '../../config.ts'
 import { getDeltaT } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { EVENT_MESSAGE } from '../events.ts'
+import { GameEvent } from '../events.ts'
 import type { ChargeableWeapon } from '../Player/Weapons/PlayerWeaponManager.ts'
 import type { InputController } from './InputManager.ts'
 import POINTER_DOWN = Input.Events.POINTER_DOWN
@@ -68,6 +68,7 @@ export class PlayerWeaponChargeInput extends SceneBound<GameLevel> implements In
       this.charge = 0
     }
   }
+
   getChargePercent() {
     const max = this.getMaxCharge()
     return max === 0 ? 0 : this.charge / max
@@ -79,8 +80,8 @@ export class PlayerWeaponChargeInput extends SceneBound<GameLevel> implements In
     const maxCharge = this.getMaxCharge()
 
     if (!maxCharge) {
-      if (this.mode === FireMode.DESTROY) this.scene.EVENTS.emit(EVENT_MESSAGE, 'Matter Tank Full!')
-      if (this.mode === FireMode.CREATE)  this.scene.EVENTS.emit(EVENT_MESSAGE, 'Matter Tank Empty!')
+      if (this.mode === FireMode.DESTROY) this.scene.EVENTS.emit(GameEvent.MESSAGE, 'Matter Tank Full!')
+      if (this.mode === FireMode.CREATE) this.scene.EVENTS.emit(GameEvent.MESSAGE, 'Matter Tank Empty!')
       return
     }
 

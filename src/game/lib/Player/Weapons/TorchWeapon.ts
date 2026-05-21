@@ -9,8 +9,9 @@ import type { ContinuousWeapon } from './PlayerWeaponManager.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 export class TorchWeapon extends SceneBound implements ContinuousWeapon {
+  readonly displayName = 'Torch'
+
   private input: PlayerWeaponConstantInput
-  public displayName = 'Torch'
 
   private projectile: TorchProjectile | null = null
 

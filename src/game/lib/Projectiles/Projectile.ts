@@ -2,7 +2,8 @@ import { Math as PMath, Time } from 'phaser'
 import { FireMode } from '../../config.ts'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import { TerrainType } from '../Tilemap/_Tilemap-types.ts'
-import { BaseProjectile, tilesToRadius } from './BaseProjectile.ts'
+import { BaseProjectile } from './BaseProjectile.ts'
+import { tilesToRadius } from './projectile-radius'
 import TimerEvent = Time.TimerEvent
 
 const EXPAND_RATE_MS = 100

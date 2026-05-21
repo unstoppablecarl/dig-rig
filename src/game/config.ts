@@ -15,6 +15,8 @@ export const PERMANENT_COLOR = GetColor(0, 255, 255)
 
 export const CREATE_COLOR_RGB = ValueToColor(CREATE_COLOR)
 export const DESTROY_COLOR_RGB = ValueToColor(DESTROY_COLOR)
+export const CREATE_DESTROY_MIX_COLOR_RGB = Interpolate.ColorWithColor(CREATE_COLOR_RGB, DESTROY_COLOR_RGB, 100, 50)
+export const CREATE_DESTROY_MIX_COLOR = CREATE_DESTROY_MIX_COLOR_RGB.color
 
 export enum FireMode {
   CREATE,

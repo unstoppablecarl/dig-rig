@@ -13,9 +13,10 @@ const VELOCITY = 300
 const CHARGE = 10
 
 export class BurstWeapon extends SceneBound implements ImmediateWeapon {
+  readonly displayName = 'Burst'
+
   private input: PlayerWeaponSingleFireInput
   public fire: (mode: FireMode) => void
-  public displayName = 'Burst'
 
   constructor(
     public scene: GameLevel,

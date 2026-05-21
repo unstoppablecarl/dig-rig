@@ -8,10 +8,6 @@ import { TerrainType } from '../Tilemap/_Tilemap-types.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
 import { ProjectileRenderer } from './ProjectileRenderer.ts'
 
-const RADIUS_DECAY = 0.9
-export const tilesToRadius = (tiles: number) => Math.sqrt(tiles / Math.PI) * RADIUS_DECAY
-export const radiusToTiles = (radius: number) => Math.floor(Math.PI * Math.pow(radius / RADIUS_DECAY, 2))
-
 export type ProjectileSource = (MatterExchanger | Position) & ParticleTarget
 
 type BaseProjectileArgs = ConstructorParameters<typeof BaseProjectile>;

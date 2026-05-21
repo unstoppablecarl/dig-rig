@@ -11,9 +11,10 @@ const RAPID_CHARGE = 100
 const RAPID_VELOCITY = 300
 
 export class RapidWeapon extends SceneBound implements ImmediateWeapon {
+  readonly displayName = 'Rapid'
+
   private input: PlayerWeaponRapidFireInput
   public fire: (mode: FireMode) => void
-  public displayName = 'Rapid'
 
   constructor(
     public scene: GameLevel,
