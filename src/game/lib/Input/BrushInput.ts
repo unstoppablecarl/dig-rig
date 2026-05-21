@@ -1,7 +1,7 @@
 import { GameObjects, Input, Scenes } from 'phaser'
+import { FireMode } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { TerrainType } from '../Tilemap/_Tilemap-types.ts'
 import type { InputController } from './InputManager.ts'
 import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
 import POINTER_DOWN = Input.Events.POINTER_DOWN
@@ -107,9 +107,9 @@ export class BrushInput extends SceneBound implements InputController {
   }
 
   apply(tileX: number, tileY: number) {
-    let newValue = TerrainType.EMPTY
+    let newValue = FireMode.DESTROY
     if (this.isCreating) {
-      newValue = TerrainType.SOLID
+      newValue = FireMode.CREATE
     }
 
     this.scene.tilemap.applyEffect(tileX, tileY, this.radius, newValue, Number.MAX_VALUE)

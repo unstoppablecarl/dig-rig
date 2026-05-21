@@ -1,5 +1,6 @@
 import { Geom } from 'phaser'
 import { type Color32, type PixelData, unpackAlpha } from 'pixel-data-js'
+import { FireMode } from '../../config.ts'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import { truncateArrayRandomly } from '../../helpers/array.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
@@ -310,7 +311,7 @@ export class Tilemap extends SceneBound {
     return islandTiles
   }
 
-  public applyEffect(tileX: number, tileY: number, tileRadius: number, newValue: TerrainType, tilesToModify = Number.MAX_VALUE) {
+  public applyEffect(tileX: number, tileY: number, tileRadius: number, mode: FireMode, tilesToModify = Number.MAX_VALUE) {
     const { x: px, y: py } = this.scene.player
     const velocity = this.scene.player.container.body?.velocity
     const vx = velocity?.x ?? 0
@@ -324,7 +325,7 @@ export class Tilemap extends SceneBound {
     // SOLID creation: geometric circle through EMPTY tiles only — water is a hard wall.
     // Island detection fires onIslandDetected for any tiles not connected to permanent
     // terrain or world bounds so they can be converted to sand.
-    if (newValue === TerrainType.SOLID) {
+    if (mode === FireMode.CREATE) {
       let tiles: Tile[] = []
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
         const value = this.getTile(x, y)
@@ -339,6 +340,7 @@ export class Tilemap extends SceneBound {
       if (tilesToModify < tiles.length) tiles = truncateArrayRandomly(tiles, tilesToModify)
       if (!tiles.length) return tiles
 
+      const newValue = TerrainType.SOLID
       const startTime = this.scene.time.now
       for (const { x, y } of tiles) {
         this.scene.tilemapRenderer.addEffect(x, y, newValue, startTime)
@@ -352,30 +354,34 @@ export class Tilemap extends SceneBound {
       return tiles
     }
 
-    // DESTROY: geometric circle, skip fluid.
-    // After removing tiles, check if any adjacent solid became disconnected.
-    let tiles: Tile[] = []
-    this.getCircle(tileX, tileY, tileRadius, (x, y) => {
-      const value = this.getTile(x, y)
-      if (value === TerrainType.PERMANENT) return
-      if (newValue === value) return
-      if (this.isFluid(value)) return
-      tiles.push({ x, y })
-    })
+    if (mode === FireMode.DESTROY) {
+      const newValue = TerrainType.EMPTY
+      // After removing tiles, check if any adjacent solid became disconnected.
+      let tiles: Tile[] = []
+      this.getCircle(tileX, tileY, tileRadius, (x, y) => {
+        const value = this.getTile(x, y)
+        if (value === TerrainType.PERMANENT) return
+        if (newValue === value) return
+        if (this.isFluid(value)) return
+        tiles.push({ x, y })
+      })
 
-    if (tilesToModify < tiles.length) tiles = truncateArrayRandomly(tiles, tilesToModify)
-    if (!tiles.length) return tiles
+      if (tilesToModify < tiles.length) tiles = truncateArrayRandomly(tiles, tilesToModify)
+      if (!tiles.length) return tiles
 
-    const startTime = this.scene.time.now
-    for (const { x, y } of tiles) {
-      this.scene.tilemapRenderer.addEffect(x, y, newValue, startTime)
-      this.setTile(x, y, newValue)
+      const startTime = this.scene.time.now
+      for (const { x, y } of tiles) {
+        this.scene.tilemapRenderer.addEffect(x, y, newValue, startTime)
+        this.setTile(x, y, newValue)
+      }
+
+      const newIslands = this.findNewlyDisconnectedByDestruction(tiles)
+      if (newIslands.length) this.onIslandDetected?.(newIslands)
+
+      return tiles
     }
 
-    const newIslands = this.findNewlyDisconnectedByDestruction(tiles)
-    if (newIslands.length) this.onIslandDetected?.(newIslands)
-
-    return tiles
+    return []
   }
 
   checkForCollision(x: number, y: number, vx: number, vy: number, dt: number, scale = 1): {

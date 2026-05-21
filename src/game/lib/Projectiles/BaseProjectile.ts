@@ -5,7 +5,6 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
-import { TerrainType } from '../Tilemap/_Tilemap-types.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
 import { ProjectileRenderer } from './ProjectileRenderer.ts'
 
@@ -72,12 +71,16 @@ export abstract class BaseProjectile extends SceneBound {
 
   private _emitPos = { x: 0, y: 0 }
 
+  // protected meltTiles(count: number) {
+  //
+  // }
+
   protected createTiles(count: number) {
     const tiles = this.scene.tilemap.applyEffect(
       this.x,
       this.y,
       this.radius,
-      TerrainType.SOLID,
+      FireMode.CREATE,
       count,
     )
 
@@ -108,7 +111,7 @@ export abstract class BaseProjectile extends SceneBound {
   protected destroyTiles(count: number) {
     const tileX = this.x
     const tileY = this.y
-    const tiles = this.scene.tilemap.applyEffect(tileX, tileY, this.radius, TerrainType.EMPTY, count)
+    const tiles = this.scene.tilemap.applyEffect(tileX, tileY, this.radius, FireMode.DESTROY, count)
     const changed = tiles.length
     this.tilesModified += changed
     if (changed) {
