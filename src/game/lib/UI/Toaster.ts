@@ -1,7 +1,7 @@
 import { debounce, type DebouncedFunction } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { UIScene } from '../../scenes/Layers/UIScene.ts'
-import { EVENT_MESSAGE } from '../events.ts'
+import { GameEvent } from '../events.ts'
 
 export class Toaster extends SceneBound {
   private element: HTMLElement
@@ -16,7 +16,7 @@ export class Toaster extends SceneBound {
       this.hide()
     }, 2000)
 
-    this.scene.EVENTS.on(EVENT_MESSAGE, this.message, this)
+    this.scene.EVENTS.on(GameEvent.MESSAGE, this.message, this)
   }
 
   message(text: string) {
@@ -33,6 +33,6 @@ export class Toaster extends SceneBound {
   }
 
   protected onDestroy() {
-    this.scene.EVENTS.off(EVENT_MESSAGE, this.message, this)
+    this.scene.EVENTS.off(GameEvent.MESSAGE, this.message, this)
   }
 }

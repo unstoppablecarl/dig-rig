@@ -1,10 +1,12 @@
 import type { Weapon } from './Player/Weapons/PlayerWeaponManager.ts'
 
-export const EVENT_WEAPON_SELECTED = 'EVENT_WEAPON_SELECTED'
-export const EVENT_MESSAGE = 'EVENT_MESSAGE'
+export enum GameEvent {
+  WEAPON_SELECTED = 'WEAPON_SELECTED',
+  MESSAGE = 'MESSAGE'
+}
 
 export interface EventMap {
-  [EVENT_WEAPON_SELECTED]: [Weapon];
-  [EVENT_MESSAGE]: [string]
+  [GameEvent.WEAPON_SELECTED]: [Weapon];
+  [GameEvent.MESSAGE]: [string]
 }
 

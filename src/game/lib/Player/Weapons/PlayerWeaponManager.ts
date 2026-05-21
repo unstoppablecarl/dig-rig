@@ -2,11 +2,13 @@ import { Input } from 'phaser'
 import { type FireMode } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { EVENT_WEAPON_SELECTED } from '../../events.ts'
+import { GameEvent } from '../../events.ts'
 import type { InputController } from '../../Input/InputManager.ts'
 import type { Projectile } from '../../Projectiles/Projectile.ts'
 import { BasicWeapon } from './BasicWeapon.ts'
 import { BurstWeapon } from './BurstWeapon.ts'
+import { InstantWeaponCreate } from './InstantWeaponCreate.ts'
+import { InstantWeaponDestroy } from './InstantWeaponDestroy.ts'
 import { RapidWeapon } from './RapidWeapon.ts'
 import { TorchWeapon } from './TorchWeapon.ts'
 import { TunnelWeapon } from './TunnelWeapon.ts'
@@ -15,9 +17,11 @@ import ANY_KEY_DOWN = Input.Keyboard.Events.ANY_KEY_DOWN
 export interface Weapon {
   setEnabled(value: boolean): void
   enabled: boolean
-  displayName: string
+  readonly displayName: string
   readonly slot: number
   destroy(): void
+
+  getSuffix?: () => string
 }
 
 export interface ImmediateWeapon extends Weapon {
@@ -50,6 +54,8 @@ export class PlayerWeaponManager extends SceneBound<GameLevel> implements InputC
       RapidWeapon,
       TorchWeapon,
       TunnelWeapon,
+      InstantWeaponCreate,
+      InstantWeaponDestroy,
     ]
 
     for (const [index, Def] of weapons.entries()) {
@@ -95,7 +101,7 @@ export class PlayerWeaponManager extends SceneBound<GameLevel> implements InputC
 
     weapon.setEnabled(true)
 
-    this.scene.EVENTS.emit(EVENT_WEAPON_SELECTED, weapon)
+    this.scene.EVENTS.emit(GameEvent.WEAPON_SELECTED, weapon)
 
     this._active = weapon
   }

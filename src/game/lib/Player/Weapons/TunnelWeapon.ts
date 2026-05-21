@@ -14,8 +14,9 @@ const DESTROY_PROJECTILE_DISTANCE = 20
 const DESTROY_PROJECTILE_EXPAND_RATE_MS = 10
 
 export class TunnelWeapon extends SceneBound implements ContinuousWeapon {
+  readonly displayName = 'Tunnel'
+
   private input: PlayerWeaponConstantInput
-  public displayName = 'Tunnel'
 
   private projectileDestroy: TunnelProjectile | null = null
   readonly matterTank: MatterTank

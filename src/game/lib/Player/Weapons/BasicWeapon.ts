@@ -9,9 +9,10 @@ import type { ChargeableWeapon } from './PlayerWeaponManager.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 export class BasicWeapon extends SceneBound implements ChargeableWeapon {
+  readonly displayName = 'Basic'
+
   private queued: Projectile | null = null
   private chargeInput: PlayerWeaponChargeInput
-  public displayName = 'Basic'
 
   constructor(
     public scene: GameLevel,

@@ -1,5 +1,6 @@
 import { FireMode } from '../../config.ts'
-import { BaseProjectile, radiusToTiles } from './BaseProjectile.ts'
+import { BaseProjectile } from './BaseProjectile.ts'
+import { radiusToTiles } from './projectile-radius'
 
 const MAX_RADIUS = 20
 

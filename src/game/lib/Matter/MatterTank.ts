@@ -1,6 +1,5 @@
-import { clampMaxInt } from '../../helpers/_helpers.ts'
-
 import { FireMode } from '../../config.ts'
+import { clampMaxInt } from '../../helpers/_helpers.ts'
 import type { MatterManager } from './MatterManager.ts'
 
 export class MatterTank {
@@ -100,6 +99,11 @@ export class MatterTank {
 
   hasChargeAvailable(charge: number, mode: FireMode) {
     return this.chargeAvailable(mode) >= charge
+  }
+
+  clampToChargeAvailable(charge: number, mode: FireMode) {
+    const available = this.chargeAvailable(mode)
+    return Math.min(charge, available)
   }
 
   chargeAvailable(mode: FireMode) {
