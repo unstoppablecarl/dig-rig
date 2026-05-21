@@ -1,12 +1,8 @@
 import { Math as PMath, Time } from 'phaser'
 import { FireMode } from '../../config.ts'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
-import type { GameLevel } from '../../scenes/GameLevel.ts'
-import type { MatterTank } from '../Matter/MatterTank.ts'
 import { TerrainType } from '../Tilemap/_Tilemap-types.ts'
-import { BaseProjectile, type ProjectileSource, tilesToRadius } from './BaseProjectile.ts'
-import type { ProjectileManager } from './ProjectileManager.ts'
-import { type IProjectileRenderer } from './ProjectileRenderer.ts'
+import { BaseProjectile, tilesToRadius } from './BaseProjectile.ts'
 import TimerEvent = Time.TimerEvent
 
 const EXPAND_RATE_MS = 100
@@ -20,41 +16,16 @@ export class Projectile extends BaseProjectile {
   private expandTimer: TimerEvent | null = null
   private initialRadius: number
 
-  constructor(
-    scene: GameLevel,
-    manager: ProjectileManager,
-    source: ProjectileSource,
-    matterTank: MatterTank,
-    x: number,
-    y: number,
-    mode: FireMode,
-    renderer?: IProjectileRenderer,
-  ) {
-    super(
-      scene,
-      manager,
-      source,
-      matterTank,
-      x,
-      y,
-      mode,
-      renderer,
-    )
-  }
-
   setTilesToModify(count: number) {
     const changed = super.setTilesToModify(count)
     if (changed) {
       this.initialRadius = this.radius = tilesToRadius(count)
-      this.renderer.queueReRender()
     }
 
     return changed
   }
 
   update(dt: number) {
-    this.renderer.update(this)
-
     if (!this.fired) return
 
     // if in create mode, and not already collided/expanding yet, and collided with collision map tile
@@ -74,7 +45,7 @@ export class Projectile extends BaseProjectile {
           this.x = stepX - stepDx
           this.y = stepY - stepDy
 
-          this.renderer.fadeOutAndDestroy()
+          this.renderer?.fadeOutAndDestroy()
           this.radius = EXPAND_START_RADIUS
           // stop
           this.vx = 0
@@ -93,7 +64,6 @@ export class Projectile extends BaseProjectile {
         const easedValue = PMath.Easing.Circular.In(this.lifespanPercent)
         const decay = PMath.Linear(1, FINAL_DECAY_SCALE, easedValue)
         this.radius = this.initialRadius * decay
-        this.renderer.queueReRender()
       }
     }
 
@@ -134,7 +104,6 @@ export class Projectile extends BaseProjectile {
         const charge = this.charge()
         if (charge > 0) {
           this.createTiles(charge)
-          this.renderer.queueReRender()
         }
       },
     })

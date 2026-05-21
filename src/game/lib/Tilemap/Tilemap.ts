@@ -21,13 +21,17 @@ export class Tilemap extends SceneBound {
 
   private matter = 0
 
+  readonly diagonalDistance: number
+
   constructor(
-    public scene: GameLevel,
+    readonly scene: GameLevel,
     readonly width: number,
     readonly height: number,
   ) {
     super(scene)
     this.tiles = new Uint8Array(width * height)
+
+    this.diagonalDistance = Math.hypot(width, height)
 
     this.chunkManager = new ChunkManager(scene, width, height)
   }
@@ -262,6 +266,63 @@ export class Tilemap extends SceneBound {
         }
       }
     }
+  }
+
+  _collisionPosition: Position = { x: 0, y: 0 }
+
+  getAngleCollision(
+    startX: number,
+    startY: number,
+    angle: number,
+    types: Set<TerrainType>,
+    maxDistance = this.diagonalDistance,
+  ): Position {
+    const vx = Math.cos(angle)
+    const vy = Math.sin(angle)
+
+    return this.getCollision(
+      startX,
+      startY,
+      vx,
+      vy,
+      types,
+      maxDistance,
+    )
+  }
+
+  getCollision(
+    startX: number,
+    startY: number,
+    directionX: number,
+    directionY: number,
+    types: Set<TerrainType>,
+    maxDistance = this.diagonalDistance,
+  ): Position {
+    const len = Math.sqrt(directionX * directionX + directionY * directionY)
+    if (len === 0) return { x: startX, y: startY }
+
+    const nx = directionX / len
+    const ny = directionY / len
+
+    for (let d = 0; d <= maxDistance; d++) {
+      const x = Math.round(startX + nx * d)
+      const y = Math.round(startY + ny * d)
+      if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
+        const prev = Math.max(d - 1, 0)
+        this._collisionPosition.x = Math.round(startX + nx * prev)
+        this._collisionPosition.y = Math.round(startY + ny * prev)
+        return this._collisionPosition
+      }
+      if (types.has(this.getTile(x, y))) {
+        this._collisionPosition.x = x
+        this._collisionPosition.y = y
+        return this._collisionPosition
+      }
+    }
+
+    this._collisionPosition.x = Math.round(startX + nx * maxDistance)
+    this._collisionPosition.y = Math.round(startY + ny * maxDistance)
+    return this._collisionPosition
   }
 
   static makeFromSolidAndPermanentPixelData(scene: GameLevel, solidData: PixelData, permanentData: PixelData) {

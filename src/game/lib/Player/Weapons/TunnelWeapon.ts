@@ -6,7 +6,6 @@ import type { Position } from '../../../types.ts'
 import { PlayerWeaponConstantInput } from '../../Input/PlayerWeaponConstantInput.ts'
 import { MatterTank } from '../../Matter/MatterTank.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
-import { NoopProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
 import { TunnelProjectile } from '../../Projectiles/TunnelProjectile.ts'
 import type { ContinuousWeapon } from './PlayerWeaponManager.ts'
 import UPDATE = Scenes.Events.UPDATE
@@ -20,7 +19,6 @@ export class TunnelWeapon extends SceneBound implements ContinuousWeapon {
 
   private projectileDestroy: TunnelProjectile | null = null
   readonly matterTank: MatterTank
-  readonly createProjectileRenderer: NoopProjectileRenderer
 
   constructor(
     public scene: GameLevel,
@@ -29,7 +27,6 @@ export class TunnelWeapon extends SceneBound implements ContinuousWeapon {
     super(scene)
     this.input = new PlayerWeaponConstantInput(scene, this)
     this.matterTank = new MatterTank(scene.matterManager, TunnelProjectile.MAX_TILES_TO_MOD * 1000)
-    this.createProjectileRenderer = new NoopProjectileRenderer()
   }
 
   _startPos: Position = { x: 0, y: 0 }
@@ -81,7 +78,7 @@ export class TunnelWeapon extends SceneBound implements ContinuousWeapon {
     if (!charge) return
     const pos = this.scene.player.getInverseProjectilePosition(DESTROY_PROJECTILE_DISTANCE, this._pos)
 
-    const projectile = this.scene.projectiles.add(Projectile, this.scene.player, this.matterTank, pos.x, pos.y, charge, FireMode.CREATE, this.createProjectileRenderer)
+    const projectile = this.scene.projectiles.add(Projectile, this.scene.player, this.matterTank, pos.x, pos.y, charge, FireMode.CREATE, null)
     projectile.fire()
 
     if (!projectile) return

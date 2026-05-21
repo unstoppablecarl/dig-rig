@@ -1,31 +1,23 @@
 import { BlendModes, GameObjects } from 'phaser'
 import { PROJECTILE_MODE_COLORS } from '../../config.ts'
+import { SceneBound } from '../../helpers/SceneBound.ts'
+import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import type { BaseProjectile } from './BaseProjectile.ts'
+import UPDATE = Phaser.Input.Events.UPDATE
 
-export interface IProjectileRenderer {
-  destroyed: boolean
-  attachToProjectile<T extends BaseProjectile>(projectile: T): void
-  queueReRender(): void
-  fadeOutAndDestroy(): void
-  update(pos: Position): void
-  destroy(): void
-  setVisible(visible: boolean): void
-}
-
-export class ProjectileRenderer implements IProjectileRenderer {
+export class ProjectileRenderer extends SceneBound {
   protected fading = false
-  protected dirty = true
-  public destroyed = false
 
   private circle: GameObjects.Graphics
   private circleCenter: GameObjects.Graphics
   private container: GameObjects.Container
-  private projectile: BaseProjectile
+  private _radius: number = 0
+  private _color: number = 0
 
-  attachToProjectile<T extends BaseProjectile>(projectile: T) {
-    this.projectile = projectile
-    const scene = projectile.scene
+  constructor(readonly scene: GameLevel) {
+    super(scene)
+
     this.circle = scene.add.graphics().setBlendMode(BlendModes.ADD)
     this.circleCenter = scene.add.graphics().setBlendMode(BlendModes.ADD)
 
@@ -36,18 +28,36 @@ export class ProjectileRenderer implements IProjectileRenderer {
     this.circleCenter.strokeCircle(0, 0, 1)
   }
 
+  attachToProjectile(projectile: BaseProjectile) {
+    const scene = projectile.scene
+    const color = PROJECTILE_MODE_COLORS[projectile.mode]
+
+    this.setColor(color)
+
+    const update = () => {
+      if (projectile.destroyed) {
+        this.destroy()
+      }
+      if (this.destroyed) {
+        scene.events.off(UPDATE, update)
+        return
+      }
+
+      this.setRadius(projectile.radius)
+      this.setPosition(projectile)
+    }
+
+    scene.events.on(UPDATE, update)
+  }
+
   setVisible(visible: boolean) {
     this.container.visible = visible
     this.container.active = visible
   }
 
-  queueReRender() {
-    this.dirty = true
-  }
-
   fadeOutAndDestroy() {
     this.fading = true
-    this.projectile.scene.add.tween({
+    this.scene.add.tween({
       targets: this.container,
       alpha: 0,
       duration: 200,
@@ -55,27 +65,38 @@ export class ProjectileRenderer implements IProjectileRenderer {
     })
   }
 
-  update(pos: Position) {
-    if (this.destroyed || this.fading) return
+  setColor(color: number): void {
+    if (color === this._color) return
+    this._color = color
+    this.draw()
+  }
+
+  setRadius(radius: number) {
+    if (radius === this._radius) return
+    this._radius = radius
+    this.draw()
+  }
+
+  setPosition(pos: Position) {
     this.container.x = pos.x
     this.container.y = pos.y
+  }
 
-    if (!this.dirty) return
-
-    const modeColor = PROJECTILE_MODE_COLORS[this.projectile.mode]
+  private draw() {
     const w = 1
-    let radius = this.projectile.radius
+    const radius = this._radius
+    const color = this._color
 
     this.circle.clear()
 
-    this.circle.lineStyle(w * 2, modeColor, 0.8)
+    this.circle.lineStyle(w * 2, color, 0.8)
     this.circle.strokeCircle(
       0,
       0,
       radius + w * 2,
     )
 
-    this.circle.lineStyle(w * 4, modeColor, 0.2)
+    this.circle.lineStyle(w * 4, color, 0.2)
     this.circle.strokeCircle(
       0,
       0,
@@ -89,11 +110,9 @@ export class ProjectileRenderer implements IProjectileRenderer {
       radius + w * 1.5,
     )
 
-    this.dirty = false
   }
 
-  destroy() {
-    if (this.destroyed) return
+  onDestroy() {
     this.circle.destroy(true)
     this.circleCenter.destroy(true)
     this.container.destroy(true)
@@ -104,21 +123,5 @@ export class ProjectileRenderer implements IProjectileRenderer {
     this.circleCenter = null
     // @ts-expect-error: destroy
     this.container = null
-
-    this.destroyed = true
   }
-}
-
-const noop = () => {
-}
-
-export class NoopProjectileRenderer implements IProjectileRenderer {
-  attachToProjectile = noop
-  queueReRender = noop
-  fadeOutAndDestroy = noop
-  update = noop
-  destroy = noop
-  setVisible = noop
-
-  destroyed = false
 }
