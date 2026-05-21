@@ -30,16 +30,26 @@ export class MatterTank {
     return this.matterMax - this._matter - this.getPendingCharge(FireMode.DESTROY)
   }
 
+  // Debug only — bypasses conservation. Use applyPendingCharge for gameplay transfers.
   set(value: number) {
     this._matter = clampMaxInt(value, this.matterMax)
   }
 
-  remove(value: number) {
-    this._matter -= clampMaxInt(value, this._matter)
+  // Private — only applyPendingCharge may call these.
+  // The pending invariants guarantee these never overflow/underflow;
+  // if they do, it is a conservation bug
+  private add(value: number) {
+    if (this._matter + value > this.matterMax) {
+      throw new Error(`MatterTank overflow: add(${value}) with _matter=${this._matter}, max=${this.matterMax}`)
+    }
+    this._matter += value
   }
 
-  add(value: number) {
-    this._matter += clampMaxInt(value, this.availableSpace())
+  private remove(value: number) {
+    if (this._matter < value) {
+      throw new Error(`MatterTank underflow: remove(${value}) with _matter=${this._matter}`)
+    }
+    this._matter -= value
   }
 
   getPendingCharge(mode: FireMode) {
