@@ -12,10 +12,12 @@ export class ProjectileRenderer extends SceneBound {
   private circle: GameObjects.Graphics
   private circleCenter: GameObjects.Graphics
   private container: GameObjects.Container
-  private _radius: number = 0
-  private _color: number = 0
 
-  constructor(readonly scene: GameLevel) {
+  constructor(
+    readonly scene: GameLevel,
+    private _color: number = 0,
+    private _radius: number = 0,
+  ) {
     super(scene)
 
     this.circle = scene.add.graphics().setBlendMode(BlendModes.ADD)
