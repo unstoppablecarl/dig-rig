@@ -1,12 +1,12 @@
 import type { Weapon } from './Input/InputControllers/WeaponManagerInput.ts'
 
 export enum GameEvent {
-  WEAPON_SELECTED = 'WEAPON_SELECTED',
-  MESSAGE = 'MESSAGE'
+  UI_WEAPON_UPDATE = 'UI_WEAPON_UPDATE',
+  MESSAGE = 'MESSAGE',
 }
 
 export interface EventMap {
-  [GameEvent.WEAPON_SELECTED]: [Weapon];
+  [GameEvent.UI_WEAPON_UPDATE]: [Weapon]
   [GameEvent.MESSAGE]: [string]
 }
 

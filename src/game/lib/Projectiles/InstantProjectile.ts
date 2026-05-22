@@ -19,7 +19,11 @@ export class InstantProjectile extends BaseProjectile {
     if (isMatterTankFireMode(this.mode)) {
       this.matterTank.addPendingCharge(this.mode, charge)
     }
-    if (this.mode === FireMode.DESTROY) {
+    if (this.mode === FireMode.SOLIDIFY) {
+      this.solidifyTiles(charge)
+    } else if (this.mode === FireMode.MELT) {
+      this.meltTiles(charge)
+    } else if (this.mode === FireMode.DESTROY) {
       this.destroyTiles(charge)
     } else if (this.mode === FireMode.CREATE) {
       this.createTiles(charge)

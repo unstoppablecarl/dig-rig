@@ -6,3 +6,5 @@ export enum TerrainType {
   SAND_SETTLED = 4,
   WATER = 5,
 }
+
+export const TerrainTypeValues = Object.values(TerrainType).filter((key) => !isNaN(Number(key))) as TerrainType[]

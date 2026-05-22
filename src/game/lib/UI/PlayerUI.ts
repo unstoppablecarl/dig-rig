@@ -15,13 +15,13 @@ export class PlayerUI extends SceneBound {
     this.currentWeapon = document.getElementById('current-weapon-text') as HTMLElement
 
     this.binder = new EventsBinder()
-    this.binder.add(scene.EVENTS, GameEvent.WEAPON_SELECTED, this.weaponSelected, this)
+    this.binder.add(scene.EVENTS, GameEvent.UI_WEAPON_UPDATE, this.uiWeaponUpdate, this)
     this.binder.bind()
 
-    this.weaponSelected(gameLevel.playerWeaponManager.activeWeapon())
+    this.uiWeaponUpdate(gameLevel.playerWeaponManager.activeWeapon())
   }
 
-  weaponSelected(weapon: Weapon) {
+  uiWeaponUpdate(weapon: Weapon) {
     this.currentWeapon.innerHTML = `<strong>Weapon: </strong> [${weapon.slot}] ${weapon.displayName} ${weapon?.getSuffix?.() ?? ''}`
   }
 
