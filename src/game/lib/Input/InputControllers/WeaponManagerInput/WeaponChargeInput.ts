@@ -1,17 +1,16 @@
 import { Input, Scenes } from 'phaser'
-import { FireMode } from '../../config.ts'
-import { getDeltaT, isMatterTankFireMode } from '../../helpers/_helpers.ts'
-import { SceneBound } from '../../helpers/SceneBound.ts'
-import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { GameEvent } from '../events.ts'
-import type { ChargeableWeapon } from '../Player/Weapons/PlayerWeaponManager.ts'
-import type { InputController } from './InputManager.ts'
+import { FireMode } from '../../../../config.ts'
+import { getDeltaT, isMatterTankFireMode } from '../../../../helpers/_helpers.ts'
+import type { GameLevel } from '../../../../scenes/GameLevel.ts'
+import { GameEvent } from '../../../events.ts'
+import type { ChargeableWeapon } from '../WeaponManagerInput.ts'
+import { InputController } from '../InputController.ts'
 import POINTER_DOWN = Input.Events.POINTER_DOWN
 import POINTER_UP = Input.Events.POINTER_UP
 import Pointer = Input.Pointer
 import UPDATE = Scenes.Events.UPDATE
 
-export class PlayerWeaponChargeInput extends SceneBound<GameLevel> implements InputController {
+export class WeaponChargeInput extends InputController {
   // charge per second
   private chargeRate = 400
   private charge = 0
@@ -19,33 +18,14 @@ export class PlayerWeaponChargeInput extends SceneBound<GameLevel> implements In
   public isCharging = false
   public mode: FireMode = FireMode.DESTROY
 
-  private _enabled = false
-
   constructor(
     public scene: GameLevel,
     public weapon: ChargeableWeapon,
   ) {
     super(scene)
-  }
-
-  get enabled() {
-    return this._enabled
-  }
-
-  setInputEnabled(value: boolean) {
-    if (this._enabled === value) return
-
-    if (value) {
-      this.scene.input.on(POINTER_DOWN, this.pointerdown, this)
-      this.scene.input.on(POINTER_UP, this.pointerup, this)
-      this.scene.events.on(UPDATE, this.update, this)
-    } else {
-      this.scene.input.off(POINTER_DOWN, this.pointerdown, this)
-      this.scene.input.off(POINTER_UP, this.pointerup, this)
-      this.scene.events.off(UPDATE, this.update, this)
-    }
-
-    this._enabled = value
+    this.bind(this.scene.input, POINTER_DOWN, this.pointerdown)
+    this.bind(this.scene.input, POINTER_UP, this.pointerup)
+    this.bind(this.scene.events, UPDATE, this.update)
   }
 
   pointerdown(pointer: Pointer) {
@@ -99,7 +79,7 @@ export class PlayerWeaponChargeInput extends SceneBound<GameLevel> implements In
   }
 
   protected onDestroy() {
-    this.setInputEnabled(false)
+    super.onDestroy()
     // @ts-expect-error: destroy
     this.weapon = null
   }

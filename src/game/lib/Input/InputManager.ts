@@ -1,43 +1,39 @@
 import { Input } from 'phaser'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { BrushInput } from './BrushInput.ts'
-import { PlayerZoomInput } from './PlayerZoomInput.ts'
+import type { InputController } from './InputControllers/InputController.ts'
+import { BrushInput } from './InputControllers/BrushInput.ts'
+import { WeaponFireModeInput } from './InputControllers/WeaponFireModeInput.ts'
+import { ZoomInput } from './InputControllers/ZoomInput.ts'
+import { makePlayerMovementInput, type PlayerMovementInput } from './PlayerMovementInput.ts'
 
 export enum InputMode {
   WEAPON,
   BRUSH
 }
 
-export interface InputController {
-  setInputEnabled(value: boolean): void
-  enabled: boolean,
-}
-
 export class InputManager extends SceneBound {
-  private allControllers: InputController[]
   private modeControllers: Record<InputMode, InputController[]>
   private _mode: InputMode
+
+  readonly playerMovement: PlayerMovementInput
 
   constructor(
     public scene: GameLevel,
   ) {
     super(scene)
 
-    const zoomInput = new PlayerZoomInput(scene)
+    this.playerMovement = makePlayerMovementInput(scene)
+    const zoomInput = new ZoomInput(scene)
     const brushInput = new BrushInput(scene)
+    const fireModeInput = new WeaponFireModeInput(scene)
     const playerWeaponManager = scene.playerWeaponManager
-
-    this.allControllers = [
-      zoomInput,
-      brushInput,
-      playerWeaponManager,
-    ]
 
     this.modeControllers = {
       [InputMode.WEAPON]: [
         zoomInput,
         playerWeaponManager,
+        fireModeInput,
       ],
       [InputMode.BRUSH]: [
         brushInput,
@@ -62,23 +58,16 @@ export class InputManager extends SceneBound {
 
   setMode(mode: InputMode) {
     if (this._mode === mode) return
-    this._mode = mode
-    this.setEnabled(this.modeControllers[mode])
-  }
-
-  private setEnabled(controllers: InputController[]) {
-    for (const controller of this.allControllers) {
-      const shouldEnable = controllers.includes(controller)
-      controller.setInputEnabled(shouldEnable)
+    if (this._mode !== undefined) {
+      for (const c of this.modeControllers[this._mode]) c.setInputEnabled(false)
     }
+    this._mode = mode
+    for (const c of this.modeControllers[mode]) c.setInputEnabled(true)
   }
 
   protected onDestroy() {
-    for (const controller of this.allControllers) {
-      controller.setInputEnabled(false)
-    }
-    // @ts-expect-error: destroy
-    this.allControllers = null
+    const all = new Set(Object.values(this.modeControllers).flat())
+    for (const c of all) c.destroy()
     // @ts-expect-error: destroy
     this.modeControllers = null
   }

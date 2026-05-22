@@ -3,11 +3,13 @@ import { FireMode } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
-import { PlayerWeaponConstantInput } from '../../Input/PlayerWeaponConstantInput.ts'
+import {
+  type ContinuousWeapon,
+  WeaponConstantInput,
+} from '../../Input/InputControllers/WeaponManagerInput/WeaponConstantInput.ts'
 import { MatterTank } from '../../Matter/MatterTank.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
 import { TunnelProjectile } from '../../Projectiles/TunnelProjectile.ts'
-import type { ContinuousWeapon } from './PlayerWeaponManager.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 const DESTROY_PROJECTILE_DISTANCE = 20
@@ -16,7 +18,7 @@ const DESTROY_PROJECTILE_EXPAND_RATE_MS = 10
 export class TunnelWeapon extends SceneBound implements ContinuousWeapon {
   readonly displayName = 'Tunnel'
 
-  private input: PlayerWeaponConstantInput
+  private input: WeaponConstantInput
 
   private projectileDestroy: TunnelProjectile | null = null
   readonly matterTank: MatterTank
@@ -26,7 +28,7 @@ export class TunnelWeapon extends SceneBound implements ContinuousWeapon {
     readonly slot: number,
   ) {
     super(scene)
-    this.input = new PlayerWeaponConstantInput(scene, this)
+    this.input = new WeaponConstantInput(scene, this)
     this.matterTank = new MatterTank(scene.matterManager, TunnelProjectile.MAX_TILES_TO_MOD * 1000)
   }
 

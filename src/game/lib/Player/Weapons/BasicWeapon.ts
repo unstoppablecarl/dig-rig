@@ -3,23 +3,23 @@ import { FireMode } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
-import { PlayerWeaponChargeInput } from '../../Input/PlayerWeaponChargeInput.ts'
+import { WeaponChargeInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponChargeInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
-import type { ChargeableWeapon } from './PlayerWeaponManager.ts'
+import type { ChargeableWeapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 export class BasicWeapon extends SceneBound implements ChargeableWeapon {
   readonly displayName = 'Basic'
 
   private queued: Projectile | null = null
-  private chargeInput: PlayerWeaponChargeInput
+  private chargeInput: WeaponChargeInput
 
   constructor(
     public scene: GameLevel,
     readonly slot: number,
   ) {
     super(scene)
-    this.chargeInput = new PlayerWeaponChargeInput(scene, this)
+    this.chargeInput = new WeaponChargeInput(scene, this)
   }
 
   getFireMode(): FireMode {

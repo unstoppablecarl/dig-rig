@@ -71,9 +71,24 @@ export abstract class BaseProjectile extends SceneBound {
 
   private _emitPos = { x: 0, y: 0 }
 
-  // protected meltTiles(count: number) {
-  //
-  // }
+
+  protected solidifyTiles(count: number) {
+    const tileX = this.x
+    const tileY = this.y
+    const tiles = this.scene.tilemap.applyEffect(tileX, tileY, this.radius, FireMode.SOLIDIFY, count)
+    const changed = tiles.length
+    this.tilesModified += changed
+    return changed
+  }
+
+  protected meltTiles(count: number) {
+    const tileX = this.x
+    const tileY = this.y
+    const tiles = this.scene.tilemap.applyEffect(tileX, tileY, this.radius, FireMode.MELT, count)
+    const changed = tiles.length
+    this.tilesModified += changed
+    return changed
+  }
 
   protected createTiles(count: number) {
     const tiles = this.scene.tilemap.applyEffect(
@@ -102,9 +117,8 @@ export abstract class BaseProjectile extends SceneBound {
       }
       this.scene.particleManager.spawnMatter(source, target, true)
     }
-    if (isMatterTankFireMode(this.mode)) {
-      this.matterTank.applyPendingCharge(this.mode, changed)
-    }
+    this.matterTank.applyPendingCharge(FireMode.CREATE, changed)
+
     return tiles.length
   }
 
@@ -131,10 +145,9 @@ export abstract class BaseProjectile extends SceneBound {
         this.scene.particleManager.spawnMatter(source, target, false)
       }
 
-      if (isMatterTankFireMode(this.mode)) {
-        this.matterTank.applyPendingCharge(this.mode, tiles.length)
-      }
+      this.matterTank.applyPendingCharge(FireMode.DESTROY, tiles.length)
     }
+
     return changed
   }
 

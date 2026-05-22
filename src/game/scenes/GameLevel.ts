@@ -4,14 +4,15 @@ import { PLAYER_SPRITE_SHEET_ASSETS } from '../../assets/player/player-sprite-sh
 import { DRAW_WORLD_BORDER_DEBUG } from '../config.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
-import { SandBridge } from '../lib/Sand/SandBridge.ts'
 import { InputManager } from '../lib/Input/InputManager.ts'
+import { PlayerFireModeState } from '../lib/Player/PlayerFireModeState.ts'
 import { MatterManager } from '../lib/Matter/MatterManager.ts'
 import { ParticleManager } from '../lib/Particles/ParticleManager.ts'
 import { TerrainParticleManager } from '../lib/Particles/TerrainParticleManager.ts'
 import { Player } from '../lib/Player/Player.ts'
-import { PlayerWeaponManager } from '../lib/Player/Weapons/PlayerWeaponManager.ts'
+import { WeaponManagerInput } from '../lib/Input/InputControllers/WeaponManagerInput.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
+import { SandBridge } from '../lib/Sand/SandBridge.ts'
 import { Tilemap } from '../lib/Tilemap/Tilemap.ts'
 import { TilemapRenderer, type TilemapRendererConfig } from '../lib/Tilemap/TilemapRenderer.ts'
 import { CameraController } from '../lib/UI/CameraController.ts'
@@ -39,14 +40,14 @@ type Layers = {
 }
 
 export abstract class GameLevel extends Scene {
-  public displayName: string = 'Level Name Not Loaded'
+  public displayName = 'Level Name Not Loaded'
   public layers: Layers
   public cameraController: CameraController
   public entities: Group
   public matterManager: MatterManager
   public particleManager: ParticleManager
   public player: Player
-  public playerWeaponManager: PlayerWeaponManager
+  public playerWeaponManager: WeaponManagerInput
   public projectiles: ProjectileManager
   public terrainChunkBodyManager: TerrainChunkBodyManager
   public tilemap: Tilemap
@@ -56,6 +57,7 @@ export abstract class GameLevel extends Scene {
   public terrainParticleManager: TerrainParticleManager
   public sandBridge: SandBridge
   protected id: LevelId
+  public playerInputState: PlayerFireModeState
 
   protected makeTilemapRenderer(tilemap: Tilemap): TilemapRenderer {
     return new TilemapRenderer(this, this.getTerrainTexture(tilemap), this.tilemapRendererConfig())
@@ -154,12 +156,6 @@ export abstract class GameLevel extends Scene {
       () => this.textures.get(key).setFilter(NEAREST))
   }
 
-  loadPixelSpritesheet(key: string, url: string, config: Phaser.Types.Loader.FileTypes.ImageFrameConfig) {
-    this.load.spritesheet(key, url, config)
-    this.load.once(`filecomplete-spritesheet-${key}`,
-      () => this.textures.get(key).setFilter(NEAREST))
-  }
-
   create() {
     this.preCreateLevel()
 
@@ -191,12 +187,13 @@ export abstract class GameLevel extends Scene {
       this.tilemap.height,
     )
 
+    this.playerInputState = new PlayerFireModeState()
     this.terrainParticleManager = new TerrainParticleManager(this)
     this.tilemapRenderer = this.makeTilemapRenderer(this.tilemap)
     this.sandBridge = new SandBridge(this)
     this.terrainChunkBodyManager = new TerrainChunkBodyManager(this)
     this.projectiles = new ProjectileManager(this)
-    this.playerWeaponManager = new PlayerWeaponManager(this)
+    this.playerWeaponManager = new WeaponManagerInput(this)
     this.particleManager = new ParticleManager(this)
     this.inputManager = new InputManager(this)
 

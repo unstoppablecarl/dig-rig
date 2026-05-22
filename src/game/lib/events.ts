@@ -1,4 +1,4 @@
-import type { Weapon } from './Player/Weapons/PlayerWeaponManager.ts'
+import type { Weapon } from './Input/InputControllers/WeaponManagerInput.ts'
 
 export enum GameEvent {
   WEAPON_SELECTED = 'WEAPON_SELECTED',

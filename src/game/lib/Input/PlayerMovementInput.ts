@@ -1,8 +1,8 @@
 import { Input, type Scene } from 'phaser'
 
-export type PlayerInput = ReturnType<typeof makePlayerInput>
+export type PlayerMovementInput = ReturnType<typeof makePlayerMovementInput>
 
-export function makePlayerInput(scene: Scene) {
+export function makePlayerMovementInput(scene: Scene) {
 
   const bind = (keyId: KeyId | KeyId[]) => new MultiInput(scene, keyId)
 

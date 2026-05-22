@@ -1,17 +1,16 @@
 import { Input } from 'phaser'
 import { type FireMode } from '../../../config.ts'
-import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { GameEvent } from '../../events.ts'
-import type { InputController } from '../../Input/InputManager.ts'
+import { BasicWeapon } from '../../Player/Weapons/BasicWeapon.ts'
+import { BurstWeapon } from '../../Player/Weapons/BurstWeapon.ts'
+import { InstantWeaponCreate } from '../../Player/Weapons/InstantWeaponCreate.ts'
+import { InstantWeaponDestroy } from '../../Player/Weapons/InstantWeaponDestroy.ts'
+import { RapidWeapon } from '../../Player/Weapons/RapidWeapon.ts'
+import { TorchWeapon } from '../../Player/Weapons/TorchWeapon.ts'
+import { TunnelWeapon } from '../../Player/Weapons/TunnelWeapon.ts'
 import type { Projectile } from '../../Projectiles/Projectile.ts'
-import { BasicWeapon } from './BasicWeapon.ts'
-import { BurstWeapon } from './BurstWeapon.ts'
-import { InstantWeaponCreate } from './InstantWeaponCreate.ts'
-import { InstantWeaponDestroy } from './InstantWeaponDestroy.ts'
-import { RapidWeapon } from './RapidWeapon.ts'
-import { TorchWeapon } from './TorchWeapon.ts'
-import { TunnelWeapon } from './TunnelWeapon.ts'
+import { InputController } from './InputController.ts'
 import ANY_KEY_DOWN = Input.Keyboard.Events.ANY_KEY_DOWN
 
 export interface Weapon {
@@ -35,18 +34,14 @@ export interface ChargeableWeapon extends Weapon {
   getFireMode(): FireMode
 }
 
-export interface ContinuousWeapon extends Weapon {
-  firing(value: boolean, mode: FireMode): void,
-}
-
-export class PlayerWeaponManager extends SceneBound<GameLevel> implements InputController {
+export class WeaponManagerInput extends InputController {
   private readonly weapons = new Map<number, Weapon | ChargeableWeapon>()
 
-  private _enabled = false
   private _active: Weapon | ChargeableWeapon
 
   constructor(scene: GameLevel) {
     super(scene)
+    this.bind(this.scene.input.keyboard!, ANY_KEY_DOWN, this.keydown)
 
     const weapons = [
       BasicWeapon,
@@ -66,22 +61,8 @@ export class PlayerWeaponManager extends SceneBound<GameLevel> implements InputC
     this.setActive(1)
   }
 
-  get enabled() {
-    return this._enabled
-  }
-
-  setInputEnabled(value: boolean): void {
-    if (this._enabled === value) return
-
-    this._enabled = value
-    this._active.setEnabled(value)
-
-    if (value) {
-      this.scene.input.keyboard!.on(ANY_KEY_DOWN, this.keydown, this)
-    } else {
-      this.scene.input.keyboard!.off(ANY_KEY_DOWN, this.keydown, this)
-    }
-  }
+  protected onEnable() { this._active.setEnabled(true) }
+  protected onDisable() { this._active.setEnabled(false) }
 
   keydown(event: KeyboardEvent) {
     const key = parseInt(event.key, 10)
@@ -99,7 +80,7 @@ export class PlayerWeaponManager extends SceneBound<GameLevel> implements InputC
 
     const weapon = this.weapons.get(slot) as Weapon
 
-    weapon.setEnabled(true)
+    if (this.enabled) weapon.setEnabled(true)
 
     this.scene.EVENTS.emit(GameEvent.WEAPON_SELECTED, weapon)
 
@@ -115,7 +96,7 @@ export class PlayerWeaponManager extends SceneBound<GameLevel> implements InputC
   }
 
   protected onDestroy() {
-    this.setInputEnabled(false)
+    super.onDestroy()
     for (const weapon of this.weapons.values()) {
       weapon.destroy()
     }
