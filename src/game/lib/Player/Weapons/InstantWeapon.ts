@@ -4,21 +4,22 @@ import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import { GameEvent } from '../../events.ts'
-import { PlayerKeyset } from '../../Input/PlayerKeyset.ts'
-import { PlayerWeaponSingleFireInput } from '../../Input/PlayerWeaponSingleFireInput.ts'
+import { KeysetInput } from '../../Input/InputControllers/KeysetInput.ts'
+import { WeaponSingleFireInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponSingleFireInput.ts'
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
 import { tilesToRadius } from '../../Projectiles/projectile-radius'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
 import { TerrainType } from '../../Tilemap/_Tilemap-types.ts'
-import type { ImmediateWeapon } from './PlayerWeaponManager.ts'
+import type { ImmediateWeapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 const MIN_CHARGE = 10
+
 export abstract class InstantWeapon extends SceneBound implements ImmediateWeapon {
   readonly abstract displayName: string
 
-  private fireInput: PlayerWeaponSingleFireInput
-  private chargeInput: PlayerKeyset
+  private fireInput: WeaponSingleFireInput
+  private chargeInput: KeysetInput
   private renderer: ProjectileRenderer
   private _enabled: boolean
 
@@ -32,8 +33,8 @@ export abstract class InstantWeapon extends SceneBound implements ImmediateWeapo
     protected mode: FireMode,
   ) {
     super(scene)
-    this.fireInput = new PlayerWeaponSingleFireInput(scene, this)
-    this.chargeInput = new PlayerKeyset(scene, {
+    this.fireInput = new WeaponSingleFireInput(scene, this)
+    this.chargeInput = new KeysetInput(scene, {
       'q': () => this.decreaseCharge(),
       'e': () => this.increaseCharge(),
     })

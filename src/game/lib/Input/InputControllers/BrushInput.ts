@@ -1,8 +1,7 @@
 import { GameObjects, Input, Scenes } from 'phaser'
-import { SceneBound } from '../../helpers/SceneBound.ts'
-import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { TerrainType } from '../Tilemap/_Tilemap-types.ts'
-import type { InputController } from './InputManager.ts'
+import type { GameLevel } from '../../../scenes/GameLevel.ts'
+import { TerrainType } from '../../Tilemap/_Tilemap-types.ts'
+import { InputController } from './InputController.ts'
 import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
 import POINTER_DOWN = Input.Events.POINTER_DOWN
 import POINTER_MOVE = Input.Events.POINTER_MOVE
@@ -11,14 +10,13 @@ import POINTER_UP = Input.Events.POINTER_UP
 import Pointer = Input.Pointer
 import UPDATE = Scenes.Events.UPDATE
 
-export class BrushInput extends SceneBound implements InputController {
+export class BrushInput extends InputController {
   public graphics: GameObjects.Graphics
   private mouseX = 0
   private mouseY = 0
   private isDrawing = false
   private isCreating = false
   private brushDirty = true
-  private _enabled = false
 
   constructor(
     public scene: GameLevel,
@@ -28,35 +26,20 @@ export class BrushInput extends SceneBound implements InputController {
   ) {
     super(scene)
     this.graphics = this.scene.add.graphics()
-
     scene.layers.brush.add(this.graphics)
+    this.bind(this.scene.input, POINTER_MOVE, this.pointermove)
+    this.bind(this.scene.input, POINTER_DOWN, this.pointerdown)
+    this.bind(this.scene.input, POINTER_UP, this.pointerup)
+    this.bind(this.scene.input, GAMEOBJECT_POINTER_WHEEL, this.wheel)
+    this.bind(this.scene.events, UPDATE, this.update)
   }
 
-  get enabled() {
-    return this._enabled
+  protected onEnable() {
+    this.graphics.setActive(true).setVisible(true)
   }
 
-  setInputEnabled(value: boolean) {
-    if (this._enabled === value) return
-
-    if (value) {
-      this.scene.input.on(POINTER_MOVE, this.pointermove, this)
-      this.scene.input.on(POINTER_DOWN, this.pointerdown, this)
-      this.scene.input.on(POINTER_UP, this.pointerup, this)
-      this.scene.input.on(GAMEOBJECT_POINTER_WHEEL, this.wheel, this)
-      this.scene.events.on(UPDATE, this.update, this)
-
-      this.graphics.setActive(true).setVisible(true)
-    } else {
-      this.scene.input.off(POINTER_MOVE, this.pointermove, this)
-      this.scene.input.off(POINTER_DOWN, this.pointerdown, this)
-      this.scene.input.off(POINTER_UP, this.pointerup, this)
-      this.scene.input.off(GAMEOBJECT_POINTER_WHEEL, this.wheel, this)
-      this.scene.events.off(UPDATE, this.update, this)
-
-      this.graphics.setActive(false).setVisible(false)
-    }
-    this._enabled = value
+  protected onDisable() {
+    this.graphics.setActive(false).setVisible(false)
   }
 
   pointermove(pointer: Pointer) {
@@ -64,12 +47,8 @@ export class BrushInput extends SceneBound implements InputController {
     this.mouseY = pointer.worldY
     this.brushDirty = true
 
-    // dragging
     if (this.isDrawing) {
-      const tileX = this.mouseX
-      const tileY = this.mouseY
-
-      this.apply(tileX, tileY)
+      this.apply(this.mouseX, this.mouseY)
     }
   }
 
@@ -77,11 +56,7 @@ export class BrushInput extends SceneBound implements InputController {
     this.isDrawing = true
     const destroying = (pointer.leftButtonDown() && pointer.event.shiftKey) || pointer.rightButtonDown()
     this.isCreating = !destroying
-
-    const tileX = pointer.worldX
-    const tileY = pointer.worldY
-
-    this.apply(tileX, tileY)
+    this.apply(pointer.worldX, pointer.worldY)
   }
 
   pointerup() {
@@ -100,7 +75,6 @@ export class BrushInput extends SceneBound implements InputController {
   update() {
     if (!this.brushDirty) return
     this.brushDirty = false
-
     this.graphics.clear()
     this.graphics.lineStyle(4, 0xffff00, 1)
     this.graphics.strokeCircle(this.mouseX, this.mouseY, this.radius)
@@ -116,7 +90,7 @@ export class BrushInput extends SceneBound implements InputController {
   }
 
   protected onDestroy() {
-    this.setInputEnabled(false)
+    super.onDestroy()
     // @ts-expect-error: destroy
     this.graphics = null
   }

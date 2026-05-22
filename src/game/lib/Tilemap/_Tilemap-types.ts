@@ -1,5 +1,5 @@
 export enum TerrainType {
-  EMPTY,
-  SOLID,
-  PERMANENT,
+  EMPTY = 0,
+  SOLID = 1,
+  PERMANENT = 2,
 }

@@ -2,7 +2,7 @@ import { type Scene } from 'phaser'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { GameEvent } from '../events.ts'
-import type { Weapon } from '../Player/Weapons/PlayerWeaponManager.ts'
+import type { Weapon } from '../Input/InputControllers/WeaponManagerInput.ts'
 
 export class PlayerUI extends SceneBound {
   private currentWeapon: HTMLElement

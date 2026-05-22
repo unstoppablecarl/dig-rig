@@ -2,9 +2,9 @@ import { FireMode } from '../../../config.ts'
 import { throttle } from '../../../helpers/_helpers.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { PlayerWeaponSingleFireInput } from '../../Input/PlayerWeaponSingleFireInput.ts'
+import { WeaponSingleFireInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponSingleFireInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
-import type { ImmediateWeapon } from './PlayerWeaponManager.ts'
+import type { ImmediateWeapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 
 const BURST_SHOTS = 5
 const BETWEEN_SHOTS_MS = 100
@@ -15,7 +15,7 @@ const CHARGE = 10
 export class BurstWeapon extends SceneBound implements ImmediateWeapon {
   readonly displayName = 'Burst'
 
-  private input: PlayerWeaponSingleFireInput
+  private input: WeaponSingleFireInput
   public fire: (mode: FireMode) => void
 
   constructor(
@@ -23,7 +23,7 @@ export class BurstWeapon extends SceneBound implements ImmediateWeapon {
     readonly slot: number,
   ) {
     super(scene)
-    this.input = new PlayerWeaponSingleFireInput(scene, this)
+    this.input = new WeaponSingleFireInput(scene, this)
 
     this.fire = throttle((mode: FireMode) => {
       this.fireBurst(mode)

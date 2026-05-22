@@ -2,7 +2,7 @@ import { GameObjects, type Scene, Tweens } from 'phaser'
 import { CREATE_COLOR, DESTROY_COLOR, FireMode } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import type { ChargeableWeapon, Weapon } from '../Player/Weapons/PlayerWeaponManager.ts'
+import type { ChargeableWeapon, Weapon } from '../Input/InputControllers/WeaponManagerInput.ts'
 import DOMElement = GameObjects.DOMElement
 import Rectangle = GameObjects.Rectangle
 import Tween = Tweens.Tween

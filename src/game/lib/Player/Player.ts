@@ -9,8 +9,8 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import { MASK_PLAYER, MASK_TERRAIN } from '../Collision/BodyCategories.ts'
+import { type PlayerMovementInput } from '../Input/PlayerMovementInput.ts'
 import { MatterTank } from '../Matter/MatterTank.ts'
-import { makePlayerInput, type PlayerInput } from './InputKeys.ts'
 import Animation = Animations.Animation
 import AnimationFrame = Animations.AnimationFrame
 import Container = GameObjects.Container
@@ -49,7 +49,7 @@ enum Facing {
 }
 
 export class Player extends SceneBound implements MatterExchanger, ParticleTarget {
-  public input: PlayerInput
+  public input: PlayerMovementInput
   public sprite: Sprite
   public container: PlayerContainer
   public maxVelocity = 300
@@ -90,7 +90,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     this.initCollisionBody()
     this.initSprite()
     this.setPosition(x, y)
-    this.input = makePlayerInput(scene)
+    this.input = scene.inputManager.playerMovement
 
     // collision debugger
     // this.scene.matter.world.on('collisionstart', (event, bodyA, bodyB) => {
