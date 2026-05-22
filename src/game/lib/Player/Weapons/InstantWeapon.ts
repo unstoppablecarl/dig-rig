@@ -10,14 +10,16 @@ import { WeaponSingleFireInput } from '../../Input/InputControllers/WeaponManage
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
 import { tilesToRadius } from '../../Projectiles/projectile-radius'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
-import { TerrainType } from '../../Tilemap/_Tilemap-types.ts'
+import { TerrainType, TerrainTypeValues } from '../../Tilemap/_Tilemap-types.ts'
 import { EventsBinder } from '../../Util/EventsBinder.ts'
+import { PlayerFireModeState } from '../PlayerFireModeState.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 const MIN_CHARGE = 10
+const COLLISION_TYPES = new Set(TerrainTypeValues.filter(v => v !== TerrainType.EMPTY))
 
-export abstract class InstantWeapon extends SceneBound implements ImmediateWeapon {
-  readonly abstract displayName: string
+export class InstantWeapon extends SceneBound implements ImmediateWeapon {
+  readonly displayName = 'Instant'
 
   private fireInput: WeaponSingleFireInput
   private chargeInput: KeysetInput
@@ -28,29 +30,44 @@ export abstract class InstantWeapon extends SceneBound implements ImmediateWeapo
 
   private targetPos: Position
   private binder: EventsBinder
+  private fireMode: PlayerFireModeState
 
   constructor(
     public scene: GameLevel,
     readonly slot: number,
-    protected mode: FireMode,
   ) {
     super(scene)
     this.fireInput = new WeaponSingleFireInput(scene, this)
+    this.fireMode = new PlayerFireModeState()
     this.chargeInput = new KeysetInput(scene, {
       'q': () => this.decreaseCharge(),
       'e': () => this.increaseCharge(),
+      'r': () => {
+        this.fireMode.prev()
+        this.onFireModeChange()
+      },
+      'f': () => {
+        this.fireMode.next()
+        this.onFireModeChange()
+      },
     })
+
     this.binder = new EventsBinder()
     this.binder.add(scene.events, UPDATE, this.update, this)
 
     this.renderer = new ProjectileRenderer(scene)
-    this.renderer.setColor(PROJECTILE_MODE_COLORS[this.mode])
+    this.renderer.setColor(PROJECTILE_MODE_COLORS[this.fireMode.value()])
+  }
+
+  onFireModeChange(): void {
+    this.renderer.setColor(PROJECTILE_MODE_COLORS[this.fireMode.value()])
+    this.scene.EVENTS.emit(GameEvent.UI_WEAPON_UPDATE, this)
   }
 
   fire(): void {
     const available = this.clampCharge()
 
-    this.scene.projectiles.fireForPlayer(InstantProjectile, available, this.mode, 0, this.targetPos, 0, null)
+    this.scene.projectiles.fireForPlayer(InstantProjectile, available, this.fireMode.value(), 0, this.targetPos, 0, null)
   }
 
   get enabled() {
@@ -78,7 +95,8 @@ export abstract class InstantWeapon extends SceneBound implements ImmediateWeapo
   update(): void {
     const armPosition = this.scene.player.getProjectilePosition(0, this._playerArmPos)
     const armAngle = this.scene.player.getProjectileAngle()
-    this.targetPos = this.scene.tilemap.getAngleCollision(armPosition.x, armPosition.y, armAngle, new Set([TerrainType.SOLID]))
+    this.targetPos = this.scene.tilemap.getAngleCollision(armPosition.x, armPosition.y, armAngle, COLLISION_TYPES)
+
     this.renderer.setPosition(this.targetPos)
     this.clampCharge()
   }
@@ -95,16 +113,20 @@ export abstract class InstantWeapon extends SceneBound implements ImmediateWeapo
   }
 
   getSuffix(): string {
-    return ` charge: ${this.charge}, radius: ${Math.round(this.renderer.radius)} Q/E keys change charge`
+    return ` | charge: ${this.charge}, radius: ${Math.round(this.renderer.radius)} Q/E keys change charge | Mode: ${FireMode[this.fireMode.value()]} R/F keys change mode`
   }
 
   protected setCharge(val: number): boolean {
     val = Math.max(MIN_CHARGE, val)
-    const charge = this.scene.player.matterTank.clampToChargeAvailable(val, this.mode)
+    const mode = this.fireMode.value()
+    const charge = this.scene.player.matterTank.clampToChargeAvailable(val, mode)
     if (charge === this.charge) return false
     this.charge = charge
     const radius = tilesToRadius(charge)
     this.renderer.setRadius(radius)
+
+    this.scene.EVENTS.emit(GameEvent.UI_WEAPON_UPDATE, this)
+
     return true
   }
 
@@ -116,5 +138,12 @@ export abstract class InstantWeapon extends SceneBound implements ImmediateWeapo
   protected onDestroy() {
     this.setEnabled(false)
     this.fireInput.destroy()
+
+    // @ts-expect-error: destroy
+    this.renderer = null
+    // @ts-expect-error: destroy
+    this.fireInput = null
+    // @ts-expect-error: destroy
+    this.chargeInput = null
   }
 }

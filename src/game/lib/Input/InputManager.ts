@@ -1,8 +1,8 @@
 import { Input } from 'phaser'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import type { InputController } from './InputControllers/InputController.ts'
 import { BrushInput } from './InputControllers/BrushInput.ts'
+import type { InputController } from './InputControllers/InputController.ts'
 import { ZoomInput } from './InputControllers/ZoomInput.ts'
 import { makePlayerMovementInput, type PlayerMovementInput } from './PlayerMovementInput.ts'
 

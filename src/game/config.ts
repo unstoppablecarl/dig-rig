@@ -24,6 +24,8 @@ export enum FireMode {
   DESTROY,
 }
 
+export const FireModeValues = Object.values(FireMode).filter((key) => !isNaN(Number(key))) as FireMode[]
+
 export const BG_COLOR = GetColor(79, 86, 99)
 
 export const PROJECTILE_MODE_COLORS = {

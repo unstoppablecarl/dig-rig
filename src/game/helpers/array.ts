@@ -20,15 +20,14 @@ export function truncateArrayRandomly<T>(arr: T[], targetSize: number): T[] {
   if (targetSize < 0) {
     throw new Error('Target size cannot be negative')
   }
-  const result = [...arr]
   if (targetSize >= arr.length) {
-    return result
+    return arr
   }
-  while (result.length > targetSize) {
-    const randomIndex = Math.floor(Math.random() * result.length)
-    result.splice(randomIndex, 1)
+  while (arr.length > targetSize) {
+    const randomIndex = Math.floor(Math.random() * arr.length)
+    arr.splice(randomIndex, 1)
   }
-  return result
+  return arr
 }
 
 export function shuffleArray<T>(array: T[]): T[] {

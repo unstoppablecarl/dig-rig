@@ -75,8 +75,8 @@ export class Tilemap extends SceneBound {
     const prev = this.tiles[id]
     this.tiles[id] = value
     this.chunkManager.setDirty(x, y, prev, value)
-    if (value === TerrainType.EMPTY) this.matter--
-    if (value === TerrainType.SOLID) this.matter++
+    if (prev === TerrainType.SOLID && value !== TerrainType.SOLID) this.matter--
+    if (prev !== TerrainType.SOLID && value === TerrainType.SOLID) this.matter++
     return true
   }
 
@@ -167,6 +167,7 @@ export class Tilemap extends SceneBound {
       return false
     }
   }
+  _appyEffectTiles: Tile[] = []
 
   public applyEffect(tileX: number, tileY: number, tileRadius: number, newValue: TerrainType, tilesToModify = Number.MAX_VALUE) {
     const { x: px, y: py } = this.scene.player
@@ -179,7 +180,8 @@ export class Tilemap extends SceneBound {
     const velUp = Math.max(Math.min(vy, 0), -MAX_VEL_EXTEND)
     const velDown = Math.min(Math.max(vy, 0), MAX_VEL_EXTEND)
 
-    let tiles: Tile[] = []
+    this._appyEffectTiles.length = 0
+    const tiles = this._appyEffectTiles
     this.getCircle(tileX, tileY, tileRadius, (x, y) => {
       const value = this.getTile(x, y)
 
@@ -197,7 +199,7 @@ export class Tilemap extends SceneBound {
     })
 
     if (tilesToModify < tiles.length) {
-      tiles = truncateArrayRandomly(tiles, tilesToModify)
+      truncateArrayRandomly(tiles, tilesToModify)
     }
 
     if (!tiles.length) {

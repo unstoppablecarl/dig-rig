@@ -4,8 +4,7 @@ import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { GameEvent } from '../../events.ts'
 import { BasicWeapon } from '../../Player/Weapons/BasicWeapon.ts'
 import { BurstWeapon } from '../../Player/Weapons/BurstWeapon.ts'
-import { InstantWeaponCreate } from '../../Player/Weapons/InstantWeaponCreate.ts'
-import { InstantWeaponDestroy } from '../../Player/Weapons/InstantWeaponDestroy.ts'
+import { InstantWeapon } from '../../Player/Weapons/InstantWeapon.ts'
 import { RapidWeapon } from '../../Player/Weapons/RapidWeapon.ts'
 import { TorchWeapon } from '../../Player/Weapons/TorchWeapon.ts'
 import { TunnelWeapon } from '../../Player/Weapons/TunnelWeapon.ts'
@@ -49,8 +48,7 @@ export class WeaponManagerInput extends InputController {
       RapidWeapon,
       TorchWeapon,
       TunnelWeapon,
-      InstantWeaponCreate,
-      InstantWeaponDestroy,
+      InstantWeapon,
     ]
 
     for (const [index, Def] of weapons.entries()) {
@@ -58,11 +56,16 @@ export class WeaponManagerInput extends InputController {
       this.weapons.set(slot, new Def(scene, slot))
     }
 
-    this.setActive(1)
+    this._active = this.weapons.get(1) as Weapon
   }
 
-  protected onEnable() { this._active.setEnabled(true) }
-  protected onDisable() { this._active.setEnabled(false) }
+  protected onEnable() {
+    this._active.setEnabled(true)
+  }
+
+  protected onDisable() {
+    this._active.setEnabled(false)
+  }
 
   keydown(event: KeyboardEvent) {
     const key = parseInt(event.key, 10)
@@ -74,17 +77,14 @@ export class WeaponManagerInput extends InputController {
   }
 
   private setActive(slot: number) {
-    if (this._active) {
-      this._active.setEnabled(false)
-    }
+    if (!this.enabled) return
+    this._active.setEnabled(false)
 
     const weapon = this.weapons.get(slot) as Weapon
-
-    if (this.enabled) weapon.setEnabled(true)
-
-    this.scene.EVENTS.emit(GameEvent.WEAPON_SELECTED, weapon)
-
+    weapon.setEnabled(true)
     this._active = weapon
+
+    this.scene.EVENTS.emit(GameEvent.UI_WEAPON_UPDATE, weapon)
   }
 
   activeWeaponSlot(): number {
@@ -100,5 +100,7 @@ export class WeaponManagerInput extends InputController {
     for (const weapon of this.weapons.values()) {
       weapon.destroy()
     }
+    // @ts-expect-error: destroy
+    this._active = null
   }
 }
