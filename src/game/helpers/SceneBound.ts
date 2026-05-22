@@ -1,4 +1,6 @@
 import type { Scene } from 'phaser'
+import DESTROY = Phaser.Scenes.Events.DESTROY
+import SHUTDOWN = Phaser.Scenes.Events.SHUTDOWN
 
 export class SceneBound<T extends Scene = Scene> {
   private _destroyed = false
@@ -8,16 +10,16 @@ export class SceneBound<T extends Scene = Scene> {
   }
 
   constructor(public scene: T) {
-    scene.events.once('destroy', this.destroy, this)
-    scene.events.once('shutdown', this.destroy, this)
+    scene.events.once(DESTROY, this.destroy, this)
+    scene.events.once(SHUTDOWN, this.destroy, this)
   }
 
   // subclasses should not call this directly. Use onDestroy
   destroy() {
     if (this._destroyed) return
     this._destroyed = true
-    this.scene?.events.off('destroy', this.destroy, this)
-    this.scene?.events.off('shutdown', this.destroy, this)
+    this.scene?.events.off(DESTROY, this.destroy, this)
+    this.scene?.events.off(SHUTDOWN, this.destroy, this)
     this.onDestroy()
     // @ts-expect-error: destroy
     this.scene = null
