@@ -8,6 +8,7 @@ import {
   WeaponConstantInput,
 } from '../../Input/InputControllers/WeaponManagerInput/WeaponConstantInput.ts'
 import { TorchProjectile } from '../../Projectiles/TorchProjectile.ts'
+import { EventsBinder } from '../../Util/EventsBinder.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 export class TorchWeapon extends SceneBound implements ContinuousWeapon {
@@ -16,6 +17,7 @@ export class TorchWeapon extends SceneBound implements ContinuousWeapon {
   private input: WeaponConstantInput
 
   private projectile: TorchProjectile | null = null
+  private binder: EventsBinder
 
   constructor(
     public scene: GameLevel,
@@ -23,7 +25,8 @@ export class TorchWeapon extends SceneBound implements ContinuousWeapon {
   ) {
     super(scene)
     this.input = new WeaponConstantInput(scene, this)
-
+    this.binder = new EventsBinder()
+    this.binder.add(scene.events, UPDATE, this.update, this)
   }
 
   firing(value: boolean, mode: FireMode): void {
@@ -46,9 +49,9 @@ export class TorchWeapon extends SceneBound implements ContinuousWeapon {
     this.input.setInputEnabled(value)
 
     if (value) {
-      this.scene.events.on(UPDATE, this.update, this)
+      this.binder.bind()
     } else {
-      this.scene.events.off(UPDATE, this.update, this)
+      this.binder.unBind()
       this.projectile?.destroy()
     }
   }
@@ -66,6 +69,10 @@ export class TorchWeapon extends SceneBound implements ContinuousWeapon {
     this.input.destroy()
     this.projectile?.destroy()
     this.projectile = null
+
+    this.binder.unBind()
+    // @ts-expect-error: destroy
+    this.binder = null
     this.scene.events.off(UPDATE, this.update, this)
   }
 }

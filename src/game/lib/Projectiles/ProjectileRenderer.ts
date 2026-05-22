@@ -12,6 +12,7 @@ export class ProjectileRenderer extends SceneBound {
   private circle: GameObjects.Graphics
   private circleCenter: GameObjects.Graphics
   private container: GameObjects.Container
+  private unBind: null | (() => void) = null
 
   constructor(
     readonly scene: GameLevel,
@@ -50,6 +51,7 @@ export class ProjectileRenderer extends SceneBound {
     }
 
     scene.events.on(UPDATE, update)
+    this.unBind = () => scene.events.off(UPDATE, update)
   }
 
   setVisible(visible: boolean) {
@@ -122,6 +124,8 @@ export class ProjectileRenderer extends SceneBound {
     this.circle.destroy(true)
     this.circleCenter.destroy(true)
     this.container.destroy(true)
+    this.unBind?.()
+    this.unBind = null
 
     // @ts-expect-error: destroy
     this.circle = null
