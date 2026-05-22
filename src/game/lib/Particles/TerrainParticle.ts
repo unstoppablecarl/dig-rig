@@ -1,4 +1,4 @@
-import { TerrainType } from '../Tilemap/_Tilemap-types.ts'
+import { FireMode } from '../../config.ts'
 
 export class TerrainParticle {
   public lifetime: number = 0
@@ -8,7 +8,7 @@ export class TerrainParticle {
     public y: number,
     public vx: number,
     public vy: number,
-    readonly terrainType: TerrainType.SOLID | TerrainType.EMPTY = TerrainType.SOLID,
+    readonly mode: FireMode.CREATE | FireMode.DESTROY = FireMode.CREATE,
     readonly radius: number = 1,
     readonly maxLifetimeSeconds = 10,
   ) {

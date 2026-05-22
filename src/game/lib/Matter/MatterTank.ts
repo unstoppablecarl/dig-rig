@@ -92,9 +92,9 @@ export class MatterTank {
       return
     }
 
-    // if (mode === FireMode.CREATE) {
-    return this.remove(value)
-    // }
+    if (mode === FireMode.CREATE) {
+      return this.remove(value)
+    }
   }
 
   hasChargeAvailable(charge: number, mode: FireMode) {

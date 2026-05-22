@@ -1,12 +1,11 @@
 import { GameObjects, Input, Scenes } from 'phaser'
+import { FireMode } from '../../../config.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { TerrainType } from '../../Tilemap/_Tilemap-types.ts'
 import { InputController } from './InputController.ts'
 import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
 import POINTER_DOWN = Input.Events.POINTER_DOWN
 import POINTER_MOVE = Input.Events.POINTER_MOVE
 import POINTER_UP = Input.Events.POINTER_UP
-
 import Pointer = Input.Pointer
 import UPDATE = Scenes.Events.UPDATE
 
@@ -81,11 +80,7 @@ export class BrushInput extends InputController {
   }
 
   apply(tileX: number, tileY: number) {
-    let newValue = TerrainType.EMPTY
-    if (this.isCreating) {
-      newValue = TerrainType.SOLID
-    }
-
+    const newValue = this.isCreating ? FireMode.CREATE : FireMode.DESTROY
     this.scene.tilemap.applyEffect(tileX, tileY, this.radius, newValue, Number.MAX_VALUE)
   }
 

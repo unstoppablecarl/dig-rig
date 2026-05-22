@@ -1,5 +1,6 @@
 import { Geom } from 'phaser'
 import { type Color32, type PixelData, unpackAlpha } from 'pixel-data-js'
+import { FireMode } from '../../config.ts'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import { truncateArrayRandomly } from '../../helpers/array.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
@@ -169,7 +170,7 @@ export class Tilemap extends SceneBound {
   }
   _appyEffectTiles: Tile[] = []
 
-  public applyEffect(tileX: number, tileY: number, tileRadius: number, newValue: TerrainType, tilesToModify = Number.MAX_VALUE) {
+  public applyEffect(tileX: number, tileY: number, tileRadius: number, mode: FireMode, tilesToModify = Number.MAX_VALUE) {
     const { x: px, y: py } = this.scene.player
     const velocity = this.scene.player.container.body?.velocity
     const vx = velocity?.x ?? 0
@@ -182,6 +183,11 @@ export class Tilemap extends SceneBound {
 
     this._appyEffectTiles.length = 0
     const tiles = this._appyEffectTiles
+    let newValue: TerrainType = TerrainType.EMPTY
+    if(mode === FireMode.CREATE){
+      newValue = TerrainType.SOLID
+    }
+
     this.getCircle(tileX, tileY, tileRadius, (x, y) => {
       const value = this.getTile(x, y)
 
