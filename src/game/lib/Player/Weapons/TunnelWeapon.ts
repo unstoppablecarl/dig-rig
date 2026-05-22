@@ -10,6 +10,7 @@ import {
 import { MatterTank } from '../../Matter/MatterTank.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
 import { TunnelProjectile } from '../../Projectiles/TunnelProjectile.ts'
+import { EventsBinder } from '../../Util/EventsBinder.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 const DESTROY_PROJECTILE_DISTANCE = 20
@@ -22,12 +23,15 @@ export class TunnelWeapon extends SceneBound implements ContinuousWeapon {
 
   private projectileDestroy: TunnelProjectile | null = null
   readonly matterTank: MatterTank
+  private binder: EventsBinder
 
   constructor(
     public scene: GameLevel,
     readonly slot: number,
   ) {
     super(scene)
+    this.binder = new EventsBinder()
+    this.binder.add(scene.events, UPDATE, this.update, this)
     this.input = new WeaponConstantInput(scene, this)
     this.matterTank = new MatterTank(scene.matterManager, TunnelProjectile.MAX_TILES_TO_MOD * 1000)
   }
@@ -48,9 +52,9 @@ export class TunnelWeapon extends SceneBound implements ContinuousWeapon {
 
     if (value) {
       this.initDestroyProjectile()
-      this.scene.events.on(UPDATE, this.update, this)
+      this.binder.bind()
     } else {
-      this.scene.events.off(UPDATE, this.update, this)
+      this.binder.unBind()
     }
   }
 
@@ -93,6 +97,8 @@ export class TunnelWeapon extends SceneBound implements ContinuousWeapon {
     this.input.destroy()
     this.projectileDestroy?.destroy()
     this.projectileDestroy = null
-    this.scene.events.off(UPDATE, this.update, this)
+    this.binder.unBind()
+    // @ts-expect-error: destroy
+    this.binder = null
   }
 }

@@ -2,6 +2,7 @@ import { Math as PMath, Scale } from 'phaser'
 import { getFactor } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { EventsBinder } from '../Util/EventsBinder.ts'
 import RESIZE = Scale.Events.RESIZE
 
 const INITIAL_ZOOM = 3
@@ -10,6 +11,7 @@ export class CameraController extends SceneBound {
 
   private minZoom = 0
   private maxZoom = 10
+  private binder: EventsBinder
 
   constructor(
     public scene: GameLevel,
@@ -17,8 +19,10 @@ export class CameraController extends SceneBound {
     super(scene)
     this.calcMinZoom()
 
+    this.binder = new EventsBinder()
+    this.binder.add(scene.game.scale, RESIZE, this.calcMinZoom, this)
+    this.binder.bind()
     scene.cameras.main.setZoom(INITIAL_ZOOM)
-    scene.game.scale.on(RESIZE, this.calcMinZoom, this)
   }
 
   calcMinZoom() {
@@ -65,6 +69,8 @@ export class CameraController extends SceneBound {
   }
 
   protected onDestroy() {
-    this.scene.game.scale.off(RESIZE, this.calcMinZoom, this)
+    this.binder.unBind()
+    // @ts-expect-error: destroy
+    this.binder = null
   }
 }

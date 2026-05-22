@@ -6,12 +6,13 @@ import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import { GameEvent } from '../../events.ts'
 import { KeysetInput } from '../../Input/InputControllers/KeysetInput.ts'
+import type { ImmediateWeapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponSingleFireInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponSingleFireInput.ts'
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
 import { tilesToRadius } from '../../Projectiles/projectile-radius'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
 import { TerrainType } from '../../Tilemap/_Tilemap-types.ts'
-import type { ImmediateWeapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
+import { EventsBinder } from '../../Util/EventsBinder.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 const MIN_CHARGE = 10
@@ -27,6 +28,7 @@ export abstract class InstantWeapon extends SceneBound implements ImmediateWeapo
   private charge: number = -1
 
   private targetPos: Position
+  private binder: EventsBinder
 
   constructor(
     public scene: GameLevel,
@@ -39,6 +41,8 @@ export abstract class InstantWeapon extends SceneBound implements ImmediateWeapo
       'q': () => this.decreaseCharge(),
       'e': () => this.increaseCharge(),
     })
+    this.binder = new EventsBinder()
+    this.binder.add(scene.events, UPDATE, this.update, this)
 
     this.renderer = new ProjectileRenderer(scene)
     this.renderer.setColor(PROJECTILE_MODE_COLORS[this.mode])
@@ -62,9 +66,9 @@ export abstract class InstantWeapon extends SceneBound implements ImmediateWeapo
 
     if (value) {
       this.setCharge(2000)
-      this.scene.events.on(UPDATE, this.update, this)
+      this.binder.bind()
     } else {
-      this.scene.events.off(UPDATE, this.update, this)
+      this.binder.unBind()
     }
 
     this._enabled = value

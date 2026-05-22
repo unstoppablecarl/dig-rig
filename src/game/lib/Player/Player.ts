@@ -11,6 +11,7 @@ import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import { MASK_PLAYER, MASK_TERRAIN } from '../Collision/BodyCategories.ts'
 import { type PlayerMovementInput } from '../Input/PlayerMovementInput.ts'
 import { MatterTank } from '../Matter/MatterTank.ts'
+import { EventsBinder } from '../Util/EventsBinder.ts'
 import Animation = Animations.Animation
 import AnimationFrame = Animations.AnimationFrame
 import Container = GameObjects.Container
@@ -73,6 +74,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
   private canJump = true
   private jumpCooldownTimer: Time.TimerEvent | undefined
   private _mouseWorld = { x: 0, y: 0 }
+  private binder: EventsBinder
 
   constructor(
     public scene: GameLevel,
@@ -87,6 +89,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
       500,
     )
 
+    this.binder = new EventsBinder()
     this.initCollisionBody()
     this.initSprite()
     this.setPosition(x, y)
@@ -198,8 +201,9 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
 
     this.container.setFixedRotation()
 
-    scene.matter.world.on(BEFORE_UPDATE, this.resetTouching, this)
-    scene.matter.world.on(AFTER_UPDATE, this.updateArm, this)
+    this.binder.add(scene.matter.world, BEFORE_UPDATE, this.resetTouching, this)
+    this.binder.add(scene.matter.world, AFTER_UPDATE, this.updateArm, this)
+    this.binder.bind()
 
     const collideConfig = {
       objectA: Object.values(this.sensors),
@@ -440,8 +444,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
   }
 
   protected onDestroy() {
-    this.scene.matter.world?.off(BEFORE_UPDATE, this.resetTouching, this)
-    this.scene.matter.world?.off(AFTER_UPDATE, this.updateArm, this)
+    this.binder.unBind()
     const sensors = [this.sensors.bottom, this.sensors.left, this.sensors.right]
     this.scene.matterCollision.removeOnCollideStart({ objectA: sensors })
     this.scene.matterCollision.removeOnCollideActive({ objectA: sensors })
@@ -452,6 +455,8 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     this.arm.destroy()
     this.matterTank.destroy()
 
+    // @ts-expect-error: destroy
+    this.binder = null
     // @ts-expect-error: destroy
     this.input = null
     // @ts-expect-error: destroy

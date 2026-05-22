@@ -3,9 +3,10 @@ import { FireMode } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
+import type { ChargeableWeapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponChargeInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponChargeInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
-import type { ChargeableWeapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
+import { EventsBinder } from '../../Util/EventsBinder.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 export class BasicWeapon extends SceneBound implements ChargeableWeapon {
@@ -13,12 +14,15 @@ export class BasicWeapon extends SceneBound implements ChargeableWeapon {
 
   private queued: Projectile | null = null
   private chargeInput: WeaponChargeInput
+  private binder
 
   constructor(
     public scene: GameLevel,
     readonly slot: number,
   ) {
     super(scene)
+    this.binder = new EventsBinder()
+    this.binder.add(scene.events, UPDATE, this.update, this)
     this.chargeInput = new WeaponChargeInput(scene, this)
   }
 
@@ -38,9 +42,9 @@ export class BasicWeapon extends SceneBound implements ChargeableWeapon {
     this.chargeInput.setInputEnabled(value)
 
     if (value) {
-      this.scene.events.on(UPDATE, this.update, this)
+      this.binder.bind()
     } else {
-      this.scene.events.off(UPDATE, this.update, this)
+      this.binder.unBind()
     }
   }
 
@@ -80,6 +84,8 @@ export class BasicWeapon extends SceneBound implements ChargeableWeapon {
     this.chargeInput.destroy()
     this.queued?.destroy()
     this.queued = null
-    this.scene.events.off(UPDATE, this.update, this)
+    this.binder.unBind()
+    // @ts-expect-error: destroy
+    this.binder = null
   }
 }
