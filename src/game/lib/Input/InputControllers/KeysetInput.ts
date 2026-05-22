@@ -17,4 +17,9 @@ export class KeysetInput extends InputController {
   keydown(event: KeyboardEvent) {
     this.bindings[event.key]?.()
   }
+
+  onDestroy() {
+    // @ts-expect-error: destroy
+    this.bindings = null
+  }
 }
