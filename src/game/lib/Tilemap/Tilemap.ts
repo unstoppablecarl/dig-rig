@@ -333,7 +333,7 @@ export class Tilemap extends SceneBound {
     // Island detection fires onIslandDetected for any tiles not connected to permanent
     // terrain or world bounds so they can be converted to sand.
     if (mode === FireMode.CREATE) {
-      let tiles: Tile[] = []
+      const tiles: Tile[] = []
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
         const value = this.getTile(x, y)
         if (value !== TerrainType.EMPTY) return
@@ -344,7 +344,7 @@ export class Tilemap extends SceneBound {
         tiles.push({ x, y })
       })
 
-      if (tilesToModify < tiles.length) tiles = truncateArrayRandomly(tiles, tilesToModify)
+      if (tilesToModify < tiles.length) truncateArrayRandomly(tiles, tilesToModify)
       if (!tiles.length) return tiles
 
       const newValue = TerrainType.SOLID
@@ -362,7 +362,7 @@ export class Tilemap extends SceneBound {
     } else if (mode === FireMode.DESTROY) {
       const newValue = TerrainType.EMPTY
       // After removing tiles, check if any adjacent solid became disconnected.
-      let tiles: Tile[] = []
+      const tiles: Tile[] = []
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
         const value = this.getTile(x, y)
         if (value === TerrainType.PERMANENT) return
@@ -371,7 +371,7 @@ export class Tilemap extends SceneBound {
         tiles.push({ x, y })
       })
 
-      if (tilesToModify < tiles.length) tiles = truncateArrayRandomly(tiles, tilesToModify)
+      if (tilesToModify < tiles.length) truncateArrayRandomly(tiles, tilesToModify)
       if (!tiles.length) return tiles
 
       const startTime = this.scene.time.now
@@ -385,7 +385,7 @@ export class Tilemap extends SceneBound {
 
       return tiles
     } else if (mode === FireMode.MELT) {
-      let tiles = this._appyEffectTiles
+      const tiles = this._appyEffectTiles
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
         const value = this.getTile(x, y)
         let newValue: TerrainType
@@ -398,7 +398,7 @@ export class Tilemap extends SceneBound {
         tiles.push({ x, y, newValue })
       })
 
-      if (tilesToModify < tiles.length) tiles = truncateArrayRandomly(tiles, tilesToModify)
+      if (tilesToModify < tiles.length) truncateArrayRandomly(tiles, tilesToModify)
       if (!tiles.length) return tiles
 
       const startTime = this.scene.time.now
@@ -413,7 +413,7 @@ export class Tilemap extends SceneBound {
 
       return tiles
     } else if (mode === FireMode.SOLIDIFY) {
-      let tiles = this._appyEffectTiles
+      const tiles = this._appyEffectTiles
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
         const value = this.getTile(x, y)
         let newValue: TerrainType
@@ -426,7 +426,7 @@ export class Tilemap extends SceneBound {
         tiles.push({ x, y, newValue })
       })
 
-      if (tilesToModify < tiles.length) tiles = truncateArrayRandomly(tiles, tilesToModify)
+      if (tilesToModify < tiles.length) truncateArrayRandomly(tiles, tilesToModify)
       if (!tiles.length) return tiles
 
       const startTime = this.scene.time.now

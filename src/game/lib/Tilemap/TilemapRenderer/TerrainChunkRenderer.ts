@@ -18,6 +18,15 @@ const MASK_PERM         = 0xFF0000FF  // R=255 (1.000)
 
 const CHUNK_BYTES = CHUNK_SIZE * CHUNK_SIZE * 4
 
+const MASK_MAP: Record<TerrainType, number> = {
+  [TerrainType.EMPTY]: MASK_EMPTY,
+  [TerrainType.PERMANENT]: MASK_PERM,
+  [TerrainType.SOLID]: MASK_SOLID,
+  [TerrainType.WATER]: MASK_WATER,
+  [TerrainType.SAND]: MASK_SAND,
+  [TerrainType.SAND_SETTLED]: MASK_SAND_SETTLED,
+}
+
 export class TerrainChunkRenderer extends SceneBound {
   readonly maskTexture: CanvasTexture
 
@@ -48,13 +57,7 @@ export class TerrainChunkRenderer extends SceneBound {
       const flippedRow = (CHUNK_SIZE - 1 - y) * CHUNK_SIZE
       for (let x = 0; x < CHUNK_SIZE; x++) {
         const tile = tilemap.getTile(offX + x, offY + y)
-        pixels[flippedRow + x] =
-          tile === TerrainType.PERMANENT    ? MASK_PERM :
-          tile === TerrainType.SOLID        ? MASK_SOLID :
-          tile === TerrainType.SAND_SETTLED ? MASK_SAND_SETTLED :
-          tile === TerrainType.SAND         ? MASK_SAND :
-          tile === TerrainType.WATER        ? MASK_WATER :
-          MASK_EMPTY
+        pixels[flippedRow + x] = MASK_MAP[tile]
       }
     }
 

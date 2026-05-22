@@ -5,7 +5,6 @@ import { DRAW_WORLD_BORDER_DEBUG } from '../config.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
 import { InputManager } from '../lib/Input/InputManager.ts'
-import { PlayerFireModeState } from '../lib/Player/PlayerFireModeState.ts'
 import { MatterManager } from '../lib/Matter/MatterManager.ts'
 import { ParticleManager } from '../lib/Particles/ParticleManager.ts'
 import { TerrainParticleManager } from '../lib/Particles/TerrainParticleManager.ts'
@@ -57,8 +56,6 @@ export abstract class GameLevel extends Scene {
   public terrainParticleManager: TerrainParticleManager
   public sandBridge: SandBridge
   protected id: LevelId
-  public playerInputState: PlayerFireModeState
-
   protected makeTilemapRenderer(tilemap: Tilemap): TilemapRenderer {
     return new TilemapRenderer(this, this.getTerrainTexture(tilemap), this.tilemapRendererConfig())
   }
@@ -187,7 +184,6 @@ export abstract class GameLevel extends Scene {
       this.tilemap.height,
     )
 
-    this.playerInputState = new PlayerFireModeState()
     this.terrainParticleManager = new TerrainParticleManager(this)
     this.tilemapRenderer = this.makeTilemapRenderer(this.tilemap)
     this.sandBridge = new SandBridge(this)
