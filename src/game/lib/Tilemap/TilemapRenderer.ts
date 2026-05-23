@@ -28,6 +28,7 @@ export type TilemapRendererConfig = {
   readonly glowTransitionAnimation: boolean,
   readonly glowTransitionMS: number,
   readonly sandSettledColor: RGBShaderColor,
+  readonly sandSettledColorAlpha: number
   readonly sandSettledOutlineColor: RGBShaderColor,
   readonly waterColor: RGBShaderColor,
   // 0-1
@@ -46,6 +47,7 @@ const CONFIG_DEFAULTS: TilemapRendererConfig = {
   outlineOpacity: 0.75,
 
   sandSettledColor: [0.76, 0.60, 0.26] as RGBShaderColor,
+  sandSettledColorAlpha: 0.65,
   sandSettledOutlineColor: [0.90, 0.78, 0.45] as RGBShaderColor,
   waterColor: [0.20, 0.55, 0.92] as RGBShaderColor,
   waterAlpha: 0.60,
@@ -76,6 +78,7 @@ const FRAG_SHADER = `
     uniform vec3 uPermanentTileColor;
 
     uniform vec3 uSandSettledColor;
+    uniform float uSandSettledColorAlpha;
     uniform vec3 uSandSettledOutlineColor;
     uniform vec3 uWaterColor;
     uniform float uWaterAlpha;
@@ -151,7 +154,7 @@ const FRAG_SHADER = `
         // SAND_SETTLED — yellow tint over terrain texture
         else if (mask > 0.22) {
             color = texture2D(uTerrain, outTexCoord);
-            color.rgb = mix(color.rgb, uSandSettledColor, 0.65);
+            color.rgb = mix(color.rgb, uSandSettledColor, uSandSettledColorAlpha);
             if (outline > 0.5) {
                 color.rgb = mix(color.rgb, uSandSettledOutlineColor, 0.5);
             } else if (glow > 0.01) {
@@ -196,6 +199,7 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
   readonly outlineColor = CONFIG_DEFAULTS.outlineColor
   readonly outlineOpacity = CONFIG_DEFAULTS.outlineOpacity
   readonly sandSettledColor = CONFIG_DEFAULTS.sandSettledColor
+  readonly sandSettledColorAlpha = CONFIG_DEFAULTS.sandSettledColorAlpha
   readonly sandSettledOutlineColor = CONFIG_DEFAULTS.sandSettledOutlineColor
   readonly waterColor = CONFIG_DEFAULTS.waterColor
   readonly waterAlpha = CONFIG_DEFAULTS.waterAlpha
@@ -240,6 +244,8 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
           setUniform('uDestroyColor', toVec3(DESTROY_COLOR as number))
           setUniform('uCreateColor', toVec3(CREATE_COLOR as number))
           setUniform('uSandSettledColor', this.sandSettledColor)
+          setUniform('uSandSettledColorAlpha', this.sandSettledColorAlpha)
+
           setUniform('uSandSettledOutlineColor', this.sandSettledOutlineColor)
           setUniform('uWaterColor', this.waterColor)
           setUniform('uWaterAlpha', this.waterAlpha)
