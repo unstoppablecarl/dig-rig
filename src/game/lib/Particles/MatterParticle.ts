@@ -1,10 +1,10 @@
 import { Display, GameObjects, Math as PMath } from 'phaser'
 import { DRAW_PARTICLE_DEBUG } from '../../config.ts'
-import { interpolateColors } from '../../helpers/colors.ts'
 import { makeSimplexNoise } from '../../helpers/noise.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { ParticleTarget, Position } from '../../types.ts'
 import Color = Display.Color
+import Interpolate = Display.Color.Interpolate
 
 import Particle = GameObjects.Particles.Particle
 import ParticleEmitter = GameObjects.Particles.ParticleEmitter
@@ -178,7 +178,13 @@ export class MatterParticle extends Particle {
 
     const distanceProgress = 1 - Math.min(1, distance / this.initialDistance)
     this.scaleX = this.scaleY = Bezier(SCALE_INTERPOLATION, distanceProgress) * this.localScale
-    this.tint = interpolateColors(this.colorFrom, this.colorTo, distanceProgress)
+
+    this.tint = Interpolate.ColorWithColor(
+      this.colorFrom,
+      this.colorTo,
+      1,
+      distanceProgress,
+    ).color
 
     if (DRAW_PARTICLE_DEBUG && this.target) {
       (this.emitter.scene as GameLevel).particleManager
