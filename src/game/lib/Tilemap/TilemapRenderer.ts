@@ -1,14 +1,9 @@
 import { GameObjects } from 'phaser'
-import {
-  GLOW_ENABLED,
-  GLOW_TRANSITION_ANIMATION_ENABLED,
-
-} from '../../config.ts'
+import { FireMode, GLOW_ENABLED, GLOW_TRANSITION_ANIMATION_ENABLED } from '../../config.ts'
 import { CREATE_COLOR, DESTROY_COLOR, PERMANENT_COLOR } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { RGBShaderColor } from '../../types.ts'
-import { TerrainType } from './_Tilemap-types.ts'
 import { TerrainChunkGlowRenderer } from './TilemapRenderer/TerrainChunkGlowRenderer.ts'
 import { TerrainChunkRenderer } from './TilemapRenderer/TerrainChunkRenderer.ts'
 import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'
@@ -94,17 +89,17 @@ const FRAG_SHADER = `
 
     vec3 blendOverlay(vec3 base, vec3 blend, float ratio) {
         vec3 blended =  vec3(
-            blendOverlay(base.r, blend.r),
-            blendOverlay(base.g, blend.g),
-            blendOverlay(base.b, blend.b)
+        blendOverlay(base.r, blend.r),
+        blendOverlay(base.g, blend.g),
+        blendOverlay(base.b, blend.b)
         );
 
-       
+
         blended.rgb = mix(base.rgb, blended, ratio);
-        
+
         return blended;
     }
-    
+
     void main() {
         // uMask encodes tile type in the R channel:
         //   R = 0.00  →  EMPTY        (transparent, discarded)
@@ -176,16 +171,10 @@ const FRAG_SHADER = `
             color = vec4(0.0, 0.0, 0.0, 0.0);
         }
 
-        // uEffect carries timed transition colors (dig/fill animations).
-        // R = destroy (EMPTY) intensity, G = create (SOLID) intensity, both fade 1→0.
-        // Both channels can be non-zero on the same tile simultaneously.
-        // Weighted average of the active colors, then mix into terrain by total intensity,
-        // so each effect contributes proportionally rather than the last one dominating.
+        // uEffect carries timed fire-mode colors. RGB = fire mode color, A = intensity (1→0).
         vec4 eff = texture2D(uEffect, outTexCoord);
-        float totalI = eff.r + eff.g;
-        if (totalI > 0.01) {
-            vec3 effectColor = (uDestroyColor * eff.r + uCreateColor * eff.g) / totalI;
-            color = mix(color, vec4(effectColor, 1.0), min(totalI, 1.0));
+        if (eff.a > 0.004) {
+            color = mix(color, vec4(eff.rgb, 1.0), eff.a);
         }
 
         if (color.a < 0.01) discard;
@@ -234,8 +223,6 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
       glowTransitionMS: this.glowTransitionMS,
     })
 
-
-
     const shader: Shader = scene.add.shader(
       {
         name: 'TerrainShader',
@@ -277,8 +264,8 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
     ;(shader as any).renderNode?.programManager?.getCurrentProgramSuite?.()
   }
 
-  addEffect(tx: number, ty: number, value: TerrainType, startTime?: number) {
-    this.effectSystem.addEffect(tx, ty, value, startTime)
+  addEffect(tx: number, ty: number, mode: FireMode, startTime?: number) {
+    this.effectSystem.addEffect(tx, ty, mode, startTime)
   }
 
   render() {

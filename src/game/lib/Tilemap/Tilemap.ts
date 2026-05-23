@@ -333,7 +333,7 @@ export class Tilemap extends SceneBound {
     // Island detection fires onIslandDetected for any tiles not connected to permanent
     // terrain or world bounds so they can be converted to sand.
     if (mode === FireMode.CREATE) {
-      const tiles: Tile[] = []
+      const tiles = this._appyEffectTiles as Tile[]
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
         const value = this.getTile(x, y)
         if (value !== TerrainType.EMPTY) return
@@ -350,7 +350,7 @@ export class Tilemap extends SceneBound {
       const newValue = TerrainType.SOLID
       const startTime = this.scene.time.now
       for (const { x, y } of tiles) {
-        this.scene.tilemapRenderer.addEffect(x, y, newValue, startTime)
+        this.scene.tilemapRenderer.addEffect(x, y, mode, startTime)
         this.setTile(x, y, newValue)
       }
 
@@ -362,7 +362,7 @@ export class Tilemap extends SceneBound {
     } else if (mode === FireMode.DESTROY) {
       const newValue = TerrainType.EMPTY
       // After removing tiles, check if any adjacent solid became disconnected.
-      const tiles: Tile[] = []
+      const tiles = this._appyEffectTiles as Tile[]
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
         const value = this.getTile(x, y)
         if (value === TerrainType.PERMANENT) return
@@ -376,7 +376,7 @@ export class Tilemap extends SceneBound {
 
       const startTime = this.scene.time.now
       for (const { x, y } of tiles) {
-        this.scene.tilemapRenderer.addEffect(x, y, newValue, startTime)
+        this.scene.tilemapRenderer.addEffect(x, y, mode, startTime)
         this.setTile(x, y, newValue)
       }
 
@@ -403,7 +403,7 @@ export class Tilemap extends SceneBound {
 
       const startTime = this.scene.time.now
       for (const { x, y, newValue } of tiles) {
-        this.scene.tilemapRenderer.addEffect(x, y, newValue, startTime)
+        this.scene.tilemapRenderer.addEffect(x, y, mode, startTime)
         this.setTile(x, y, newValue)
       }
       this.scene.sandBridge.activateTiles(tiles)
@@ -431,7 +431,7 @@ export class Tilemap extends SceneBound {
 
       const startTime = this.scene.time.now
       for (const { x, y, newValue } of tiles) {
-        this.scene.tilemapRenderer.addEffect(x, y, newValue, startTime)
+        this.scene.tilemapRenderer.addEffect(x, y, mode, startTime)
         this.setTile(x, y, newValue)
       }
       this.scene.sandBridge.activateTiles(tiles)

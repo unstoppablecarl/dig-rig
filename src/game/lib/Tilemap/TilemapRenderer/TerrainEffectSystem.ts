@@ -1,26 +1,22 @@
+import { FireMode } from '../../../config.ts'
+import { FIRE_MODE_COLORS_RGB } from '../../../config/colors.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { TerrainType } from '../_Tilemap-types.ts'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
-// Each mutable effect type gets its own channel so both can overlap on the same tile.
-// Pixel layout (A always 255 to prevent premultiplied-alpha corruption):
-//   R = destroy (EMPTY) intensity   0–255
-//   G = create  (SOLID) intensity   0–255
-//   A = 255 always
-// PERMANENT tiles are immutable so they have no effect animation.
+// RGB = fire mode color, A = intensity fading 1→0 over EFFECT_DURATION_MS.
+// texSubImage2D with Uint8Array bypasses premultiplied-alpha (UNPACK_PREMULTIPLY_ALPHA_WEBGL
+// defaults false), and texture2D in GLSL returns raw stored values, so A is safe to use.
 const EFFECT_DURATION_MS = 1500
-const EFFECT_CHANNEL: Partial<Record<TerrainType, number>> = {
-  [TerrainType.EMPTY]: 0, // R
-  [TerrainType.SOLID]: 1, // G
-}
 
 type EffectEntry = {
   startTime: number
   tx: number
   ty: number
-  channel: number
+  r: number
+  g: number
+  b: number
 }
 
 export class TerrainEffectSystem extends SceneBound {
@@ -36,21 +32,16 @@ export class TerrainEffectSystem extends SceneBound {
     this.effectTexture = this.scene.initCanvasTexture('terrain_effect_texture', width, height)
 
     this.effectBuf = new Uint8Array(width * height * 4)
-    // Pre-fill A=255 so premultiplied-alpha never corrupts R/G/B intensity values
-    for (let i = 3; i < this.effectBuf.length; i += 4) this.effectBuf[i] = 255
 
     // Plain Uint8Array (not Uint8ClampedArray): Chrome routes texSubImage2D(Uint8ClampedArray)
     // through glCopySubTextureCHROMIUM, which throws INVALID_VALUE at texture boundaries.
     this.effectUploadBuf = new Uint8Array(width * height * 4)
   }
 
-  addEffect(tx: number, ty: number, value: TerrainType, startTime: number = this.scene.time.now) {
-    const channel = EFFECT_CHANNEL[value]
-    if (channel === undefined) return
+  addEffect(tx: number, ty: number, value: FireMode, startTime: number = this.scene.time.now) {
+    const { r, g, b } = FIRE_MODE_COLORS_RGB[value]
     const idx = ty * this.scene.tilemap.width + tx
-    // Key encodes both position and channel so destroy and create expire independently
-    const key = idx * 2 + channel
-    this.effectMap.set(key, { startTime, tx, ty, channel })
+    this.effectMap.set(idx, { startTime, tx, ty, r, g, b })
   }
 
   update() {
@@ -61,15 +52,18 @@ export class TerrainEffectSystem extends SceneBound {
     const bytes = this.effectBuf
     let minX = width, maxX = 0, minY = height, maxY = 0
 
-    for (const [key, { startTime, tx, ty, channel }] of this.effectMap) {
+    for (const [key, { startTime, tx, ty, r, g, b }] of this.effectMap) {
       const elapsed = now - startTime
-      const byteIdx = (ty * width + tx) * 4 + channel  // 0=R (destroy), 1=G (create)
+      const byteIdx = (ty * width + tx) * 4
 
       if (elapsed >= EFFECT_DURATION_MS) {
-        bytes[byteIdx] = 0
+        bytes[byteIdx + 3] = 0
         this.effectMap.delete(key)
       } else {
-        bytes[byteIdx] = Math.floor(255 * (1 - elapsed / EFFECT_DURATION_MS))
+        bytes[byteIdx] = r
+        bytes[byteIdx + 1] = g
+        bytes[byteIdx + 2] = b
+        bytes[byteIdx + 3] = Math.floor((1 - elapsed / EFFECT_DURATION_MS) * 255)
       }
 
       if (tx < minX) minX = tx
