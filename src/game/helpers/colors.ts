@@ -1,18 +1,3 @@
-import { Display } from 'phaser'
-import Color = Display.Color
-import Interpolate = Display.Color.Interpolate
-
-export function interpolateColors(a: Color, b: Color, ratio: number): number {
-  const result = Interpolate.ColorWithColor(
-    a,
-    b,
-    1,
-    ratio,
-  )
-
-  return result.color
-}
-
 // lighten/darken
 export function shiftColorValue(color: number, amount: number): number {
   let r = (color >> 16) & 0xFF
