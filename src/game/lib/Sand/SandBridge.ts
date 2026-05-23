@@ -40,7 +40,7 @@ export class SandBridge extends SceneBound {
       for (const idx of e.data.indices as number[]) {
         const tx = idx % tilemap.width
         const ty = idx / tilemap.width | 0
-        tilemapRenderer.addEffect(tx, ty, FireMode.CREATE, now)
+        tilemapRenderer.addEffect(tx, ty, FireMode.SOLIDIFY, now)
       }
     }
 

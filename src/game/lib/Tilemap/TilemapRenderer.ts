@@ -27,7 +27,10 @@ export type TilemapRendererConfig = {
   readonly glowEnabled: boolean,
   readonly glowTransitionAnimation: boolean,
   readonly glowTransitionMS: number,
+  readonly sandColor: RGBShaderColor,
+
   readonly sandSettledColor: RGBShaderColor,
+  // 0-1
   readonly sandSettledColorAlpha: number
   readonly sandSettledOutlineColor: RGBShaderColor,
   readonly waterColor: RGBShaderColor,
@@ -45,7 +48,7 @@ const CONFIG_DEFAULTS: TilemapRendererConfig = {
 
   outlineColor: [255, 200, 200].map((v: number) => v / 255) as RGBShaderColor,
   outlineOpacity: 0.75,
-
+  sandColor:  [0.76, 0.60, 0.26] as RGBShaderColor,
   sandSettledColor: [0.76, 0.60, 0.26] as RGBShaderColor,
   sandSettledColorAlpha: 0.65,
   sandSettledOutlineColor: [0.90, 0.78, 0.45] as RGBShaderColor,
@@ -76,7 +79,7 @@ const FRAG_SHADER = `
     uniform vec3 uCreateColor;
 
     uniform vec3 uPermanentTileColor;
-
+    uniform vec3 uSandColor;
     uniform vec3 uSandSettledColor;
     uniform float uSandSettledColorAlpha;
     uniform vec3 uSandSettledOutlineColor;
@@ -163,7 +166,7 @@ const FRAG_SHADER = `
         }
         // SAND (falling) — create color
         else if (mask > 0.10) {
-            color = vec4(uCreateColor, 1.0);
+            color = vec4(uSandColor, 1.0);
         }
         // WATER — flat transparent blue, no terrain texture
         else if (mask > 0.03) {
@@ -198,6 +201,7 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
   readonly glowStrength = CONFIG_DEFAULTS.glowStrength
   readonly outlineColor = CONFIG_DEFAULTS.outlineColor
   readonly outlineOpacity = CONFIG_DEFAULTS.outlineOpacity
+  readonly sandColor = CONFIG_DEFAULTS.sandColor
   readonly sandSettledColor = CONFIG_DEFAULTS.sandSettledColor
   readonly sandSettledColorAlpha = CONFIG_DEFAULTS.sandSettledColorAlpha
   readonly sandSettledOutlineColor = CONFIG_DEFAULTS.sandSettledOutlineColor
@@ -243,6 +247,7 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
           setUniform('uPermanentTileColor', toVec3(PERMANENT_COLOR))
           setUniform('uDestroyColor', toVec3(DESTROY_COLOR as number))
           setUniform('uCreateColor', toVec3(CREATE_COLOR as number))
+          setUniform('uSandColor', this.sandColor)
           setUniform('uSandSettledColor', this.sandSettledColor)
           setUniform('uSandSettledColorAlpha', this.sandSettledColorAlpha)
 
