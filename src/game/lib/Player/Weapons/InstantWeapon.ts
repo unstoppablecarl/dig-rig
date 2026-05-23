@@ -1,5 +1,6 @@
 import { Scenes } from 'phaser'
-import { FireMode, PROJECTILE_MODE_COLORS } from '../../../config.ts'
+import { FireMode } from '../../../config.ts'
+import { FIRE_MODE_COLORS } from '../../../config/colors.ts'
 import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
@@ -57,11 +58,11 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
     this.binder.add(scene.events, UPDATE, this.update, this)
 
     this.renderer = new ProjectileRenderer(scene)
-    this.renderer.setColor(PROJECTILE_MODE_COLORS[this.fireMode.value()])
+    this.renderer.setColor(FIRE_MODE_COLORS[this.fireMode.value()])
   }
 
   onFireModeChange(): void {
-    this.renderer.setColor(PROJECTILE_MODE_COLORS[this.fireMode.value()])
+    this.renderer.setColor(FIRE_MODE_COLORS[this.fireMode.value()])
     this.scene.EVENTS.emit(GameEvent.UI_WEAPON_UPDATE, this)
   }
 

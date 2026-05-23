@@ -1,5 +1,6 @@
 import { Game, Scale, WEBGL } from 'phaser'
-import { BG_COLOR, GRAVITY } from './game/config.ts'
+import { GRAVITY } from './game/config.ts'
+import { BG_COLOR } from './game/config/colors.ts'
 import { setGame } from './game/launcher.ts'
 import { pluginEventBusConfig } from './game/lib/plugins/events-plugin.ts'
 import { pluginMatterCollisionConfig } from './game/lib/plugins/matter-collision-plugin.ts'

@@ -1,5 +1,6 @@
 import { BlendModes, Display, GameObjects } from 'phaser'
-import { CREATE_COLOR_RGB, DESTROY_COLOR_RGB, DRAW_PARTICLE_DEBUG, MAX_MATTER_PARTICLES } from '../../config.ts'
+import { DRAW_PARTICLE_DEBUG, MAX_MATTER_PARTICLES } from '../../config.ts'
+import { CREATE_COLOR_RGB, DESTROY_COLOR_RGB } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'

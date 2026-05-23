@@ -1,5 +1,6 @@
 import { GameObjects, type Scene, Tweens } from 'phaser'
-import { CREATE_COLOR, DESTROY_COLOR, FireMode } from '../../config.ts'
+import { FireMode } from '../../config.ts'
+import { CREATE_COLOR, DESTROY_COLOR } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { ChargeableWeapon, Weapon } from '../Input/InputControllers/WeaponManagerInput.ts'

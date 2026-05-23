@@ -1,5 +1,6 @@
 import { GameObjects, Math as PMath } from 'phaser'
-import { FireMode, TERRAIN_TYPE_TRANSITION_COLORS } from '../../config.ts'
+import { FireMode } from '../../config.ts'
+import { FIRE_MODE_COLORS } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { TerrainParticle } from './TerrainParticle.ts'
@@ -75,7 +76,7 @@ export class TerrainParticleManager extends SceneBound {
 
       const gridX = Math.round(particle.x)
       const gridY = Math.round(particle.y)
-      const color = TERRAIN_TYPE_TRANSITION_COLORS[particle.mode]
+      const color = FIRE_MODE_COLORS[particle.mode]
 
       const lifespanPercent = particle.lifetimePercent()
 

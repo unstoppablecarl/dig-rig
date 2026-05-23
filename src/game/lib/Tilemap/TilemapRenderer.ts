@@ -1,11 +1,10 @@
 import { GameObjects } from 'phaser'
 import {
-  CREATE_COLOR,
-  DESTROY_COLOR,
   GLOW_ENABLED,
   GLOW_TRANSITION_ANIMATION_ENABLED,
-  PERMANENT_COLOR,
+
 } from '../../config.ts'
+import { CREATE_COLOR, DESTROY_COLOR, PERMANENT_COLOR } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { RGBShaderColor } from '../../types.ts'
