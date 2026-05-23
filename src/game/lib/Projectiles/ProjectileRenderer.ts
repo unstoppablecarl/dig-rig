@@ -1,5 +1,5 @@
 import { BlendModes, GameObjects } from 'phaser'
-import { PROJECTILE_MODE_COLORS } from '../../config.ts'
+import { FIRE_MODE_COLORS } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
@@ -31,7 +31,7 @@ export class ProjectileRenderer extends SceneBound {
 
   attachToProjectile(projectile: BaseProjectile) {
     const scene = projectile.scene
-    const color = PROJECTILE_MODE_COLORS[projectile.mode]
+    const color = FIRE_MODE_COLORS[projectile.mode]
 
     this.setColor(color)
 

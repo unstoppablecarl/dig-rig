@@ -1,11 +1,10 @@
 import { GameObjects } from 'phaser'
 import {
-  CREATE_COLOR,
-  DESTROY_COLOR,
   GLOW_ENABLED,
   GLOW_TRANSITION_ANIMATION_ENABLED,
-  PERMANENT_COLOR,
+
 } from '../../config.ts'
+import { CREATE_COLOR, DESTROY_COLOR, PERMANENT_COLOR } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { RGBShaderColor } from '../../types.ts'
@@ -33,6 +32,11 @@ export type TilemapRendererConfig = {
   readonly glowEnabled: boolean,
   readonly glowTransitionAnimation: boolean,
   readonly glowTransitionMS: number,
+  readonly sandSettledColor: RGBShaderColor,
+  readonly sandSettledOutlineColor: RGBShaderColor,
+  readonly waterColor: RGBShaderColor,
+  // 0-1
+  readonly waterAlpha: number,
 }
 
 const CONFIG_DEFAULTS: TilemapRendererConfig = {
@@ -45,6 +49,11 @@ const CONFIG_DEFAULTS: TilemapRendererConfig = {
 
   outlineColor: [255, 200, 200].map((v: number) => v / 255) as RGBShaderColor,
   outlineOpacity: 0.75,
+
+  sandSettledColor: [0.76, 0.60, 0.26] as RGBShaderColor,
+  sandSettledOutlineColor: [0.90, 0.78, 0.45] as RGBShaderColor,
+  waterColor: [0.20, 0.55, 0.92] as RGBShaderColor,
+  waterAlpha: 0.60,
 }
 
 // language=GLSL
@@ -71,6 +80,11 @@ const FRAG_SHADER = `
 
     uniform vec3 uPermanentTileColor;
 
+    uniform vec3 uSandSettledColor;
+    uniform vec3 uSandSettledOutlineColor;
+    uniform vec3 uWaterColor;
+    uniform float uWaterAlpha;
+
     // phaser framework variable
     varying vec2 outTexCoord;
 
@@ -93,9 +107,12 @@ const FRAG_SHADER = `
     
     void main() {
         // uMask encodes tile type in the R channel:
-        //   R ≈ 0.00  →  EMPTY      (transparent, discarded)
-        //   R ≈ 0.50  →  SOLID      (samples terrain texture)
-        //   R = 1.00  →  PERMANENT  (fixed cyan base color)
+        //   R = 0.00  →  EMPTY        (transparent, discarded)
+        //   R ≈ 0.06  →  WATER        (blue tint)
+        //   R ≈ 0.16  →  SAND         (create color while falling)
+        //   R ≈ 0.31  →  SAND_SETTLED (yellow tint over terrain texture)
+        //   R ≈ 0.50  →  SOLID        (samples terrain texture)
+        //   R = 1.00  →  PERMANENT    (fixed cyan base color)
         float mask = texture2D(uMask, outTexCoord).r;
 
         // uGlow is written by the CPU distance-transform each time terrain changes:
@@ -119,7 +136,7 @@ const FRAG_SHADER = `
             }
         }
         // SOLID
-        else if (mask > 0.25) {
+        else if (mask > 0.42) {
             // SOLID — terrain texture, soft glow gradient, crisp 1px outline on top
             color = texture2D(uTerrain, outTexCoord);
 
@@ -135,7 +152,24 @@ const FRAG_SHADER = `
 
                 color.rgb = mix(color.rgb, multiplyColor, glow * uInnerGlowStrength);
             }
-
+        }
+        // SAND_SETTLED — yellow tint over terrain texture
+        else if (mask > 0.22) {
+            color = texture2D(uTerrain, outTexCoord);
+            color.rgb = mix(color.rgb, uSandSettledColor, 0.65);
+            if (outline > 0.5) {
+                color.rgb = mix(color.rgb, uSandSettledOutlineColor, 0.5);
+            } else if (glow > 0.01) {
+                color.rgb = mix(color.rgb, uGlowColor, glow * uInnerGlowStrength * 0.4);
+            }
+        }
+        // SAND (falling) — create color
+        else if (mask > 0.10) {
+            color = vec4(uCreateColor, 1.0);
+        }
+        // WATER — flat transparent blue, no terrain texture
+        else if (mask > 0.03) {
+            color = vec4(uWaterColor * uWaterAlpha, uWaterAlpha);
         }
         // EMPTY — fully transparent
         else {
@@ -172,6 +206,10 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
   readonly glowStrength = CONFIG_DEFAULTS.glowStrength
   readonly outlineColor = CONFIG_DEFAULTS.outlineColor
   readonly outlineOpacity = CONFIG_DEFAULTS.outlineOpacity
+  readonly sandSettledColor = CONFIG_DEFAULTS.sandSettledColor
+  readonly sandSettledOutlineColor = CONFIG_DEFAULTS.sandSettledOutlineColor
+  readonly waterColor = CONFIG_DEFAULTS.waterColor
+  readonly waterAlpha = CONFIG_DEFAULTS.waterAlpha
   readonly permanentOutlineMask: CanvasTexture
 
   constructor(
@@ -214,6 +252,10 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
           setUniform('uPermanentTileColor', toVec3(PERMANENT_COLOR))
           setUniform('uDestroyColor', toVec3(DESTROY_COLOR as number))
           setUniform('uCreateColor', toVec3(CREATE_COLOR as number))
+          setUniform('uSandSettledColor', this.sandSettledColor)
+          setUniform('uSandSettledOutlineColor', this.sandSettledOutlineColor)
+          setUniform('uWaterColor', this.waterColor)
+          setUniform('uWaterAlpha', this.waterAlpha)
         },
       },
       0, 0,
