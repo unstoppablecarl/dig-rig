@@ -6,7 +6,6 @@ import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import { GameEvent } from '../../events.ts'
-import { KeysetInput } from '../../Input/InputControllers/KeysetInput.ts'
 import type { ImmediateWeapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponRapidFireInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponRapidFireInput.ts'
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
@@ -26,7 +25,7 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
   readonly displayName = 'Instant'
 
   private fireInput: WeaponRapidFireInput
-  private chargeInput: KeysetInput
+  private _actionUnbinds: Array<() => void> = []
   private renderer: ProjectileRenderer
   private _enabled: boolean
 
@@ -43,18 +42,6 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
     super(scene)
     this.fireInput = new WeaponRapidFireInput(scene, this, BETWEEN_SHOTS_MS)
     this.fireMode = new PlayerFireModeState()
-    this.chargeInput = new KeysetInput(scene, {
-      'q': () => this.decreaseCharge(),
-      'e': () => this.increaseCharge(),
-      'r': () => {
-        this.fireMode.prev()
-        this.onFireModeChange()
-      },
-      'f': () => {
-        this.fireMode.next()
-        this.onFireModeChange()
-      },
-    })
 
     this.binder = new EventsBinder()
     this.binder.add(scene.events, UPDATE, this.update, this)
@@ -80,13 +67,21 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
   setEnabled(value: boolean) {
     if (this._enabled === value) return
     this.fireInput.setInputEnabled(value)
-    this.chargeInput.setInputEnabled(value)
     this.renderer.setVisible(value)
 
     if (value) {
+      const actions = this.scene.playerActions
+      this._actionUnbinds = [
+        actions.CHARGE_DECREASE.onDown(() => this.decreaseCharge()),
+        actions.CHARGE_INCREASE.onDown(() => this.increaseCharge()),
+        actions.PREV_FIRE_MODE.onDown(() => { this.fireMode.prev(); this.onFireModeChange() }),
+        actions.NEXT_FIRE_MODE.onDown(() => { this.fireMode.next(); this.onFireModeChange() }),
+      ]
       this.setCharge(2000)
       this.binder.bind()
     } else {
+      for (const unbind of this._actionUnbinds) unbind()
+      this._actionUnbinds = []
       this.binder.unBind()
     }
 
@@ -149,7 +144,5 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
     this.renderer = null
     // @ts-expect-error: destroy
     this.fireInput = null
-    // @ts-expect-error: destroy
-    this.chargeInput = null
   }
 }

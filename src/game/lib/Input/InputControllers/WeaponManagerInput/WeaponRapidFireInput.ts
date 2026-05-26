@@ -14,7 +14,7 @@ export class WeaponRapidFireInput extends InputController {
     readonly rateOfFireMs: number,
   ) {
     super(scene)
-    this.bind(this.scene.events, UPDATE, this.update)
+    this.addEvent(this.scene.events, UPDATE, this.update)
   }
 
   update(_time: number, delta: number) {
@@ -22,12 +22,12 @@ export class WeaponRapidFireInput extends InputController {
 
     if (this.coolDown > 0) return
 
-    const pointer = this.scene.input.activePointer
+    const actions = this.scene.playerActions
 
     let mode: FireMode
-    if (pointer.rightButtonDown()) {
+    if (actions.FIRE_SECONDARY.isDown()) {
       mode = FireMode.CREATE
-    } else if (pointer.leftButtonDown()) {
+    } else if (actions.FIRE_PRIMARY.isDown()) {
       mode = FireMode.DESTROY
     } else {
       this.coolDown = 0

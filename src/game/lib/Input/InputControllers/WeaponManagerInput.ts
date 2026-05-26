@@ -40,7 +40,7 @@ export class WeaponManagerInput extends InputController {
 
   constructor(scene: GameLevel) {
     super(scene)
-    this.bind(this.scene.input.keyboard!, ANY_KEY_DOWN, this.keydown)
+    this.addEvent(this.scene.input.keyboard!, ANY_KEY_DOWN, this.keydown)
 
     const weapons = [
       BasicWeapon,

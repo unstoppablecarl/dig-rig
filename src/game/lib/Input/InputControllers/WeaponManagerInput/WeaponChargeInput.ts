@@ -1,13 +1,10 @@
-import { Input, Scenes } from 'phaser'
+import { Scenes } from 'phaser'
 import { FireMode } from '../../../../config.ts'
 import { getDeltaT, isMatterTankFireMode } from '../../../../helpers/_helpers.ts'
 import type { GameLevel } from '../../../../scenes/GameLevel.ts'
 import { GameEvent } from '../../../events.ts'
-import type { ChargeableWeapon } from '../WeaponManagerInput.ts'
 import { InputController } from '../InputController.ts'
-import POINTER_DOWN = Input.Events.POINTER_DOWN
-import POINTER_UP = Input.Events.POINTER_UP
-import Pointer = Input.Pointer
+import type { ChargeableWeapon } from '../WeaponManagerInput.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 export class WeaponChargeInput extends InputController {
@@ -23,30 +20,32 @@ export class WeaponChargeInput extends InputController {
     public weapon: ChargeableWeapon,
   ) {
     super(scene)
-    this.bind(this.scene.input, POINTER_DOWN, this.pointerdown)
-    this.bind(this.scene.input, POINTER_UP, this.pointerup)
-    this.bind(this.scene.events, UPDATE, this.update)
-  }
-
-  pointerdown(pointer: Pointer) {
-    if (pointer.rightButtonDown()) {
-      this.isCharging = true
-      this.mode = FireMode.CREATE
-    } else if (pointer.leftButtonDown()) {
-      this.isCharging = true
-      this.mode = FireMode.DESTROY
-    }
-  }
-
-  pointerup(pointer: Pointer) {
-    if (pointer.rightButtonReleased() || pointer.leftButtonReleased()) {
-      if (this.charge > 0) {
-        this.weapon.fireQueued()
-      }
-
+    this.addEvent(this.scene.events, UPDATE, this.update)
+    const stopCharging = () => {
+      if (!this.isCharging) return
+      if (this.charge > 0) this.weapon.fireQueued()
       this.isCharging = false
       this.charge = 0
     }
+
+    const a = this.scene.playerActions
+    this.addInput(() => [
+      a.FIRE_PRIMARY.onDown(() => {
+        this.isCharging = true
+        this.mode = FireMode.DESTROY
+      }),
+      a.FIRE_SECONDARY.onDown(() => {
+        this.isCharging = true
+        this.mode = FireMode.CREATE
+      }),
+      a.FIRE_PRIMARY.onUp(stopCharging),
+      a.FIRE_SECONDARY.onUp(stopCharging),
+    ])
+  }
+
+  protected onDisable() {
+    this.isCharging = false
+    this.charge = 0
   }
 
   getChargePercent() {

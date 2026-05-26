@@ -9,7 +9,6 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import { MASK_PLAYER, MASK_TERRAIN } from '../Collision/BodyCategories.ts'
-import { type PlayerMovementInput } from '../Input/PlayerMovementInput.ts'
 import { MatterTank } from '../Matter/MatterTank.ts'
 import { EventsBinder } from '../Util/EventsBinder.ts'
 import Animation = Animations.Animation
@@ -50,7 +49,6 @@ enum Facing {
 }
 
 export class Player extends SceneBound implements MatterExchanger, ParticleTarget {
-  public input: PlayerMovementInput
   public sprite: Sprite
   public container: PlayerContainer
   public maxVelocity = 300
@@ -93,7 +91,6 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     this.initCollisionBody()
     this.initSprite()
     this.setPosition(x, y)
-    this.input = scene.inputManager.playerMovement
 
     // collision debugger
     // this.scene.matter.world.on('collisionstart', (event, bodyA, bodyB) => {
@@ -327,10 +324,11 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     this.prevPosition.x = this.x
     this.prevPosition.y = this.y
 
-    const left = this.input.left.isDown()
-    const right = this.input.right.isDown()
-    const jumping = this.input.jump.isDown()
-    const down = this.input.down.isDown()
+    const actions = this.scene.playerActions
+    const left = actions.MOVE_LEFT.isDown()
+    const right = actions.MOVE_RIGHT.isDown()
+    const jumping = actions.JUMP.isDown()
+    const down = actions.MOVE_DOWN.isDown()
 
     const isOnGround = this.isTouching.ground
     const isInAir = !isOnGround
@@ -457,8 +455,6 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
 
     // @ts-expect-error: destroy
     this.binder = null
-    // @ts-expect-error: destroy
-    this.input = null
     // @ts-expect-error: destroy
     this.sprite = null
     // @ts-expect-error: destroy

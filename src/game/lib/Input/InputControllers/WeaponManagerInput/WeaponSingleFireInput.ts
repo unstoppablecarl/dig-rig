@@ -1,30 +1,20 @@
-import { Input } from 'phaser'
 import { FireMode } from '../../../../config.ts'
 import type { GameLevel } from '../../../../scenes/GameLevel.ts'
-import type { ImmediateWeapon } from '../WeaponManagerInput.ts'
 import { InputController } from '../InputController.ts'
-import POINTER_DOWN = Input.Events.POINTER_DOWN
-import Pointer = Input.Pointer
+import type { ImmediateWeapon } from '../WeaponManagerInput.ts'
 
 export class WeaponSingleFireInput extends InputController {
+
   constructor(
     public scene: GameLevel,
     public weapon: ImmediateWeapon,
   ) {
     super(scene)
-    this.bind(this.scene.input, POINTER_DOWN, this.pointerdown)
-  }
-
-  pointerdown(pointer: Pointer) {
-    let mode: FireMode
-    if (pointer.rightButtonDown()) {
-      mode = FireMode.CREATE
-    } else if (pointer.leftButtonDown()) {
-      mode = FireMode.DESTROY
-    } else {
-      return
-    }
-    this.weapon.fire(mode)
+    const actions = this.scene.playerActions
+    this.addInput(() => [
+      actions.FIRE_PRIMARY.onDown(() => this.weapon.fire(FireMode.DESTROY)),
+      actions.FIRE_SECONDARY.onDown(() => this.weapon.fire(FireMode.CREATE)),
+    ])
   }
 
   protected onDestroy() {

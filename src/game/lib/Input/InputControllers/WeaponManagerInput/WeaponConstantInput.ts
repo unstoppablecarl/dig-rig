@@ -1,11 +1,8 @@
-import { Input, Scenes } from 'phaser'
+import { Scenes } from 'phaser'
 import { FireMode } from '../../../../config.ts'
 import type { GameLevel } from '../../../../scenes/GameLevel.ts'
 import { InputController } from '../InputController.ts'
 import type { Weapon } from '../WeaponManagerInput.ts'
-import POINTER_DOWN = Input.Events.POINTER_DOWN
-import POINTER_UP = Input.Events.POINTER_UP
-import Pointer = Input.Pointer
 import UPDATE = Scenes.Events.UPDATE
 
 export interface ContinuousWeapon extends Weapon {
@@ -21,27 +18,29 @@ export class WeaponConstantInput extends InputController {
     public weapon: ContinuousWeapon,
   ) {
     super(scene)
-    this.bind(this.scene.input, POINTER_DOWN, this.pointerdown)
-    this.bind(this.scene.input, POINTER_UP, this.pointerup)
-    this.bind(this.scene.events, UPDATE, this.update)
+    this.addEvent(this.scene.events, UPDATE, this.update)
+
+    const a = this.scene.playerActions
+    this.addInput(() => [
+      a.FIRE_PRIMARY.onDown(() => {
+        this.firing = true
+        this.mode = FireMode.DESTROY
+      }),
+      a.FIRE_SECONDARY.onDown(() => {
+        this.firing = true
+        this.mode = FireMode.CREATE
+      }),
+      a.FIRE_PRIMARY.onUp(() => {
+        this.firing = false
+      }),
+      a.FIRE_SECONDARY.onUp(() => {
+        this.firing = false
+      }),
+    ])
   }
 
-  pointerdown(pointer: Pointer) {
-    if (pointer.rightButtonDown()) {
-      this.firing = true
-      this.mode = FireMode.CREATE
-    }
-
-    if (pointer.leftButtonDown()) {
-      this.firing = true
-      this.mode = FireMode.DESTROY
-    }
-  }
-
-  pointerup(pointer: Pointer) {
-    if (pointer.rightButtonReleased() || pointer.leftButtonReleased()) {
-      this.firing = false
-    }
+  protected onDisable() {
+    this.firing = false
   }
 
   update(_time: number, _delta: number) {

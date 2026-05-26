@@ -10,9 +10,23 @@ type InternalBinding = {
   context: any
 }
 
+export type InputBinder = (() => InputUnBinder)
+export type InputUnBinder = (() => void) | (() => void)[]
+
 export class EventsBinder {
   private _bindings: InternalBinding[] = []
   private _bound = false
+
+  private _inputBindings: InputBinder[] = []
+  private _inputUnBindings: (() => void)[] = []
+
+  addInput(input: InputBinder | InputBinder[]) {
+    const bindings = Array.isArray(input) ? input : [input]
+
+    this._inputBindings.push(...bindings)
+
+    return this
+  }
 
   add<T extends AnyEmitter>(emitter: T, event: Parameters<T['on']>[0], handler: Function, context?: any): this {
     this._bindings.push({ emitter, event, handler, context })
@@ -24,6 +38,11 @@ export class EventsBinder {
     for (const { emitter, event, handler, context } of this._bindings) {
       emitter.on(event, handler, context)
     }
+    for (const fn of this._inputBindings) {
+      const reverse = fn()
+      const unBindings = Array.isArray(reverse) ? reverse : [reverse]
+      this._inputUnBindings.push(...unBindings)
+    }
     this._bound = true
   }
 
@@ -32,6 +51,10 @@ export class EventsBinder {
     for (const { emitter, event, handler, context } of this._bindings) {
       emitter.off(event, handler, context)
     }
+    for (const fn of this._inputUnBindings) {
+      fn()
+    }
+    this._inputUnBindings = []
     this._bound = false
   }
 }
