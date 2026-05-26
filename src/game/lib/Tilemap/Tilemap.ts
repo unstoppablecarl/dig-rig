@@ -560,6 +560,20 @@ export class Tilemap extends SceneBound {
     return this._collisionPosition
   }
 
+  setBorder(thickness: number, value: TerrainType) {
+    const { width, height } = this
+    for (let t = 0; t < thickness; t++) {
+      for (let x = t; x < width - t; x++) {
+        this.setTile(x, t, value)
+        this.setTile(x, height - 1 - t, value)
+      }
+      for (let y = t + 1; y < height - 1 - t; y++) {
+        this.setTile(t, y, value)
+        this.setTile(width - 1 - t, y, value)
+      }
+    }
+  }
+
   static makeFromSolidAndPermanentPixelData(scene: GameLevel, solidData: PixelData, permanentData: PixelData) {
     if (solidData.w !== permanentData.w || solidData.h !== permanentData.h) {
       throw new Error('solidData and permanentData must be the same dimensions')

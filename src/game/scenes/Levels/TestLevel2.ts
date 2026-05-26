@@ -44,6 +44,7 @@ export default class TestLevel2 extends GameLevel {
 
     tilemap.setRect(200, ref - 100, 60, 60, TerrainType.PERMANENT)
 
+    tilemap.setBorder(2, TerrainType.PERMANENT)
     return tilemap
   }
 
