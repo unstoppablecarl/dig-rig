@@ -1,5 +1,5 @@
 import { Scenes } from 'phaser'
-import { FireMode } from '../../../config.ts'
+import { FireMode, FireModeValues } from '../../../config.ts'
 import { FIRE_MODE_COLORS } from '../../../config/colors.ts'
 import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
@@ -13,7 +13,6 @@ import { tilesToRadius } from '../../Projectiles/projectile-radius'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
 import { TerrainType, TerrainTypeValues } from '../../Tilemap/_Tilemap-types.ts'
 import { EventsBinder } from '../../Util/EventsBinder.ts'
-import { PlayerFireModeState } from '../PlayerFireModeState.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 const MIN_CHARGE = 10
@@ -24,8 +23,7 @@ const BETWEEN_SHOTS_MS = 50
 export class InstantWeapon extends SceneBound implements ImmediateWeapon {
   readonly displayName = 'Instant'
 
-  private fireInput: WeaponRapidFireInput
-  private _actionUnbinds: Array<() => void> = []
+  private input: WeaponRapidFireInput
   private renderer: ProjectileRenderer
   private _enabled: boolean
 
@@ -40,7 +38,7 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
     readonly slot: number,
   ) {
     super(scene)
-    this.fireInput = new WeaponRapidFireInput(scene, this, BETWEEN_SHOTS_MS)
+    this.input = new WeaponRapidFireInput(scene, this, BETWEEN_SHOTS_MS)
     this.fireMode = new PlayerFireModeState()
 
     this.binder = new EventsBinder()
@@ -48,6 +46,20 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
 
     this.renderer = new ProjectileRenderer(scene)
     this.renderer.setColor(FIRE_MODE_COLORS[this.fireMode.value()])
+
+    const a = this.scene.playerActions
+    this.binder.addInput(() => [
+      a.CHARGE_DECREASE.onDown(() => this.decreaseCharge()),
+      a.CHARGE_INCREASE.onDown(() => this.increaseCharge()),
+      a.PREV_FIRE_MODE.onDown(() => {
+        this.fireMode.prev()
+        this.onFireModeChange()
+      }),
+      a.NEXT_FIRE_MODE.onDown(() => {
+        this.fireMode.next()
+        this.onFireModeChange()
+      }),
+    ])
   }
 
   fire() {
@@ -66,22 +78,14 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
 
   setEnabled(value: boolean) {
     if (this._enabled === value) return
-    this.fireInput.setInputEnabled(value)
+    this.input.setInputEnabled(value)
     this.renderer.setVisible(value)
 
     if (value) {
-      const actions = this.scene.playerActions
-      this._actionUnbinds = [
-        actions.CHARGE_DECREASE.onDown(() => this.decreaseCharge()),
-        actions.CHARGE_INCREASE.onDown(() => this.increaseCharge()),
-        actions.PREV_FIRE_MODE.onDown(() => { this.fireMode.prev(); this.onFireModeChange() }),
-        actions.NEXT_FIRE_MODE.onDown(() => { this.fireMode.next(); this.onFireModeChange() }),
-      ]
+
       this.setCharge(2000)
       this.binder.bind()
     } else {
-      for (const unbind of this._actionUnbinds) unbind()
-      this._actionUnbinds = []
       this.binder.unBind()
     }
 
@@ -138,11 +142,51 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
 
   protected onDestroy() {
     this.setEnabled(false)
-    this.fireInput.destroy()
+    this.input.destroy()
 
     // @ts-expect-error: destroy
     this.renderer = null
     // @ts-expect-error: destroy
-    this.fireInput = null
+    this.input = null
+  }
+}
+
+export class PlayerFireModeState {
+  private index = 0
+  private _fireMode: FireMode
+
+  constructor(mode: FireMode = FireMode.DESTROY) {
+    this.set(mode)
+  }
+
+  value() {
+    return this._fireMode
+  }
+
+  set(fireMode: FireMode) {
+    this._fireMode = fireMode
+    this.index = FireModeValues.indexOf(fireMode)
+  }
+
+  prev() {
+    let index: number
+    if (this.index === 0) {
+      index = FireModeValues.length - 1
+    } else {
+      index = this.index - 1
+    }
+    this.set(FireModeValues[index])
+    return this._fireMode
+  }
+
+  next() {
+    let index: number
+    if (this.index === FireModeValues.length - 1) {
+      index = 0
+    } else {
+      index = this.index + 1
+    }
+    this.set(FireModeValues[index])
+    return this._fireMode
   }
 }

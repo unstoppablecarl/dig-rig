@@ -2,6 +2,7 @@ import { Input } from 'phaser'
 import { type FireMode } from '../../../config.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { GameEvent } from '../../events.ts'
+import { PlayerFireGroupState } from '../../Player/PlayerFireGroupState.ts'
 import { BasicWeapon } from '../../Player/Weapons/BasicWeapon.ts'
 import { BurstWeapon } from '../../Player/Weapons/BurstWeapon.ts'
 import { InstantWeapon } from '../../Player/Weapons/InstantWeapon.ts'
@@ -37,9 +38,12 @@ export class WeaponManagerInput extends InputController {
   private readonly weapons = new Map<number, Weapon | ChargeableWeapon>()
 
   private _active: Weapon | ChargeableWeapon
+  fireGroup: PlayerFireGroupState
 
   constructor(scene: GameLevel) {
     super(scene)
+
+    this.fireGroup = new PlayerFireGroupState()
     this.addEvent(this.scene.input.keyboard!, ANY_KEY_DOWN, this.keydown)
 
     const weapons = [

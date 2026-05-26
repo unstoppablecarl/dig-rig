@@ -56,16 +56,22 @@ export class Projectile extends BaseProjectile {
           break
         }
       }
-    }
-
-    if (this.mode === FireMode.DESTROY) {
+    } else {
       if (this.charge() > 0) {
-        this.destroyTiles(this.charge())
-
-        const easedValue = PMath.Easing.Circular.In(this.lifespanPercent)
-        const decay = PMath.Linear(1, FINAL_DECAY_SCALE, easedValue)
-        this.radius = this.initialRadius * decay
+        if (this.mode === FireMode.DESTROY) {
+          this.destroyTiles(this.charge())
+        }
+        if (this.mode === FireMode.MELT) {
+          this.meltTiles(this.charge())
+        }
+        if (this.mode === FireMode.SOLIDIFY) {
+          this.solidifyTiles(this.charge())
+        }
       }
+
+      const easedValue = PMath.Easing.Circular.In(this.lifespanPercent)
+      const decay = PMath.Linear(1, FINAL_DECAY_SCALE, easedValue)
+      this.radius = this.initialRadius * decay
     }
 
     this.x += this.vx * dt

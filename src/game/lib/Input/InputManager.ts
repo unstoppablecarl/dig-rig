@@ -2,6 +2,7 @@ import { Input } from 'phaser'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { BrushInput } from './InputControllers/BrushInput.ts'
+import { FireGroupInput } from './InputControllers/FireGroupInput.ts'
 import type { InputController } from './InputControllers/InputController.ts'
 import { ZoomInput } from './InputControllers/ZoomInput.ts'
 
@@ -21,12 +22,14 @@ export class InputManager extends SceneBound {
 
     const zoomInput = new ZoomInput(scene)
     const brushInput = new BrushInput(scene)
+    const fireGroupInput = new FireGroupInput(scene)
     const playerWeaponManager = scene.playerWeaponManager
 
     this.modeControllers = {
       [InputMode.WEAPON]: [
         zoomInput,
         playerWeaponManager,
+        fireGroupInput,
       ],
       [InputMode.BRUSH]: [
         brushInput,

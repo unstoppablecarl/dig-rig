@@ -22,13 +22,14 @@ export class WeaponRapidFireInput extends InputController {
 
     if (this.coolDown > 0) return
 
-    const actions = this.scene.playerActions
+    const a = this.scene.playerActions
+    const fireGroup = this.scene.playerWeaponManager.fireGroup
 
     let mode: FireMode
-    if (actions.FIRE_SECONDARY.isDown()) {
-      mode = FireMode.CREATE
-    } else if (actions.FIRE_PRIMARY.isDown()) {
-      mode = FireMode.DESTROY
+    if (a.FIRE_SECONDARY.isDown()) {
+      mode = fireGroup.secondary()
+    } else if (a.FIRE_PRIMARY.isDown()) {
+      mode = fireGroup.primary()
     } else {
       this.coolDown = 0
       return
