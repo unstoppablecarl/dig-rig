@@ -1,7 +1,7 @@
 import { Scenes } from 'phaser'
 import { FireMode } from '../../../config.ts'
 import { FIRE_MODE_COLORS } from '../../../config/colors.ts'
-import { isMatterTankFireMode, throttle } from '../../../helpers/_helpers.ts'
+import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
@@ -36,8 +36,6 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
   private binder: EventsBinder
   private fireMode: PlayerFireModeState
 
-  public fire: (mode: FireMode) => void
-
   constructor(
     public scene: GameLevel,
     readonly slot: number,
@@ -63,11 +61,11 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
 
     this.renderer = new ProjectileRenderer(scene)
     this.renderer.setColor(FIRE_MODE_COLORS[this.fireMode.value()])
+  }
 
-    this.fire = throttle(() => {
-      const available = this.clampCharge()
-      this.scene.projectiles.fireForPlayer(InstantProjectile, available, this.fireMode.value(), 0, this.targetPos, 0, null)
-    }, BETWEEN_SHOTS_MS)
+  fire() {
+    const available = this.clampCharge()
+    this.scene.projectiles.fireForPlayer(InstantProjectile, available, this.fireMode.value(), 0, this.targetPos, 0, null)
   }
 
   onFireModeChange(): void {
