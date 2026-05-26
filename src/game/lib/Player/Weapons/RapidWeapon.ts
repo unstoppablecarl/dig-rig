@@ -21,7 +21,7 @@ export class RapidWeapon extends SceneBound implements ImmediateWeapon {
     readonly slot: number,
   ) {
     super(scene)
-    this.input = new WeaponRapidFireInput(scene, this)
+    this.input = new WeaponRapidFireInput(scene, this, BETWEEN_SHOTS_MS)
 
     this.fire = throttle((mode: FireMode) => {
       this.scene.projectiles.fireForPlayer(Projectile, RAPID_CHARGE, mode, RAPID_VELOCITY)

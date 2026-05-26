@@ -43,7 +43,7 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
     readonly slot: number,
   ) {
     super(scene)
-    this.fireInput = new WeaponRapidFireInput(scene, this)
+    this.fireInput = new WeaponRapidFireInput(scene, this, BETWEEN_SHOTS_MS)
     this.fireMode = new PlayerFireModeState()
     this.chargeInput = new KeysetInput(scene, {
       'q': () => this.decreaseCharge(),
@@ -65,12 +65,8 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
     this.renderer.setColor(FIRE_MODE_COLORS[this.fireMode.value()])
 
     this.fire = throttle(() => {
-      console.log('fire')
-
       const available = this.clampCharge()
-
       this.scene.projectiles.fireForPlayer(InstantProjectile, available, this.fireMode.value(), 0, this.targetPos, 0, null)
-
     }, BETWEEN_SHOTS_MS)
   }
 
