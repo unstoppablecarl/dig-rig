@@ -81,7 +81,10 @@ function reactivateAround(tx: number, ty: number, dest: Set<number>) {
   for (const [ax, ay] of aboveChecks) {
     if (ax < 0 || ax >= width || ay < 0) continue
     const idx = ay * width + ax
-    if (stableWater.has(idx)) { stableWater.delete(idx); dest.add(idx) }
+    if (stableWater.has(idx)) {
+      stableWater.delete(idx)
+      dest.add(idx)
+    }
   }
 
   // Wake the full consecutive chain of stable water in each direction so the pool
@@ -109,7 +112,7 @@ function tryMove(
   const toTile = tiles[toIdx]
 
   // Sand sinks through water (density swap); everything else requires an empty destination
-  const canEnter = toTile === EMPTY || (tileType === SAND && toTile === WATER)
+  const canEnter = toTile === EMPTY || ((tileType === SAND) && toTile === WATER)
   if (!canEnter) return false
 
   tiles[toIdx] = tileType
@@ -132,6 +135,7 @@ function tryMove(
 }
 
 const MAX_FLOW = 8
+
 function tryFlowHorizontal(
   fromIdx: number, fromTx: number, fromTy: number,
   dir: number,
@@ -196,7 +200,15 @@ function step() {
 
       if (!moved) {
         stableWater.add(idx)
-        // don't carry forward — water waits until a neighbour opens up
+        // Wake SAND_SETTLED directly above — it should sink through water
+        if (ty > 0) {
+          const aboveIdx = (ty - 1) * width + tx
+          if (tiles[aboveIdx] === SAND_SETTLED) {
+            tiles[aboveIdx] = SAND
+            markDirty(tx, ty - 1)
+            next.add(aboveIdx)
+          }
+        }
       }
 
     }
