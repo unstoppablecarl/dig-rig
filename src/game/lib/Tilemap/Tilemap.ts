@@ -168,6 +168,7 @@ export class Tilemap extends SceneBound {
       return false
     }
   }
+
   _appyEffectTiles: Tile[] = []
 
   public applyEffect(tileX: number, tileY: number, tileRadius: number, mode: FireMode, tilesToModify = Number.MAX_VALUE) {
@@ -184,7 +185,7 @@ export class Tilemap extends SceneBound {
     this._appyEffectTiles.length = 0
     const tiles = this._appyEffectTiles
     let newValue: TerrainType = TerrainType.EMPTY
-    if(mode === FireMode.CREATE){
+    if (mode === FireMode.CREATE) {
       newValue = TerrainType.SOLID
     }
 
@@ -278,7 +279,7 @@ export class Tilemap extends SceneBound {
 
   _collisionPosition: Position = { x: 0, y: 0 }
 
-  getAngleCollision(
+  getAngleRayCollision(
     startX: number,
     startY: number,
     angle: number,
@@ -288,7 +289,7 @@ export class Tilemap extends SceneBound {
     const vx = Math.cos(angle)
     const vy = Math.sin(angle)
 
-    return this.getCollision(
+    return this.getRayCollision(
       startX,
       startY,
       vx,
@@ -298,7 +299,7 @@ export class Tilemap extends SceneBound {
     )
   }
 
-  getCollision(
+  getRayCollision(
     startX: number,
     startY: number,
     directionX: number,

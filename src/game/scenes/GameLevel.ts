@@ -1,15 +1,17 @@
 import { GameObjects, Geom, Input, Scene, Textures } from 'phaser'
 import { loadPixelSpriteSheets } from '../../assets/asset-loader.ts'
 import { PLAYER_SPRITE_SHEET_ASSETS } from '../../assets/player/player-sprite-sheet-assets.ts'
+import { INPUT_ACTIONS } from '../../input.ts'
 import { DRAW_WORLD_BORDER_DEBUG } from '../config.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
+import { WeaponManagerInput } from '../lib/Input/InputControllers/WeaponManagerInput.ts'
 import { InputManager } from '../lib/Input/InputManager.ts'
+import { makePlayerActions, type PlayerActions } from '../lib/Input/PlayerActions.ts'
 import { MatterManager } from '../lib/Matter/MatterManager.ts'
 import { ParticleManager } from '../lib/Particles/ParticleManager.ts'
 import { TerrainParticleManager } from '../lib/Particles/TerrainParticleManager.ts'
 import { Player } from '../lib/Player/Player.ts'
-import { WeaponManagerInput } from '../lib/Input/InputControllers/WeaponManagerInput.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
 import { Tilemap } from '../lib/Tilemap/Tilemap.ts'
 import { TilemapRenderer, type TilemapRendererConfig } from '../lib/Tilemap/TilemapRenderer.ts'
@@ -52,6 +54,7 @@ export abstract class GameLevel extends Scene {
   public tilemapRenderer: TilemapRenderer
   public worldBounds: Geom.Rectangle
   public inputManager: InputManager
+  public playerActions: PlayerActions
   public terrainParticleManager: TerrainParticleManager
   protected id: LevelId
 
@@ -187,6 +190,7 @@ export abstract class GameLevel extends Scene {
     this.tilemapRenderer = this.makeTilemapRenderer(this.tilemap)
     this.terrainChunkBodyManager = new TerrainChunkBodyManager(this)
     this.projectiles = new ProjectileManager(this)
+    this.playerActions = makePlayerActions(this, INPUT_ACTIONS)
     this.playerWeaponManager = new WeaponManagerInput(this)
     this.particleManager = new ParticleManager(this)
     this.inputManager = new InputManager(this)

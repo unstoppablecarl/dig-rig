@@ -4,7 +4,6 @@ import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { BrushInput } from './InputControllers/BrushInput.ts'
 import type { InputController } from './InputControllers/InputController.ts'
 import { ZoomInput } from './InputControllers/ZoomInput.ts'
-import { makePlayerMovementInput, type PlayerMovementInput } from './PlayerMovementInput.ts'
 
 export enum InputMode {
   WEAPON,
@@ -15,14 +14,11 @@ export class InputManager extends SceneBound {
   private modeControllers: Record<InputMode, InputController[]>
   private _mode: InputMode
 
-  readonly playerMovement: PlayerMovementInput
-
   constructor(
     public scene: GameLevel,
   ) {
     super(scene)
 
-    this.playerMovement = makePlayerMovementInput(scene)
     const zoomInput = new ZoomInput(scene)
     const brushInput = new BrushInput(scene)
     const playerWeaponManager = scene.playerWeaponManager

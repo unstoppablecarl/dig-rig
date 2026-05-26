@@ -1,7 +1,7 @@
 import { Events } from 'phaser'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { EventsBinder } from '../../Util/EventsBinder.ts'
+import { EventsBinder, type InputBinder } from '../../Util/EventsBinder.ts'
 
 export abstract class InputController extends SceneBound<GameLevel> {
   private _enabled = false
@@ -16,8 +16,12 @@ export abstract class InputController extends SceneBound<GameLevel> {
     return this._enabled
   }
 
-  protected bind(emitter: Events.EventEmitter, event: string, handler: Function, context: any = this) {
+  protected addEvent(emitter: Events.EventEmitter, event: string, handler: Function, context: any = this) {
     this.binder.add(emitter, event, handler, context)
+  }
+
+  protected addInput(input: InputBinder | InputBinder[]) {
+    this.binder.addInput(input)
   }
 
   setInputEnabled(value: boolean) {
