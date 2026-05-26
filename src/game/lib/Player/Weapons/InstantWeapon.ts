@@ -1,14 +1,14 @@
 import { Scenes } from 'phaser'
 import { FireMode } from '../../../config.ts'
 import { FIRE_MODE_COLORS } from '../../../config/colors.ts'
-import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
+import { isMatterTankFireMode, throttle } from '../../../helpers/_helpers.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import { GameEvent } from '../../events.ts'
 import { KeysetInput } from '../../Input/InputControllers/KeysetInput.ts'
 import type { ImmediateWeapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
-import { WeaponSingleFireInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponSingleFireInput.ts'
+import { WeaponRapidFireInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponRapidFireInput.ts'
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
 import { tilesToRadius } from '../../Projectiles/projectile-radius'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
@@ -20,10 +20,12 @@ import UPDATE = Scenes.Events.UPDATE
 const MIN_CHARGE = 10
 const COLLISION_TYPES = new Set(TerrainTypeValues.filter(v => v !== TerrainType.EMPTY))
 
+const BETWEEN_SHOTS_MS = 50
+
 export class InstantWeapon extends SceneBound implements ImmediateWeapon {
   readonly displayName = 'Instant'
 
-  private fireInput: WeaponSingleFireInput
+  private fireInput: WeaponRapidFireInput
   private chargeInput: KeysetInput
   private renderer: ProjectileRenderer
   private _enabled: boolean
@@ -34,12 +36,14 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
   private binder: EventsBinder
   private fireMode: PlayerFireModeState
 
+  public fire: (mode: FireMode) => void
+
   constructor(
     public scene: GameLevel,
     readonly slot: number,
   ) {
     super(scene)
-    this.fireInput = new WeaponSingleFireInput(scene, this)
+    this.fireInput = new WeaponRapidFireInput(scene, this)
     this.fireMode = new PlayerFireModeState()
     this.chargeInput = new KeysetInput(scene, {
       'q': () => this.decreaseCharge(),
@@ -59,17 +63,20 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
 
     this.renderer = new ProjectileRenderer(scene)
     this.renderer.setColor(FIRE_MODE_COLORS[this.fireMode.value()])
+
+    this.fire = throttle(() => {
+      console.log('fire')
+
+      const available = this.clampCharge()
+
+      this.scene.projectiles.fireForPlayer(InstantProjectile, available, this.fireMode.value(), 0, this.targetPos, 0, null)
+
+    }, BETWEEN_SHOTS_MS)
   }
 
   onFireModeChange(): void {
     this.renderer.setColor(FIRE_MODE_COLORS[this.fireMode.value()])
     this.scene.EVENTS.emit(GameEvent.UI_WEAPON_UPDATE, this)
-  }
-
-  fire(): void {
-    const available = this.clampCharge()
-
-    this.scene.projectiles.fireForPlayer(InstantProjectile, available, this.fireMode.value(), 0, this.targetPos, 0, null)
   }
 
   get enabled() {
@@ -97,7 +104,7 @@ export class InstantWeapon extends SceneBound implements ImmediateWeapon {
   update(): void {
     const armPosition = this.scene.player.getProjectilePosition(0, this._playerArmPos)
     const armAngle = this.scene.player.getProjectileAngle()
-    this.targetPos = this.scene.tilemap.getAngleCollision(armPosition.x, armPosition.y, armAngle, COLLISION_TYPES)
+    this.targetPos = this.scene.tilemap.getAngleRayCollision(armPosition.x, armPosition.y, armAngle, COLLISION_TYPES)
 
     this.renderer.setPosition(this.targetPos)
     this.clampCharge()

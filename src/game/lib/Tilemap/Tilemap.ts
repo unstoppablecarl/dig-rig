@@ -505,7 +505,7 @@ export class Tilemap extends SceneBound {
 
   _collisionPosition: Position = { x: 0, y: 0 }
 
-  getAngleCollision(
+  getAngleRayCollision(
     startX: number,
     startY: number,
     angle: number,
@@ -515,7 +515,7 @@ export class Tilemap extends SceneBound {
     const vx = Math.cos(angle)
     const vy = Math.sin(angle)
 
-    return this.getCollision(
+    return this.getRayCollision(
       startX,
       startY,
       vx,
@@ -525,7 +525,7 @@ export class Tilemap extends SceneBound {
     )
   }
 
-  getCollision(
+  getRayCollision(
     startX: number,
     startY: number,
     directionX: number,
