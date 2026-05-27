@@ -4,7 +4,7 @@ import { radiusToTiles } from './projectile-radius'
 
 const MAX_RADIUS = 20
 
-export class TunnelProjectile extends BaseProjectile {
+export class TunnelDestroyProjectile extends BaseProjectile {
   readonly mode = FireMode.DESTROY as const
 
   static MAX_TILES_TO_MOD = radiusToTiles(MAX_RADIUS)
@@ -18,7 +18,7 @@ export class TunnelProjectile extends BaseProjectile {
 
   recharge() {
     const available = this.matterTank.chargeAvailable(FireMode.DESTROY)
-    if (available < TunnelProjectile.MAX_TILES_TO_MOD) return
+    if (available < TunnelDestroyProjectile.MAX_TILES_TO_MOD) return
     this.tilesModified = 0
 
     this.tilesToModify = available

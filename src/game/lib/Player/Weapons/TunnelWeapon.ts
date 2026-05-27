@@ -5,7 +5,7 @@ import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponConstantInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponConstantInput.ts'
 import { MatterTank } from '../../Matter/MatterTank.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
-import { TunnelProjectile } from '../../Projectiles/TunnelProjectile.ts'
+import { TunnelDestroyProjectile } from '../../Projectiles/TunnelDestroyProjectile.ts'
 
 const DESTROY_PROJECTILE_DISTANCE = 20
 const DESTROY_PROJECTILE_EXPAND_RATE_MS = 10
@@ -14,7 +14,7 @@ const DESTROY_PROJECTILE_VELOCITY = 1000
 export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   readonly displayName = 'Tunnel'
 
-  private projectileDestroy: TunnelProjectile | null = null
+  private projectileDestroy: TunnelDestroyProjectile | null = null
   readonly matterTank: MatterTank
 
   constructor(
@@ -22,7 +22,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
     readonly slot: number,
   ) {
     super(scene)
-    this.matterTank = new MatterTank(scene.matterManager, TunnelProjectile.MAX_TILES_TO_MOD)
+    this.matterTank = new MatterTank(scene.matterManager, TunnelDestroyProjectile.MAX_TILES_TO_MOD)
   }
 
   private _startPos: Position = { x: 0, y: 0 }
@@ -53,11 +53,11 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   private initDestroyProjectile() {
     if (this.projectileDestroy) return
     const availableCharge = this.matterTank.chargeAvailable(FireMode.DESTROY)
-    const charge = Math.min(TunnelProjectile.MAX_TILES_TO_MOD, availableCharge)
+    const charge = Math.min(TunnelDestroyProjectile.MAX_TILES_TO_MOD, availableCharge)
 
     const startPos = this.scene.player.getProjectilePosition(0, this._startPos)
 
-    this.projectileDestroy = this.scene.projectiles.add(TunnelProjectile, this.scene.player, this.matterTank, startPos.x, startPos.y, charge, FireMode.DESTROY)
+    this.projectileDestroy = this.scene.projectiles.add(TunnelDestroyProjectile, this.scene.player, this.matterTank, startPos.x, startPos.y, charge, FireMode.DESTROY)
   }
 
   private addCreateProjectile() {
