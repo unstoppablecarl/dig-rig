@@ -31,23 +31,11 @@ export function truncateArrayRandomly<T>(arr: T[], targetSize: number): T[] {
 }
 
 export function shuffleArray<T>(array: T[]): T[] {
-  // Create a shallow copy to avoid modifying the original array if desired.
-  const shuffled = [...array]
-  let currentIndex = shuffled.length
-  let randomIndex
-
-  // While there remain elements to shuffle.
-  while (currentIndex !== 0) {
-    // Pick a remaining element.
-    randomIndex = Math.floor(Math.random() * currentIndex)
-    currentIndex--;
-
-    // And swap it with the current element.
-    [shuffled[currentIndex], shuffled[randomIndex]] = [
-      shuffled[randomIndex],
-      shuffled[currentIndex],
-    ]
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = array[i]
+    array[i] = array[j]
+    array[j] = tmp
   }
-
-  return shuffled
+  return array
 }
