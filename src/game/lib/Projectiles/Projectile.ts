@@ -30,30 +30,33 @@ export class Projectile extends BaseProjectile {
     if (!this.fired) return
 
     // if in create mode, and not already collided/expanding yet, and collided with collision map tile
-    if (this.mode === FireMode.CREATE && !this.expandTimer) {
-      const { stepDx, stepDy, totalSteps } = getCollisionSteps(this.vx, this.vy, dt)
+    if (this.mode === FireMode.CREATE) {
+      if (!this.expandTimer) {
+        const { stepDx, stepDy, totalSteps } = getCollisionSteps(this.vx, this.vy, dt)
 
-      for (let i = 0; i < totalSteps; i++) {
-        const stepX = this.x + stepDx * i
-        const stepY = this.y + stepDy * i
+        for (let i = 0; i < totalSteps; i++) {
+          const stepX = this.x + stepDx * i
+          const stepY = this.y + stepDy * i
 
         const collision = this.scene.tilemap.getTileFromWorld(
-          stepX,
-          stepY,
+            stepX,
+            stepY,
         ) !== TerrainType.EMPTY
 
-        if (collision) {
-          this.x = stepX - stepDx
-          this.y = stepY - stepDy
+          if (collision) {
+            this.x = stepX - stepDx
+            this.y = stepY - stepDy
 
-          this.renderer?.fadeOutAndDestroy()
-          this.radius = EXPAND_START_RADIUS
-          // stop
-          this.vx = 0
-          this.vy = 0
-          this.expandTimer = this.startExpandTimer()
+            this.renderer?.fadeOutAndDestroy()
+            this.radius = EXPAND_START_RADIUS
+            // stop
+            this.vx = 0
+            this.vy = 0
 
-          break
+            this.expandTimer = this.startExpandTimer()
+
+            break
+          }
         }
       }
     } else {
@@ -97,6 +100,7 @@ export class Projectile extends BaseProjectile {
     }
 
     this.lifespanPercent = (this.tilesModified / this.tilesToModify)
+
   }
 
   public startExpandTimer() {

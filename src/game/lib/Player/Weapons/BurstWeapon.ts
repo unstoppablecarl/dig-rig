@@ -1,10 +1,9 @@
 import { FireMode } from '../../../config.ts'
 import { throttle } from '../../../helpers/_helpers.ts'
-import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
+import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponSingleFireInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponSingleFireInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
-import type { ImmediateWeapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 
 const BURST_SHOTS = 5
 const BETWEEN_SHOTS_MS = 100
@@ -12,10 +11,9 @@ const THROTTLE_MS = BURST_SHOTS * BETWEEN_SHOTS_MS
 const VELOCITY = 300
 const CHARGE = 10
 
-export class BurstWeapon extends SceneBound implements ImmediateWeapon {
+export class BurstWeapon extends WeaponSingleFireInput implements Weapon {
   readonly displayName = 'Burst'
 
-  private input: WeaponSingleFireInput
   public fire: (mode: FireMode) => void
 
   constructor(
@@ -23,19 +21,10 @@ export class BurstWeapon extends SceneBound implements ImmediateWeapon {
     readonly slot: number,
   ) {
     super(scene)
-    this.input = new WeaponSingleFireInput(scene, this)
 
     this.fire = throttle((mode: FireMode) => {
       this.fireBurst(mode)
     }, THROTTLE_MS)
-  }
-
-  get enabled() {
-    return this.input.enabled
-  }
-
-  setEnabled(value: boolean) {
-    this.input.setInputEnabled(value)
   }
 
   fireBurst(mode: FireMode) {
@@ -50,9 +39,5 @@ export class BurstWeapon extends SceneBound implements ImmediateWeapon {
 
   fireOnce(mode: FireMode) {
     this.scene.projectiles.fireForPlayer(Projectile, CHARGE, mode, VELOCITY)
-  }
-
-  protected onDestroy() {
-    this.input.destroy()
   }
 }

@@ -1,13 +1,11 @@
-import { Scenes } from 'phaser'
 import { FireMode } from '../../../../config.ts'
 import { getDeltaT, isMatterTankFireMode } from '../../../../helpers/_helpers.ts'
 import type { GameLevel } from '../../../../scenes/GameLevel.ts'
 import { GameEvent } from '../../../events.ts'
+import type { Projectile } from '../../../Projectiles/Projectile.ts'
 import { InputController } from '../InputController.ts'
-import type { ChargeableWeapon } from '../WeaponManagerInput.ts'
-import UPDATE = Scenes.Events.UPDATE
 
-export class WeaponChargeInput extends InputController {
+export abstract class WeaponChargeInput extends InputController {
   // charge per second
   private chargeRate = 400
   private charge = 0
@@ -17,13 +15,11 @@ export class WeaponChargeInput extends InputController {
 
   constructor(
     public scene: GameLevel,
-    public weapon: ChargeableWeapon,
   ) {
     super(scene)
-    this.addEvent(this.scene.events, UPDATE, this.update)
     const stopCharging = () => {
       if (!this.isCharging) return
-      if (this.charge > 0) this.weapon.fireQueued()
+      if (this.charge > 0) this.fireQueued()
       this.isCharging = false
       this.charge = 0
     }
@@ -66,20 +62,27 @@ export class WeaponChargeInput extends InputController {
 
     const dt = getDeltaT(delta)
     this.charge = Math.min(this.charge + Math.floor(this.chargeRate * dt), maxCharge)
-    this.weapon.getQueuedProjectile(this.mode).setTilesToModify(this.charge)
+    this.getQueuedProjectile(this.mode).setTilesToModify(this.charge)
   }
 
   getMaxCharge(): number {
-    let charge = Infinity
     if (isMatterTankFireMode(this.mode)) {
-      charge = this.scene.player.matterTank.chargeAvailable(this.mode)
+      return this.scene.player.matterTank.chargeAvailable(this.mode)
     }
-    return charge
+    return Infinity
   }
+
+  setEnabled(value: boolean) {
+    this.setInputEnabled(value)
+  }
+
+  abstract getQueuedProjectile(mode: FireMode): Projectile
+
+  abstract fireQueued(): void
+
+  abstract getFireMode(): FireMode
 
   protected onDestroy() {
     super.onDestroy()
-    // @ts-expect-error: destroy
-    this.weapon = null
   }
 }

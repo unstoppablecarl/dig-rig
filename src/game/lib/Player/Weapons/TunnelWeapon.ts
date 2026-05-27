@@ -1,67 +1,35 @@
-import { Scenes } from 'phaser'
 import { FireMode } from '../../../config.ts'
-import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
-import {
-  type ContinuousWeapon,
-  WeaponConstantInput,
-} from '../../Input/InputControllers/WeaponManagerInput/WeaponConstantInput.ts'
+import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
+import { WeaponConstantInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponConstantInput.ts'
 import { MatterTank } from '../../Matter/MatterTank.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
 import { TunnelProjectile } from '../../Projectiles/TunnelProjectile.ts'
-import { EventsBinder } from '../../Util/EventsBinder.ts'
-import UPDATE = Scenes.Events.UPDATE
 
 const DESTROY_PROJECTILE_DISTANCE = 20
 const DESTROY_PROJECTILE_EXPAND_RATE_MS = 10
+const DESTROY_PROJECTILE_VELOCITY = 1000
 
-export class TunnelWeapon extends SceneBound implements ContinuousWeapon {
+export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   readonly displayName = 'Tunnel'
-
-  private input: WeaponConstantInput
 
   private projectileDestroy: TunnelProjectile | null = null
   readonly matterTank: MatterTank
-  private binder: EventsBinder
 
   constructor(
     public scene: GameLevel,
     readonly slot: number,
   ) {
     super(scene)
-    this.binder = new EventsBinder()
-    this.binder.add(scene.events, UPDATE, this.update, this)
-    this.input = new WeaponConstantInput(scene, this)
-    this.matterTank = new MatterTank(scene.matterManager, TunnelProjectile.MAX_TILES_TO_MOD * 1000)
+    this.matterTank = new MatterTank(scene.matterManager, TunnelProjectile.MAX_TILES_TO_MOD)
   }
 
-  _startPos: Position = { x: 0, y: 0 }
+  private _startPos: Position = { x: 0, y: 0 }
 
-  firing(value: boolean): void {
-    this.projectileDestroy!.active = value
-    this.addCreateProjectile()
-  }
-
-  get enabled() {
-    return this.input.enabled
-  }
-
-  setEnabled(value: boolean) {
-    this.input.setInputEnabled(value)
-
-    if (value) {
-      this.initDestroyProjectile()
-      this.binder.bind()
-    } else {
-      this.binder.unBind()
-    }
-  }
-
-  private _pos: Position = { x: 0, y: 0 }
-
-  public update() {
+  updateFiring(value: boolean): void {
     if (this.projectileDestroy) {
+      this.projectileDestroy.active = value
       const destroyPos = this.scene.player.getProjectilePosition(0, this._pos)
       this.projectileDestroy.x = destroyPos.x
       this.projectileDestroy.y = destroyPos.y
@@ -69,6 +37,18 @@ export class TunnelWeapon extends SceneBound implements ContinuousWeapon {
 
     this.addCreateProjectile()
   }
+
+  protected onEnable() {
+    this.initDestroyProjectile()
+    this.scene.ui.matterMeter.setMatterTank(this.matterTank)
+  }
+
+  protected onDisable() {
+    super.onDisable()
+    this.scene.ui.matterMeter.setMatterTank(this.scene.player.matterTank)
+  }
+
+  private _pos: Position = { x: 0, y: 0 }
 
   private initDestroyProjectile() {
     if (this.projectileDestroy) return
@@ -86,19 +66,16 @@ export class TunnelWeapon extends SceneBound implements ContinuousWeapon {
     const pos = this.scene.player.getInverseProjectilePosition(DESTROY_PROJECTILE_DISTANCE, this._pos)
 
     const projectile = this.scene.projectiles.add(Projectile, this.scene.player, this.matterTank, pos.x, pos.y, charge, FireMode.CREATE, null)
-    projectile.fire()
-
-    if (!projectile) return
+    const angle = this.scene.player.getProjectileAngle()
+    const vx = Math.cos(angle) * -1
+    const vy = Math.sin(angle) * -1
+    projectile.fireRaw(vx, vy, DESTROY_PROJECTILE_VELOCITY)
     projectile.expandRateMs = DESTROY_PROJECTILE_EXPAND_RATE_MS
-    projectile.startExpandTimer()
   }
 
   protected onDestroy() {
-    this.input.destroy()
+    super.onDestroy()
     this.projectileDestroy?.destroy()
     this.projectileDestroy = null
-    this.binder.unBind()
-    // @ts-expect-error: destroy
-    this.binder = null
   }
 }

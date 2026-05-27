@@ -11,7 +11,7 @@ export type GUI = ReturnType<typeof makeGUI>
 
 export function makeGUI(game: GameLevel) {
   const pane = new Pane({
-   title: 'Debug'
+    title: 'Debug',
     // container: document.getElementById('app')!
   })
   pane.registerPlugin(EssentialsPlugin)
@@ -60,6 +60,15 @@ export function makeGUI(game: GameLevel) {
   matterFolder.addBinding(matter, 'universe', { readonly: true, format: formatInt })
   matterFolder.addBinding(matter, 'world', { readonly: true, format: formatInt })
   matterFolder.addBinding(matter, 'player', { readonly: true, format: formatInt })
+
+  const projectiles = {
+    get count() {
+      return game.projectiles?.children?.length ?? 0
+    },
+  }
+  const projectilesFolder = pane.addFolder({ title: 'Projectiles' })
+
+  projectilesFolder.addBinding(projectiles, 'count', { readonly: true, format: formatInt })
 
   const physicsFolder = pane.addFolder({ title: 'Physics Bodies' })
 

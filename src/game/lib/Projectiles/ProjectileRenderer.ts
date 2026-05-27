@@ -1,17 +1,17 @@
-import { BlendModes, GameObjects } from 'phaser'
+import { BlendModes, GameObjects, Scenes } from 'phaser'
 import { FIRE_MODE_COLORS } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import type { BaseProjectile } from './BaseProjectile.ts'
-import UPDATE = Phaser.Input.Events.UPDATE
+import UPDATE = Scenes.Events.UPDATE
 
 export class ProjectileRenderer extends SceneBound {
   protected fading = false
 
-  private circle: GameObjects.Graphics
-  private circleCenter: GameObjects.Graphics
-  private container: GameObjects.Container
+  readonly circle: GameObjects.Graphics
+  readonly circleCenter: GameObjects.Graphics
+  readonly container: GameObjects.Container
   private _radius: number = 0
   private _color: number = 0
   private unBind: null | (() => void) = null

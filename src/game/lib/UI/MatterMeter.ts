@@ -4,6 +4,7 @@ import { CREATE_COLOR, DESTROY_COLOR } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { ChargeableWeapon, Weapon } from '../Input/InputControllers/WeaponManagerInput.ts'
+import type { MatterTank } from '../Matter/MatterTank.ts'
 import DOMElement = GameObjects.DOMElement
 import Rectangle = GameObjects.Rectangle
 import Tween = Tweens.Tween
@@ -23,6 +24,8 @@ export class MatterMeter extends SceneBound {
   private text: DOMElement
   private tween: Tween | null = null
 
+  private matterTank: MatterTank
+
   constructor(
     public scene: Scene,
     public gameLevel: GameLevel,
@@ -31,6 +34,7 @@ export class MatterMeter extends SceneBound {
 
     const matterTank = gameLevel.player.matterTank
     this.prevMatter = matterTank.matterStart
+    this.matterTank = matterTank
 
     const BORDER_COLOR = 0xffffff
     const METER_COLOR = 0xffffff
@@ -65,11 +69,11 @@ export class MatterMeter extends SceneBound {
       .setOrigin(0.5, 1)
       .setFillStyle(0xffffff, 1)
 
-    this.destroyPending = scene.add.rectangle(chargeR.x+1, chargeR.y, 30, chargeR.h)
+    this.destroyPending = scene.add.rectangle(chargeR.x + 1, chargeR.y, 30, chargeR.h)
       .setOrigin(0.5, 1)
       .setFillStyle(DESTROY_COLOR, PENDING_ALPHA)
 
-    this.createPending = scene.add.rectangle(chargeR.x+1, chargeR.y, 30, chargeR.h)
+    this.createPending = scene.add.rectangle(chargeR.x + 1, chargeR.y, 30, chargeR.h)
       .setOrigin(0.5, 0)
       .setFillStyle(CREATE_COLOR, PENDING_ALPHA)
 
@@ -78,7 +82,7 @@ export class MatterMeter extends SceneBound {
       .createFromHTML('<div/>')
     this.text.node.id = 'matter-meter-text'
 
-    const textBG = scene.add.rectangle(borderR.x+0.5, borderR.y + borderR.h + 1, borderR.w+ 1, TEXT_BG_HEIGHT + 1)
+    const textBG = scene.add.rectangle(borderR.x + 0.5, borderR.y + borderR.h + 1, borderR.w + 1, TEXT_BG_HEIGHT + 1)
       .setOrigin(0.5, 0)
       .setFillStyle(BORDER_COLOR, 1)
 
@@ -94,7 +98,7 @@ export class MatterMeter extends SceneBound {
   }
 
   update() {
-    const matterTank = this.gameLevel.player.matterTank
+    const matterTank = this.matterTank
 
     let diffY: number
     if (SHOW_TWEEN) {
@@ -156,6 +160,10 @@ export class MatterMeter extends SceneBound {
     }
 
     this.prevMatter = matterTank.matterContained()
+  }
+
+  setMatterTank(matterTank: MatterTank): void {
+    this.matterTank = matterTank
   }
 
   protected onDestroy() {

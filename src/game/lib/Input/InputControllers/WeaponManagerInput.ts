@@ -9,7 +9,6 @@ import { InstantWeapon } from '../../Player/Weapons/InstantWeapon.ts'
 import { RapidWeapon } from '../../Player/Weapons/RapidWeapon.ts'
 import { TorchWeapon } from '../../Player/Weapons/TorchWeapon.ts'
 import { TunnelWeapon } from '../../Player/Weapons/TunnelWeapon.ts'
-import type { Projectile } from '../../Projectiles/Projectile.ts'
 import { InputController } from './InputController.ts'
 import ANY_KEY_DOWN = Input.Keyboard.Events.ANY_KEY_DOWN
 
@@ -23,14 +22,8 @@ export interface Weapon {
   getSuffix?: () => string
 }
 
-export interface ImmediateWeapon extends Weapon {
-  fire(mode: FireMode): void
-}
-
 export interface ChargeableWeapon extends Weapon {
-  getQueuedProjectile(mode: FireMode): Projectile
   getChargePercent(): number
-  fireQueued(): void
   getFireMode(): FireMode
 }
 

@@ -17,8 +17,11 @@ export class TunnelProjectile extends BaseProjectile {
   }
 
   recharge() {
+    const available = this.matterTank.chargeAvailable(FireMode.DESTROY)
+    if (available < TunnelProjectile.MAX_TILES_TO_MOD) return
     this.tilesModified = 0
-    this.tilesToModify = this.matterTank.chargeAvailable(FireMode.DESTROY)
+
+    this.tilesToModify = available
     this.matterTank.addPendingCharge(FireMode.DESTROY, this.tilesToModify)
   }
 

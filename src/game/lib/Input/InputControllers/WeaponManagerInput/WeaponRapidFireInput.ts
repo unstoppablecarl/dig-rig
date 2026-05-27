@@ -2,16 +2,14 @@ import { Scenes } from 'phaser'
 import { FireMode } from '../../../../config.ts'
 import type { GameLevel } from '../../../../scenes/GameLevel.ts'
 import { InputController } from '../InputController.ts'
-import type { ImmediateWeapon } from '../WeaponManagerInput.ts'
 import UPDATE = Scenes.Events.UPDATE
 
-export class WeaponRapidFireInput extends InputController {
+export abstract class WeaponRapidFireInput extends InputController {
   protected coolDown = 0
+  abstract readonly rateOfFireMs: number
 
   constructor(
     public scene: GameLevel,
-    public weapon: ImmediateWeapon,
-    readonly rateOfFireMs: number,
   ) {
     super(scene)
     this.addEvent(this.scene.events, UPDATE, this.update)
@@ -36,12 +34,16 @@ export class WeaponRapidFireInput extends InputController {
     }
 
     this.coolDown += this.rateOfFireMs
-    this.weapon.fire(mode)
+    this.fire(mode)
   }
+
+  setEnabled(value: boolean) {
+    this.setInputEnabled(value)
+  }
+
+  abstract fire(mode: FireMode): void
 
   protected onDestroy() {
     super.onDestroy()
-    // @ts-expect-error: destroy
-    this.weapon = null
   }
 }

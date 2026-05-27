@@ -71,7 +71,6 @@ export abstract class BaseProjectile extends SceneBound {
 
   private _emitPos = { x: 0, y: 0 }
 
-
   protected solidifyTiles(count: number) {
     const tileX = this.x
     const tileY = this.y
