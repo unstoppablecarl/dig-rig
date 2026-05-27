@@ -354,133 +354,91 @@ export class Tilemap extends SceneBound {
 
   _appyEffectTiles: TileEffectResult[] = []
 
+  // SOLID creation: geometric circle through EMPTY tiles only — water is a hard wall.
+  // Island detection fires onIslandDetected for any tiles not connected to permanent
+  // terrain or world bounds so they can be converted to sand.
   public applyEffect(tileX: number, tileY: number, tileRadius: number, mode: FireMode, tilesToModify = Number.MAX_VALUE) {
-    const { x: px, y: py } = this.scene.player
-    const velocity = this.scene.player.container.body?.velocity
-    const vx = velocity?.x ?? 0
-    const vy = velocity?.y ?? 0
-    const MAX_VEL_EXTEND = 8
-    const velLeft = Math.max(Math.min(vx, 0), -MAX_VEL_EXTEND)
-    const velRight = Math.min(Math.max(vx, 0), MAX_VEL_EXTEND)
-    const velUp = Math.max(Math.min(vy, 0), -MAX_VEL_EXTEND)
-    const velDown = Math.min(Math.max(vy, 0), MAX_VEL_EXTEND)
+    const tiles = this._appyEffectTiles
+    tiles.length = 0
 
-    this._appyEffectTiles.length = 0
-    // SOLID creation: geometric circle through EMPTY tiles only — water is a hard wall.
-    // Island detection fires onIslandDetected for any tiles not connected to permanent
-    // terrain or world bounds so they can be converted to sand.
     if (mode === FireMode.CREATE) {
-      const tiles = this._appyEffectTiles as Tile[]
+      const { x: px, y: py } = this.scene.player
+      const vel = this.scene.player.container.body?.velocity
+      const vx = vel?.x ?? 0, vy = vel?.y ?? 0
+      const MAX_VEL_EXTEND = 8
+      const velLeft = Math.max(Math.min(vx, 0), -MAX_VEL_EXTEND)
+      const velRight = Math.min(Math.max(vx, 0), MAX_VEL_EXTEND)
+      const velUp = Math.max(Math.min(vy, 0), -MAX_VEL_EXTEND)
+      const velDown = Math.min(Math.max(vy, 0), MAX_VEL_EXTEND)
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
-        const value = this.getTile(x, y)
-        if (value !== TerrainType.EMPTY) return
-        if (
-          x > px - PLAYER_RADIUS_X + velLeft && x < px + PLAYER_RADIUS_X + velRight &&
-          y > py - PLAYER_RADIUS_Y + velUp && y < py + PLAYER_RADIUS_Y + velDown
-        ) return
-        tiles.push({ x, y })
+        if (this.getTile(x, y) !== TerrainType.EMPTY) return
+        if (x > px - PLAYER_RADIUS_X + velLeft && x < px + PLAYER_RADIUS_X + velRight &&
+            y > py - PLAYER_RADIUS_Y + velUp && y < py + PLAYER_RADIUS_Y + velDown) return
+        tiles.push({ x, y, newValue: TerrainType.SOLID })
       })
-
-      this.truncatePreservingCenter(tiles, tileX, tileY, tilesToModify)
-      if (!tiles.length) return tiles
-
-      const newValue = TerrainType.SOLID
-      const startTime = this.scene.time.now
-      for (const { x, y } of tiles) {
-        this.scene.tilemapRenderer.addEffect(x, y, mode, startTime)
-        this.setTile(x, y, newValue)
-      }
-
+      if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
       this.chunkManager.computeAnchored()
       const islands = this.findIslandTiles(tiles)
       if (islands.length) this.onIslandDetected?.(islands)
 
-      return tiles
     } else if (mode === FireMode.DESTROY) {
-      const newValue = TerrainType.EMPTY
-      // After removing tiles, check if any adjacent solid became disconnected.
-      const tiles = this._appyEffectTiles as Tile[]
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
         const value = this.getTile(x, y)
-        if (value === TerrainType.PERMANENT) return
-        if (newValue === value) return
-        if (this.isFluid(value)) return
-        tiles.push({ x, y })
+        if (value === TerrainType.PERMANENT || value === TerrainType.EMPTY || this.isFluid(value)) return
+        tiles.push({ x, y, newValue: TerrainType.EMPTY })
       })
-
-      this.truncatePreservingCenter(tiles, tileX, tileY, tilesToModify)
-      if (!tiles.length) return tiles
-
-      const startTime = this.scene.time.now
-      for (const { x, y } of tiles) {
-        this.scene.tilemapRenderer.addEffect(x, y, mode, startTime)
-        this.setTile(x, y, newValue)
-      }
-
+      if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
       const newIslands = this.findNewlyDisconnectedByDestruction(tiles)
       if (newIslands.length) this.onIslandDetected?.(newIslands)
 
-      return tiles
     } else if (mode === FireMode.MELT) {
-      const tiles = this._appyEffectTiles
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
         const value = this.getTile(x, y)
         let newValue: TerrainType
-
         if (value === TerrainType.SOLID) newValue = TerrainType.SAND
-        else if (value === TerrainType.SAND_SETTLED) newValue = TerrainType.WATER
-        else if (value === TerrainType.SAND) newValue = TerrainType.WATER
+        else if (value === TerrainType.SAND_SETTLED || value === TerrainType.SAND) newValue = TerrainType.WATER
         else return
-
         tiles.push({ x, y, newValue })
       })
-
-      this.truncatePreservingCenter(tiles, tileX, tileY, tilesToModify)
-      if (!tiles.length) return tiles
-
-      const startTime = this.scene.time.now
-      for (const { x, y, newValue } of tiles) {
-        this.scene.tilemapRenderer.addEffect(x, y, mode, startTime)
-        this.setTile(x, y, newValue)
-      }
+      if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
       this.scene.sandBridge.activateTiles(tiles)
-
       const newIslands = this.findNewlyDisconnectedByDestruction(tiles)
       if (newIslands.length) this.onIslandDetected?.(newIslands)
 
-      return tiles
     } else if (mode === FireMode.SOLIDIFY) {
-      const tiles = this._appyEffectTiles
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
         const value = this.getTile(x, y)
         let newValue: TerrainType
-
         if (value === TerrainType.WATER) newValue = TerrainType.SAND
-        else if (value === TerrainType.SAND_SETTLED) newValue = TerrainType.SOLID
-        else if (value === TerrainType.SAND) newValue = TerrainType.SOLID
+        else if (value === TerrainType.SAND_SETTLED || value === TerrainType.SAND) newValue = TerrainType.SOLID
         else return
-
         tiles.push({ x, y, newValue })
       })
-
-      this.truncatePreservingCenter(tiles, tileX, tileY, tilesToModify)
-      if (!tiles.length) return tiles
-
-      const startTime = this.scene.time.now
-      for (const { x, y, newValue } of tiles) {
-        this.scene.tilemapRenderer.addEffect(x, y, mode, startTime)
-        this.setTile(x, y, newValue)
-      }
+      if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
       this.scene.sandBridge.activateTiles(tiles)
-
       this.chunkManager.computeAnchored()
       const islands = this.findIslandTiles(tiles)
       if (islands.length) this.onIslandDetected?.(islands)
-
-      return tiles
     }
 
-    return []
+    return tiles
+  }
+
+  private commitEffectTiles(
+    tiles: TileEffectResult[],
+    tileX: number,
+    tileY: number,
+    tilesToModify: number,
+    mode: FireMode,
+  ): boolean {
+    this.truncatePreservingCenter(tiles, tileX, tileY, tilesToModify)
+    if (!tiles.length) return false
+    const startTime = this.scene.time.now
+    for (const { x, y, newValue } of tiles) {
+      this.scene.tilemapRenderer.addEffect(x, y, mode, startTime)
+      this.setTile(x, y, newValue)
+    }
+    return true
   }
 
   checkForCollision(x: number, y: number, vx: number, vy: number, dt: number, scale = 1): {
