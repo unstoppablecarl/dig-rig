@@ -2,7 +2,6 @@ import { Geom } from 'phaser'
 import { type Color32, type PixelData, unpackAlpha } from 'pixel-data-js'
 import { FireMode } from '../../config.ts'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
-import { truncateArrayRandomly } from '../../helpers/array.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
@@ -165,25 +164,63 @@ export class Tilemap extends SceneBound {
     const minY = Math.max(0, Math.floor(tileY - tileRadius))
     const maxY = Math.min(this.height - 1, Math.ceil(tileY + tileRadius))
 
+    const tiles: [number, number, number][] = []
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
         const dx = x - tileX
         const dy = y - tileY
-        if (dx * dx + dy * dy <= r2) {
-          const result = cb(x, y)
-          if (returnBoolOnFirstMatch && result) {
-            return true
-          }
-        }
+        const d2 = dx * dx + dy * dy
+        if (d2 <= r2) tiles.push([x, y, d2])
       }
     }
-    if (returnBoolOnFirstMatch) {
-      return false
+    tiles.sort((a, b) => a[2] - b[2])
+
+    for (const [x, y] of tiles) {
+      const result = cb(x, y)
+      if (returnBoolOnFirstMatch && result) return true
     }
+    if (returnBoolOnFirstMatch) return false
   }
 
   private isFluid(t: TerrainType): boolean {
     return t === TerrainType.SAND || t === TerrainType.SAND_SETTLED || t === TerrainType.WATER
+  }
+
+  // Assumes tiles is sorted center-outward (as produced by getCircle).
+  // Keeps the inner core intact and randomly samples only the outermost ring.
+  private truncatePreservingCenter<T extends { x: number; y: number }>(
+    tiles: T[],
+    tileX: number,
+    tileY: number,
+    targetSize: number,
+  ): void {
+    if (targetSize >= tiles.length) return
+
+    const last = tiles[targetSize - 1]
+    const cutoffD2 = (last.x - tileX) ** 2 + (last.y - tileY) ** 2
+
+    let ringStart = targetSize - 1
+    while (ringStart > 0 && (tiles[ringStart - 1].x - tileX) ** 2 + (tiles[ringStart - 1].y - tileY) ** 2 === cutoffD2) {
+      ringStart--
+    }
+
+    let ringEnd = targetSize
+    while (ringEnd < tiles.length && (tiles[ringEnd].x - tileX) ** 2 + (tiles[ringEnd].y - tileY) ** 2 === cutoffD2) {
+      ringEnd++
+    }
+
+    // Partial Fisher-Yates: randomly select `need` tiles from the ring in-place, O(need)
+    const need = targetSize - ringStart
+    const ringSize = ringEnd - ringStart
+    for (let i = 0; i < need; i++) {
+      const j = i + Math.floor(Math.random() * (ringSize - i))
+      const a = ringStart + i
+      const b = ringStart + j
+      const tmp = tiles[a]
+      tiles[a] = tiles[b]
+      tiles[b] = tmp
+    }
+    tiles.length = targetSize
   }
 
   // Returns the subset of newTiles that form a floating island (not connected to any
@@ -344,7 +381,7 @@ export class Tilemap extends SceneBound {
         tiles.push({ x, y })
       })
 
-      if (tilesToModify < tiles.length) truncateArrayRandomly(tiles, tilesToModify)
+      this.truncatePreservingCenter(tiles, tileX, tileY, tilesToModify)
       if (!tiles.length) return tiles
 
       const newValue = TerrainType.SOLID
@@ -371,7 +408,7 @@ export class Tilemap extends SceneBound {
         tiles.push({ x, y })
       })
 
-      if (tilesToModify < tiles.length) truncateArrayRandomly(tiles, tilesToModify)
+      this.truncatePreservingCenter(tiles, tileX, tileY, tilesToModify)
       if (!tiles.length) return tiles
 
       const startTime = this.scene.time.now
@@ -398,7 +435,7 @@ export class Tilemap extends SceneBound {
         tiles.push({ x, y, newValue })
       })
 
-      if (tilesToModify < tiles.length) truncateArrayRandomly(tiles, tilesToModify)
+      this.truncatePreservingCenter(tiles, tileX, tileY, tilesToModify)
       if (!tiles.length) return tiles
 
       const startTime = this.scene.time.now
@@ -426,7 +463,7 @@ export class Tilemap extends SceneBound {
         tiles.push({ x, y, newValue })
       })
 
-      if (tilesToModify < tiles.length) truncateArrayRandomly(tiles, tilesToModify)
+      this.truncatePreservingCenter(tiles, tileX, tileY, tilesToModify)
       if (!tiles.length) return tiles
 
       const startTime = this.scene.time.now
