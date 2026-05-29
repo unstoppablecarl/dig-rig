@@ -5,6 +5,7 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
+import type { Tile } from '../Tilemap/Tilemap.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
 import { ProjectileRenderer } from './ProjectileRenderer.ts'
 
@@ -89,13 +90,14 @@ export abstract class BaseProjectile extends SceneBound {
     return changed
   }
 
-  protected createTiles(count: number) {
+  protected createTiles(count: number, innerRadius = 0) {
     const tiles = this.scene.tilemap.applyEffect(
       this.x,
       this.y,
       this.radius,
       FireMode.CREATE,
       count,
+      innerRadius,
     )
 
     const changed = tiles.length
@@ -119,6 +121,25 @@ export abstract class BaseProjectile extends SceneBound {
     this.matterTank.applyPendingCharge(FireMode.CREATE, changed)
 
     return tiles.length
+  }
+
+  protected createTilesFromList(tiles: Tile[]): number {
+    const created = this.scene.tilemap.applyCreateTiles(tiles)
+    const changed = created.length
+    if (!changed) return 0
+    this.tilesModified += changed
+    let source: Position
+    if ('matterParticleEmitPosition' in this.source) {
+      source = this.source.matterParticleEmitPosition(this._emitPos)
+    } else {
+      source = this.source
+    }
+    shuffleArray(created)
+    for (const tile of created) {
+      this.scene.particleManager.spawnMatter(source, tile, true)
+    }
+    this.matterTank.applyPendingCharge(FireMode.CREATE, changed)
+    return changed
   }
 
   protected destroyTiles(count: number) {

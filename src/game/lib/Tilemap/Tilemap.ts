@@ -14,6 +14,8 @@ export type Tile = { x: number, y: number }
 
 const PLAYER_RADIUS_X = PLAYER_WIDTH * 0.5
 const PLAYER_RADIUS_Y = PLAYER_HEIGHT * 0.5
+// How far the player AABB is extended in the direction of movement when filtering creates.
+const PLAYER_CREATE_VEL_EXTEND = 8
 
 type TileEffectResult = Tile & {
   newValue: TerrainType,
@@ -141,6 +143,8 @@ export class Tilemap extends SceneBound {
     tileY: number,
     tileRadius: number,
     cb: (x: number, y: number) => void,
+    returnBoolOnFirstMatch?: false,
+    innerRadius?: number,
   ): void
 
   public getCircle(
@@ -157,27 +161,40 @@ export class Tilemap extends SceneBound {
     tileRadius: number,
     cb: (x: number, y: number) => any,
     returnBoolOnFirstMatch = false,
+    innerRadius = 0,
   ) {
     const r2 = tileRadius * tileRadius
-    const minX = Math.max(0, Math.floor(tileX - tileRadius))
-    const maxX = Math.min(this.width - 1, Math.ceil(tileX + tileRadius))
+    const ir2 = innerRadius * innerRadius
     const minY = Math.max(0, Math.floor(tileY - tileRadius))
     const maxY = Math.min(this.height - 1, Math.ceil(tileY + tileRadius))
 
-    const tiles: [number, number, number][] = []
     for (let y = minY; y <= maxY; y++) {
-      for (let x = minX; x <= maxX; x++) {
-        const dx = x - tileX
-        const dy = y - tileY
-        const d2 = dx * dx + dy * dy
-        if (d2 <= r2) tiles.push([x, y, d2])
-      }
-    }
-    tiles.sort((a, b) => a[2] - b[2])
+      const dy = y - tileY
+      const dy2 = dy * dy
+      if (dy2 > r2) continue
 
-    for (const [x, y] of tiles) {
-      const result = cb(x, y)
-      if (returnBoolOnFirstMatch && result) return true
+      const outerDx = Math.sqrt(r2 - dy2)
+      const xMin = Math.max(0, Math.ceil(tileX - outerDx))
+      const xMax = Math.min(this.width - 1, Math.floor(tileX + outerDx))
+
+      if (innerRadius > 0 && dy2 <= ir2) {
+        const innerDx = Math.sqrt(ir2 - dy2)
+        const xSkipStart = Math.ceil(tileX - innerDx)
+        const xSkipEnd = Math.floor(tileX + innerDx)
+        for (let x = xMin; x < xSkipStart; x++) {
+          const result = cb(x, y)
+          if (returnBoolOnFirstMatch && result) return true
+        }
+        for (let x = xSkipEnd + 1; x <= xMax; x++) {
+          const result = cb(x, y)
+          if (returnBoolOnFirstMatch && result) return true
+        }
+      } else {
+        for (let x = xMin; x <= xMax; x++) {
+          const result = cb(x, y)
+          if (returnBoolOnFirstMatch && result) return true
+        }
+      }
     }
     if (returnBoolOnFirstMatch) return false
   }
@@ -186,7 +203,7 @@ export class Tilemap extends SceneBound {
     return t === TerrainType.SAND || t === TerrainType.SAND_SETTLED || t === TerrainType.WATER
   }
 
-  // Assumes tiles is sorted center-outward (as produced by getCircle).
+  // Assumes tiles is sorted center-outward. commitEffectTiles sorts before calling this.
   // Keeps the inner core intact and randomly samples only the outermost ring.
   private truncatePreservingCenter<T extends { x: number; y: number }>(
     tiles: T[],
@@ -357,7 +374,7 @@ export class Tilemap extends SceneBound {
   // SOLID creation: geometric circle through EMPTY tiles only — water is a hard wall.
   // Island detection fires onIslandDetected for any tiles not connected to permanent
   // terrain or world bounds so they can be converted to sand.
-  public applyEffect(tileX: number, tileY: number, tileRadius: number, mode: FireMode, tilesToModify = Number.MAX_VALUE) {
+  public applyEffect(tileX: number, tileY: number, tileRadius: number, mode: FireMode, tilesToModify = Number.MAX_VALUE, innerRadius = 0) {
     const tiles = this._appyEffectTiles
     tiles.length = 0
 
@@ -375,7 +392,7 @@ export class Tilemap extends SceneBound {
         if (x > px - PLAYER_RADIUS_X + velLeft && x < px + PLAYER_RADIUS_X + velRight &&
             y > py - PLAYER_RADIUS_Y + velUp && y < py + PLAYER_RADIUS_Y + velDown) return
         tiles.push({ x, y, newValue: TerrainType.SOLID })
-      })
+      }, false, innerRadius)
       if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
       this.chunkManager.computeAnchored()
       const islands = this.findIslandTiles(tiles)
@@ -424,6 +441,35 @@ export class Tilemap extends SceneBound {
     return tiles
   }
 
+  public applyCreateTiles(tiles: Tile[]): Tile[] {
+    if (!tiles.length) return tiles
+    const player = this.scene.player
+    if (player) {
+      const px = player.x, py = player.y
+      const vel = player.container.body?.velocity
+      const vx = vel?.x ?? 0, vy = vel?.y ?? 0
+      const velLeft  = Math.max(Math.min(vx, 0), -PLAYER_CREATE_VEL_EXTEND)
+      const velRight = Math.min(Math.max(vx, 0),  PLAYER_CREATE_VEL_EXTEND)
+      const velUp    = Math.max(Math.min(vy, 0), -PLAYER_CREATE_VEL_EXTEND)
+      const velDown  = Math.min(Math.max(vy, 0),  PLAYER_CREATE_VEL_EXTEND)
+      const left  = px - PLAYER_RADIUS_X + velLeft
+      const right = px + PLAYER_RADIUS_X + velRight
+      const top   = py - PLAYER_RADIUS_Y + velUp
+      const bot   = py + PLAYER_RADIUS_Y + velDown
+      tiles = tiles.filter(({ x, y }) => !(x > left && x < right && y > top && y < bot))
+      if (!tiles.length) return tiles
+    }
+    const startTime = this.scene.time.now
+    for (const { x, y } of tiles) {
+      this.scene.tilemapRenderer.addEffect(x, y, FireMode.CREATE, startTime)
+      this.setTile(x, y, TerrainType.SOLID)
+    }
+    this.chunkManager.computeAnchored()
+    const islands = this.findIslandTiles(tiles)
+    if (islands.length) this.onIslandDetected?.(islands)
+    return tiles
+  }
+
   private commitEffectTiles(
     tiles: TileEffectResult[],
     tileX: number,
@@ -431,6 +477,11 @@ export class Tilemap extends SceneBound {
     tilesToModify: number,
     mode: FireMode,
   ): boolean {
+    if (tilesToModify < tiles.length) {
+      tiles.sort((a, b) =>
+        ((a.x - tileX) ** 2 + (a.y - tileY) ** 2) - ((b.x - tileX) ** 2 + (b.y - tileY) ** 2),
+      )
+    }
     this.truncatePreservingCenter(tiles, tileX, tileY, tilesToModify)
     if (!tiles.length) return false
     const startTime = this.scene.time.now
