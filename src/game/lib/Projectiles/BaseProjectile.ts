@@ -93,7 +93,7 @@ export abstract class BaseProjectile extends SceneBound {
         x: tile.x,
         y: tile.y,
       }
-      this.scene.particleManager.spawnMatter(source, target, true)
+      this.scene.vfxParticleManager.spawnMatter(source, target, true)
     }
     this.matterTank.applyPendingCharge(FireMode.CREATE, changed)
 
@@ -120,7 +120,7 @@ export abstract class BaseProjectile extends SceneBound {
           x: tile.x,
           y: tile.y,
         }
-        this.scene.particleManager.spawnMatter(source, target, false)
+        this.scene.vfxParticleManager.spawnMatter(source, target, false)
       }
 
       this.matterTank.applyPendingCharge(FireMode.DESTROY, tiles.length)

@@ -1,6 +1,6 @@
 import { FireMode } from '../../config.ts'
 
-export class TerrainParticle {
+export class VFXTerrainParticle {
   public lifetime: number = 0
 
   constructor(

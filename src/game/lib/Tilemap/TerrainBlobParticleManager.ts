@@ -3,10 +3,10 @@ import { FireMode } from '../../config.ts'
 import { FIRE_MODE_COLORS } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { TerrainParticle } from './TerrainParticle.ts'
+import { VFXTerrainParticle } from '../VFXParticles/VFXTerrainParticle.ts'
 
-export class TerrainParticleManager extends SceneBound {
-  public particles: TerrainParticle[] = []
+export class TerrainBlobParticleManager extends SceneBound {
+  public particles: VFXTerrainParticle[] = []
   private graphics: GameObjects.Graphics
 
   constructor(public scene: GameLevel) {
@@ -29,7 +29,7 @@ export class TerrainParticleManager extends SceneBound {
       const radius = PMath.Between(2, 6)
 
       this.particles.push(
-        new TerrainParticle(centerX, centerY, vx, vy, type, radius),
+        new VFXTerrainParticle(centerX, centerY, vx, vy, type, radius),
       )
     }
   }
@@ -44,7 +44,7 @@ export class TerrainParticleManager extends SceneBound {
     this.render()
   }
 
-  updateParticle(d: TerrainParticle, dt: number) {
+  updateParticle(d: VFXTerrainParticle, dt: number) {
     d.lifetime += dt
     if (d.expired()) {
       return false
