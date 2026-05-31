@@ -17,7 +17,7 @@ const PLAYER_RADIUS_Y = PLAYER_HEIGHT * 0.5
 // How far the player AABB is extended in the direction of movement when filtering creates.
 const PLAYER_CREATE_VEL_EXTEND = 8
 
-type TileEffectResult = Tile & {
+export type TileEffectResult = Tile & {
   newValue: TerrainType,
 }
 
@@ -369,13 +369,11 @@ export class Tilemap extends SceneBound {
     return islandTiles
   }
 
-  _appyEffectTiles: TileEffectResult[] = []
-
   // SOLID creation: geometric circle through EMPTY tiles only — water is a hard wall.
   // Island detection fires onIslandDetected for any tiles not connected to permanent
   // terrain or world bounds so they can be converted to sand.
-  public applyEffect(tileX: number, tileY: number, tileRadius: number, mode: FireMode, tilesToModify = Number.MAX_VALUE, innerRadius = 0) {
-    const tiles = this._appyEffectTiles
+  public applyEffect(out: TileEffectResult[], tileX: number, tileY: number, tileRadius: number, mode: FireMode, tilesToModify = Number.MAX_VALUE, innerRadius = 0) {
+    const tiles = out
     tiles.length = 0
 
     if (mode === FireMode.CREATE) {

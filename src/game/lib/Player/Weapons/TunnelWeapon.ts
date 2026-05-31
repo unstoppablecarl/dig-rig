@@ -1,3 +1,4 @@
+import { Scenes } from 'phaser'
 import { FireMode } from '../../../config.ts'
 import { shuffleArray } from '../../../helpers/array.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
@@ -5,15 +6,19 @@ import type { Position } from '../../../types.ts'
 import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponConstantInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponConstantInput.ts'
 import { MatterTank } from '../../Matter/MatterTank.ts'
-import type { Tile } from '../../Tilemap/Tilemap.ts'
-import { TerrainType } from '../../Tilemap/_Tilemap-types.ts'
+import type { SweepRecord } from '../../Projectiles/TunnelDestroyProjectile.ts'
 import { TunnelDestroyProjectile } from '../../Projectiles/TunnelDestroyProjectile.ts'
+import { TerrainType } from '../../Tilemap/_Tilemap-types.ts'
+import type { Tile } from '../../Tilemap/Tilemap.ts'
+import UPDATE = Scenes.Events.UPDATE
 
-// record.radius + this = min center-to-center dist from record to player before processing.
-// Must satisfy: PLAYER_SAFE_MARGIN - 5 > PLAYER_RADIUS_Y + PLAYER_CREATE_VEL_EXTEND (= 23)
-// so no restore tile (at most record.radius+5 from record) falls inside applyCreateTiles' AABB filter.
-const PLAYER_SAFE_MARGIN = 30
-// Particles per restore batch — the area can be hundreds of tiles; cap to avoid particle spam.
+// Per-tile safe radius: tiles this close to the player are held in the record's
+// remaining list and retried next frame instead of being created immediately.
+// Must exceed PLAYER_RADIUS_Y + PLAYER_CREATE_VEL_EXTEND (~23) to stay clear of
+// applyCreateTiles' AABB filter.
+const TILE_SAFE_RADIUS = 25
+const TILE_SAFE_RSQ = TILE_SAFE_RADIUS * TILE_SAFE_RADIUS
+
 const MAX_RESTORE_PARTICLES = 40
 
 export class TunnelWeapon extends WeaponConstantInput implements Weapon {
@@ -22,8 +27,6 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   private projectileDestroy: TunnelDestroyProjectile | null = null
   readonly matterTank: MatterTank
 
-  // Shared visited set and result buffer across all records in one frame.
-  // This lets applyCreateTiles (and computeAnchored inside it) run exactly once per frame.
   private _restoreVisited = new Set<number>()
   private _restoreResult: Tile[] = []
   private _emitPos: Position = { x: 0, y: 0 }
@@ -34,6 +37,8 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   ) {
     super(scene)
     this.matterTank = new MatterTank(scene.matterManager, TunnelDestroyProjectile.MAX_TILES_TO_MOD * 5)
+    // Registered directly so restore runs every frame regardless of active weapon / firing state.
+    scene.events.on(UPDATE, this.processRestoreTiles, this)
   }
 
   private _startPos: Position = { x: 0, y: 0 }
@@ -46,8 +51,6 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
       this.projectileDestroy.x = destroyPos.x
       this.projectileDestroy.y = destroyPos.y
     }
-
-    this.processRestoreTiles()
   }
 
   protected onEnable() {
@@ -65,20 +68,29 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
     const availableCharge = this.matterTank.chargeAvailable(FireMode.DESTROY)
     const charge = Math.min(TunnelDestroyProjectile.MAX_TILES_TO_MOD, availableCharge)
     const startPos = this.scene.player.getProjectilePosition(0, this._startPos)
-    this.projectileDestroy = this.scene.projectiles.add(TunnelDestroyProjectile, this.scene.player, this.matterTank, startPos.x, startPos.y, charge, FireMode.DESTROY)
+    this.projectileDestroy = this.scene.projectiles.add(
+      TunnelDestroyProjectile,
+      this.scene.player,
+      this.matterTank,
+      startPos.x,
+      startPos.y,
+      charge,
+      FireMode.DESTROY,
+    )
   }
 
   private processRestoreTiles() {
     const dp = this.projectileDestroy
-    const queue = dp?.sweepQueue
-    if (!queue?.length) return
-
+    if (!dp) return
+    const queue = dp.sweepQueue
+    const tilemap = this.scene.tilemap
+    const width = tilemap.width
     const px = this.scene.player.x
     const py = this.scene.player.y
-    const playerSafeRSq = (dp!.radius + PLAYER_SAFE_MARGIN) ** 2
     const available = this.matterTank.chargeAvailable(FireMode.CREATE)
 
-    // Shared state across all records processed this frame.
+    if (!queue.length && available <= 0) return
+
     const visited = this._restoreVisited
     visited.clear()
     const result = this._restoreResult
@@ -95,54 +107,154 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
         continue
       }
 
-      const dx = record.x - px
-      const dy = record.y - py
-      if (dx * dx + dy * dy <= playerSafeRSq) {
-        queue[writeIdx++] = record
-        continue
+      // Fast path: if all tiles in this record are guaranteed outside TILE_SAFE_RADIUS
+      // (record center is farther than radius + TILE_SAFE_RADIUS), skip per-tile checks.
+      const dx = record.cx - px
+      const dy = record.cy - py
+      const allSafe = dx * dx + dy * dy > (record.radius + TILE_SAFE_RADIUS) ** 2
+
+      const obstructed = this._processRecord(record, result, visited, available, px, py, allSafe)
+
+      // Flood-fill fallback for tiles whose exact position was obstructed (solid).
+      // Phase 1: adjacent-to-solid tiles only. Phase 2: any empty tile.
+      if (obstructed > 0 && result.length < available) {
+        const cx = Math.round(record.cx)
+        const cy = Math.round(record.cy)
+        const targetLen = Math.min(result.length + obstructed, available)
+        const maxRadius = record.radius * 4
+        const scanCircle = (adjOnly: boolean) => {
+          let searchRadius = record.radius
+          while (result.length < targetLen && searchRadius <= maxRadius) {
+            tilemap.getCircle(cx, cy, searchRadius, (x, y) => {
+              if (tilemap.getTile(x, y) !== TerrainType.EMPTY) return false
+              if (adjOnly && !this._isAdjacentToSolid(x, y)) return false
+              const key = y * width + x
+              if (visited.has(key)) return false
+              if (!allSafe) {
+                const fdx = x - px, fdy = y - py
+                if (fdx * fdx + fdy * fdy <= TILE_SAFE_RSQ) return false
+              }
+              visited.add(key)
+              result.push({ x, y })
+              return result.length >= targetLen
+            }, true)
+            searchRadius = Math.round(searchRadius * 1.5)
+          }
+        }
+        scanCircle(true)
+        if (result.length < targetLen) scanCircle(false)
       }
 
-      this._collectInto(record, result, visited, available)
+      if (result.length >= available) outOfMatter = true
 
-      if (result.length >= available) {
-        // Hit the matter cap: keep this record so the remaining tiles are created next time
-        outOfMatter = true
+      if (record.remaining.length > 0) {
         queue[writeIdx++] = record
       }
-      // else: record fully processed — discard
     }
     queue.length = writeIdx
 
+    // Global fallback: if matter remains after all sweep records are exhausted,
+    // search outward from the player. Phase 1: adjacent-to-solid only. Phase 2: any empty.
+    if (!outOfMatter && result.length < available) {
+      const cx = Math.round(px)
+      const cy = Math.round(py)
+      const scanGlobal = (adjOnly: boolean) => {
+        let searchRadius = TILE_SAFE_RADIUS + 1
+        while (result.length < available && searchRadius <= 200) {
+          tilemap.getCircle(cx, cy, searchRadius, (x, y) => {
+            if (tilemap.getTile(x, y) !== TerrainType.EMPTY) return false
+            if (adjOnly && !this._isAdjacentToSolid(x, y)) return false
+            const key = y * width + x
+            if (visited.has(key)) return false
+            const fdx = x - px, fdy = y - py
+            if (fdx * fdx + fdy * fdy <= TILE_SAFE_RSQ) return false
+            visited.add(key)
+            result.push({ x, y })
+            return result.length >= available
+          }, true)
+          searchRadius = Math.round(searchRadius * 1.5)
+        }
+      }
+      scanGlobal(true)
+      if (result.length < available) scanGlobal(false)
+    }
+
     if (result.length > 0) {
-      this.applyRestoreCreate(result)
+      this._applyCreate(result)
     }
   }
 
-  private _collectInto(
-    record: { x: number; y: number; radius: number },
+  // Compacts record.remaining in-place:
+  //   - tiles too close to player → kept for next frame
+  //   - tiles at the matter cap → kept for next frame
+  //   - tiles at empty positions → added to result (consumed)
+  //   - tiles at solid positions → counted as obstructed (consumed, fall through to flood fill)
+  // Returns the number of obstructed tiles encountered.
+  private _processRecord(
+    record: SweepRecord,
     result: Tile[],
     visited: Set<number>,
-    limit: number,
-  ) {
+    available: number,
+    px: number,
+    py: number,
+    allSafe: boolean,
+  ): number {
     const { tilemap } = this.scene
     const { width } = tilemap
-    const cx = Math.round(record.x)
-    const cy = Math.round(record.y)
-    const r = record.radius + 5
+    const remaining = record.remaining
+    let writeIdx = 0
+    let obstructed = 0
+    let limitHit = false
 
-    tilemap.getCircle(cx, cy, r, (x, y) => {
-      if (tilemap.getTile(x, y) !== TerrainType.EMPTY) return false
-      const key = y * width + x
-      if (visited.has(key)) return false
+    for (let i = 0; i < remaining.length; i++) {
+      const tile = remaining[i]
+
+      if (limitHit) {
+        remaining[writeIdx++] = tile
+        continue
+      }
+
+      if (!allSafe) {
+        const tdx = tile.x - px
+        const tdy = tile.y - py
+        if (tdx * tdx + tdy * tdy <= TILE_SAFE_RSQ) {
+          remaining[writeIdx++] = tile  // too close — defer to next frame
+          continue
+        }
+      }
+
+      if (result.length >= available) {
+        limitHit = true
+        remaining[writeIdx++] = tile  // matter cap — defer to next frame
+        continue
+      }
+
+      if (tilemap.getTile(tile.x, tile.y) !== TerrainType.EMPTY) {
+        obstructed++
+        continue  // solid — fall through to flood fill
+      }
+
+      const key = tile.y * width + tile.x
+      if (visited.has(key)) continue
       visited.add(key)
-      result.push({ x, y })
-      return result.length >= limit  // stops getCircle iteration when limit reached
-    }, true)
+      result.push(tile)
+    }
+
+    remaining.length = writeIdx
+    return obstructed
   }
 
-  // Caller guarantees tiles.length <= chargeAvailable(CREATE)
-  private applyRestoreCreate(tiles: Tile[]) {
-    if (!tiles.length) return
+  private _isAdjacentToSolid(x: number, y: number): boolean {
+    const { tilemap } = this.scene
+    return (
+      tilemap.getTile(x - 1, y) !== TerrainType.EMPTY ||
+      tilemap.getTile(x + 1, y) !== TerrainType.EMPTY ||
+      tilemap.getTile(x, y - 1) !== TerrainType.EMPTY ||
+      tilemap.getTile(x, y + 1) !== TerrainType.EMPTY
+    )
+  }
+
+  private _applyCreate(tiles: Tile[]) {
     const created = this.scene.tilemap.applyCreateTiles(tiles)
     if (!created.length) return
     this.matterTank.addPendingCharge(FireMode.CREATE, created.length)
@@ -156,6 +268,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   }
 
   protected onDestroy() {
+    this.scene.events.off(UPDATE, this.processRestoreTiles, this)
     super.onDestroy()
     this.projectileDestroy?.destroy()
     this.projectileDestroy = null

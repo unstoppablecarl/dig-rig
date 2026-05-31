@@ -5,7 +5,7 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
-import type { Tile } from '../Tilemap/Tilemap.ts'
+import type { Tile, TileEffectResult } from '../Tilemap/Tilemap.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
 import { ProjectileRenderer } from './ProjectileRenderer.ts'
 
@@ -71,11 +71,12 @@ export abstract class BaseProjectile extends SceneBound {
   abstract update(dt: number): void
 
   private _emitPos = { x: 0, y: 0 }
+  private _effectTiles: TileEffectResult[] = []
 
   protected solidifyTiles(count: number) {
     const tileX = this.x
     const tileY = this.y
-    const tiles = this.scene.tilemap.applyEffect(tileX, tileY, this.radius, FireMode.SOLIDIFY, count)
+    const tiles = this.scene.tilemap.applyEffect(this._effectTiles, tileX, tileY, this.radius, FireMode.SOLIDIFY, count)
     const changed = tiles.length
     this.tilesModified += changed
     return changed
@@ -84,7 +85,7 @@ export abstract class BaseProjectile extends SceneBound {
   protected meltTiles(count: number) {
     const tileX = this.x
     const tileY = this.y
-    const tiles = this.scene.tilemap.applyEffect(tileX, tileY, this.radius, FireMode.MELT, count)
+    const tiles = this.scene.tilemap.applyEffect(this._effectTiles, tileX, tileY, this.radius, FireMode.MELT, count)
     const changed = tiles.length
     this.tilesModified += changed
     return changed
@@ -92,6 +93,7 @@ export abstract class BaseProjectile extends SceneBound {
 
   protected createTiles(count: number, innerRadius = 0) {
     const tiles = this.scene.tilemap.applyEffect(
+      this._effectTiles,
       this.x,
       this.y,
       this.radius,
@@ -142,10 +144,10 @@ export abstract class BaseProjectile extends SceneBound {
     return changed
   }
 
-  protected destroyTiles(count: number) {
+  protected destroyTiles(count: number): Tile[] {
     const tileX = this.x
     const tileY = this.y
-    const tiles = this.scene.tilemap.applyEffect(tileX, tileY, this.radius, FireMode.DESTROY, count)
+    const tiles = this.scene.tilemap.applyEffect(this._effectTiles, tileX, tileY, this.radius, FireMode.DESTROY, count)
     const changed = tiles.length
     this.tilesModified += changed
     if (changed) {
@@ -168,7 +170,7 @@ export abstract class BaseProjectile extends SceneBound {
       this.matterTank.applyPendingCharge(FireMode.DESTROY, tiles.length)
     }
 
-    return changed
+    return tiles
   }
 
   charge() {

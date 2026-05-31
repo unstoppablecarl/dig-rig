@@ -1,6 +1,7 @@
 import { GameObjects, Input, Scenes } from 'phaser'
 import { FireMode } from '../../../config.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
+import type { TileEffectResult } from '../../Tilemap/Tilemap.ts'
 import { InputController } from './InputController.ts'
 import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
 import POINTER_DOWN = Input.Events.POINTER_DOWN
@@ -16,6 +17,7 @@ export class BrushInput extends InputController {
   private isDrawing = false
   private isCreating = false
   private brushDirty = true
+  private _effectTiles: TileEffectResult[] = []
 
   constructor(
     public scene: GameLevel,
@@ -81,7 +83,7 @@ export class BrushInput extends InputController {
 
   apply(tileX: number, tileY: number) {
     const newValue = this.isCreating ? FireMode.CREATE : FireMode.DESTROY
-    this.scene.tilemap.applyEffect(tileX, tileY, this.radius, newValue, Number.MAX_VALUE)
+    this.scene.tilemap.applyEffect(this._effectTiles, tileX, tileY, this.radius, newValue, Number.MAX_VALUE)
   }
 
   protected onDestroy() {
