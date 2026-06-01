@@ -1,4 +1,4 @@
-import { FireMode, FireModeValues } from '../../../config.ts'
+import { FireModeValues } from '../../../config.ts'
 import { FIRE_MODE_COLORS } from '../../../config/colors.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
@@ -9,6 +9,7 @@ import { MatterType, MatterTypeValues } from '../../Matter/_Matter-types.ts'
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
 import { tilesToRadius } from '../../Projectiles/projectile-radius'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
+import { FireMode } from '../_FireMode-types'
 
 const MIN_CHARGE = 10
 const COLLISION_TYPES = new Set(MatterTypeValues.filter(v => v !== MatterType.EMPTY))

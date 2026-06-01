@@ -1,7 +1,7 @@
 import { Input } from 'phaser'
-import { type FireMode } from '../../../config.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { GameEvent } from '../../events.ts'
+import { FireMode } from '../../Player/_FireMode-types'
 import { PlayerFireGroupState } from '../../Player/PlayerFireGroupState.ts'
 import { BasicWeapon } from '../../Player/Weapons/BasicWeapon.ts'
 import { BurstWeapon } from '../../Player/Weapons/BurstWeapon.ts'

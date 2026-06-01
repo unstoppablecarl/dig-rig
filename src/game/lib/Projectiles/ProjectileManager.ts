@@ -1,8 +1,8 @@
-import { FireMode } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
+import { FireMode } from '../Player/_FireMode-types'
 import type { BaseProjectile, BaseProjectileConstructor, ProjectileSource } from './BaseProjectile.ts'
 import { ProjectileRenderer } from './ProjectileRenderer.ts'
 

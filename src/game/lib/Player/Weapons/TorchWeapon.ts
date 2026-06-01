@@ -1,9 +1,9 @@
-import { FireMode } from '../../../config.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponConstantInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponConstantInput.ts'
 import { TorchProjectile } from '../../Projectiles/TorchProjectile.ts'
+import { FireMode } from '../_FireMode-types'
 
 export class TorchWeapon extends WeaponConstantInput implements Weapon {
   readonly displayName = 'Torch'

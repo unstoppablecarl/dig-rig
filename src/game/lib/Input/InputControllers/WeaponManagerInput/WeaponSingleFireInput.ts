@@ -1,5 +1,5 @@
-import type { FireMode } from '../../../../config.ts'
 import type { GameLevel } from '../../../../scenes/GameLevel.ts'
+import { FireMode } from '../../../Player/_FireMode-types'
 import { InputController } from '../InputController.ts'
 
 export abstract class WeaponSingleFireInput extends InputController {

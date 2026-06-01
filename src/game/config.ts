@@ -1,13 +1,10 @@
+import { FireMode } from './lib/Player/_FireMode-types'
+
 export const CHUNK_SIZE = 64 as const
 
 export const GRAVITY: number = 1
 export const PLAYER_JUMP_POWER = -7
 export const PLAYER_MOVE_SPEED = 3.5
-
-export enum FireMode {
-  CREATE,
-  DESTROY,
-}
 
 export const FireModeValues = Object.values(FireMode).filter((key) => !isNaN(Number(key))) as FireMode[]
 

@@ -1,10 +1,10 @@
 import { Scenes } from 'phaser'
-import { FireMode } from '../../../config.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import type { ChargeableWeapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponChargeInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponChargeInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
+import { FireMode } from '../_FireMode-types'
 import UPDATE = Scenes.Events.UPDATE
 
 export class BasicWeapon extends WeaponChargeInput implements ChargeableWeapon {

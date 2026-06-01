@@ -1,6 +1,6 @@
 import { Scenes } from 'phaser'
-import { FireMode } from '../../../../config.ts'
 import type { GameLevel } from '../../../../scenes/GameLevel.ts'
+import { FireMode } from '../../../Player/_FireMode-types'
 import { InputController } from '../InputController.ts'
 import UPDATE = Scenes.Events.UPDATE
 

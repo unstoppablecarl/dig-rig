@@ -1,8 +1,8 @@
 import { GameObjects, Math as PMath } from 'phaser'
-import { FireMode } from '../../config.ts'
 import { FIRE_MODE_COLORS } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { FireMode } from '../Player/_FireMode-types'
 import type { TileEffectResult } from './Tilemap.ts'
 import { VFXTerrainParticle } from '../VFXParticles/VFXTerrainParticle.ts'
 

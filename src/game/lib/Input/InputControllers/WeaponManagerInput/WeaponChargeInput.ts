@@ -1,7 +1,7 @@
-import { FireMode } from '../../../../config.ts'
 import { getDeltaT } from '../../../../helpers/_helpers.ts'
 import type { GameLevel } from '../../../../scenes/GameLevel.ts'
 import { GameEvent } from '../../../events.ts'
+import { FireMode } from '../../../Player/_FireMode-types'
 import type { Projectile } from '../../../Projectiles/Projectile.ts'
 import { InputController } from '../InputController.ts'
 

@@ -1,4 +1,4 @@
-import { FireMode } from '../../config.ts'
+import { FireMode } from '../Player/_FireMode-types'
 import type { Tile } from '../Tilemap/Tilemap.ts'
 import { BaseProjectile } from './BaseProjectile.ts'
 import { radiusToTiles } from './projectile-radius'

@@ -1,8 +1,8 @@
-import { FireMode } from '../../../config.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponRapidFireInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponRapidFireInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
+import { FireMode } from '../_FireMode-types'
 
 const RAPID_CHARGE = 100
 const RAPID_VELOCITY = 300

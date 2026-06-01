@@ -1,11 +1,11 @@
 import { Geom } from 'phaser'
 import { type Color32, type PixelData, unpackAlpha } from 'pixel-data-js'
-import { FireMode } from '../../config.ts'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import { MatterType } from '../Matter/_Matter-types.ts'
+import { FireMode } from '../Player/_FireMode-types'
 import { PLAYER_HEIGHT, PLAYER_WIDTH } from '../Player/Player.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle

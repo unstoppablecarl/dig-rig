@@ -1,6 +1,6 @@
 import { GameObjects, Input, Scenes } from 'phaser'
-import { FireMode } from '../../../config.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
+import { FireMode } from '../../Player/_FireMode-types'
 import type { TileEffectResult } from '../../Tilemap/Tilemap.ts'
 import { InputController } from './InputController.ts'
 import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL

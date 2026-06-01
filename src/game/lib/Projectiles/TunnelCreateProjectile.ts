@@ -1,5 +1,6 @@
 import { Time } from 'phaser'
-import { FireMode } from '../../config.ts'
+
+import { FireMode } from '../Player/_FireMode-types'
 import type { Tile } from '../Tilemap/Tilemap.ts'
 import { MatterType } from '../Matter/_Matter-types.ts'
 import { BaseProjectile } from './BaseProjectile.ts'

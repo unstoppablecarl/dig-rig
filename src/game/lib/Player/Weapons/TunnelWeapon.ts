@@ -1,5 +1,4 @@
 import { Scenes } from 'phaser'
-import { FireMode } from '../../../config.ts'
 import { shuffleArray } from '../../../helpers/array.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
@@ -10,6 +9,7 @@ import type { SweepRecord } from '../../Projectiles/TunnelDestroyProjectile.ts'
 import { TunnelDestroyProjectile } from '../../Projectiles/TunnelDestroyProjectile.ts'
 import { MatterType } from '../../Matter/_Matter-types.ts'
 import type { Tile } from '../../Tilemap/Tilemap.ts'
+import { FireMode } from '../_FireMode-types'
 import UPDATE = Scenes.Events.UPDATE
 
 // Per-tile safe radius: tiles this close to the player are held in the record's
