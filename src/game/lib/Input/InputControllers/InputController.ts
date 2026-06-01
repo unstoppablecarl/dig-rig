@@ -5,7 +5,7 @@ import { EventsBinder, type InputBinder } from '../../Util/EventsBinder.ts'
 
 export abstract class InputController extends SceneBound<GameLevel> {
   private _enabled = false
-  private binder: EventsBinder
+  protected binder: EventsBinder
 
   constructor(scene: GameLevel) {
     super(scene)

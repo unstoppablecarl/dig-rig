@@ -2,12 +2,11 @@ import { Geom } from 'phaser'
 import { type Color32, type PixelData, unpackAlpha } from 'pixel-data-js'
 import { FireMode } from '../../config.ts'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
-import { truncateArrayRandomly } from '../../helpers/array.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
-import { PLAYER_HEIGHT, PLAYER_WIDTH } from '../Player/Player.ts'
 import { MatterType } from '../Matter/_Matter-types.ts'
+import { PLAYER_HEIGHT, PLAYER_WIDTH } from '../Player/Player.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
 
@@ -15,6 +14,12 @@ export type Tile = { x: number, y: number }
 
 const PLAYER_RADIUS_X = PLAYER_WIDTH * 0.5
 const PLAYER_RADIUS_Y = PLAYER_HEIGHT * 0.5
+// How far the player AABB is extended in the direction of movement when filtering creates.
+const PLAYER_CREATE_VEL_EXTEND = 8
+
+export type TileEffectResult = Tile & {
+  newValue: MatterType,
+}
 
 export class Tilemap extends SceneBound {
   private tiles: Uint8Array<ArrayBuffer>
@@ -129,6 +134,8 @@ export class Tilemap extends SceneBound {
     tileY: number,
     tileRadius: number,
     cb: (x: number, y: number) => void,
+    returnBoolOnFirstMatch?: false,
+    innerRadius?: number,
   ): void
 
   public getCircle(
@@ -145,82 +152,161 @@ export class Tilemap extends SceneBound {
     tileRadius: number,
     cb: (x: number, y: number) => any,
     returnBoolOnFirstMatch = false,
+    innerRadius = 0,
   ) {
     const r2 = tileRadius * tileRadius
-    const minX = Math.max(0, Math.floor(tileX - tileRadius))
-    const maxX = Math.min(this.width - 1, Math.ceil(tileX + tileRadius))
+    const ir2 = innerRadius * innerRadius
     const minY = Math.max(0, Math.floor(tileY - tileRadius))
     const maxY = Math.min(this.height - 1, Math.ceil(tileY + tileRadius))
 
     for (let y = minY; y <= maxY; y++) {
-      for (let x = minX; x <= maxX; x++) {
-        const dx = x - tileX
-        const dy = y - tileY
-        if (dx * dx + dy * dy <= r2) {
+      const dy = y - tileY
+      const dy2 = dy * dy
+      if (dy2 > r2) continue
+
+      const outerDx = Math.sqrt(r2 - dy2)
+      const xMin = Math.max(0, Math.ceil(tileX - outerDx))
+      const xMax = Math.min(this.width - 1, Math.floor(tileX + outerDx))
+
+      if (innerRadius > 0 && dy2 <= ir2) {
+        const innerDx = Math.sqrt(ir2 - dy2)
+        const xSkipStart = Math.ceil(tileX - innerDx)
+        const xSkipEnd = Math.floor(tileX + innerDx)
+        for (let x = xMin; x < xSkipStart; x++) {
           const result = cb(x, y)
-          if (returnBoolOnFirstMatch && result) {
-            return true
-          }
+          if (returnBoolOnFirstMatch && result) return true
+        }
+        for (let x = xSkipEnd + 1; x <= xMax; x++) {
+          const result = cb(x, y)
+          if (returnBoolOnFirstMatch && result) return true
+        }
+      } else {
+        for (let x = xMin; x <= xMax; x++) {
+          const result = cb(x, y)
+          if (returnBoolOnFirstMatch && result) return true
         }
       }
     }
-    if (returnBoolOnFirstMatch) {
-      return false
-    }
+    if (returnBoolOnFirstMatch) return false
   }
 
-  _appyEffectTiles: Tile[] = []
+  // Assumes tiles is sorted center-outward. commitEffectTiles sorts before calling this.
+  // Keeps the inner core intact and randomly samples only the outermost ring.
+  private truncatePreservingCenter<T extends { x: number; y: number }>(
+    tiles: T[],
+    tileX: number,
+    tileY: number,
+    targetSize: number,
+  ): void {
+    if (targetSize >= tiles.length) return
 
-  public applyEffect(tileX: number, tileY: number, tileRadius: number, mode: FireMode, tilesToModify = Number.MAX_VALUE) {
-    const { x: px, y: py } = this.scene.player
-    const velocity = this.scene.player.container.body?.velocity
-    const vx = velocity?.x ?? 0
-    const vy = velocity?.y ?? 0
-    const MAX_VEL_EXTEND = 8
-    const velLeft = Math.max(Math.min(vx, 0), -MAX_VEL_EXTEND)
-    const velRight = Math.min(Math.max(vx, 0), MAX_VEL_EXTEND)
-    const velUp = Math.max(Math.min(vy, 0), -MAX_VEL_EXTEND)
-    const velDown = Math.min(Math.max(vy, 0), MAX_VEL_EXTEND)
+    const last = tiles[targetSize - 1]
+    const cutoffD2 = (last.x - tileX) ** 2 + (last.y - tileY) ** 2
 
-    this._appyEffectTiles.length = 0
-    const tiles = this._appyEffectTiles
-    let newValue: MatterType = MatterType.EMPTY
+    let ringStart = targetSize - 1
+    while (ringStart > 0 && (tiles[ringStart - 1].x - tileX) ** 2 + (tiles[ringStart - 1].y - tileY) ** 2 === cutoffD2) {
+      ringStart--
+    }
+
+    let ringEnd = targetSize
+    while (ringEnd < tiles.length && (tiles[ringEnd].x - tileX) ** 2 + (tiles[ringEnd].y - tileY) ** 2 === cutoffD2) {
+      ringEnd++
+    }
+
+    // Partial Fisher-Yates: randomly select `need` tiles from the ring in-place, O(need)
+    const need = targetSize - ringStart
+    const ringSize = ringEnd - ringStart
+    for (let i = 0; i < need; i++) {
+      const j = i + Math.floor(Math.random() * (ringSize - i))
+      const a = ringStart + i
+      const b = ringStart + j
+      const tmp = tiles[a]
+      tiles[a] = tiles[b]
+      tiles[b] = tmp
+    }
+    tiles.length = targetSize
+  }
+
+  public applyEffect(out: TileEffectResult[], tileX: number, tileY: number, tileRadius: number, mode: FireMode, tilesToModify = Number.MAX_VALUE, innerRadius = 0) {
+    const tiles = out
+    tiles.length = 0
     if (mode === FireMode.CREATE) {
-      newValue = MatterType.SOLID
-    }
+      const { x: px, y: py } = this.scene.player
+      const vel = this.scene.player.container.body?.velocity
+      const vx = vel?.x ?? 0, vy = vel?.y ?? 0
+      const MAX_VEL_EXTEND = 8
+      const velLeft = Math.max(Math.min(vx, 0), -MAX_VEL_EXTEND)
+      const velRight = Math.min(Math.max(vx, 0), MAX_VEL_EXTEND)
+      const velUp = Math.max(Math.min(vy, 0), -MAX_VEL_EXTEND)
+      const velDown = Math.min(Math.max(vy, 0), MAX_VEL_EXTEND)
+      this.getCircle(tileX, tileY, tileRadius, (x, y) => {
+        if (this.getTile(x, y) !== MatterType.EMPTY) return
+        if (x > px - PLAYER_RADIUS_X + velLeft && x < px + PLAYER_RADIUS_X + velRight &&
+          y > py - PLAYER_RADIUS_Y + velUp && y < py + PLAYER_RADIUS_Y + velDown) return
+        tiles.push({ x, y, newValue: MatterType.SOLID })
+      }, false, innerRadius)
+      if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
 
-    this.getCircle(tileX, tileY, tileRadius, (x, y) => {
-      const value = this.getTile(x, y)
+    } else if (mode === FireMode.DESTROY) {
+      this.getCircle(tileX, tileY, tileRadius, (x, y) => {
+        const value = this.getTile(x, y)
+        if (value === MatterType.PERMANENT || value === MatterType.EMPTY) return
+        tiles.push({ x, y, newValue: MatterType.EMPTY })
+      })
+      if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
 
-      if (value === MatterType.PERMANENT) return
-      if (newValue === value) return
-      if (
-        newValue === MatterType.SOLID &&
-        x > px - PLAYER_RADIUS_X + velLeft &&
-        x < px + PLAYER_RADIUS_X + velRight &&
-        y > py - PLAYER_RADIUS_Y + velUp &&
-        y < py + PLAYER_RADIUS_Y + velDown
-      ) return
-
-      tiles.push({ x, y })
-    })
-
-    if (tilesToModify < tiles.length) {
-      truncateArrayRandomly(tiles, tilesToModify)
-    }
-
-    if (!tiles.length) {
-      return tiles
-    }
-
-    const startTime = this.scene.time.now
-
-    for (const { x, y } of tiles) {
-      this.scene.tilemapRenderer.addEffect(x, y, newValue, startTime)
-      this.setTile(x, y, newValue)
     }
 
     return tiles
+  }
+
+  public applyCreateTiles(tiles: Tile[]): Tile[] {
+    if (!tiles.length) return tiles
+    const player = this.scene.player
+    if (player) {
+      const px = player.x, py = player.y
+      const vel = player.container.body?.velocity
+      const vx = vel?.x ?? 0, vy = vel?.y ?? 0
+      const velLeft = Math.max(Math.min(vx, 0), -PLAYER_CREATE_VEL_EXTEND)
+      const velRight = Math.min(Math.max(vx, 0), PLAYER_CREATE_VEL_EXTEND)
+      const velUp = Math.max(Math.min(vy, 0), -PLAYER_CREATE_VEL_EXTEND)
+      const velDown = Math.min(Math.max(vy, 0), PLAYER_CREATE_VEL_EXTEND)
+      const left = px - PLAYER_RADIUS_X + velLeft
+      const right = px + PLAYER_RADIUS_X + velRight
+      const top = py - PLAYER_RADIUS_Y + velUp
+      const bot = py + PLAYER_RADIUS_Y + velDown
+      tiles = tiles.filter(({ x, y }) => !(x > left && x < right && y > top && y < bot))
+      if (!tiles.length) return tiles
+    }
+    const startTime = this.scene.time.now
+    for (const { x, y } of tiles) {
+      this.scene.tilemapRenderer.addEffect(x, y, FireMode.CREATE, startTime)
+      this.setTile(x, y, MatterType.SOLID)
+    }
+
+    return tiles
+  }
+
+  private commitEffectTiles(
+    tiles: TileEffectResult[],
+    tileX: number,
+    tileY: number,
+    tilesToModify: number,
+    mode: FireMode,
+  ): boolean {
+    if (tilesToModify < tiles.length) {
+      tiles.sort((a, b) =>
+        ((a.x - tileX) ** 2 + (a.y - tileY) ** 2) - ((b.x - tileX) ** 2 + (b.y - tileY) ** 2),
+      )
+    }
+    this.truncatePreservingCenter(tiles, tileX, tileY, tilesToModify)
+    if (!tiles.length) return false
+    const startTime = this.scene.time.now
+    for (const { x, y, newValue } of tiles) {
+      this.scene.tilemapRenderer.addEffect(x, y, mode, startTime)
+      this.setTile(x, y, newValue)
+    }
+    return true
   }
 
   checkForCollision(x: number, y: number, vx: number, vy: number, dt: number, scale = 1): {
@@ -332,6 +418,20 @@ export class Tilemap extends SceneBound {
     this._collisionPosition.x = Math.round(startX + nx * maxDistance)
     this._collisionPosition.y = Math.round(startY + ny * maxDistance)
     return this._collisionPosition
+  }
+
+  setBorder(thickness: number, value: MatterType) {
+    const { width, height } = this
+    for (let t = 0; t < thickness; t++) {
+      for (let x = t; x < width - t; x++) {
+        this.setTile(x, t, value)
+        this.setTile(x, height - 1 - t, value)
+      }
+      for (let y = t + 1; y < height - 1 - t; y++) {
+        this.setTile(t, y, value)
+        this.setTile(width - 1 - t, y, value)
+      }
+    }
   }
 
   static makeFromSolidAndPermanentPixelData(scene: GameLevel, solidData: PixelData, permanentData: PixelData) {

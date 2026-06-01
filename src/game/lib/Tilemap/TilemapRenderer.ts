@@ -1,14 +1,9 @@
 import { GameObjects } from 'phaser'
-import {
-  GLOW_ENABLED,
-  GLOW_TRANSITION_ANIMATION_ENABLED,
-
-} from '../../config.ts'
+import { FireMode, GLOW_ENABLED, GLOW_TRANSITION_ANIMATION_ENABLED } from '../../config.ts'
 import { CREATE_COLOR, DESTROY_COLOR, PERMANENT_COLOR } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { RGBShaderColor } from '../../types.ts'
-import { MatterType } from '../Matter/_Matter-types.ts'
 import { TerrainChunkGlowRenderer } from './TilemapRenderer/TerrainChunkGlowRenderer.ts'
 import { TerrainChunkRenderer } from './TilemapRenderer/TerrainChunkRenderer.ts'
 import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'
@@ -94,17 +89,17 @@ const FRAG_SHADER = `
 
     vec3 blendOverlay(vec3 base, vec3 blend, float ratio) {
         vec3 blended =  vec3(
-            blendOverlay(base.r, blend.r),
-            blendOverlay(base.g, blend.g),
-            blendOverlay(base.b, blend.b)
+        blendOverlay(base.r, blend.r),
+        blendOverlay(base.g, blend.g),
+        blendOverlay(base.b, blend.b)
         );
 
-       
+
         blended.rgb = mix(base.rgb, blended, ratio);
-        
+
         return blended;
     }
-    
+
     void main() {
         // uMask encodes tile type in the R channel:
         //   R = 0.00  →  EMPTY        (transparent, discarded)
@@ -234,8 +229,6 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
       glowTransitionMS: this.glowTransitionMS,
     })
 
-
-
     const shader: Shader = scene.add.shader(
       {
         name: 'TerrainShader',
@@ -277,8 +270,8 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
     ;(shader as any).renderNode?.programManager?.getCurrentProgramSuite?.()
   }
 
-  addEffect(tx: number, ty: number, value: MatterType, startTime?: number) {
-    this.effectSystem.addEffect(tx, ty, value, startTime)
+  addEffect(tx: number, ty: number, mode: FireMode, startTime?: number) {
+    this.effectSystem.addEffect(tx, ty, mode, startTime)
   }
 
   render() {

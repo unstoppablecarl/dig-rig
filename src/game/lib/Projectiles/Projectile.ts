@@ -30,42 +30,45 @@ export class Projectile extends BaseProjectile {
     if (!this.fired) return
 
     // if in create mode, and not already collided/expanding yet, and collided with collision map tile
-    if (this.mode === FireMode.CREATE && !this.expandTimer) {
-      const { stepDx, stepDy, totalSteps } = getCollisionSteps(this.vx, this.vy, dt)
+    if (this.mode === FireMode.CREATE) {
+      if (!this.expandTimer) {
+        const { stepDx, stepDy, totalSteps } = getCollisionSteps(this.vx, this.vy, dt)
 
-      for (let i = 0; i < totalSteps; i++) {
-        const stepX = this.x + stepDx * i
-        const stepY = this.y + stepDy * i
+        for (let i = 0; i < totalSteps; i++) {
+          const stepX = this.x + stepDx * i
+          const stepY = this.y + stepDy * i
 
         const collision = this.scene.tilemap.getTileFromWorld(
-          stepX,
-          stepY,
+            stepX,
+            stepY,
         ) !== MatterType.EMPTY
 
-        if (collision) {
-          this.x = stepX - stepDx
-          this.y = stepY - stepDy
+          if (collision) {
+            this.x = stepX - stepDx
+            this.y = stepY - stepDy
 
-          this.renderer?.fadeOutAndDestroy()
-          this.radius = EXPAND_START_RADIUS
-          // stop
-          this.vx = 0
-          this.vy = 0
-          this.expandTimer = this.startExpandTimer()
+            this.renderer?.fadeOutAndDestroy()
+            this.radius = EXPAND_START_RADIUS
+            // stop
+            this.vx = 0
+            this.vy = 0
 
-          break
+            this.expandTimer = this.startExpandTimer()
+
+            break
+          }
         }
       }
-    }
-
-    if (this.mode === FireMode.DESTROY) {
+    } else {
       if (this.charge() > 0) {
-        this.destroyTiles(this.charge())
-
-        const easedValue = PMath.Easing.Circular.In(this.lifespanPercent)
-        const decay = PMath.Linear(1, FINAL_DECAY_SCALE, easedValue)
-        this.radius = this.initialRadius * decay
+        if (this.mode === FireMode.DESTROY) {
+          this.destroyTiles(this.charge())
+        }
       }
+
+      const easedValue = PMath.Easing.Circular.In(this.lifespanPercent)
+      const decay = PMath.Linear(1, FINAL_DECAY_SCALE, easedValue)
+      this.radius = this.initialRadius * decay
     }
 
     this.x += this.vx * dt
@@ -91,6 +94,7 @@ export class Projectile extends BaseProjectile {
     }
 
     this.lifespanPercent = (this.tilesModified / this.tilesToModify)
+
   }
 
   public startExpandTimer() {

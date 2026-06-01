@@ -1,51 +1,27 @@
 import { Scenes } from 'phaser'
 import { FireMode } from '../../../config.ts'
-import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import type { ChargeableWeapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponChargeInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponChargeInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
-import { EventsBinder } from '../../Util/EventsBinder.ts'
 import UPDATE = Scenes.Events.UPDATE
 
-export class BasicWeapon extends SceneBound implements ChargeableWeapon {
+export class BasicWeapon extends WeaponChargeInput implements ChargeableWeapon {
   readonly displayName = 'Basic'
 
   private queued: Projectile | null = null
-  private chargeInput: WeaponChargeInput
-  private binder
 
   constructor(
     public scene: GameLevel,
     readonly slot: number,
   ) {
     super(scene)
-    this.binder = new EventsBinder()
     this.binder.add(scene.events, UPDATE, this.update, this)
-    this.chargeInput = new WeaponChargeInput(scene, this)
   }
 
   getFireMode(): FireMode {
-    return this.chargeInput.mode
-  }
-
-  getChargePercent(): number {
-    return this.chargeInput.getChargePercent()
-  }
-
-  get enabled() {
-    return this.chargeInput.enabled
-  }
-
-  setEnabled(value: boolean) {
-    this.chargeInput.setInputEnabled(value)
-
-    if (value) {
-      this.binder.bind()
-    } else {
-      this.binder.unBind()
-    }
+    return this.mode
   }
 
   private _pos: Position = { x: 0, y: 0 }
@@ -72,7 +48,8 @@ export class BasicWeapon extends SceneBound implements ChargeableWeapon {
     this.queued = null
   }
 
-  public update() {
+  update(_time: number, delta: number) {
+    super.update(_time, delta)
     if (this.queued) {
       const pos = this.scene.player.getProjectilePosition(this.queued.radius, this._pos)
       this.queued.x = pos.x
@@ -81,11 +58,8 @@ export class BasicWeapon extends SceneBound implements ChargeableWeapon {
   }
 
   protected onDestroy() {
-    this.chargeInput.destroy()
+    super.onDestroy()
     this.queued?.destroy()
     this.queued = null
-    this.binder.unBind()
-    // @ts-expect-error: destroy
-    this.binder = null
   }
 }

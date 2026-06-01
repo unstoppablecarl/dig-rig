@@ -56,6 +56,7 @@ export abstract class GameLevel extends Scene {
   public inputManager: InputManager
   public playerActions: PlayerActions
   public terrainBlobParticleManager: TerrainBlobParticleManager
+  public ui: UIScene
   protected id: LevelId
 
   protected makeTilemapRenderer(tilemap: Tilemap): TilemapRenderer {
@@ -93,7 +94,7 @@ export abstract class GameLevel extends Scene {
   init(entry: LevelEntryWithId) {
     this.id = entry.id
     this.displayName = entry.displayName
-    this.registerSubScene(UIScene)
+    this.ui = this.registerSubScene(UIScene)
     this.registerSubScene(BgScene)
 
     const mouse = this.input.mouse as MouseManager
@@ -239,9 +240,10 @@ export abstract class GameLevel extends Scene {
     return effectTexture
   }
 
-  private registerSubScene(Def: { ID: string, new(): any }) {
+  private registerSubScene<T extends { ID: string, new(): E }, E>(Def: T): E {
     if (!this.scene.get(Def.ID)) {
       this.scene.add(Def.ID, Def)
     }
+    return this.scene.get(Def.ID) as E
   }
 }

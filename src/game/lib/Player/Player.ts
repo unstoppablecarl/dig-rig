@@ -222,7 +222,8 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     this.container.add(this.arm)
 
     this.sprite.on(Animations.Events.ANIMATION_UPDATE, (anim: Animation, frame: AnimationFrame) => {
-      const newValue = (anim.key === 'walk') && (frame.index === 1 || frame.index === 2 || frame.index === 3)
+      const newValue = (anim.key === 'walk') && (frame.index === 1 || frame.index === 2 || frame.index === 3) ||
+        (anim.key === 'walk-reverse') && (frame.index === 3 || frame.index === 4 || frame.index === 5)
       if (newValue !== this.armMove) {
         this.armMove = newValue
         this.updateArmPosition()

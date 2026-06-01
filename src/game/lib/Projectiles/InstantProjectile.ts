@@ -16,7 +16,6 @@ export class InstantProjectile extends BaseProjectile {
   fire() {
     const charge = this.charge()
     this.matterTank.addPendingCharge(this.mode, charge)
-
     if (this.mode === FireMode.DESTROY) {
       this.destroyTiles(charge)
     } else if (this.mode === FireMode.CREATE) {

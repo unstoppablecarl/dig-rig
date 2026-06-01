@@ -2,16 +2,14 @@ import { Scenes } from 'phaser'
 import { FireMode } from '../../../../config.ts'
 import type { GameLevel } from '../../../../scenes/GameLevel.ts'
 import { InputController } from '../InputController.ts'
-import type { ImmediateWeapon } from '../WeaponManagerInput.ts'
 import UPDATE = Scenes.Events.UPDATE
 
-export class WeaponRapidFireInput extends InputController {
+export abstract class WeaponRapidFireInput extends InputController {
   protected coolDown = 0
+  abstract readonly rateOfFireMs: number
 
   constructor(
     public scene: GameLevel,
-    public weapon: ImmediateWeapon,
-    readonly rateOfFireMs: number,
   ) {
     super(scene)
     this.addEvent(this.scene.events, UPDATE, this.update)
@@ -22,25 +20,30 @@ export class WeaponRapidFireInput extends InputController {
 
     if (this.coolDown > 0) return
 
-    const actions = this.scene.playerActions
+    const a = this.scene.playerActions
+    const fireGroup = this.scene.playerWeaponManager.fireGroup
 
     let mode: FireMode
-    if (actions.FIRE_SECONDARY.isDown()) {
-      mode = FireMode.CREATE
-    } else if (actions.FIRE_PRIMARY.isDown()) {
-      mode = FireMode.DESTROY
+    if (a.FIRE_SECONDARY.isDown()) {
+      mode = fireGroup.secondary()
+    } else if (a.FIRE_PRIMARY.isDown()) {
+      mode = fireGroup.primary()
     } else {
       this.coolDown = 0
       return
     }
 
     this.coolDown += this.rateOfFireMs
-    this.weapon.fire(mode)
+    this.fire(mode)
   }
+
+  setEnabled(value: boolean) {
+    this.setInputEnabled(value)
+  }
+
+  abstract fire(mode: FireMode): void
 
   protected onDestroy() {
     super.onDestroy()
-    // @ts-expect-error: destroy
-    this.weapon = null
   }
 }

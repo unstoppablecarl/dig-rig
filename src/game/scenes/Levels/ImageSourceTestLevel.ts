@@ -1,3 +1,4 @@
+import { MatterType } from '../../lib/Matter/_Matter-types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { textureToPixelData } from '../../lib/Textures/texture-util.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
@@ -29,7 +30,10 @@ export default class ImageSourceTestLevel extends GameLevel {
     const solidData = textureToPixelData(this.textures, this.SOLID)
     const permanentData = textureToPixelData(this.textures, this.PERMANENT)
 
-    return Tilemap.makeFromSolidAndPermanentPixelData(this, solidData, permanentData)
+    const tilemap = Tilemap.makeFromSolidAndPermanentPixelData(this, solidData, permanentData)
+    tilemap.setBorder(2, MatterType.PERMANENT)
+
+    return tilemap
   }
 
   makePlayer() {

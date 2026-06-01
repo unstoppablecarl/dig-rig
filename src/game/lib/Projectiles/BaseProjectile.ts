@@ -4,6 +4,7 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
+import type { Tile, TileEffectResult } from '../Tilemap/Tilemap.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
 import { ProjectileRenderer } from './ProjectileRenderer.ts'
 
@@ -25,7 +26,7 @@ export abstract class BaseProjectile extends SceneBound {
   protected initialVY: number
   protected lifespanPercent = 0
 
-  protected readonly DEFAULT_VELOCITY = 100
+  protected readonly DEFAULT_VELOCITY: number = 100
 
   constructor(
     public scene: GameLevel,
@@ -67,14 +68,17 @@ export abstract class BaseProjectile extends SceneBound {
   abstract update(dt: number): void
 
   private _emitPos = { x: 0, y: 0 }
+  private _effectTiles: TileEffectResult[] = []
 
-  protected createTiles(count: number) {
+  protected createTiles(count: number, innerRadius = 0) {
     const tiles = this.scene.tilemap.applyEffect(
+      this._effectTiles,
       this.x,
       this.y,
       this.radius,
       FireMode.CREATE,
       count,
+      innerRadius,
     )
 
     const changed = tiles.length
@@ -100,10 +104,29 @@ export abstract class BaseProjectile extends SceneBound {
     return tiles.length
   }
 
-  protected destroyTiles(count: number) {
+  protected createTilesFromList(tiles: Tile[]): number {
+    const created = this.scene.tilemap.applyCreateTiles(tiles)
+    const changed = created.length
+    if (!changed) return 0
+    this.tilesModified += changed
+    let source: Position
+    if ('matterParticleEmitPosition' in this.source) {
+      source = this.source.matterParticleEmitPosition(this._emitPos)
+    } else {
+      source = this.source
+    }
+    shuffleArray(created)
+    for (const tile of created) {
+      this.scene.vfxParticleManager.spawnMatter(source, tile, true)
+    }
+    this.matterTank.applyPendingCharge(FireMode.CREATE, changed)
+    return changed
+  }
+
+  protected destroyTiles(count: number): Tile[] {
     const tileX = this.x
     const tileY = this.y
-    const tiles = this.scene.tilemap.applyEffect(tileX, tileY, this.radius, FireMode.DESTROY, count)
+    const tiles = this.scene.tilemap.applyEffect(this._effectTiles, tileX, tileY, this.radius, FireMode.DESTROY, count)
     const changed = tiles.length
     this.tilesModified += changed
     if (changed) {
@@ -126,7 +149,7 @@ export abstract class BaseProjectile extends SceneBound {
       this.matterTank.applyPendingCharge(FireMode.DESTROY, tiles.length)
     }
 
-    return changed
+    return tiles
   }
 
   charge() {

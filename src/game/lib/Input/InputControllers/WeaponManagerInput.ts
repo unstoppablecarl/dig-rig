@@ -2,13 +2,13 @@ import { Input } from 'phaser'
 import { type FireMode } from '../../../config.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { GameEvent } from '../../events.ts'
+import { PlayerFireGroupState } from '../../Player/PlayerFireGroupState.ts'
 import { BasicWeapon } from '../../Player/Weapons/BasicWeapon.ts'
 import { BurstWeapon } from '../../Player/Weapons/BurstWeapon.ts'
 import { InstantWeapon } from '../../Player/Weapons/InstantWeapon.ts'
 import { RapidWeapon } from '../../Player/Weapons/RapidWeapon.ts'
 import { TorchWeapon } from '../../Player/Weapons/TorchWeapon.ts'
 import { TunnelWeapon } from '../../Player/Weapons/TunnelWeapon.ts'
-import type { Projectile } from '../../Projectiles/Projectile.ts'
 import { InputController } from './InputController.ts'
 import ANY_KEY_DOWN = Input.Keyboard.Events.ANY_KEY_DOWN
 
@@ -22,14 +22,8 @@ export interface Weapon {
   getSuffix?: () => string
 }
 
-export interface ImmediateWeapon extends Weapon {
-  fire(mode: FireMode): void
-}
-
 export interface ChargeableWeapon extends Weapon {
-  getQueuedProjectile(mode: FireMode): Projectile
   getChargePercent(): number
-  fireQueued(): void
   getFireMode(): FireMode
 }
 
@@ -37,9 +31,12 @@ export class WeaponManagerInput extends InputController {
   private readonly weapons = new Map<number, Weapon | ChargeableWeapon>()
 
   private _active: Weapon | ChargeableWeapon
+  fireGroup: PlayerFireGroupState
 
   constructor(scene: GameLevel) {
     super(scene)
+
+    this.fireGroup = new PlayerFireGroupState()
     this.addEvent(this.scene.input.keyboard!, ANY_KEY_DOWN, this.keydown)
 
     const weapons = [
