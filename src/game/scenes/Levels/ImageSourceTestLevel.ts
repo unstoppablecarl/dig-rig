@@ -1,6 +1,6 @@
-import { MatterType } from '../../lib/Matter/_Matter-types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { textureToPixelData } from '../../lib/Textures/texture-util.ts'
+import { MatterType } from '../../lib/Matter/_Matter-types.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
 import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture
