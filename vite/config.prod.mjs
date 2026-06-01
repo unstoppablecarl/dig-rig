@@ -17,9 +17,6 @@ const baseConfig = {
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          phaser: ['phaser'],
-        },
       },
     },
   },
