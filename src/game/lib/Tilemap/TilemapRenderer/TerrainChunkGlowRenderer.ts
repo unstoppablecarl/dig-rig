@@ -1,7 +1,7 @@
 import { CHUNK_SIZE } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { TerrainType } from '../_Tilemap-types.ts'
+import { MatterType } from '../_Tilemap-types.ts'
 import type { Chunk, ChunkId } from '../Chunk.ts'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import CanvasTexture = Phaser.Textures.CanvasTexture
@@ -147,7 +147,7 @@ export class TerrainChunkGlowRenderer extends SceneBound implements TerrainChunk
     // 1. Init: empty=0 (seed), solid=255 (infinity sentinel)
     for (let y = 0; y < EXT; y++) {
       for (let x = 0; x < EXT; x++) {
-        dist[y * EXT + x] = tilemap.getTile(startX + x, startY + y) === TerrainType.EMPTY ? 0 : 255
+        dist[y * EXT + x] = tilemap.getTile(startX + x, startY + y) === MatterType.EMPTY ? 0 : 255
       }
     }
 

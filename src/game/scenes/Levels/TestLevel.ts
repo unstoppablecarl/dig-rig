@@ -1,7 +1,7 @@
 import { Driller } from '../../lib/Entities/Driller.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { ScaleLevelTexture } from '../../lib/Textures/ScaleLevelTexture.ts'
-import { TerrainType } from '../../lib/Tilemap/_Tilemap-types.ts'
+import { MatterType } from '../../lib/Tilemap/_Tilemap-types.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
 import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture
@@ -32,10 +32,10 @@ export default class TestLevel extends GameLevel {
     )
 
     let ref = 600
-    tilemap.setRect(0, ref - 100, tilemap.width, 500, TerrainType.SOLID)
-    tilemap.setRect(200, ref - 160, 160, 60, TerrainType.SOLID)
-    tilemap.setRect(230, ref - 200, 60, 60, TerrainType.SOLID)
-    tilemap.setRect(450, ref - 220, 60, 60, TerrainType.SOLID)
+    tilemap.setRect(0, ref - 100, tilemap.width, 500, MatterType.SOLID)
+    tilemap.setRect(200, ref - 160, 160, 60, MatterType.SOLID)
+    tilemap.setRect(230, ref - 200, 60, 60, MatterType.SOLID)
+    tilemap.setRect(450, ref - 220, 60, 60, MatterType.SOLID)
 
     return tilemap
   }

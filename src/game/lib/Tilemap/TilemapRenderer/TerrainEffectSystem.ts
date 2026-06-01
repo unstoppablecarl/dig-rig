@@ -1,6 +1,6 @@
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { TerrainType } from '../_Tilemap-types.ts'
+import { MatterType } from '../_Tilemap-types.ts'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
@@ -11,9 +11,9 @@ import CanvasTexture = Phaser.Textures.CanvasTexture
 //   A = 255 always
 // PERMANENT tiles are immutable so they have no effect animation.
 const EFFECT_DURATION_MS = 1500
-const EFFECT_CHANNEL: Partial<Record<TerrainType, number>> = {
-  [TerrainType.EMPTY]: 0, // R
-  [TerrainType.SOLID]: 1, // G
+const EFFECT_CHANNEL: Partial<Record<MatterType, number>> = {
+  [MatterType.EMPTY]: 0, // R
+  [MatterType.SOLID]: 1, // G
 }
 
 type EffectEntry = {
@@ -44,7 +44,7 @@ export class TerrainEffectSystem extends SceneBound {
     this.effectUploadBuf = new Uint8Array(width * height * 4)
   }
 
-  addEffect(tx: number, ty: number, value: TerrainType, startTime: number = this.scene.time.now) {
+  addEffect(tx: number, ty: number, value: MatterType, startTime: number = this.scene.time.now) {
     const channel = EFFECT_CHANNEL[value]
     if (channel === undefined) return
     const idx = ty * this.scene.tilemap.width + tx

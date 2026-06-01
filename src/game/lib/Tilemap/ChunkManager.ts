@@ -1,7 +1,7 @@
 import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { TerrainType } from './_Tilemap-types.ts'
+import { MatterType } from './_Tilemap-types.ts'
 import { Chunk, type ChunkId } from './Chunk.ts'
 
 export class ChunkManager extends SceneBound {
@@ -42,12 +42,12 @@ export class ChunkManager extends SceneBound {
     return this.getChunk(cx, cy)
   }
 
-  setDirty(tx: number, ty: number, oldType: TerrainType, newType: TerrainType) {
+  setDirty(tx: number, ty: number, oldType: MatterType, newType: MatterType) {
     const chunk = this.getChunkByTile(tx, ty)
     if (!chunk) return
 
-    const wasSolid = oldType !== TerrainType.EMPTY
-    const isSolid  = newType !== TerrainType.EMPTY
+    const wasSolid = oldType !== MatterType.EMPTY
+    const isSolid  = newType !== MatterType.EMPTY
     if (isSolid && !wasSolid) chunk.solidTileCount++
     if (wasSolid && !isSolid) chunk.solidTileCount--
 

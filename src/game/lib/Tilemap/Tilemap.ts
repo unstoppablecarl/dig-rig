@@ -7,7 +7,7 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import { PLAYER_HEIGHT, PLAYER_WIDTH } from '../Player/Player.ts'
-import { TerrainType } from './_Tilemap-types.ts'
+import { MatterType } from './_Tilemap-types.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
 
@@ -42,7 +42,7 @@ export class Tilemap extends SceneBound {
     startY: number,
     width: number,
     height: number,
-    value: TerrainType,
+    value: MatterType,
   ): void {
     const rect = Rectangle.Intersection(
       new Rectangle(startX, startY, width, height),
@@ -70,28 +70,28 @@ export class Tilemap extends SceneBound {
 
   // ALWAYS confirm the value is actually going to change
   // before calling this
-  public setTile(x: number, y: number, value: TerrainType) {
+  public setTile(x: number, y: number, value: MatterType) {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false
     const id = y * this.width + x
     const prev = this.tiles[id]
     this.tiles[id] = value
     this.chunkManager.setDirty(x, y, prev, value)
-    if (prev === TerrainType.SOLID && value !== TerrainType.SOLID) this.matter--
-    if (prev !== TerrainType.SOLID && value === TerrainType.SOLID) this.matter++
+    if (prev === MatterType.SOLID && value !== MatterType.SOLID) this.matter--
+    if (prev !== MatterType.SOLID && value === MatterType.SOLID) this.matter++
     return true
   }
 
-  public getTile(x: number, y: number): TerrainType {
-    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return TerrainType.PERMANENT
+  public getTile(x: number, y: number): MatterType {
+    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return MatterType.PERMANENT
     return this.tiles[y * this.width + x]
   }
 
   public isSolid(x: number, y: number) {
     const value = this.getTile(Math.floor(x), Math.floor(y))
-    return value === TerrainType.SOLID || value === TerrainType.PERMANENT
+    return value === MatterType.SOLID || value === MatterType.PERMANENT
   }
 
-  public getTileFromWorld(worldX: number, worldY: number): TerrainType {
+  public getTileFromWorld(worldX: number, worldY: number): MatterType {
     return this.getTile(
       Math.round(worldX),
       Math.round(worldY),
@@ -108,7 +108,7 @@ export class Tilemap extends SceneBound {
   public checkTile(
     tileX: number,
     tileY: number,
-    terrainType: TerrainType,
+    terrainType: MatterType,
   ) {
     return this.getTile(tileX, tileY) === terrainType
   }
@@ -117,7 +117,7 @@ export class Tilemap extends SceneBound {
     tileX: number,
     tileY: number,
     tileRadius: number,
-    terrainType: TerrainType,
+    terrainType: MatterType,
   ) {
     return this.getCircle(tileX, tileY, tileRadius, (x, y) => {
       return this.getTile(x, y) === terrainType
@@ -184,18 +184,18 @@ export class Tilemap extends SceneBound {
 
     this._appyEffectTiles.length = 0
     const tiles = this._appyEffectTiles
-    let newValue: TerrainType = TerrainType.EMPTY
+    let newValue: MatterType = MatterType.EMPTY
     if (mode === FireMode.CREATE) {
-      newValue = TerrainType.SOLID
+      newValue = MatterType.SOLID
     }
 
     this.getCircle(tileX, tileY, tileRadius, (x, y) => {
       const value = this.getTile(x, y)
 
-      if (value === TerrainType.PERMANENT) return
+      if (value === MatterType.PERMANENT) return
       if (newValue === value) return
       if (
-        newValue === TerrainType.SOLID &&
+        newValue === MatterType.SOLID &&
         x > px - PLAYER_RADIUS_X + velLeft &&
         x < px + PLAYER_RADIUS_X + velRight &&
         y > py - PLAYER_RADIUS_Y + velUp &&
@@ -236,7 +236,7 @@ export class Tilemap extends SceneBound {
       const stepX = x + stepDx * i
       const stepY = y + stepDy * i
 
-      const collision = this.getTileFromWorld(stepX, stepY) !== TerrainType.EMPTY
+      const collision = this.getTileFromWorld(stepX, stepY) !== MatterType.EMPTY
       if (collision) {
         return {
           collision: true,
@@ -263,7 +263,7 @@ export class Tilemap extends SceneBound {
     this.chunkManager = null
   }
 
-  setFromPixelDataAlpha(pixelData: PixelData, value: TerrainType) {
+  setFromPixelDataAlpha(pixelData: PixelData, value: MatterType) {
     if (this.width !== pixelData.w || this.height !== pixelData.h) {
       throw new Error('pixelData must match w/h of tilemap')
     }
@@ -283,7 +283,7 @@ export class Tilemap extends SceneBound {
     startX: number,
     startY: number,
     angle: number,
-    types: Set<TerrainType>,
+    types: Set<MatterType>,
     maxDistance = this.diagonalDistance,
   ): Position {
     const vx = Math.cos(angle)
@@ -304,7 +304,7 @@ export class Tilemap extends SceneBound {
     startY: number,
     directionX: number,
     directionY: number,
-    types: Set<TerrainType>,
+    types: Set<MatterType>,
     maxDistance = this.diagonalDistance,
   ): Position {
     const len = Math.sqrt(directionX * directionX + directionY * directionY)
@@ -346,9 +346,9 @@ export class Tilemap extends SceneBound {
       for (let x = 0; x < w; x++) {
         const idx = y * w + x
         if (unpackAlpha(permanentData.data[idx] as Color32) > 0) {
-          tilemap.setTile(x, y, TerrainType.PERMANENT)
+          tilemap.setTile(x, y, MatterType.PERMANENT)
         } else if (unpackAlpha(solidData.data[idx] as Color32) > 0) {
-          tilemap.setTile(x, y, TerrainType.SOLID)
+          tilemap.setTile(x, y, MatterType.SOLID)
         }
       }
     }

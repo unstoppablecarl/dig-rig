@@ -8,7 +8,7 @@ import { CREATE_COLOR, DESTROY_COLOR, PERMANENT_COLOR } from '../../config/color
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { RGBShaderColor } from '../../types.ts'
-import { TerrainType } from './_Tilemap-types.ts'
+import { MatterType } from './_Tilemap-types.ts'
 import { TerrainChunkGlowRenderer } from './TilemapRenderer/TerrainChunkGlowRenderer.ts'
 import { TerrainChunkRenderer } from './TilemapRenderer/TerrainChunkRenderer.ts'
 import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'
@@ -277,7 +277,7 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
     ;(shader as any).renderNode?.programManager?.getCurrentProgramSuite?.()
   }
 
-  addEffect(tx: number, ty: number, value: TerrainType, startTime?: number) {
+  addEffect(tx: number, ty: number, value: MatterType, startTime?: number) {
     this.effectSystem.addEffect(tx, ty, value, startTime)
   }
 
