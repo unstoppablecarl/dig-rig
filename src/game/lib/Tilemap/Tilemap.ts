@@ -7,7 +7,7 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import { PLAYER_HEIGHT, PLAYER_WIDTH } from '../Player/Player.ts'
-import { MatterType } from './_Matter-types.ts'
+import { MatterType } from '../Matter/_Matter-types.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
 

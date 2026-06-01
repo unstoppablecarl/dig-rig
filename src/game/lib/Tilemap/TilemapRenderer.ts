@@ -8,7 +8,7 @@ import { CREATE_COLOR, DESTROY_COLOR, PERMANENT_COLOR } from '../../config/color
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { RGBShaderColor } from '../../types.ts'
-import { MatterType } from './_Matter-types.ts'
+import { MatterType } from '../Matter/_Matter-types.ts'
 import { TerrainChunkGlowRenderer } from './TilemapRenderer/TerrainChunkGlowRenderer.ts'
 import { TerrainChunkRenderer } from './TilemapRenderer/TerrainChunkRenderer.ts'
 import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'

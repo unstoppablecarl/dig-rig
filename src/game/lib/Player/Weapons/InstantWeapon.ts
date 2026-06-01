@@ -10,13 +10,13 @@ import { WeaponRapidFireInput } from '../../Input/InputControllers/WeaponManager
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
 import { tilesToRadius } from '../../Projectiles/projectile-radius'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
-import { MatterType, TerrainTypeValues } from '../../Tilemap/_Matter-types.ts'
+import { MatterType, MatterTypeValues } from '../../Matter/_Matter-types.ts'
 import { EventsBinder } from '../../Util/EventsBinder.ts'
 import { PlayerFireModeState } from '../PlayerFireModeState.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 const MIN_CHARGE = 10
-const COLLISION_TYPES = new Set(TerrainTypeValues.filter(v => v !== MatterType.EMPTY))
+const COLLISION_TYPES = new Set(MatterTypeValues.filter(v => v !== MatterType.EMPTY))
 
 const BETWEEN_SHOTS_MS = 50
 

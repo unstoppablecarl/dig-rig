@@ -1,7 +1,7 @@
 import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { MatterType } from './_Matter-types.ts'
+import { MatterType } from '../Matter/_Matter-types.ts'
 import { Chunk, type ChunkId } from './Chunk.ts'
 
 export class ChunkManager extends SceneBound {
