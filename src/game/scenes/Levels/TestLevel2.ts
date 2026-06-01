@@ -1,5 +1,5 @@
 import { Player } from '../../lib/Player/Player.ts'
-import { MatterType } from '../../lib/Tilemap/_Tilemap-types.ts'
+import { MatterType } from '../../lib/Tilemap/_Matter-types.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
 import type { TilemapRendererConfig } from '../../lib/Tilemap/TilemapRenderer.ts'
 import { GameLevel } from '../GameLevel.ts'

@@ -1,7 +1,7 @@
 import { Driller } from '../../lib/Entities/Driller.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { ScaleLevelTexture } from '../../lib/Textures/ScaleLevelTexture.ts'
-import { MatterType } from '../../lib/Tilemap/_Tilemap-types.ts'
+import { MatterType } from '../../lib/Tilemap/_Matter-types.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
 import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture

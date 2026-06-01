@@ -10,7 +10,7 @@ import { WeaponRapidFireInput } from '../../Input/InputControllers/WeaponManager
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
 import { tilesToRadius } from '../../Projectiles/projectile-radius'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
-import { MatterType, TerrainTypeValues } from '../../Tilemap/_Tilemap-types.ts'
+import { MatterType, TerrainTypeValues } from '../../Tilemap/_Matter-types.ts'
 import { EventsBinder } from '../../Util/EventsBinder.ts'
 import { PlayerFireModeState } from '../PlayerFireModeState.ts'
 import UPDATE = Scenes.Events.UPDATE
