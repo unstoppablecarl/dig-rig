@@ -1,7 +1,7 @@
 import { random } from '../../../helpers/random'
 import {
-  EMPTY, FIRE, FUSE, MatterType, OIL, PLANT,
-  SALT_WATER, STEAM, WATER,
+  C4, EMPTY, FALLING_WAX, FIRE, FUSE, MatterType, OIL, PLANT,
+  SALT_WATER, STEAM, WAX, WATER,
 } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
@@ -69,6 +69,28 @@ const def: ElementDef = {
       }
     }
 
+    // Melt wax → falling wax (passive, so fire must handle it directly)
+    if (random() < 30) {
+      const waxLoc = world.borderingAdjacent(tx, ty, idx, WAX)
+      if (waxLoc !== -1) {
+        tiles[waxLoc] = FALLING_WAX
+        const wx = waxLoc % width
+        const wy = waxLoc / width | 0
+        world.markDirty(wx, wy)
+        next.add(waxLoc)
+        next.add(idx)
+      }
+    }
+
+    // Wake C4 — adds it to next so its own explosion action runs (passive, can't self-wake)
+    if (random() < 80) {
+      const c4Loc = world.borderingAdjacent(tx, ty, idx, C4)
+      if (c4Loc !== -1) {
+        next.add(c4Loc)
+        next.add(idx)
+      }
+    }
+
     // Probabilistic self-extinguish
     if (random() < 40) {
       const xStart = Math.max(tx - 1, 0)
@@ -83,7 +105,7 @@ const def: ElementDef = {
           const t = tiles[y * width + x]
           const bt = t & 0x7F
           if (bt === FIRE) continue
-          if (bt === PLANT || bt === FUSE || bt === OIL) { flameOut = false; break outer }
+          if (bt === PLANT || bt === FUSE || bt === OIL || bt === WAX) { flameOut = false; break outer }
         }
       }
 
