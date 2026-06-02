@@ -20,6 +20,7 @@ export class MatterMeter extends SceneBound {
   private createPending: Rectangle
 
   private prevMatter: number
+  private prevMatterText = ''
   private charge: Rectangle
   private text: DOMElement
   private tween: Tween | null = null
@@ -128,10 +129,11 @@ export class MatterMeter extends SceneBound {
     }
 
     let matterText = Math.floor(matterTank.matterContained()).toString()
-    if (matterText === '0') {
-      matterText = ''
+    if (matterText === '0') matterText = ''
+    if (matterText !== this.prevMatterText) {
+      this.prevMatterText = matterText
+      this.text.setText(matterText)
     }
-    this.text.setText(matterText)
 
     const matterTopY = this.matter.getBounds().y
 
