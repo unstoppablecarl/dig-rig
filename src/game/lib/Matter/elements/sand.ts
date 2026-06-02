@@ -11,7 +11,7 @@ const def: ElementDef = {
     const moved =
       world.tryMove(idx, tx, ty, tx, ty + 1, SAND, next) ||
       world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, SAND, next) ||
-      world.tryMove(idx, tx, ty, tx + (world.leftFirst ? 1 : -1), ty + 1, SAND, next)
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, SAND, next)
 
     if (!moved) {
       world.tiles[idx] = SAND_SETTLED

@@ -4,8 +4,9 @@ import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { FireMode } from '../Player/_FireMode-types.ts'
 import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
-import { MatterType } from './_Matter-types.ts'
+import { MatterType, TYPE_MASK } from './_Matter-types.ts'
 import { MatterWorkerInMsg, MatterWorkerOutMsg, type TypedMatterWorker } from './_MatterWorker-types.ts'
+import { ParticleLayer } from '../Particles/ParticleLayer.ts'
 import ParticleWorkerConstructor from './matter.worker.ts?worker'
 
 export class MatterBridge extends SceneBound {
@@ -14,6 +15,7 @@ export class MatterBridge extends SceneBound {
   private readonly dirtyChunks: Uint8Array
   private readonly numChunksX: number
   private readonly numChunksY: number
+  private readonly particleLayer: ParticleLayer
 
   constructor(public scene: GameLevel) {
     super(scene)
@@ -26,6 +28,8 @@ export class MatterBridge extends SceneBound {
     this.dirtyChunksBuffer = new SharedArrayBuffer(this.numChunksX * this.numChunksY)
     this.dirtyChunks = new Uint8Array(this.dirtyChunksBuffer)
 
+    this.particleLayer = new ParticleLayer(this.scene)
+
     this.worker = new ParticleWorkerConstructor()
     this.worker.postMessage({
       type: MatterWorkerInMsg.INIT,
@@ -37,13 +41,19 @@ export class MatterBridge extends SceneBound {
     })
 
     this.worker.onmessage = (e) => {
-      if (e.data.type !== MatterWorkerOutMsg.SETTLED) return
-      const { tilemapRenderer } = this.scene
-      const now = this.scene.time.now
-      for (const idx of e.data.indices) {
-        const tx = idx % tilemap.width
-        const ty = idx / tilemap.width | 0
-        tilemapRenderer.addEffect(tx, ty, FireMode.SOLIDIFY, now)
+      if (e.data.type === MatterWorkerOutMsg.SETTLED) {
+        const { tilemapRenderer } = this.scene
+        const now = this.scene.time.now
+        for (const idx of e.data.indices) {
+          const tx = idx % tilemap.width
+          const ty = idx / tilemap.width | 0
+          tilemapRenderer.addEffect(tx, ty, FireMode.SOLIDIFY, now)
+        }
+        return
+      }
+
+      if (e.data.type === MatterWorkerOutMsg.SPAWN_PARTICLE) {
+        this.particleLayer.spawn(e.data.particleType, e.data.x, e.data.y)
       }
     }
 
@@ -81,7 +91,7 @@ export class MatterBridge extends SceneBound {
         if (dx * dx + dy * dy > radius * radius) continue
         const x = tx + dx
         const y = ty + dy
-        if (tilemap.getTile(x, y) !== MatterType.EMPTY) continue
+        if ((tilemap.getTile(x, y) & TYPE_MASK) !== MatterType.EMPTY) continue
         tilemap.setTile(x, y, value)
         indices.push(y * tilemap.width + x)
       }
@@ -93,6 +103,8 @@ export class MatterBridge extends SceneBound {
 
   update() {
     if (this.destroyed) return
+
+    this.particleLayer.update()
 
     const chunkManager = this.scene.tilemap.chunkManager
 

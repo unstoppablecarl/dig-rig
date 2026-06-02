@@ -39,7 +39,7 @@ export class VFXParticleManager extends SceneBound {
     this.emitter = this.scene.sys.displayList.add(new EmitterClass(this.scene, 0, 0, 'particle', {
       particleClass: VFXMatterParticle,
       speed: 0,
-      quantity: 1000,
+      quantity: Math.min(1000, MAX_MATTER_PARTICLES),
       // manual
       frequency: -1,
       maxAliveParticles: MAX_MATTER_PARTICLES,

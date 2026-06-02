@@ -1,7 +1,7 @@
 import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { MatterType, PERMANENT, SOLID } from '../Matter/_Matter-types.ts'
+import { MatterType, PERMANENT, SOLID, TYPE_MASK } from '../Matter/_Matter-types.ts'
 import { Chunk, type ChunkId } from './Chunk.ts'
 
 export class ChunkManager extends SceneBound {
@@ -45,12 +45,12 @@ export class ChunkManager extends SceneBound {
     return this.getChunk(cx, cy)
   }
 
-  setDirty(tx: number, ty: number, oldType: MatterType, newType: MatterType) {
+  setDirty(tx: number, ty: number, oldType: number, newType: number) {
     const chunk = this.getChunkByTile(tx, ty)
     if (!chunk) return
 
-    const wasSolid = oldType !== MatterType.EMPTY
-    const isSolid  = newType !== MatterType.EMPTY
+    const wasSolid = (oldType & TYPE_MASK) !== MatterType.EMPTY
+    const isSolid  = (newType & TYPE_MASK) !== MatterType.EMPTY
     if (isSolid && !wasSolid) chunk.solidTileCount++
     if (wasSolid && !isSolid) chunk.solidTileCount--
 

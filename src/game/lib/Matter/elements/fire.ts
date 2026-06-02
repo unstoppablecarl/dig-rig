@@ -1,0 +1,107 @@
+import {
+  EMPTY, FIRE, FUSE, MatterType, OIL, PLANT,
+  SALT_WATER, STEAM, WATER,
+} from '../_Matter-types.ts'
+import { rng } from '../MatterWorld.ts'
+import type { ElementDef } from '../elements.ts'
+
+const def: ElementDef = {
+  id: MatterType.FIRE,
+  name: 'Fire',
+  action(world, tx, ty, idx, next): void {
+    const { tiles, width, height } = world
+
+    // Extinguished by water / salt-water
+    if (rng() < 80) {
+      let waterLoc = world.bordering(tx, ty, idx, WATER)
+      if (waterLoc === -1) waterLoc = world.bordering(tx, ty, idx, SALT_WATER)
+      if (waterLoc !== -1) {
+        tiles[waterLoc] = STEAM
+        tiles[idx] = EMPTY
+        world.markDirty(tx, ty)
+        const wx = waterLoc % width
+        const wy = waterLoc / width | 0
+        world.markDirty(wx, wy)
+        next.add(waterLoc)
+        return
+      }
+    }
+
+    // Ignite plant
+    if (rng() < 20) {
+      const plantLoc = world.borderingAdjacent(tx, ty, idx, PLANT)
+      if (plantLoc !== -1) {
+        tiles[plantLoc] = FIRE
+        const px = plantLoc % width
+        const py = plantLoc / width | 0
+        world.markDirty(px, py)
+        next.add(plantLoc)
+        next.add(idx)
+        return
+      }
+    }
+
+    // Ignite fuse
+    if (rng() < 80) {
+      const fuseLoc = world.borderingAdjacent(tx, ty, idx, FUSE)
+      if (fuseLoc !== -1) {
+        tiles[fuseLoc] = FIRE
+        const fx = fuseLoc % width
+        const fy = fuseLoc / width | 0
+        world.markDirty(fx, fy)
+        next.add(fuseLoc)
+        next.add(idx)
+        return
+      }
+    }
+
+    // Ignite oil
+    if (rng() < 30) {
+      const oilLoc = world.bordering(tx, ty, idx, OIL)
+      if (oilLoc !== -1) {
+        tiles[oilLoc] = FIRE
+        const ox = oilLoc % width
+        const oy = oilLoc / width | 0
+        world.markDirty(ox, oy)
+        next.add(oilLoc)
+        next.add(idx)
+        return
+      }
+    }
+
+    // Probabilistic self-extinguish
+    if (rng() < 40) {
+      const xStart = Math.max(tx - 1, 0)
+      const yStart = Math.max(ty - 1, 0)
+      const xEnd   = Math.min(tx + 2, width)
+      const yEnd   = Math.min(ty + 2, height)
+      let flameOut = true
+
+      outer: for (let y = yStart; y < yEnd; y++) {
+        for (let x = xStart; x < xEnd; x++) {
+          if (y === ty && x === tx) continue
+          const t = tiles[y * width + x]
+          const bt = t & 0x7F
+          if (bt === FIRE) continue
+          if (bt === PLANT || bt === FUSE || bt === OIL) { flameOut = false; break outer }
+        }
+      }
+
+      if (flameOut) {
+        tiles[idx] = EMPTY
+        world.markDirty(tx, ty)
+        world.reactivateAround(tx, ty, next)
+        return
+      }
+    }
+
+    // Rise upward
+    if (rng() < 50) {
+      if (world.tryRise(idx, tx, ty, next)) return
+    }
+
+    next.add(idx)
+  },
+}
+
+export default def

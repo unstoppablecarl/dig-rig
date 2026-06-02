@@ -1,16 +1,22 @@
 import { CHUNK_SIZE } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { MatterTypeValues } from '../../Matter/_Matter-types.ts'
+import { MatterTypeValues, SETTLED_FLAG } from '../../Matter/_Matter-types.ts'
 import type { Chunk } from '../Chunk.ts'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
 // Mask pixel layout (little-endian Uint32: 0xAABBGGRR):
-//   R = TerrainType integer value. Shader decodes via int(R * 255 + 0.5).
-const MASK_MAP: Record<number, number> = Object.fromEntries(
-  MatterTypeValues.map(type => [type, 0xFF000000 | type])
-)
+//   R = raw tile value (0–255). Shader decodes via int(R * 255 + 0.5).
+//   Bit 7 (>= 128) signals SETTLED state; bits 0–6 are the base MatterType.
+const MASK_MAP: Record<number, number> = (() => {
+  const map: Record<number, number> = {}
+  for (const type of MatterTypeValues) {
+    map[type]                 = 0xFF000000 | type
+    map[type | SETTLED_FLAG]  = 0xFF000000 | (type | SETTLED_FLAG)
+  }
+  return map
+})()
 
 const CHUNK_BYTES = CHUNK_SIZE * CHUNK_SIZE * 4
 

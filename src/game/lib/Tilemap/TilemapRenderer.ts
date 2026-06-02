@@ -113,13 +113,15 @@ const FRAG_SHADER = /* glsl */`
     }
 
     void main() {
-        // uMask R channel stores the MatterType integer value normalised to 0–1.
-        // Decode by rounding back to int: int(R * 255 + 0.5).
-        int tileType = int(texture2D(uMask, outTexCoord).r * 255.0 + 0.5);
+        // uMask R channel: raw tile value (0–255), normalised to 0–1.
+        // Bit 7 (raw >= 128) = SETTLED flag. Bits 0–6 = base MatterType.
+        int raw      = int(texture2D(uMask, outTexCoord).r * 255.0 + 0.5);
+        bool settled = raw >= 128;
+        int tileType = settled ? raw - 128 : raw;
 
         // uGlow:  G = inner-glow gradient (0→1),  R = 1px outline flag
         vec4 glowTex = texture2D(uGlow, outTexCoord);
-        float glow = glowTex.g;
+        float glow    = glowTex.g;
         float outline = glowTex.r;
 
         vec4 color;
@@ -139,25 +141,103 @@ const FRAG_SHADER = /* glsl */`
             } else if (glow > 0.01) {
                 color.rgb = mix(color.rgb * uGlowColor, color.rgb, 1.0 - glow * uInnerGlowStrength);
             }
-            }
-        else if (tileType == ${MatterType.SAND_SETTLED}) {
-            color = texture2D(uTerrain, outTexCoord);
-            color.rgb = mix(color.rgb, uSandSettledColor, uSandSettledColorAlpha);
-            if (outline > 0.5) {
-                color.rgb = mix(color.rgb, uSandSettledOutlineColor, 0.5);
-            } else if (glow > 0.01) {
-                color.rgb = mix(color.rgb, uGlowColor, glow * uInnerGlowStrength * 0.4);
-            }
         }
         else if (tileType == ${MatterType.SAND}) {
-            color = vec4(uSandColor, 1.0);
+            if (settled) {
+                color = texture2D(uTerrain, outTexCoord);
+                color.rgb = mix(color.rgb, uSandSettledColor, uSandSettledColorAlpha);
+                if (outline > 0.5) {
+                    color.rgb = mix(color.rgb, uSandSettledOutlineColor, 0.5);
+                } else if (glow > 0.01) {
+                    color.rgb = mix(color.rgb, uGlowColor, glow * uInnerGlowStrength * 0.4);
+                }
+            } else {
+                color = vec4(uSandColor, 1.0);
+            }
         }
         else if (tileType == ${MatterType.WATER}) {
             color = vec4(uWaterColor * uWaterAlpha, uWaterAlpha);
         }
-        // EMPTY — fully transparent
-        else {
+        // ── New element types ────────────────────────────────────────────────
+        else if (tileType == ${MatterType.FIRE}) {
+            float flicker = hash(outTexCoord * 50.0 + uTime * 3.0) * 0.3;
+            color = vec4(1.0, 0.3 + flicker, 0.05, 1.0);
+        }
+        else if (tileType == ${MatterType.OIL}) {
+            color = vec4(0.36, 0.18, 0.04, 0.95);
+        }
+        else if (tileType == ${MatterType.LAVA}) {
+            float glow2 = hash(outTexCoord * 30.0 + uTime * 1.5) * 0.2;
+            color = vec4(0.96 + glow2, 0.35 + glow2, 0.06, 1.0);
+        }
+        else if (tileType == ${MatterType.ROCK}) {
+            color = vec4(0.27, 0.16, 0.03, 1.0);
+        }
+        else if (tileType == ${MatterType.STEAM}) {
+            color = vec4(0.76, 0.84, 0.92, 0.55);
+        }
+        else if (tileType == ${MatterType.METHANE}) {
+            color = vec4(0.55, 0.55, 0.55, 0.70);
+        }
+        else if (tileType == ${MatterType.SALT}) {
+            color = vec4(0.99, 0.99, 0.99, 1.0);
+        }
+        else if (tileType == ${MatterType.SALT_WATER}) {
+            color = vec4(0.50, 0.69, 1.00, 0.70);
+        }
+        else if (tileType == ${MatterType.CONCRETE}) {
+            color = vec4(0.71, 0.71, 0.71, 1.0);
+        }
+        else if (tileType == ${MatterType.PLANT}) {
+            color = vec4(0.05, 0.70, 0.10, 1.0);
+        }
+        else if (tileType == ${MatterType.FUSE}) {
+            color = vec4(0.86, 0.69, 0.78, 1.0);
+        }
+        else if (tileType == ${MatterType.WAX}) {
+            color = vec4(0.94, 0.88, 0.83, 1.0);
+        }
+        else if (tileType == ${MatterType.FALLING_WAX}) {
+            color = vec4(0.94, 0.88, 0.82, 0.85);
+        }
+        else if (tileType == ${MatterType.NITRO}) {
+            color = vec4(0.0, 0.59, 0.10, 0.90);
+        }
+        else if (tileType == ${MatterType.NAPALM}) {
+            color = vec4(0.86, 0.50, 0.27, 0.95);
+        }
+        else if (tileType == ${MatterType.C4}) {
+            color = vec4(0.94, 0.90, 0.59, 1.0);
+        }
+        else if (tileType == ${MatterType.ICE}) {
+            color = vec4(0.63, 0.91, 1.00, 0.85);
+        }
+        else if (tileType == ${MatterType.CHILLED_ICE}) {
+            color = vec4(0.08, 0.60, 0.86, 0.90);
+        }
+        else if (tileType == ${MatterType.CRYO}) {
+            color = vec4(0.0, 0.84, 1.00, 0.80);
+        }
+        else if (tileType == ${MatterType.ACID}) {
+            float pulse = hash(outTexCoord * 20.0 + uTime * 2.0) * 0.15;
+            color = vec4(0.42 + pulse, 0.94, 0.16, 0.90);
+        }
+        else if (tileType == ${MatterType.THERMITE}) {
+            color = vec4(0.76, 0.55, 0.27, 1.0);
+        }
+        else if (tileType == ${MatterType.BURNING_THERMITE}) {
+            float br = hash(outTexCoord * 40.0 + uTime * 4.0) * 0.2;
+            color = vec4(1.0, 0.51 + br, 0.51 + br, 1.0);
+        }
+        else if (tileType == ${MatterType.GUNPOWDER}) {
+            color = vec4(0.67, 0.67, 0.55, 1.0);
+        }
+        // EMPTY (0) — fully transparent; unknown type — debug magenta
+        else if (tileType == ${MatterType.EMPTY}) {
             color = vec4(0.0, 0.0, 0.0, 0.0);
+        }
+        else {
+            color = vec4(1.0, 0.0, 1.0, 1.0);
         }
 
         // uEffect carries timed fire-mode colors. RGB = fire mode color, A = intensity (1→0).

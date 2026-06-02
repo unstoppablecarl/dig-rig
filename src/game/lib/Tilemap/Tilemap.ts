@@ -4,7 +4,7 @@ import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
-import { MatterType } from '../Matter/_Matter-types.ts'
+import { MatterType, SETTLED_FLAG, TYPE_MASK } from '../Matter/_Matter-types.ts'
 import { FireMode } from '../Player/_FireMode-types.ts'
 import { PLAYER_HEIGHT, PLAYER_WIDTH } from '../Player/Player.ts'
 import { ChunkManager } from './ChunkManager.ts'
@@ -86,31 +86,39 @@ export class Tilemap extends SceneBound {
   // before calling this
   public setTile(x: number, y: number, value: MatterType) {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false
-    const id = y * this.width + x
+    const id   = y * this.width + x
     const prev = this.tiles[id]
+    const prevType = prev & TYPE_MASK
     this.tiles[id] = value
     this.chunkManager.setDirty(x, y, prev, value)
-    if (prev === MatterType.SOLID && value !== MatterType.SOLID) this.matter--
-    if (prev !== MatterType.SOLID && value === MatterType.SOLID) this.matter++
+    if (prevType === MatterType.SOLID && value !== MatterType.SOLID) this.matter--
+    if (prevType !== MatterType.SOLID && value === MatterType.SOLID) this.matter++
     if (value === MatterType.EMPTY) this.onTileEmpty?.(x, y)
     return true
   }
 
-  public getTile(x: number, y: number): MatterType {
+  // Returns the raw tile value, which may include SETTLED_FLAG (0x80) in bit 7.
+  // Use `value & TYPE_MASK` to get the base MatterType for comparisons.
+  public getTile(x: number, y: number): number {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return MatterType.PERMANENT
     return this.tiles[y * this.width + x]
   }
 
   public isSolid(x: number, y: number) {
-    const value = this.getTile(Math.floor(x), Math.floor(y))
-    return value === MatterType.SOLID || value === MatterType.PERMANENT || value === MatterType.SAND_SETTLED
+    const raw  = this.getTile(Math.floor(x), Math.floor(y))
+    const type = raw & TYPE_MASK
+    if (type === MatterType.SOLID || type === MatterType.PERMANENT) return true
+    // Granular materials are solid for physics only when settled
+    if (raw & SETTLED_FLAG) {
+      return type === MatterType.SAND || type === MatterType.ROCK ||
+             type === MatterType.CONCRETE || type === MatterType.SALT ||
+             type === MatterType.THERMITE
+    }
+    return false
   }
 
-  public getTileFromWorld(worldX: number, worldY: number): MatterType {
-    return this.getTile(
-      Math.round(worldX),
-      Math.round(worldY),
-    )
+  public getTileFromWorld(worldX: number, worldY: number): number {
+    return this.getTile(Math.round(worldX), Math.round(worldY))
   }
 
   public getTilePosFromWorld(worldX: number, worldY: number): Position {
@@ -125,7 +133,7 @@ export class Tilemap extends SceneBound {
     tileY: number,
     terrainType: MatterType,
   ) {
-    return this.getTile(tileX, tileY) === terrainType
+    return (this.getTile(tileX, tileY) & TYPE_MASK) === terrainType
   }
 
   public checkCircleCollision(
@@ -135,7 +143,7 @@ export class Tilemap extends SceneBound {
     terrainType: MatterType,
   ) {
     return this.getCircle(tileX, tileY, tileRadius, (x, y) => {
-      return this.getTile(x, y) === terrainType
+      return (this.getTile(x, y) & TYPE_MASK) === terrainType
     }, true)
   }
 
@@ -395,13 +403,12 @@ export class Tilemap extends SceneBound {
 
     } else if (mode === FireMode.DESTROY) {
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
-        const value = this.getTile(x, y)
+        const type = this.getTile(x, y) & TYPE_MASK
         if (
-          value === MatterType.PERMANENT ||
-          value === MatterType.EMPTY ||
-          value === MatterType.SAND ||
-          value === MatterType.SAND_SETTLED ||
-          value === MatterType.WATER
+          type === MatterType.PERMANENT ||
+          type === MatterType.EMPTY ||
+          type === MatterType.SAND ||
+          type === MatterType.WATER
         ) return
         tiles.push({ x, y, newValue: MatterType.EMPTY })
       })
@@ -411,10 +418,10 @@ export class Tilemap extends SceneBound {
 
     } else if (mode === FireMode.MELT) {
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
-        const value = this.getTile(x, y)
+        const type = this.getTile(x, y) & TYPE_MASK
         let newValue: MatterType
-        if (value === MatterType.SOLID) newValue = MatterType.SAND
-        else if (value === MatterType.SAND_SETTLED || value === MatterType.SAND) newValue = MatterType.WATER
+        if (type === MatterType.SOLID) newValue = MatterType.SAND
+        else if (type === MatterType.SAND) newValue = MatterType.WATER
         else return
         tiles.push({ x, y, newValue })
       })
@@ -425,10 +432,10 @@ export class Tilemap extends SceneBound {
 
     } else if (mode === FireMode.SOLIDIFY) {
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
-        const value = this.getTile(x, y)
+        const type = this.getTile(x, y) & TYPE_MASK
         let newValue: MatterType
-        if (value === MatterType.WATER) newValue = MatterType.SAND
-        else if (value === MatterType.SAND_SETTLED || value === MatterType.SAND) newValue = MatterType.SOLID
+        if (type === MatterType.WATER) newValue = MatterType.SAND
+        else if (type === MatterType.SAND) newValue = MatterType.SOLID
         else return
         tiles.push({ x, y, newValue })
       })
@@ -506,7 +513,7 @@ export class Tilemap extends SceneBound {
       const stepX = x + stepDx * i
       const stepY = y + stepDy * i
 
-      const collision = this.getTileFromWorld(stepX, stepY) !== MatterType.EMPTY
+      const collision = (this.getTileFromWorld(stepX, stepY) & TYPE_MASK) !== MatterType.EMPTY
       if (collision) {
         return {
           collision: true,
@@ -596,7 +603,7 @@ export class Tilemap extends SceneBound {
         this._collisionPosition.y = Math.round(startY + ny * prev)
         return this._collisionPosition
       }
-      if (types.has(this.getTile(x, y))) {
+      if (types.has((this.getTile(x, y) & TYPE_MASK) as MatterType)) {
         this._collisionPosition.x = x
         this._collisionPosition.y = y
         return this._collisionPosition
