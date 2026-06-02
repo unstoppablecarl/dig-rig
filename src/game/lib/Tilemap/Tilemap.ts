@@ -23,10 +23,11 @@ export type TileEffectResult = Tile & {
 
 export class Tilemap extends SceneBound {
   private readonly sab: SharedArrayBuffer
-  private tiles: Uint8Array<SharedArrayBuffer>
+  private tiles: Uint32Array<SharedArrayBuffer>
   public chunkManager: ChunkManager
   public onTileEmpty?: (tx: number, ty: number) => void
   public onIslandDetected?: (tiles: Tile[]) => void
+  public onActivateTiles?: (tiles: Tile[]) => void
 
   private matter = 0
 
@@ -38,8 +39,8 @@ export class Tilemap extends SceneBound {
     readonly height: number,
   ) {
     super(scene)
-    this.sab = new SharedArrayBuffer(width * height)
-    this.tiles = new Uint8Array(this.sab)
+    this.sab = new SharedArrayBuffer(width * height * Uint32Array.BYTES_PER_ELEMENT)
+    this.tiles = new Uint32Array(this.sab)
 
     this.diagonalDistance = Math.hypot(width, height)
 
@@ -197,10 +198,6 @@ export class Tilemap extends SceneBound {
       }
     }
     if (returnBoolOnFirstMatch) return false
-  }
-
-  private isFluid(t: MatterType): boolean {
-    return t === MatterType.SAND || t === MatterType.SAND_SETTLED || t === MatterType.WATER
   }
 
   // Assumes tiles is sorted center-outward. commitEffectTiles sorts before calling this.
@@ -399,7 +396,13 @@ export class Tilemap extends SceneBound {
     } else if (mode === FireMode.DESTROY) {
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
         const value = this.getTile(x, y)
-        if (value === MatterType.PERMANENT || value === MatterType.EMPTY || this.isFluid(value)) return
+        if (
+          value === MatterType.PERMANENT ||
+          value === MatterType.EMPTY ||
+          value === MatterType.SAND ||
+          value === MatterType.SAND_SETTLED ||
+          value === MatterType.WATER
+        ) return
         tiles.push({ x, y, newValue: MatterType.EMPTY })
       })
       if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
@@ -416,7 +419,7 @@ export class Tilemap extends SceneBound {
         tiles.push({ x, y, newValue })
       })
       if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
-      this.scene.matterBridge.activateTiles(tiles)
+      this.onActivateTiles?.(tiles)
       const newIslands = this.findNewlyDisconnectedByDestruction(tiles)
       if (newIslands.length) this.onIslandDetected?.(newIslands)
 
@@ -430,7 +433,7 @@ export class Tilemap extends SceneBound {
         tiles.push({ x, y, newValue })
       })
       if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
-      this.scene.matterBridge.activateTiles(tiles)
+      this.onActivateTiles?.(tiles)
       this.chunkManager.computeAnchored()
       const islands = this.findIslandTiles(tiles)
       if (islands.length) this.onIslandDetected?.(islands)
@@ -525,6 +528,7 @@ export class Tilemap extends SceneBound {
   protected onDestroy() {
     this.onTileEmpty = undefined
     this.onIslandDetected = undefined
+    this.onActivateTiles = undefined
     // @ts-expect-error: destroy
     this.tiles = null
     // @ts-expect-error: destroy

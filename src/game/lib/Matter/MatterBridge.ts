@@ -1,44 +1,46 @@
 import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { MatterType } from './_Matter-types.ts'
 import { FireMode } from '../Player/_FireMode-types.ts'
 import type { Chunk } from '../Tilemap/Chunk.ts'
-import SandWorkerConstructor from './matter.worker.ts?worker'
+import type { Tile } from '../Tilemap/Tilemap.ts'
+import { MatterType } from './_Matter-types.ts'
+import { MatterWorkerInMsg, MatterWorkerOutMsg, type TypedMatterWorker } from './_MatterWorker-types.ts'
+import ParticleWorkerConstructor from './matter.worker.ts?worker'
 
 export class MatterBridge extends SceneBound {
-  private readonly worker: Worker
-  private readonly dirtyBuffer: SharedArrayBuffer
-  private readonly dirty: Uint8Array
+  private readonly worker: TypedMatterWorker
+  private readonly dirtyChunksBuffer: SharedArrayBuffer
+  private readonly dirtyChunks: Uint8Array
   private readonly numChunksX: number
   private readonly numChunksY: number
 
   constructor(public scene: GameLevel) {
     super(scene)
 
-    const { tilemap } = scene
-    const { chunkManager } = tilemap
+    const tilemap = this.scene.tilemap
+    const chunkManager = tilemap.chunkManager
 
     this.numChunksX = chunkManager.width
     this.numChunksY = chunkManager.height
-    this.dirtyBuffer = new SharedArrayBuffer(this.numChunksX * this.numChunksY)
-    this.dirty = new Uint8Array(this.dirtyBuffer)
+    this.dirtyChunksBuffer = new SharedArrayBuffer(this.numChunksX * this.numChunksY)
+    this.dirtyChunks = new Uint8Array(this.dirtyChunksBuffer)
 
-    this.worker = new SandWorkerConstructor()
+    this.worker = new ParticleWorkerConstructor()
     this.worker.postMessage({
-      type: 'init',
+      type: MatterWorkerInMsg.INIT,
       tilesBuffer: tilemap.tilesBuffer,
-      dirtyBuffer: this.dirtyBuffer,
+      dirtyChunksBuffer: this.dirtyChunksBuffer,
       width: tilemap.width,
       height: tilemap.height,
       chunkSize: CHUNK_SIZE,
     })
 
-    this.worker.onmessage = (e: MessageEvent) => {
-      if (e.data.type !== 'settled') return
+    this.worker.onmessage = (e) => {
+      if (e.data.type !== MatterWorkerOutMsg.SETTLED) return
       const { tilemapRenderer } = this.scene
       const now = this.scene.time.now
-      for (const idx of e.data.indices as number[]) {
+      for (const idx of e.data.indices) {
         const tx = idx % tilemap.width
         const ty = idx / tilemap.width | 0
         tilemapRenderer.addEffect(tx, ty, FireMode.SOLIDIFY, now)
@@ -46,7 +48,7 @@ export class MatterBridge extends SceneBound {
     }
 
     tilemap.onTileEmpty = (tx, ty) => {
-      this.worker.postMessage({ type: 'check', tx, ty })
+      this.worker.postMessage({ type: MatterWorkerInMsg.CHECK, tx, ty })
     }
 
     tilemap.onIslandDetected = (islands) => {
@@ -55,13 +57,17 @@ export class MatterBridge extends SceneBound {
       }
       this.activateTiles(islands)
     }
+
+    tilemap.onActivateTiles = (tiles) => {
+      this.activateTiles(tiles)
+    }
   }
 
-  activateTiles(tiles: { x: number, y: number }[]) {
-    const { tilemap } = this.scene
+  activateTiles(tiles: Tile[]) {
+    const tilemap = this.scene.tilemap
     const indices = tiles.map(({ x, y }) => y * tilemap.width + x)
     if (indices.length) {
-      this.worker.postMessage({ type: 'activate', indices })
+      this.worker.postMessage({ type: MatterWorkerInMsg.ACTIVATE, indices })
     }
   }
 
@@ -76,12 +82,13 @@ export class MatterBridge extends SceneBound {
         const x = tx + dx
         const y = ty + dy
         if (tilemap.getTile(x, y) !== MatterType.EMPTY) continue
+        console.log('placed')
         tilemap.setTile(x, y, MatterType.WATER)
         indices.push(y * tilemap.width + x)
       }
     }
     if (indices.length) {
-      this.worker.postMessage({ type: 'activate', indices })
+      this.worker.postMessage({ type: MatterWorkerInMsg.ACTIVATE, indices })
     }
   }
 
@@ -105,7 +112,7 @@ export class MatterBridge extends SceneBound {
       }
     }
     if (indices.length) {
-      this.worker.postMessage({ type: 'activate', indices })
+      this.worker.postMessage({ type: MatterWorkerInMsg.ACTIVATE, indices })
     }
     return indices.length
   }
@@ -113,14 +120,13 @@ export class MatterBridge extends SceneBound {
   update() {
     if (this.destroyed) return
 
-    const { tilemap } = this.scene
-    const { chunkManager } = tilemap
+    const chunkManager = this.scene.tilemap.chunkManager
 
     for (let cy = 0; cy < this.numChunksY; cy++) {
       for (let cx = 0; cx < this.numChunksX; cx++) {
         const chunkIdx = cy * this.numChunksX + cx
-        if (!this.dirty[chunkIdx]) continue
-        this.dirty[chunkIdx] = 0
+        if (!this.dirtyChunks[chunkIdx]) continue
+        this.dirtyChunks[chunkIdx] = 0
 
         const chunk = chunkManager.getChunk(cx, cy)
         if (!chunk) continue
@@ -158,6 +164,7 @@ export class MatterBridge extends SceneBound {
   protected onDestroy() {
     this.scene.tilemap.onTileEmpty = undefined
     this.scene.tilemap.onIslandDetected = undefined
+    this.scene.tilemap.onActivateTiles = undefined
     this.worker.terminate()
     // @ts-expect-error: destroy
     this.worker = null
