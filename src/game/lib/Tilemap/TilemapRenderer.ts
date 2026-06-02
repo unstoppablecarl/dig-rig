@@ -4,7 +4,8 @@ import { CREATE_COLOR, DESTROY_COLOR, PERMANENT_COLOR } from '../../config/color
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { RGBShaderColor } from '../../types.ts'
-import type { FireMode } from '../Player/_FireMode-types.ts'
+import { FireMode } from '../Player/_FireMode-types'
+import { MatterType } from '../Matter/_Matter-types.ts'
 import { TerrainChunkGlowRenderer } from './TilemapRenderer/TerrainChunkGlowRenderer.ts'
 import { TerrainChunkRenderer } from './TilemapRenderer/TerrainChunkRenderer.ts'
 import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'
@@ -58,7 +59,7 @@ const CONFIG_DEFAULTS: TilemapRendererConfig = {
 }
 
 // language=GLSL
-const FRAG_SHADER = `
+const FRAG_SHADER = /* glsl */`
     #ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
     #else
@@ -86,9 +87,17 @@ const FRAG_SHADER = `
     uniform vec3 uSandSettledOutlineColor;
     uniform vec3 uWaterColor;
     uniform float uWaterAlpha;
+    uniform float uTime;
 
     // phaser framework variable
     varying vec2 outTexCoord;
+
+    // Fast integer-free hash (avoids sin() which is slow on some GPUs)
+    float hash(vec2 p) {
+        p = fract(p * vec2(0.1031, 0.1030));
+        p += dot(p, p + 33.33);
+        return fract((p.x + p.y) * p.x);
+    }
 
     float blendOverlay(float base, float blend) {
         return base < 0.5 ? (2.0 * base * blend) : (1.0 - 2.0 * (1.0 - base) * (1.0 - blend));
@@ -100,63 +109,38 @@ const FRAG_SHADER = `
         blendOverlay(base.g, blend.g),
         blendOverlay(base.b, blend.b)
         );
-
-
-        blended.rgb = mix(base.rgb, blended, ratio);
-
-        return blended;
+        return mix(base.rgb, blended, ratio);
     }
 
     void main() {
-        // uMask encodes tile type in the R channel:
-        //   R = 0.00  →  EMPTY        (transparent, discarded)
-        //   R ≈ 0.06  →  WATER        (blue tint)
-        //   R ≈ 0.16  →  SAND         (create color while falling)
-        //   R ≈ 0.31  →  SAND_SETTLED (yellow tint over terrain texture)
-        //   R ≈ 0.50  →  SOLID        (samples terrain texture)
-        //   R = 1.00  →  PERMANENT    (fixed cyan base color)
-        float mask = texture2D(uMask, outTexCoord).r;
+        // uMask R channel stores the MatterType integer value normalised to 0–1.
+        // Decode by rounding back to int: int(R * 255 + 0.5).
+        int tileType = int(texture2D(uMask, outTexCoord).r * 255.0 + 0.5);
 
-        // uGlow is written by the CPU distance-transform each time terrain changes:
-        //   G = gradient intensity 0→1, where 1 is the immediate border and it fades
-        //       to 0 at GLOW_RADIUS tiles depth — drives the soft inner glow
-        //   R = 1px outline flag: 1.0 only on border tiles (distance == 1), else 0
+        // uGlow:  G = inner-glow gradient (0→1),  R = 1px outline flag
         vec4 glowTex = texture2D(uGlow, outTexCoord);
         float glow = glowTex.g;
         float outline = glowTex.r;
 
         vec4 color;
 
-        // PERMANENT
-        if (mask > 0.75) {
+        if (tileType == ${MatterType.PERMANENT}) {
             color = texture2D(uTerrain, outTexCoord);
-            // permanent color tinted toward uGlowColor near empty space
             color.rgb = blendOverlay(color.rgb, uPermanentTileColor, 0.80);
-            // is outline pixel
             if (outline > 0.5) {
                 color.rgb = mix(color.rgb, uPermanentTileColor, uOutlineOpacity);
             }
         }
-        // SOLID
-        else if (mask > 0.42) {
-            // SOLID — terrain texture, soft glow gradient, crisp 1px outline on top
+        else if (tileType == ${MatterType.SOLID}) {
             color = texture2D(uTerrain, outTexCoord);
-
-            // is outline pixel
             if (outline > 0.5) {
                 color.rgb = blendOverlay(color.rgb, uOutlineColor, uOutlineOpacity);
                 color.rgb = mix(color.rgb, uOutlineColor, 0.45);
+            } else if (glow > 0.01) {
+                color.rgb = mix(color.rgb * uGlowColor, color.rgb, 1.0 - glow * uInnerGlowStrength);
             }
-
-            // is glow pixel
-            else if (glow > 0.01)   {
-                vec3 multiplyColor = color.rgb * uGlowColor;
-
-                color.rgb = mix(color.rgb, multiplyColor, glow * uInnerGlowStrength);
             }
-        }
-        // SAND_SETTLED — yellow tint over terrain texture
-        else if (mask > 0.22) {
+        else if (tileType == ${MatterType.SAND_SETTLED}) {
             color = texture2D(uTerrain, outTexCoord);
             color.rgb = mix(color.rgb, uSandSettledColor, uSandSettledColorAlpha);
             if (outline > 0.5) {
@@ -165,12 +149,10 @@ const FRAG_SHADER = `
                 color.rgb = mix(color.rgb, uGlowColor, glow * uInnerGlowStrength * 0.4);
             }
         }
-        // SAND (falling) — create color
-        else if (mask > 0.10) {
+        else if (tileType == ${MatterType.SAND}) {
             color = vec4(uSandColor, 1.0);
         }
-        // WATER — flat transparent blue, no terrain texture
-        else if (mask > 0.03) {
+        else if (tileType == ${MatterType.WATER}) {
             color = vec4(uWaterColor * uWaterAlpha, uWaterAlpha);
         }
         // EMPTY — fully transparent
@@ -193,6 +175,7 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
   private readonly chunkRenderer: TerrainChunkRenderer
   private readonly effectSystem: TerrainEffectSystem
   private readonly glowRenderer: TerrainChunkGlowRenderer
+  private readonly shader: Shader
 
   readonly glowRadius = CONFIG_DEFAULTS.glowRadius
   readonly glowEnabled = CONFIG_DEFAULTS.glowEnabled
@@ -255,12 +238,14 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
           setUniform('uSandSettledOutlineColor', this.sandSettledOutlineColor)
           setUniform('uWaterColor', this.waterColor)
           setUniform('uWaterAlpha', this.waterAlpha)
+          setUniform('uTime', 0)
         },
       },
       0, 0,
       width, height,
     )
 
+    this.shader = shader
     shader.setOrigin(0, 0)
     shader.setTextures([
       terrainTexture,
@@ -297,6 +282,7 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
 
     this.glowRenderer.updateTransitions()
     this.effectSystem.update()
+    this.shader.setUniform('uTime', this.scene.time.now)
   }
 
   protected onDestroy() {

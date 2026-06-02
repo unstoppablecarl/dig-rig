@@ -1,31 +1,18 @@
 import { CHUNK_SIZE } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { MatterType } from '../../Matter/_Matter-types.ts'
+import { MatterTypeValues } from '../../Matter/_Matter-types.ts'
 import type { Chunk } from '../Chunk.ts'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
 // Mask pixel layout (little-endian Uint32: 0xAABBGGRR):
-//   R = 0.00 → EMPTY, R≈0.06 → WATER, R≈0.16 → SAND, R≈0.31 → SAND_SETTLED, R≈0.50 → SOLID, R=1.00 → PERMANENT
-//   Shader bands: >0.75 PERMANENT, >0.42 SOLID, >0.22 SAND_SETTLED, >0.10 SAND, >0.03 WATER, else EMPTY
-const MASK_EMPTY        = 0xFF000000
-const MASK_WATER        = 0xFF000010  // R=16  (0.063)
-const MASK_SAND         = 0xFF000028  // R=40  (0.157)
-const MASK_SAND_SETTLED = 0xFF000050  // R=80  (0.314)
-const MASK_SOLID        = 0xFF000080  // R=128 (0.502)
-const MASK_PERM         = 0xFF0000FF  // R=255 (1.000)
+//   R = TerrainType integer value. Shader decodes via int(R * 255 + 0.5).
+const MASK_MAP: Record<number, number> = Object.fromEntries(
+  MatterTypeValues.map(type => [type, 0xFF000000 | type])
+)
 
 const CHUNK_BYTES = CHUNK_SIZE * CHUNK_SIZE * 4
-
-const MASK_MAP: Record<MatterType, number> = {
-  [MatterType.EMPTY]: MASK_EMPTY,
-  [MatterType.PERMANENT]: MASK_PERM,
-  [MatterType.SOLID]: MASK_SOLID,
-  [MatterType.WATER]: MASK_WATER,
-  [MatterType.SAND]: MASK_SAND,
-  [MatterType.SAND_SETTLED]: MASK_SAND_SETTLED,
-}
 
 export class TerrainChunkRenderer extends SceneBound {
   readonly maskTexture: CanvasTexture

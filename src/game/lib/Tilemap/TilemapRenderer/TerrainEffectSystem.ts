@@ -1,7 +1,7 @@
 import { FIRE_MODE_COLORS_RGB } from '../../../config/colors.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import type { FireMode } from '../../Player/_FireMode-types.ts'
+import { FireMode } from '../../Player/_FireMode-types'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
