@@ -10,7 +10,7 @@ export class UIScene extends Scene {
   static ID = 'UIScene'
 
   public matterMeter: MatterMeter
-  public fpsText: () => void
+  public fpsText: (now?: number) => void
   public gui: GUI
   public toast: Toaster
 
@@ -32,9 +32,9 @@ export class UIScene extends Scene {
     new PlayerUI(this, gameScene)
   }
 
-  update(_time: number, _delta: number) {
+  update(time: number, _delta: number) {
     this.matterMeter.update()
-    this.fpsText()
+    this.fpsText(time)
   }
 
   initLevelDisplayName(displayName: string) {
