@@ -1,0 +1,24 @@
+import { MatterType, SAND, SAND_SETTLED } from '../_Matter-types.ts'
+import type { ElementDef } from '../elements.ts'
+import type { MatterWorld } from '../MatterWorld.ts'
+
+const def: ElementDef = {
+  id: MatterType.SAND,
+  name: 'Sand',
+  action(world: MatterWorld, tx, ty, idx, next): void {
+    const leftFirst = world.leftFirst
+
+    const moved =
+      world.tryMove(idx, tx, ty, tx, ty + 1, SAND, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, SAND, next) ||
+      world.tryMove(idx, tx, ty, tx + (world.leftFirst ? 1 : -1), ty + 1, SAND, next)
+
+    if (!moved) {
+      world.tiles[idx] = SAND_SETTLED
+      world.markDirty(tx, ty)
+      world.justSettled.push(idx)
+    }
+  },
+}
+
+export default def

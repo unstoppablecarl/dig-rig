@@ -1,5 +1,6 @@
 import { EMPTY, MatterType, SAND, SAND_SETTLED, WATER } from './_Matter-types.ts'
 import { MatterWorkerOutMsg } from './_MatterWorker-types.ts'
+import { ELEMENT_ACTIONS } from './elements.ts'
 
 const MAX_FLOW = 8
 
@@ -176,40 +177,7 @@ export class MatterWorld {
 
       const tile = this.tiles[idx] as MatterType
 
-      const leftFirst = this.leftFirst
-      if (tile === SAND) {
-        const moved =
-          this.tryMove(idx, tx, ty, tx, ty + 1, SAND, next) ||
-          this.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, SAND, next) ||
-          this.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, SAND, next)
-
-        if (!moved) {
-          this.tiles[idx] = SAND_SETTLED
-          this.markDirty(tx, ty)
-          this.justSettled.push(idx)
-        }
-
-      } else if (tile === WATER) {
-        const moved =
-          this.tryMove(idx, tx, ty, tx, ty + 1, WATER, next) ||
-          this.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, WATER, next) ||
-          this.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, WATER, next) ||
-          this.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1, next) ||
-          this.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
-
-        if (!moved) {
-          this.stableWater.add(idx)
-          // Wake SAND_SETTLED directly above — it should sink through water
-          if (ty > 0) {
-            const aboveIdx = (ty - 1) * this.width + tx
-            if (this.tiles[aboveIdx] === SAND_SETTLED) {
-              this.tiles[aboveIdx] = SAND
-              this.markDirty(tx, ty - 1)
-              next.add(aboveIdx)
-            }
-          }
-        }
-      }
+      ELEMENT_ACTIONS[tile](this, tx, ty, idx, next)
     }
 
     this.activeSet = next

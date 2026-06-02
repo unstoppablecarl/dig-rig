@@ -14,6 +14,7 @@ export enum InputMode {
 export class InputManager extends SceneBound {
   private modeControllers: Record<InputMode, InputController[]>
   private _mode: InputMode
+  brushInput: BrushInput
 
   constructor(
     public scene: GameLevel,
@@ -21,7 +22,7 @@ export class InputManager extends SceneBound {
     super(scene)
 
     const zoomInput = new ZoomInput(scene)
-    const brushInput = new BrushInput(scene)
+    const brushInput = this.brushInput = new BrushInput(scene)
     const fireGroupInput = new FireGroupInput(scene)
     const playerWeaponManager = scene.playerWeaponManager
 

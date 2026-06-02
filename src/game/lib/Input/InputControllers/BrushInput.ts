@@ -88,10 +88,8 @@ export class BrushInput extends InputController {
     if (this.element === MatterType.SOLID) {
       const mode = this.isCreating ? FireMode.CREATE : FireMode.DESTROY
       this.scene.tilemap.applyEffect(this._effectTiles, tileX, tileY, this.radius, mode)
-    } else if (this.element === MatterType.WATER) {
-      this.scene.matterBridge.placeWater(tileX, tileY, this.radius)
-    } else if (this.element === MatterType.SAND) {
-      this.scene.matterBridge.placeSand(tileX, tileY, this.radius)
+    } else {
+      this.scene.matterBridge.addElement(this.element, tileX, tileY, this.radius)
     }
   }
 

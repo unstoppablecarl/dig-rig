@@ -71,7 +71,7 @@ export class MatterBridge extends SceneBound {
     }
   }
 
-  placeWater(tx: number, ty: number, radius = 8) {
+  addElement(value: MatterType, tx: number, ty: number, radius = 8) {
     const { tilemap } = this.scene
     tx = Math.floor(tx)
     ty = Math.floor(ty)
@@ -82,38 +82,13 @@ export class MatterBridge extends SceneBound {
         const x = tx + dx
         const y = ty + dy
         if (tilemap.getTile(x, y) !== MatterType.EMPTY) continue
-        tilemap.setTile(x, y, MatterType.WATER)
+        tilemap.setTile(x, y, value)
         indices.push(y * tilemap.width + x)
       }
     }
     if (indices.length) {
       this.worker.postMessage({ type: MatterWorkerInMsg.ACTIVATE, indices })
     }
-  }
-
-  placeSand(tx: number, ty: number, radius = 8, maxTiles = Number.MAX_SAFE_INTEGER) {
-    const { tilemap } = this.scene
-    tx = Math.floor(tx)
-    ty = Math.floor(ty)
-    const indices: number[] = []
-    // Place a tall column above (tx, ty) so grains fall in sequence, producing a
-    // visible stream rather than a single burst that sinks too fast to see.
-    const halfW = Math.max(1, Math.ceil(radius / 2))
-    const colHeight = radius * 2
-    outer: for (let dy = -colHeight; dy < 0; dy++) {
-      for (let dx = -halfW; dx <= halfW; dx++) {
-        if (indices.length >= maxTiles) break outer
-        const x = tx + dx
-        const y = ty + dy
-        if (tilemap.getTile(x, y) !== MatterType.EMPTY) continue
-        tilemap.setTile(x, y, MatterType.SAND)
-        indices.push(y * tilemap.width + x)
-      }
-    }
-    if (indices.length) {
-      this.worker.postMessage({ type: MatterWorkerInMsg.ACTIVATE, indices })
-    }
-    return indices.length
   }
 
   update() {
