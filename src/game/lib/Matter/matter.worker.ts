@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import { EMPTY, SAND, SAND_SETTLED, WATER } from '../Matter/_Matter-types.ts'
+import { EMPTY, SAND, SAND_SETTLED, WATER } from './_Matter-types.ts'
 
 let tiles: Uint8Array
 let dirty: Uint8Array

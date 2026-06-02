@@ -4,7 +4,7 @@ import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { MatterType } from './_Matter-types.ts'
 import { FireMode } from '../Player/_FireMode-types.ts'
 import type { Chunk } from '../Tilemap/Chunk.ts'
-import SandWorkerConstructor from '../Sand/sand.worker.ts?worker'
+import SandWorkerConstructor from './matter.worker.ts?worker'
 
 export class MatterBridge extends SceneBound {
   private readonly worker: Worker
