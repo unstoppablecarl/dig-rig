@@ -1,15 +1,15 @@
 import { Scenes } from 'phaser'
-import { FireMode } from '../../../config.ts'
 import { shuffleArray } from '../../../helpers/array.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponConstantInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponConstantInput.ts'
+import { EMPTY } from '../../Matter/_Matter-types.ts'
 import { MatterTank } from '../../Matter/MatterTank.ts'
 import type { SweepRecord } from '../../Projectiles/TunnelDestroyProjectile.ts'
 import { TunnelDestroyProjectile } from '../../Projectiles/TunnelDestroyProjectile.ts'
-import { TerrainType } from '../../Tilemap/_Tilemap-types.ts'
 import type { Tile } from '../../Tilemap/Tilemap.ts'
+import { FireMode } from '../_FireMode-types'
 import UPDATE = Scenes.Events.UPDATE
 
 // Per-tile safe radius: tiles this close to the player are held in the record's
@@ -126,7 +126,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
           let searchRadius = record.radius
           while (result.length < targetLen && searchRadius <= maxRadius) {
             tilemap.getCircle(cx, cy, searchRadius, (x, y) => {
-              if (tilemap.getTile(x, y) !== TerrainType.EMPTY) return false
+              if (tilemap.getTile(x, y) !== EMPTY) return false
               if (adjOnly && !this._isAdjacentToSolid(x, y)) return false
               const key = y * width + x
               if (visited.has(key)) return false
@@ -162,7 +162,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
         let searchRadius = TILE_SAFE_RADIUS + 1
         while (result.length < available && searchRadius <= 200) {
           tilemap.getCircle(cx, cy, searchRadius, (x, y) => {
-            if (tilemap.getTile(x, y) !== TerrainType.EMPTY) return false
+            if (tilemap.getTile(x, y) !== EMPTY) return false
             if (adjOnly && !this._isAdjacentToSolid(x, y)) return false
             const key = y * width + x
             if (visited.has(key)) return false
@@ -229,7 +229,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
         continue
       }
 
-      if (tilemap.getTile(tile.x, tile.y) !== TerrainType.EMPTY) {
+      if (tilemap.getTile(tile.x, tile.y) !== EMPTY) {
         obstructed++
         continue  // solid — fall through to flood fill
       }
@@ -247,10 +247,10 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   private _isAdjacentToSolid(x: number, y: number): boolean {
     const { tilemap } = this.scene
     return (
-      tilemap.getTile(x - 1, y) !== TerrainType.EMPTY ||
-      tilemap.getTile(x + 1, y) !== TerrainType.EMPTY ||
-      tilemap.getTile(x, y - 1) !== TerrainType.EMPTY ||
-      tilemap.getTile(x, y + 1) !== TerrainType.EMPTY
+      tilemap.getTile(x - 1, y) !== EMPTY ||
+      tilemap.getTile(x + 1, y) !== EMPTY ||
+      tilemap.getTile(x, y - 1) !== EMPTY ||
+      tilemap.getTile(x, y + 1) !== EMPTY
     )
   }
 
@@ -262,7 +262,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
     shuffleArray(created)
     const n = Math.min(created.length, MAX_RESTORE_PARTICLES)
     for (let i = 0; i < n; i++) {
-      this.scene.particleManager.spawnMatter(source, created[i], true)
+      this.scene.vfxParticleManager.spawnMatter(source, created[i], true)
     }
     this.matterTank.applyPendingCharge(FireMode.CREATE, created.length)
   }

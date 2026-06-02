@@ -1,7 +1,7 @@
 import { Math as PMath, Time } from 'phaser'
-import { FireMode } from '../../config.ts'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
-import { TerrainType } from '../Tilemap/_Tilemap-types.ts'
+import { MatterType } from '../Matter/_Matter-types.ts'
+import { FireMode } from '../Player/_FireMode-types'
 import { BaseProjectile } from './BaseProjectile.ts'
 import { tilesToRadius } from './projectile-radius'
 import TimerEvent = Time.TimerEvent
@@ -41,7 +41,7 @@ export class Projectile extends BaseProjectile {
         const collision = this.scene.tilemap.getTileFromWorld(
             stepX,
             stepY,
-        ) !== TerrainType.EMPTY
+        ) !== MatterType.EMPTY
 
           if (collision) {
             this.x = stepX - stepDx

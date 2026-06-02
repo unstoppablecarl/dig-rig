@@ -1,10 +1,10 @@
-import { FireMode } from '../../config.ts'
 import { isMatterTankFireMode } from '../../helpers/_helpers.ts'
 import { shuffleArray } from '../../helpers/array.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank.ts'
+import { FireMode } from '../Player/_FireMode-types'
 import type { Tile, TileEffectResult } from '../Tilemap/Tilemap.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
 import { ProjectileRenderer } from './ProjectileRenderer.ts'
@@ -118,7 +118,7 @@ export abstract class BaseProjectile extends SceneBound {
         x: tile.x,
         y: tile.y,
       }
-      this.scene.particleManager.spawnMatter(source, target, true)
+      this.scene.vfxParticleManager.spawnMatter(source, target, true)
     }
     this.matterTank.applyPendingCharge(FireMode.CREATE, changed)
 
@@ -138,7 +138,7 @@ export abstract class BaseProjectile extends SceneBound {
     }
     shuffleArray(created)
     for (const tile of created) {
-      this.scene.particleManager.spawnMatter(source, tile, true)
+      this.scene.vfxParticleManager.spawnMatter(source, tile, true)
     }
     this.matterTank.applyPendingCharge(FireMode.CREATE, changed)
     return changed
@@ -164,7 +164,7 @@ export abstract class BaseProjectile extends SceneBound {
           x: tile.x,
           y: tile.y,
         }
-        this.scene.particleManager.spawnMatter(source, target, false)
+        this.scene.vfxParticleManager.spawnMatter(source, target, false)
       }
 
       this.matterTank.applyPendingCharge(FireMode.DESTROY, tiles.length)

@@ -1,9 +1,9 @@
-import { FireMode } from '../../../config.ts'
 import { throttle } from '../../../helpers/_helpers.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponSingleFireInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponSingleFireInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
+import { FireMode } from '../_FireMode-types'
 
 const BURST_SHOTS = 5
 const BETWEEN_SHOTS_MS = 100

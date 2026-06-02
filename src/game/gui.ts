@@ -93,7 +93,7 @@ export function makeGUI(game: GameLevel) {
     },
 
     get terrain() {
-      return game.terrainParticleManager?.particles?.length ?? 0
+      return game.terrainBlobParticleManager?.particles?.length ?? 0
     },
   }
 
@@ -105,26 +105,26 @@ export function makeGUI(game: GameLevel) {
 
   physicsFolder.addButton({ title: 'Add' })
     .on('click', () => {
-      game.terrainParticleManager.explode(game.player.x, game.player.y - 100, 100)
+      game.terrainBlobParticleManager.explode(game.player.x, game.player.y - 100, 100)
     })
 
   physicsFolder.addButton({ title: 'Add Sand' })
     .on('click', () => {
-      game.sandBridge.placeSand(game.player.x, game.player.y - 100)
+      game.matterBridge.placeSand(game.player.x, game.player.y - 100)
     })
 
   physicsFolder.addButton({ title: 'Add Water' })
     .on('click', () => {
-      game.sandBridge.placeWater(game.player.x, game.player.y - 100)
+      game.matterBridge.placeWater(game.player.x, game.player.y - 100)
     })
 
   const particles = {
     get count() {
-      return game?.particleManager?.emitter?.getAliveParticleCount()
+      return game?.vfxParticleManager?.emitter?.getAliveParticleCount()
     },
 
     get dead() {
-      return game?.particleManager?.emitter?.getDeadParticleCount()
+      return game?.vfxParticleManager?.emitter?.getDeadParticleCount()
     },
   }
 

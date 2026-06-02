@@ -1,6 +1,7 @@
 import { GameObjects, Input, Scenes } from 'phaser'
-import { FireMode } from '../../../config.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
+import { MatterType } from '../../Matter/_Matter-types.ts'
+import { FireMode } from '../../Player/_FireMode-types'
 import type { TileEffectResult } from '../../Tilemap/Tilemap.ts'
 import { InputController } from './InputController.ts'
 import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
@@ -18,6 +19,8 @@ export class BrushInput extends InputController {
   private isCreating = false
   private brushDirty = true
   private _effectTiles: TileEffectResult[] = []
+
+  public element: MatterType = MatterType.SOLID
 
   constructor(
     public scene: GameLevel,
@@ -82,8 +85,14 @@ export class BrushInput extends InputController {
   }
 
   apply(tileX: number, tileY: number) {
-    const newValue = this.isCreating ? FireMode.CREATE : FireMode.DESTROY
-    this.scene.tilemap.applyEffect(this._effectTiles, tileX, tileY, this.radius, newValue, Number.MAX_VALUE)
+    if (this.element === MatterType.SOLID) {
+      const mode = this.isCreating ? FireMode.CREATE : FireMode.DESTROY
+      this.scene.tilemap.applyEffect(this._effectTiles, tileX, tileY, this.radius, mode)
+    } else if (this.element === MatterType.WATER) {
+      this.scene.matterBridge.placeWater(tileX, tileY, this.radius)
+    } else if (this.element === MatterType.SAND) {
+      this.scene.matterBridge.placeSand(tileX, tileY, this.radius)
+    }
   }
 
   protected onDestroy() {

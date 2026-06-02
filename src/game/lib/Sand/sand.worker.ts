@@ -1,11 +1,6 @@
 /// <reference lib="webworker" />
 
-import { TerrainType } from '../Tilemap/_Tilemap-types.ts'
-
-const EMPTY = TerrainType.EMPTY
-const SAND = TerrainType.SAND
-const SAND_SETTLED = TerrainType.SAND_SETTLED
-const WATER = TerrainType.WATER
+import { EMPTY, SAND, SAND_SETTLED, WATER } from '../Matter/_Matter-types.ts'
 
 let tiles: Uint8Array
 let dirty: Uint8Array

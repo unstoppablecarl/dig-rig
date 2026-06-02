@@ -1,4 +1,4 @@
-import { FireMode, FireModeValues } from '../../../config.ts'
+
 import { FIRE_MODE_COLORS } from '../../../config/colors.ts'
 import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
@@ -9,10 +9,11 @@ import { WeaponRapidFireInput } from '../../Input/InputControllers/WeaponManager
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
 import { tilesToRadius } from '../../Projectiles/projectile-radius'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
-import { TerrainType, TerrainTypeValues } from '../../Tilemap/_Tilemap-types.ts'
+import { MatterType, MatterTypeValues } from '../../Matter/_Matter-types.ts'
+import { FireMode, FireModeValues } from '../_FireMode-types'
 
 const MIN_CHARGE = 10
-const COLLISION_TYPES = new Set(TerrainTypeValues.filter(v => v !== TerrainType.EMPTY))
+const COLLISION_TYPES = new Set(MatterTypeValues.filter(v => v !== MatterType.EMPTY))
 
 export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
   readonly displayName = 'Instant'

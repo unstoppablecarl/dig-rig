@@ -1,5 +1,5 @@
+import { PERMANENT, SOLID } from '../../lib/Matter/_Matter-types.ts'
 import { Player } from '../../lib/Player/Player.ts'
-import { TerrainType } from '../../lib/Tilemap/_Tilemap-types.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
 import type { TilemapRendererConfig } from '../../lib/Tilemap/TilemapRenderer.ts'
 import { GameLevel } from '../GameLevel.ts'
@@ -37,14 +37,14 @@ export default class TestLevel2 extends GameLevel {
     )
 
     let ref = 600
-    tilemap.setRect(0, ref - 100, tilemap.width, 500, TerrainType.SOLID)
-    tilemap.setRect(200, ref - 160, 160, 60, TerrainType.SOLID)
-    tilemap.setRect(230, ref - 200, 60, 60, TerrainType.SOLID)
-    tilemap.setRect(450, ref - 220, 60, 60, TerrainType.SOLID)
+    tilemap.setRect(0, ref - 100, tilemap.width, 500, SOLID)
+    tilemap.setRect(200, ref - 160, 160, 60, SOLID)
+    tilemap.setRect(230, ref - 200, 60, 60, SOLID)
+    tilemap.setRect(450, ref - 220, 60, 60, SOLID)
 
-    tilemap.setRect(200, ref - 100, 60, 60, TerrainType.PERMANENT)
+    tilemap.setRect(200, ref - 100, 60, 60, PERMANENT)
 
-    tilemap.setBorder(2, TerrainType.PERMANENT)
+    tilemap.setBorder(2, PERMANENT)
     return tilemap
   }
 

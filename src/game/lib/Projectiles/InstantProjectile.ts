@@ -1,4 +1,4 @@
-import { FireMode } from '../../config.ts'
+import { FireMode } from '../Player/_FireMode-types'
 import { isMatterTankFireMode } from '../../helpers/_helpers.ts'
 import { BaseProjectile } from './BaseProjectile.ts'
 import { tilesToRadius } from './projectile-radius'

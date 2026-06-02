@@ -1,5 +1,5 @@
-import { FireMode, MatterTankFireMode } from '../../config.ts'
 import { clampMaxInt } from '../../helpers/_helpers.ts'
+import { FireMode, type MatterTankFireMode } from '../Player/_FireMode-types'
 import type { MatterManager } from './MatterManager.ts'
 
 export class MatterTank {

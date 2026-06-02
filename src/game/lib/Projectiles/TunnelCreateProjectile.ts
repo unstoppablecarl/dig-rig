@@ -1,7 +1,8 @@
 import { Time } from 'phaser'
-import { FireMode } from '../../config.ts'
+
+import { FireMode } from '../Player/_FireMode-types'
+import { EMPTY } from '../Matter/_Matter-types.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
-import { TerrainType } from '../Tilemap/_Tilemap-types.ts'
 import { BaseProjectile } from './BaseProjectile.ts'
 import TimerEvent = Time.TimerEvent
 
@@ -21,7 +22,8 @@ export class TunnelCreateProjectile extends BaseProjectile {
     this.expandTimer = this.startExpandTimer()
   }
 
-  update(_dt: number) {}
+  update(_dt: number) {
+  }
 
   public startExpandTimer() {
     return this.scene.time.addEvent({
@@ -37,7 +39,7 @@ export class TunnelCreateProjectile extends BaseProjectile {
     if (x < 0 || x >= width || y < 0 || y >= height) return
     const key = y * width + x
     if (this._queued.has(key)) return
-    if (this.scene.tilemap.getTile(x, y) !== TerrainType.EMPTY) return
+    if (this.scene.tilemap.getTile(x, y) !== EMPTY) return
     this._queued.add(key)
     this._frontier.push({ x, y })
   }
@@ -75,7 +77,7 @@ export class TunnelCreateProjectile extends BaseProjectile {
     while (this._frontierHead < this._frontier.length && toCreate.length < budget) {
       const { x, y } = this._frontier[this._frontierHead++]
 
-      if (this.scene.tilemap.getTile(x, y) !== TerrainType.EMPTY) continue
+      if (this.scene.tilemap.getTile(x, y) !== EMPTY) continue
       if ((x - px) * fdx + (y - py) * fdy > 0) continue
 
       toCreate.push({ x, y })

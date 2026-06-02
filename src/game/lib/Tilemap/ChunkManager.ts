@@ -1,7 +1,7 @@
 import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { TerrainType } from './_Tilemap-types.ts'
+import { MatterType, PERMANENT, SOLID } from '../Matter/_Matter-types.ts'
 import { Chunk, type ChunkId } from './Chunk.ts'
 
 export class ChunkManager extends SceneBound {
@@ -45,12 +45,12 @@ export class ChunkManager extends SceneBound {
     return this.getChunk(cx, cy)
   }
 
-  setDirty(tx: number, ty: number, oldType: TerrainType, newType: TerrainType) {
+  setDirty(tx: number, ty: number, oldType: MatterType, newType: MatterType) {
     const chunk = this.getChunkByTile(tx, ty)
     if (!chunk) return
 
-    const wasSolid = oldType !== TerrainType.EMPTY
-    const isSolid  = newType !== TerrainType.EMPTY
+    const wasSolid = oldType !== MatterType.EMPTY
+    const isSolid  = newType !== MatterType.EMPTY
     if (isSolid && !wasSolid) chunk.solidTileCount++
     if (wasSolid && !isSolid) chunk.solidTileCount--
 
@@ -120,7 +120,7 @@ export class ChunkManager extends SceneBound {
         const y1 = Math.min(y0 + CHUNK_SIZE, tilemap.height)
         scan: for (let y = y0; y < y1; y++) {
           for (let x = x0; x < x1; x++) {
-            if (tilemap.getTile(x, y) === TerrainType.PERMANENT) {
+            if (tilemap.getTile(x, y) === PERMANENT) {
               this.permanentChunkIds.add((cy * this.width + cx) as ChunkId)
               break scan
             }
@@ -142,26 +142,26 @@ export class ChunkManager extends SceneBound {
     if (dx === 1) {
       const ax = xEnd - 1, bx = xEnd
       for (let y = y0; y < yEnd; y++) {
-        if (tilemap.getTile(ax, y) === TerrainType.SOLID &&
-            tilemap.getTile(bx, y) === TerrainType.SOLID) return true
+        if (tilemap.getTile(ax, y) === SOLID &&
+            tilemap.getTile(bx, y) === SOLID) return true
       }
     } else if (dx === -1) {
       const ax = x0, bx = x0 - 1
       for (let y = y0; y < yEnd; y++) {
-        if (tilemap.getTile(ax, y) === TerrainType.SOLID &&
-            tilemap.getTile(bx, y) === TerrainType.SOLID) return true
+        if (tilemap.getTile(ax, y) === SOLID &&
+            tilemap.getTile(bx, y) === SOLID) return true
       }
     } else if (dy === 1) {
       const ay = yEnd - 1, by = yEnd
       for (let x = x0; x < xEnd; x++) {
-        if (tilemap.getTile(x, ay) === TerrainType.SOLID &&
-            tilemap.getTile(x, by) === TerrainType.SOLID) return true
+        if (tilemap.getTile(x, ay) === SOLID &&
+            tilemap.getTile(x, by) === SOLID) return true
       }
     } else {
       const ay = y0, by = y0 - 1
       for (let x = x0; x < xEnd; x++) {
-        if (tilemap.getTile(x, ay) === TerrainType.SOLID &&
-            tilemap.getTile(x, by) === TerrainType.SOLID) return true
+        if (tilemap.getTile(x, ay) === SOLID &&
+            tilemap.getTile(x, by) === SOLID) return true
       }
     }
     return false

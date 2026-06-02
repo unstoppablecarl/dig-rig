@@ -1,11 +1,12 @@
-import { CHUNK_SIZE, FireMode } from '../../config.ts'
+import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { MatterType } from './_Matter-types.ts'
+import { FireMode } from '../Player/_FireMode-types.ts'
 import type { Chunk } from '../Tilemap/Chunk.ts'
-import { TerrainType } from '../Tilemap/_Tilemap-types.ts'
-import SandWorkerConstructor from './sand.worker.ts?worker'
+import SandWorkerConstructor from '../Sand/sand.worker.ts?worker'
 
-export class SandBridge extends SceneBound {
+export class MatterBridge extends SceneBound {
   private readonly worker: Worker
   private readonly dirtyBuffer: SharedArrayBuffer
   private readonly dirty: Uint8Array
@@ -50,7 +51,7 @@ export class SandBridge extends SceneBound {
 
     tilemap.onIslandDetected = (islands) => {
       for (const { x, y } of islands) {
-        tilemap.setTile(x, y, TerrainType.SAND)
+        tilemap.setTile(x, y, MatterType.SAND)
       }
       this.activateTiles(islands)
     }
@@ -74,8 +75,8 @@ export class SandBridge extends SceneBound {
         if (dx * dx + dy * dy > radius * radius) continue
         const x = tx + dx
         const y = ty + dy
-        if (tilemap.getTile(x, y) !== TerrainType.EMPTY) continue
-        tilemap.setTile(x, y, TerrainType.WATER)
+        if (tilemap.getTile(x, y) !== MatterType.EMPTY) continue
+        tilemap.setTile(x, y, MatterType.WATER)
         indices.push(y * tilemap.width + x)
       }
     }
@@ -98,8 +99,8 @@ export class SandBridge extends SceneBound {
         if (indices.length >= maxTiles) break outer
         const x = tx + dx
         const y = ty + dy
-        if (tilemap.getTile(x, y) !== TerrainType.EMPTY) continue
-        tilemap.setTile(x, y, TerrainType.SAND)
+        if (tilemap.getTile(x, y) !== MatterType.EMPTY) continue
+        tilemap.setTile(x, y, MatterType.SAND)
         indices.push(y * tilemap.width + x)
       }
     }

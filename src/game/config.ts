@@ -4,19 +4,6 @@ export const GRAVITY: number = 1
 export const PLAYER_JUMP_POWER = -7
 export const PLAYER_MOVE_SPEED = 3.5
 
-export enum FireMode {
-  CREATE,
-  DESTROY,
-  // solid -> sand -> water
-  MELT,
-  //water -> sand -> solid
-  SOLIDIFY,
-}
-
-export const FireModeValues = Object.values(FireMode).filter((key) => !isNaN(Number(key))) as FireMode[]
-
-export type MatterTankFireMode = FireMode.CREATE | FireMode.DESTROY;
-
 export const MAX_MATTER_PARTICLES = 1500
 
 export const PLAYER_MATTER_TANK_SIZE = 5000

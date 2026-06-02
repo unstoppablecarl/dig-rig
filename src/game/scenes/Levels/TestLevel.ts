@@ -1,7 +1,7 @@
 import { Driller } from '../../lib/Entities/Driller.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { ScaleLevelTexture } from '../../lib/Textures/ScaleLevelTexture.ts'
-import { TerrainType } from '../../lib/Tilemap/_Tilemap-types.ts'
+import { PERMANENT, SOLID } from '../../lib/Matter/_Matter-types.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
 import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture
@@ -32,11 +32,11 @@ export default class TestLevel extends GameLevel {
     )
 
     let ref = 600
-    tilemap.setRect(0, ref - 100, tilemap.width, 500, TerrainType.SOLID)
-    tilemap.setRect(200, ref - 160, 160, 60, TerrainType.SOLID)
-    tilemap.setRect(230, ref - 200, 60, 60, TerrainType.SOLID)
-    tilemap.setRect(450, ref - 220, 60, 60, TerrainType.SOLID)
-    tilemap.setBorder(2, TerrainType.PERMANENT)
+    tilemap.setRect(0, ref - 100, tilemap.width, 500, SOLID)
+    tilemap.setRect(200, ref - 160, 160, 60, SOLID)
+    tilemap.setRect(230, ref - 200, 60, 60, SOLID)
+    tilemap.setRect(450, ref - 220, 60, 60, SOLID)
+    tilemap.setBorder(2, PERMANENT)
 
     return tilemap
   }
@@ -66,7 +66,6 @@ export default class TestLevel extends GameLevel {
       restitution: 0,
       density: 0.001,
     })
-
 
     const sprite = this.add.sprite(x, y, 'crate')
 

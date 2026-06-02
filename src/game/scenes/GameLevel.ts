@@ -9,11 +9,11 @@ import { WeaponManagerInput } from '../lib/Input/InputControllers/WeaponManagerI
 import { InputManager } from '../lib/Input/InputManager.ts'
 import { makePlayerActions, type PlayerActions } from '../lib/Input/PlayerActions.ts'
 import { MatterManager } from '../lib/Matter/MatterManager.ts'
-import { ParticleManager } from '../lib/Particles/ParticleManager.ts'
-import { TerrainParticleManager } from '../lib/Particles/TerrainParticleManager.ts'
+import { VFXParticleManager } from '../lib/VFXParticles/VFXParticleManager.ts'
+import { TerrainBlobParticleManager } from '../lib/Tilemap/TerrainBlobParticleManager.ts'
 import { Player } from '../lib/Player/Player.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
-import { SandBridge } from '../lib/Sand/SandBridge.ts'
+import { MatterBridge } from '../lib/Matter/MatterBridge.ts'
 import { Tilemap } from '../lib/Tilemap/Tilemap.ts'
 import { TilemapRenderer, type TilemapRendererConfig } from '../lib/Tilemap/TilemapRenderer.ts'
 import { CameraController } from '../lib/UI/CameraController.ts'
@@ -46,7 +46,7 @@ export abstract class GameLevel extends Scene {
   public cameraController: CameraController
   public entities: Group
   public matterManager: MatterManager
-  public particleManager: ParticleManager
+  public vfxParticleManager: VFXParticleManager
   public player: Player
   public playerWeaponManager: WeaponManagerInput
   public projectiles: ProjectileManager
@@ -56,8 +56,8 @@ export abstract class GameLevel extends Scene {
   public worldBounds: Geom.Rectangle
   public inputManager: InputManager
   public playerActions: PlayerActions
-  public terrainParticleManager: TerrainParticleManager
-  public sandBridge: SandBridge
+  public terrainBlobParticleManager: TerrainBlobParticleManager
+  public matterBridge: MatterBridge
   public ui: UIScene
   protected id: LevelId
 
@@ -189,14 +189,14 @@ export abstract class GameLevel extends Scene {
       this.tilemap.height,
     )
 
-    this.terrainParticleManager = new TerrainParticleManager(this)
+    this.terrainBlobParticleManager = new TerrainBlobParticleManager(this)
     this.tilemapRenderer = this.makeTilemapRenderer(this.tilemap)
-    this.sandBridge = new SandBridge(this)
+    this.matterBridge = new MatterBridge(this)
     this.terrainChunkBodyManager = new TerrainChunkBodyManager(this)
     this.projectiles = new ProjectileManager(this)
     this.playerActions = makePlayerActions(this, INPUT_ACTIONS)
     this.playerWeaponManager = new WeaponManagerInput(this)
-    this.particleManager = new ParticleManager(this)
+    this.vfxParticleManager = new VFXParticleManager(this)
     this.inputManager = new InputManager(this)
 
     this.entities = this.add.group({
@@ -225,12 +225,12 @@ export abstract class GameLevel extends Scene {
   update(_time: number, delta: number) {
     const dt = getDeltaT(delta)
 
-    this.sandBridge.update()
+    this.matterBridge.update()
     this.cameraController.update()
     this.player.update()
     this.projectiles.update(dt)
     this.terrainChunkBodyManager.update()
-    this.terrainParticleManager.update(dt)
+    this.terrainBlobParticleManager.update(dt)
 
     this.tilemapRenderer.render()
   }

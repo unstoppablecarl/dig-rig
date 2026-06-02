@@ -4,12 +4,12 @@ import { CREATE_COLOR_RGB, DESTROY_COLOR_RGB } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
-import { MatterParticle, PARTICLE_SIZE } from './MatterParticle.ts'
+import { VFXMatterParticle, PARTICLE_SIZE } from './VFXMatterParticle.ts'
 import Color = Display.Color
 import Graphics = GameObjects.Graphics
 import ParticleEmitter = GameObjects.Particles.ParticleEmitter
 
-export class ParticleManager extends SceneBound {
+export class VFXParticleManager extends SceneBound {
   public emitter: ParticleEmitter
   debugGraphics: Graphics | null = null
 
@@ -37,7 +37,7 @@ export class ParticleManager extends SceneBound {
     }
 
     this.emitter = this.scene.sys.displayList.add(new EmitterClass(this.scene, 0, 0, 'particle', {
-      particleClass: MatterParticle,
+      particleClass: VFXMatterParticle,
       speed: 0,
       quantity: 1000,
       // manual
@@ -63,7 +63,7 @@ export class ParticleManager extends SceneBound {
     colorFrom: Color,
     colorTo: Color,
   ) {
-    const particle = this.emitter.emitParticleAt(source.x, source.y, 1) as MatterParticle
+    const particle = this.emitter.emitParticleAt(source.x, source.y, 1) as VFXMatterParticle
     particle?.init(target, staticTarget, colorFrom, colorTo)
   }
 
@@ -77,7 +77,7 @@ export class ParticleManager extends SceneBound {
 class MatterParticleEmitter extends ParticleEmitter {
   preUpdate(time: number, delta: number) {
     if (DRAW_PARTICLE_DEBUG) {
-      (this.scene as GameLevel).particleManager?.debugGraphics?.clear()
+      (this.scene as GameLevel).vfxParticleManager?.debugGraphics?.clear()
     }
     super.preUpdate(time, delta)
   }

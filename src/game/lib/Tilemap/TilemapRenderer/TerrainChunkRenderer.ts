@@ -1,7 +1,7 @@
 import { CHUNK_SIZE } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { TerrainType } from '../_Tilemap-types.ts'
+import { MatterType } from '../../Matter/_Matter-types.ts'
 import type { Chunk } from '../Chunk.ts'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import CanvasTexture = Phaser.Textures.CanvasTexture
@@ -18,13 +18,13 @@ const MASK_PERM         = 0xFF0000FF  // R=255 (1.000)
 
 const CHUNK_BYTES = CHUNK_SIZE * CHUNK_SIZE * 4
 
-const MASK_MAP: Record<TerrainType, number> = {
-  [TerrainType.EMPTY]: MASK_EMPTY,
-  [TerrainType.PERMANENT]: MASK_PERM,
-  [TerrainType.SOLID]: MASK_SOLID,
-  [TerrainType.WATER]: MASK_WATER,
-  [TerrainType.SAND]: MASK_SAND,
-  [TerrainType.SAND_SETTLED]: MASK_SAND_SETTLED,
+const MASK_MAP: Record<MatterType, number> = {
+  [MatterType.EMPTY]: MASK_EMPTY,
+  [MatterType.PERMANENT]: MASK_PERM,
+  [MatterType.SOLID]: MASK_SOLID,
+  [MatterType.WATER]: MASK_WATER,
+  [MatterType.SAND]: MASK_SAND,
+  [MatterType.SAND_SETTLED]: MASK_SAND_SETTLED,
 }
 
 export class TerrainChunkRenderer extends SceneBound {

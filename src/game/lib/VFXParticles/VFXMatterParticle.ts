@@ -51,7 +51,7 @@ const SCALE_INTERPOLATION = [1, 3, 1].map(v => PARTICLE_BASE_SCALE * v)
 
 const noise = makeSimplexNoise(NOISE_SCALE, NOISE_TIME_SCALE)
 
-export class MatterParticle extends Particle {
+export class VFXMatterParticle extends Particle {
   private target: Position | ParticleTarget | null = null
   private colorFrom: Color
   private colorTo: Color
@@ -187,7 +187,7 @@ export class MatterParticle extends Particle {
     ).color
 
     if (DRAW_PARTICLE_DEBUG && this.target) {
-      (this.emitter.scene as GameLevel).particleManager
+      (this.emitter.scene as GameLevel).vfxParticleManager
         ?.debugGraphics
         ?.moveTo(this.x, this.y)
         ?.lineTo(this.target.x, this.target.y)

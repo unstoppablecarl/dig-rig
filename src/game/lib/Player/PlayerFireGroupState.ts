@@ -1,4 +1,4 @@
-import { FireMode } from '../../config.ts'
+import { FireMode } from './_FireMode-types'
 
 export enum FireGroup {
   CREATE_DESTROY,
