@@ -3,7 +3,7 @@ import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { FireMode } from '../../Player/_FireMode-types'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
-import CanvasTexture = Phaser.Textures.CanvasTexture
+import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
 
 // RGB = fire mode color, A = intensity fading 1→0 over EFFECT_DURATION_MS.
 // texSubImage2D with Uint8Array bypasses premultiplied-alpha (UNPACK_PREMULTIPLY_ALPHA_WEBGL
@@ -20,7 +20,8 @@ type EffectEntry = {
 }
 
 export class TerrainEffectSystem extends SceneBound {
-  readonly effectTexture: CanvasTexture
+  readonly effectTexture: Phaser.Textures.Texture
+  private readonly effectWrapper: WebGLTextureWrapper
 
   private readonly effectBuf: Uint8Array
   private readonly effectUploadBuf: Uint8Array
@@ -29,7 +30,10 @@ export class TerrainEffectSystem extends SceneBound {
   constructor(public scene: GameLevel) {
     super(scene)
     const { width, height } = scene.tilemap
-    this.effectTexture = this.scene.initCanvasTexture('terrain_effect_texture', width, height)
+
+    const [texture, wrapper] = this.scene.initGLTexture('terrain_effect_texture', width, height)
+    this.effectTexture = texture
+    this.effectWrapper = wrapper
 
     this.effectBuf = new Uint8Array(width * height * 4)
 
@@ -82,10 +86,9 @@ export class TerrainEffectSystem extends SceneBound {
     }
 
     const gl = (this.scene.renderer as WebGLRenderer).gl
-    const texture = (this.effectTexture.source[0] as any).glTexture.webGLTexture!
     const glY = this.scene.tilemap.height - minY - bh
 
-    gl.bindTexture(gl.TEXTURE_2D, texture)
+    gl.bindTexture(gl.TEXTURE_2D, this.effectWrapper.webGLTexture)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
     gl.texSubImage2D(gl.TEXTURE_2D, 0, minX, glY, bw, bh, gl.RGBA, gl.UNSIGNED_BYTE, this.effectUploadBuf)
     gl.bindTexture(gl.TEXTURE_2D, null)

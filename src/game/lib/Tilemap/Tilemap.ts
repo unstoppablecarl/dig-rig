@@ -12,6 +12,9 @@ import Rectangle = Geom.Rectangle
 
 export type Tile = { x: number, y: number }
 
+const BFS_DX = [-1, 1, 0, 0]
+const BFS_DY = [0, 0, -1, 1]
+
 const PLAYER_RADIUS_X = PLAYER_WIDTH * 0.5
 const PLAYER_RADIUS_Y = PLAYER_HEIGHT * 0.5
 // How far the player AABB is extended in the direction of movement when filtering creates.
@@ -23,7 +26,7 @@ export type TileEffectResult = Tile & {
 
 export class Tilemap extends SceneBound {
   private readonly sab: SharedArrayBuffer
-  private tiles: Uint32Array<SharedArrayBuffer>
+  readonly tiles: Uint32Array<SharedArrayBuffer>
   public chunkManager: ChunkManager
   public onTileEmpty?: (tx: number, ty: number) => void
   public onIslandDetected?: (tiles: Tile[]) => void
@@ -32,6 +35,11 @@ export class Tilemap extends SceneBound {
   private matter = 0
 
   readonly diagonalDistance: number
+
+  // Pre-allocated BFS buffers — eliminates Set + per-tile object allocations in the hot path
+  private readonly _bfsVisited: Uint8Array   // 0=unvisited, 1=in-component, 2=globally done
+  private readonly _bfsQueue: Int32Array     // flat tile index queue
+  private readonly _bfsComp: Int32Array      // component tile indices for this BFS pass
 
   constructor(
     readonly scene: GameLevel,
@@ -45,6 +53,11 @@ export class Tilemap extends SceneBound {
     this.diagonalDistance = Math.hypot(width, height)
 
     this.chunkManager = new ChunkManager(scene, width, height)
+
+    const n = width * height
+    this._bfsVisited = new Uint8Array(n)
+    this._bfsQueue   = new Int32Array(n)
+    this._bfsComp    = new Int32Array(n)
   }
 
   get tilesBuffer(): SharedArrayBuffer {
@@ -325,49 +338,59 @@ export class Tilemap extends SceneBound {
   // any solid tile.  Genuine islands exhaust their component and are detected
   // regardless of size.
   private findNewlyDisconnectedByDestruction(destroyedTiles: Tile[]): Tile[] {
-    const globalVisited = new Set<number>()
+    const { width, height, tiles, _bfsVisited: vis, _bfsQueue: queue, _bfsComp: comp } = this
+    vis.fill(0)
+
     const islandTiles: Tile[] = []
 
     for (const { x: dx, y: dy } of destroyedTiles) {
-      for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
-        const sx = dx + ox, sy = dy + oy
-        if (sx < 0 || sx >= this.width || sy < 0 || sy >= this.height) continue
-        const sidx = sy * this.width + sx
-        if (globalVisited.has(sidx)) continue
-        if (this.getTile(sx, sy) !== MatterType.SOLID) continue
+      for (let d = 0; d < 4; d++) {
+        const sx = dx + BFS_DX[d], sy = dy + BFS_DY[d]
+        if (sx < 0 || sx >= width || sy < 0 || sy >= height) continue
+        const sidx = sy * width + sx
+        if (vis[sidx] !== 0) continue
+        if (tiles[sidx] !== MatterType.SOLID) continue
 
-        const component: Tile[] = []
-        const queue: [number, number][] = [[sx, sy]]
-        let head = 0
-        const localVisited = new Set<number>([sidx])
+        let head = 0, tail = 0, compLen = 0
         let anchored = false
 
-        outer: while (head < queue.length) {
-          const [cx, cy] = queue[head++]
-          component.push({ x: cx, y: cy })
+        vis[sidx] = 1
+        queue[tail++] = sidx
+        comp[compLen++] = sidx
 
-          for (const [ndx, ndy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
-            const nx = cx + ndx, ny = cy + ndy
-            if (nx < 0 || nx >= this.width || ny < 0 || ny >= this.height) {
+        bfs: while (head < tail) {
+          const cidx = queue[head++]
+          const cx = cidx % width
+          const cy = (cidx / width) | 0
+
+          for (let d2 = 0; d2 < 4; d2++) {
+            const nx = cx + BFS_DX[d2], ny = cy + BFS_DY[d2]
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
               anchored = true
-              break outer
+              break bfs
             }
-            const nidx = ny * this.width + nx
-            if (localVisited.has(nidx)) continue
-            const nTile = this.getTile(nx, ny)
-            if (nTile === MatterType.PERMANENT) {
+            const nidx = ny * width + nx
+            if (vis[nidx] !== 0) continue
+            const nt = tiles[nidx]
+            if (nt === MatterType.PERMANENT) {
               anchored = true
-              break outer
+              break bfs
             }
-            if (nTile === MatterType.SOLID) {
-              localVisited.add(nidx)
-              queue.push([nx, ny])
+            if (nt === MatterType.SOLID) {
+              vis[nidx] = 1
+              queue[tail++] = nidx
+              comp[compLen++] = nidx
             }
           }
         }
 
-        for (const { x, y } of component) globalVisited.add(y * this.width + x)
-        if (!anchored) for (const tile of component) islandTiles.push(tile)
+        for (let k = 0; k < compLen; k++) vis[comp[k]] = 2
+        if (!anchored) {
+          for (let k = 0; k < compLen; k++) {
+            const idx = comp[k]
+            islandTiles.push({ x: idx % width, y: (idx / width) | 0 })
+          }
+        }
       }
     }
 

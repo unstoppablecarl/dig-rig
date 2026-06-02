@@ -25,6 +25,8 @@ import Layer = GameObjects.Layer
 import Rectangle = Geom.Rectangle
 import MouseManager = Input.Mouse.MouseManager
 import CanvasTexture = Phaser.Textures.CanvasTexture
+import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
+import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
 import NEAREST = Textures.FilterMode.NEAREST
 
 type Layers = {
@@ -242,6 +244,18 @@ export abstract class GameLevel extends Scene {
     effectTexture.source[0].setFilter(NEAREST)
 
     return effectTexture
+  }
+
+  initGLTexture(key: string, width: number, height: number): [Phaser.Textures.Texture, WebGLTextureWrapper] {
+    if (this.textures.exists(key)) this.textures.remove(key)
+    const renderer = this.renderer as WebGLRenderer
+    const gl = renderer.gl
+    const wrapper = renderer.createTexture2D(
+      0, gl.NEAREST, gl.NEAREST, gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
+      gl.RGBA, undefined, width, height, false, true, false,
+    )
+    const texture = this.textures.addGLTexture(key, wrapper)!
+    return [texture, wrapper]
   }
 
   private registerSubScene<T extends { ID: string, new(): E }, E>(Def: T): E {

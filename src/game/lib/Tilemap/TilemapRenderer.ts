@@ -1,16 +1,16 @@
 import { GameObjects } from 'phaser'
-import { GLOW_ENABLED, GLOW_TRANSITION_ANIMATION_ENABLED } from '../../config.ts'
+import { GLOW_ENABLED } from '../../config.ts'
 import { CREATE_COLOR, DESTROY_COLOR, PERMANENT_COLOR } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { RGBShaderColor } from '../../types.ts'
 import { FireMode } from '../Player/_FireMode-types'
 import { MatterType } from '../Matter/_Matter-types.ts'
-import { TerrainChunkGlowRenderer } from './TilemapRenderer/TerrainChunkGlowRenderer.ts'
 import { TerrainChunkRenderer } from './TilemapRenderer/TerrainChunkRenderer.ts'
 import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'
 import Shader = GameObjects.Shader
 import CanvasTexture = Phaser.Textures.CanvasTexture
+
 
 const toVec3 = (c: number): [number, number, number] => [
   ((c >> 16) & 0xFF) / 255,
@@ -20,31 +20,22 @@ const toVec3 = (c: number): [number, number, number] => [
 
 export type TilemapRendererConfig = {
   readonly outlineColor: RGBShaderColor,
-  // 0-1
   readonly outlineOpacity: number,
   readonly glowColor: RGBShaderColor,
-  // 0-1
   readonly glowStrength: number,
   readonly glowRadius: number,
   readonly glowEnabled: boolean,
-  readonly glowTransitionAnimation: boolean,
-  readonly glowTransitionMS: number,
   readonly sandColor: RGBShaderColor,
-
   readonly sandSettledColor: RGBShaderColor,
-  // 0-1
   readonly sandSettledColorAlpha: number
   readonly sandSettledOutlineColor: RGBShaderColor,
   readonly waterColor: RGBShaderColor,
-  // 0-1
   readonly waterAlpha: number,
 }
 
 const CONFIG_DEFAULTS: TilemapRendererConfig = {
   glowRadius: 10,
   glowEnabled: GLOW_ENABLED,
-  glowTransitionAnimation: GLOW_TRANSITION_ANIMATION_ENABLED,
-  glowTransitionMS: 400,
   glowColor: [60, 5, 5].map((v: number) => v / 255) as RGBShaderColor,
   glowStrength: 0.5,
 
@@ -58,23 +49,31 @@ const CONFIG_DEFAULTS: TilemapRendererConfig = {
   waterAlpha: 0.60,
 }
 
-// language=GLSL
-const FRAG_SHADER = /* glsl */`
+// Glow is computed inline in the fragment shader by sampling the mask texture
+// in a glowRadius neighbourhood. Both constants are baked as GLSL literals so
+// the compiler can unroll or optimise the fixed-bound loop.
+function buildFragShader(glowRadius: number, glowEnabled: boolean): string {
+  const GR      = glowRadius
+  const GR_LOOP = glowRadius * 2 + 1
+  const GR1     = glowRadius + 1  // intensity numerator at d=1
+
+  // language=GLSL
+  return `
     #ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
     #else
     precision mediump float;
     #endif
 
+    #define GLOW_ENABLED ${glowEnabled ? 1 : 0}
+
     uniform sampler2D uTerrain;
     uniform sampler2D uMask;
-    uniform sampler2D uGlow;
     uniform sampler2D uEffect;
 
     uniform float uInnerGlowStrength;
     uniform vec3 uGlowColor;
     uniform vec3 uOutlineColor;
-
     uniform float uOutlineOpacity;
 
     uniform vec3 uDestroyColor;
@@ -88,6 +87,9 @@ const FRAG_SHADER = /* glsl */`
     uniform vec3 uWaterColor;
     uniform float uWaterAlpha;
     uniform float uTime;
+
+    // reciprocal tilemap size: one texel step per tile
+    uniform vec2 uInvTilemapSize;
 
     // phaser framework variable
     varying vec2 outTexCoord;
@@ -104,10 +106,10 @@ const FRAG_SHADER = /* glsl */`
     }
 
     vec3 blendOverlay(vec3 base, vec3 blend, float ratio) {
-        vec3 blended =  vec3(
-        blendOverlay(base.r, blend.r),
-        blendOverlay(base.g, blend.g),
-        blendOverlay(base.b, blend.b)
+        vec3 blended = vec3(
+            blendOverlay(base.r, blend.r),
+            blendOverlay(base.g, blend.g),
+            blendOverlay(base.b, blend.b)
         );
         return mix(base.rgb, blended, ratio);
     }
@@ -119,10 +121,35 @@ const FRAG_SHADER = /* glsl */`
         bool settled = raw >= 128;
         int tileType = settled ? raw - 128 : raw;
 
-        // uGlow:  G = inner-glow gradient (0→1),  R = 1px outline flag
-        vec4 glowTex = texture2D(uGlow, outTexCoord);
-        float glow    = glowTex.g;
-        float outline = glowTex.r;
+        // Glow: find the minimum Manhattan distance from this tile to the
+        // nearest EMPTY or WATER neighbour within glowRadius.
+        // Using loop bounds baked as literals for WebGL 1 compatibility.
+        float glow    = 0.0;
+        float outline = 0.0;
+        #if GLOW_ENABLED
+        if (tileType != ${MatterType.EMPTY}) {
+            int minDist = ${GR1};
+            for (int i = 0; i < ${GR_LOOP}; i++) {
+                int dy = i - ${GR};
+                for (int j = 0; j < ${GR_LOOP}; j++) {
+                    int dx = j - ${GR};
+                    if (dx != 0 || dy != 0) {
+                        vec2 nUV = outTexCoord + vec2(float(dx), float(dy)) * uInvTilemapSize;
+                        int nr = int(texture2D(uMask, nUV).r * 255.0 + 0.5);
+                        int nt = nr >= 128 ? nr - 128 : nr;
+                        if (nt == ${MatterType.EMPTY} || nt == ${MatterType.WATER}) {
+                            int d = (dx >= 0 ? dx : -dx) + (dy >= 0 ? dy : -dy);
+                            if (d < minDist) minDist = d;
+                        }
+                    }
+                }
+            }
+            if (minDist <= ${GR}) {
+                glow    = float(${GR1} - minDist) / float(${GR});
+                outline = minDist == 1 ? 1.0 : 0.0;
+            }
+        }
+        #endif
 
         vec4 color;
 
@@ -249,18 +276,16 @@ const FRAG_SHADER = /* glsl */`
         if (color.a < 0.01) discard;
         gl_FragColor = color;
     }
-`
+  `
+}
 
 export class TilemapRenderer extends SceneBound implements TilemapRendererConfig {
   private readonly chunkRenderer: TerrainChunkRenderer
   private readonly effectSystem: TerrainEffectSystem
-  private readonly glowRenderer: TerrainChunkGlowRenderer
   private readonly shader: Shader
 
   readonly glowRadius = CONFIG_DEFAULTS.glowRadius
   readonly glowEnabled = CONFIG_DEFAULTS.glowEnabled
-  readonly glowTransitionAnimation = CONFIG_DEFAULTS.glowTransitionAnimation
-  readonly glowTransitionMS = CONFIG_DEFAULTS.glowTransitionMS
   readonly glowColor = CONFIG_DEFAULTS.glowColor
   readonly glowStrength = CONFIG_DEFAULTS.glowStrength
   readonly outlineColor = CONFIG_DEFAULTS.outlineColor
@@ -271,7 +296,6 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
   readonly sandSettledOutlineColor = CONFIG_DEFAULTS.sandSettledOutlineColor
   readonly waterColor = CONFIG_DEFAULTS.waterColor
   readonly waterAlpha = CONFIG_DEFAULTS.waterAlpha
-  readonly permanentOutlineMask: CanvasTexture
 
   constructor(
     public scene: GameLevel,
@@ -286,24 +310,15 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
 
     this.chunkRenderer = new TerrainChunkRenderer(scene)
     this.effectSystem = new TerrainEffectSystem(scene)
-    this.permanentOutlineMask = this.scene.initCanvasTexture('permanent_outline', width, height)
-
-    this.glowRenderer = new TerrainChunkGlowRenderer(scene, {
-      glowRadius: this.glowRadius,
-      glowEnabled: this.glowEnabled,
-      glowTransitionAnimation: this.glowTransitionAnimation,
-      glowTransitionMS: this.glowTransitionMS,
-    })
 
     const shader: Shader = scene.add.shader(
       {
         name: 'TerrainShader',
-        fragmentSource: FRAG_SHADER,
+        fragmentSource: buildFragShader(this.glowRadius, this.glowEnabled),
         setupUniforms: (setUniform: (name: string, value: any) => void) => {
           setUniform('uTerrain', 0)
           setUniform('uMask', 1)
-          setUniform('uGlow', 2)
-          setUniform('uEffect', 3)
+          setUniform('uEffect', 2)
           setUniform('uGlowColor', this.glowColor)
           setUniform('uOutlineColor', this.outlineColor)
           setUniform('uInnerGlowStrength', this.glowStrength)
@@ -314,11 +329,11 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
           setUniform('uSandColor', this.sandColor)
           setUniform('uSandSettledColor', this.sandSettledColor)
           setUniform('uSandSettledColorAlpha', this.sandSettledColorAlpha)
-
           setUniform('uSandSettledOutlineColor', this.sandSettledOutlineColor)
           setUniform('uWaterColor', this.waterColor)
           setUniform('uWaterAlpha', this.waterAlpha)
           setUniform('uTime', 0)
+          setUniform('uInvTilemapSize', [1.0 / width, 1.0 / height])
         },
       },
       0, 0,
@@ -330,14 +345,11 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
     shader.setTextures([
       terrainTexture,
       this.chunkRenderer.maskTexture,
-      this.glowRenderer.glowTexture,
       this.effectSystem.effectTexture,
     ])
     scene.layers.terrain.add(shader)
 
     // Force shader compilation now (during create) to avoid a stall on the first rendered frame.
-    // ShaderQuad.run() normally triggers this lazily; calling it here moves the GPU compile
-    // to scene setup
     ;(shader as any).renderNode?.programManager?.getCurrentProgramSuite?.()
   }
 
@@ -355,12 +367,10 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
         const chunk = chunkManager.getChunk(cx, cy)
         if (!chunk?.renderDirty) continue
         this.chunkRenderer.renderChunk(chunk)
-        this.glowRenderer.renderChunk(chunk)
         chunk.renderDirty = false
       }
     }
 
-    this.glowRenderer.updateTransitions()
     this.effectSystem.update()
     this.shader.setUniform('uTime', this.scene.time.now)
   }
@@ -368,6 +378,5 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
   protected onDestroy() {
     this.chunkRenderer.destroy()
     this.effectSystem.destroy()
-    this.glowRenderer.destroy()
   }
 }
