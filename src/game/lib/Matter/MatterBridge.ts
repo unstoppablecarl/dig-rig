@@ -82,7 +82,6 @@ export class MatterBridge extends SceneBound {
         const x = tx + dx
         const y = ty + dy
         if (tilemap.getTile(x, y) !== MatterType.EMPTY) continue
-        console.log('placed')
         tilemap.setTile(x, y, MatterType.WATER)
         indices.push(y * tilemap.width + x)
       }

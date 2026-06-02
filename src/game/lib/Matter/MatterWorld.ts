@@ -39,19 +39,13 @@ export class MatterWorld {
   }
 
   activate(indices: number[]) {
-    console.log('act 1')
     for (const idx of indices) {
       if (idx < 0 || idx >= this.tiles.length) continue
       const t = this.tiles[idx]
-      console.log('act 2', t)
-
       if (t === SAND || t === SAND_SETTLED) {
-        console.log('act 2.5')
-
         this.tiles[idx] = SAND
         this.activeSet.add(idx)
       } else if (t === WATER) {
-        console.log('act 3')
         this.stableWater.delete(idx)
         this.activeSet.add(idx)
       }
@@ -159,10 +153,8 @@ export class MatterWorld {
 
   step() {
     if (!this.ready) return
-    console.log('step 1')
-
     if (this.activeSet.size === 0) return
-console.log('step 2')
+
     const phase = this.frame % 2
     this.frame++
     // Alternate diagonal/horizontal preference each frame to avoid directional bias

@@ -44,8 +44,6 @@ export class TunnelCreateProjectile extends BaseProjectile {
     this._frontier.push({ x, y })
   }
 
-  private _diagCallCount = 0
-
   private expandAndCreate() {
     if (this.destroyed) return
 
@@ -93,15 +91,6 @@ export class TunnelCreateProjectile extends BaseProjectile {
     if (!toCreate.length) {
       if (this._frontierHead >= this._frontier.length) this.destroy()
       return
-    }
-
-    const _t0 = performance.now()
-    const created = super.createTilesFromList(toCreate)
-    const _ms = performance.now() - _t0
-
-    this._diagCallCount++
-    if (this._diagCallCount % 20 === 0 || _ms > 2) {
-      console.log(`tunnel:flood remaining=${this._frontier.length - this._frontierHead} created=${created} charge=${this.charge()} ms=${_ms.toFixed(2)}`)
     }
   }
 
