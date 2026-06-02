@@ -1,19 +1,22 @@
-import { Math } from 'phaser'
 import { createNoise3D } from 'simplex-noise'
-import type { Position } from '../types.ts'
-import Vector2 = Math.Vector2
 
-export function makeSimplexNoise(scale: number, timeScale: number) {
-  const noise = createNoise3D()
+export function makeCachedSimplexNoise(lifespanMs: number, size: number = 256) {
+  const WIND_LUT_MASK = size - 1
+  const WIND_LUT_PERIOD = lifespanMs / size  // ms per slot
+  const WIND_LUT_X = new Float32Array(size)
+  const WIND_LUT_Y = new Float32Array(size)
+  const n = createNoise3D()
+  const tRange = lifespanMs * 0.01
+  for (let i = 0; i < size; i++) {
+    const nt = (i / size) * tRange
+    WIND_LUT_X[i] = n(0, 0, nt)
+    WIND_LUT_Y[i] = n(1000, 1000, nt)
+  }
 
-  return (pos: Position, time: number, result: Vector2) => {
-    const nx = pos.x * scale
-    const ny = pos.y * scale
-    const nt = time * timeScale
-    const noiseX = noise(nx, ny, nt)
-    // ensures the X and Y forces have different, but still smooth, patterns
-    const noiseY = noise(nx + 1000, ny + 1000, nt)
-
-    return result.set(noiseX, noiseY)
+  return {
+    WIND_LUT_MASK,
+    WIND_LUT_PERIOD,
+    WIND_LUT_X,
+    WIND_LUT_Y,
   }
 }

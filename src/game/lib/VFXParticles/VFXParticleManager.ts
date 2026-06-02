@@ -63,6 +63,7 @@ export class VFXParticleManager extends SceneBound {
     colorFrom: Color,
     colorTo: Color,
   ) {
+    if(MAX_MATTER_PARTICLES === 0) return
     const particle = this.emitter.emitParticleAt(source.x, source.y, 1) as VFXMatterParticle
     particle?.init(target, staticTarget, colorFrom, colorTo)
   }
