@@ -1,7 +1,7 @@
+import { random } from '../../../helpers/random'
 import {
   BURNING_THERMITE, EMPTY, FIRE, MatterType, SOLID, THERMITE,
 } from '../_Matter-types.ts'
-import { rng } from '../MatterWorld.ts'
 import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
 import type { ElementDef } from '../elements.ts'
 
@@ -29,7 +29,7 @@ const def: ElementDef = {
     }
 
     // Burn through SOLID adjacent horizontally
-    if (rng() < 8) {
+    if (random() < 8) {
       const wallLeft  = tx > 0          && (tiles[idx - 1]     & 0x7F) === SOLID ? idx - 1 : -1
       const wallRight = tx < width - 1  && (tiles[idx + 1]     & 0x7F) === SOLID ? idx + 1 : -1
       const wallBelow = ty < height - 1 && (tiles[idx + width] & 0x7F) === SOLID ? idx + width : -1
@@ -44,7 +44,7 @@ const def: ElementDef = {
     }
 
     // Slow self-consume
-    if (rng() < 2) {
+    if (random() < 2) {
       tiles[idx] = FIRE
       world.markDirty(tx, ty)
       next.add(idx)
@@ -56,7 +56,7 @@ const def: ElementDef = {
     if (!moved) next.add(idx)
 
     // Spawn charged particle occasionally
-    if (rng() < 2 && rng() < 7) {
+    if (random() < 2 && random() < 7) {
       postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: 'charged_nitro', x: tx, y: ty })
       tiles[idx] = FIRE
       world.markDirty(tx, ty)

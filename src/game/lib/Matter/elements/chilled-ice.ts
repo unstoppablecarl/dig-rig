@@ -1,7 +1,7 @@
+import { random } from '../../../helpers/random'
 import {
   FIRE, ICE, LAVA, MatterType, SALT, SALT_WATER, STEAM, WATER,
 } from '../_Matter-types.ts'
-import { rng } from '../MatterWorld.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -10,7 +10,7 @@ const def: ElementDef = {
   passive: true,
   action(world, tx, ty, idx, next): void {
     // Thaw to regular ice
-    if (rng() < 6) {
+    if (random() < 6) {
       world.tiles[idx] = ICE
       world.markDirty(tx, ty)
       next.add(idx)

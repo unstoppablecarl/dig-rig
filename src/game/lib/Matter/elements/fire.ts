@@ -1,8 +1,8 @@
+import { random } from '../../../helpers/random'
 import {
   EMPTY, FIRE, FUSE, MatterType, OIL, PLANT,
   SALT_WATER, STEAM, WATER,
 } from '../_Matter-types.ts'
-import { rng } from '../MatterWorld.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -12,7 +12,7 @@ const def: ElementDef = {
     const { tiles, width, height } = world
 
     // Extinguished by water / salt-water
-    if (rng() < 80) {
+    if (random() < 80) {
       let waterLoc = world.bordering(tx, ty, idx, WATER)
       if (waterLoc === -1) waterLoc = world.bordering(tx, ty, idx, SALT_WATER)
       if (waterLoc !== -1) {
@@ -28,7 +28,7 @@ const def: ElementDef = {
     }
 
     // Ignite plant
-    if (rng() < 20) {
+    if (random() < 20) {
       const plantLoc = world.borderingAdjacent(tx, ty, idx, PLANT)
       if (plantLoc !== -1) {
         tiles[plantLoc] = FIRE
@@ -42,7 +42,7 @@ const def: ElementDef = {
     }
 
     // Ignite fuse
-    if (rng() < 80) {
+    if (random() < 80) {
       const fuseLoc = world.borderingAdjacent(tx, ty, idx, FUSE)
       if (fuseLoc !== -1) {
         tiles[fuseLoc] = FIRE
@@ -56,7 +56,7 @@ const def: ElementDef = {
     }
 
     // Ignite oil
-    if (rng() < 30) {
+    if (random() < 30) {
       const oilLoc = world.bordering(tx, ty, idx, OIL)
       if (oilLoc !== -1) {
         tiles[oilLoc] = FIRE
@@ -70,7 +70,7 @@ const def: ElementDef = {
     }
 
     // Probabilistic self-extinguish
-    if (rng() < 40) {
+    if (random() < 40) {
       const xStart = Math.max(tx - 1, 0)
       const yStart = Math.max(ty - 1, 0)
       const xEnd   = Math.min(tx + 2, width)
@@ -96,7 +96,7 @@ const def: ElementDef = {
     }
 
     // Rise upward
-    if (rng() < 50) {
+    if (random() < 50) {
       if (world.tryRise(idx, tx, ty, next)) return
     }
 

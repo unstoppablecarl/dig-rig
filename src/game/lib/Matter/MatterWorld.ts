@@ -1,3 +1,4 @@
+import { random } from '../../helpers/random'
 import { EMPTY, FIRE, MatterType, SAND, SETTLED_FLAG, TYPE_MASK, WATER } from './_Matter-types.ts'
 import { MatterWorkerOutMsg } from './_MatterWorker-types.ts'
 import { ELEMENT_ACTIONS } from './elements.ts'
@@ -240,7 +241,7 @@ export class MatterWorld {
     const leftFirst = this.leftFirst
     let targetIdx = -1
 
-    if (rng() < sinkChance && ty < height - 1) {
+    if (random() < sinkChance && ty < height - 1) {
       const row = (ty + 1) * width
       if ((tiles[row + tx] & TYPE_MASK) === lighter) {
         targetIdx = row + tx
@@ -254,7 +255,7 @@ export class MatterWorld {
       }
     }
 
-    if (targetIdx === -1 && rng() < equalizeChance) {
+    if (targetIdx === -1 && random() < equalizeChance) {
       const dx1 = leftFirst ? -1 : 1
       const nx1 = tx + dx1, nx2 = tx - dx1
       if (nx1 >= 0 && nx1 < width && (tiles[ty * width + nx1] & TYPE_MASK) === lighter)
@@ -287,8 +288,8 @@ export class MatterWorld {
     const { tiles, width } = this
     const row = (ty + 1) * width
     if ((tiles[row + tx] & TYPE_MASK) === lighter) return true
-    if (tx > 0          && (tiles[row + tx - 1] & TYPE_MASK) === lighter) return true
-    if (tx < width - 1  && (tiles[row + tx + 1] & TYPE_MASK) === lighter) return true
+    if (tx > 0 && (tiles[row + tx - 1] & TYPE_MASK) === lighter) return true
+    if (tx < width - 1 && (tiles[row + tx + 1] & TYPE_MASK) === lighter) return true
     return false
   }
 
@@ -391,7 +392,7 @@ export class MatterWorld {
     tx: number, ty: number, idx: number, next: Set<number>,
     touchType: MatterType, intoType: MatterType, chance: number,
   ): boolean {
-    if (rng() >= chance) return false
+    if (random() >= chance) return false
     if (this.bordering(tx, ty, idx, touchType) === -1) return false
     this.tiles[idx] = intoType
     this.markDirty(tx, ty)
@@ -406,7 +407,7 @@ export class MatterWorld {
     tx: number, ty: number, idx: number, next: Set<number>,
     intoType: MatterType, chance: number,
   ): boolean {
-    if (rng() >= chance) return false
+    if (random() >= chance) return false
     const loc = this.borderingAdjacent(tx, ty, idx, intoType)
     if (loc === -1) return false
     this.tiles[loc] = this.tiles[idx] & TYPE_MASK
@@ -474,14 +475,4 @@ export class MatterWorld {
   }
 }
 
-// Pre-generated random table: returns integer 0–99 without float overhead.
-const RNG_SIZE = 8192
-const _rngTable = new Uint8Array(RNG_SIZE)
-let _rngIdx = 0
-for (let i = 0; i < RNG_SIZE; i++) _rngTable[i] = Math.floor(Math.random() * 100)
 
-export function rng(): number {
-  const v = _rngTable[_rngIdx]
-  _rngIdx = (_rngIdx + 1) % RNG_SIZE
-  return v
-}

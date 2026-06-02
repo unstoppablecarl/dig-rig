@@ -1,5 +1,5 @@
+import { random } from '../../../helpers/random'
 import { MatterType, SALT, SALT_WATER, SETTLED_FLAG, WATER } from '../_Matter-types.ts'
-import { rng } from '../MatterWorld.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -7,7 +7,7 @@ const def: ElementDef = {
   name: 'Salt',
   action(world, tx, ty, idx, next): void {
     // Dissolve in water → salt water
-    if (rng() < 25) {
+    if (random() < 25) {
       const waterLoc = world.bordering(tx, ty, idx, WATER)
       if (waterLoc !== -1) {
         world.tiles[idx] = SALT_WATER

@@ -1,5 +1,5 @@
+import { random } from '../../../helpers/random'
 import { FIRE, ICE, LAVA, MatterType, SALT, SALT_WATER, STEAM, WATER } from '../_Matter-types.ts'
-import { rng } from '../MatterWorld.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -11,7 +11,7 @@ const def: ElementDef = {
     if (world.surroundedBy(tx, ty, idx, ICE)) return
 
     // Melt from water
-    if (rng() < 1 && world.bordering(tx, ty, idx, WATER) !== -1) {
+    if (random() < 1 && world.bordering(tx, ty, idx, WATER) !== -1) {
       world.tiles[idx] = WATER
       world.markDirty(tx, ty)
       next.add(idx)
@@ -19,7 +19,7 @@ const def: ElementDef = {
     }
 
     // Melt from steam
-    if (rng() < 70 && world.bordering(tx, ty, idx, STEAM) !== -1) {
+    if (random() < 70 && world.bordering(tx, ty, idx, STEAM) !== -1) {
       world.tiles[idx] = WATER
       world.markDirty(tx, ty)
       next.add(idx)
@@ -27,7 +27,7 @@ const def: ElementDef = {
     }
 
     // Melt from salt / salt-water
-    if (rng() < 10) {
+    if (random() < 10) {
       let loc = world.bordering(tx, ty, idx, SALT)
       if (loc === -1) loc = world.bordering(tx, ty, idx, SALT_WATER)
       if (loc !== -1) {
@@ -39,7 +39,7 @@ const def: ElementDef = {
     }
 
     // Melt from fire / lava
-    if (rng() < 50) {
+    if (random() < 50) {
       let loc = world.bordering(tx, ty, idx, FIRE)
       if (loc === -1) loc = world.bordering(tx, ty, idx, LAVA)
       if (loc !== -1) {

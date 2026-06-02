@@ -1,5 +1,5 @@
+import { random } from '../../../helpers/random'
 import { CHILLED_ICE, CRYO, EMPTY, ICE, LAVA, MatterType, OIL, ROCK, SALT_WATER, SETTLED_FLAG, WATER } from '../_Matter-types.ts'
-import { rng } from '../MatterWorld.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -20,7 +20,7 @@ const def: ElementDef = {
     }
 
     // Freeze adjacent ice → CHILLED_ICE (cryo stays alive)
-    if (rng() < 50) {
+    if (random() < 50) {
       const iceLoc = world.bordering(tx, ty, idx, ICE)
       if (iceLoc !== -1) {
         world.tiles[iceLoc] = CHILLED_ICE
@@ -59,7 +59,7 @@ const def: ElementDef = {
       }
 
       // Slowly self-freeze when fully immobile and no water to interact with
-      if (rng() < 1 && rng() < 50) {
+      if (random() < 1 && random() < 50) {
         world.tiles[idx] = CHILLED_ICE
         world.markDirty(tx, ty)
         world.reactivateAround(tx, ty, next)

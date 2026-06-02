@@ -1,5 +1,5 @@
+import { random } from '../../../helpers/random'
 import { FIRE, LAVA, MatterType, ROCK, SALT_WATER, SETTLED_FLAG, STEAM, WATER } from '../_Matter-types.ts'
-import { rng } from '../MatterWorld.ts'
 import type { ElementDef } from '../elements.ts'
 
 // Elements lava cannot burn
@@ -26,7 +26,7 @@ const def: ElementDef = {
     }
 
     // Burn adjacent non-immune tiles
-    if (rng() < 25) {
+    if (random() < 25) {
       const neighbors = [
         idx - width, idx + width, idx - 1, idx + 1,
       ]

@@ -1,7 +1,7 @@
+import { random } from '../../../helpers/random'
 import {
   BURNING_THERMITE, FIRE, MatterType, SETTLED_FLAG,
 } from '../_Matter-types.ts'
-import { rng } from '../MatterWorld.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -15,7 +15,7 @@ const def: ElementDef = {
     }
 
     // Ignite near fire
-    if (rng() < 50 && world.borderingAdjacent(tx, ty, idx, FIRE) !== -1) {
+    if (random() < 50 && world.borderingAdjacent(tx, ty, idx, FIRE) !== -1) {
       world.tiles[idx] = BURNING_THERMITE
       world.markDirty(tx, ty)
       next.add(idx)

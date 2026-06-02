@@ -1,5 +1,5 @@
+import { random } from '../../../helpers/random'
 import { FIRE, MatterType, OIL, SETTLED_FLAG } from '../_Matter-types.ts'
-import { rng } from '../MatterWorld.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -7,7 +7,7 @@ const def: ElementDef = {
   name: 'Oil',
   action(world, tx, ty, idx, next): void {
     // Catch fire
-    if (rng() < 30 && world.bordering(tx, ty, idx, FIRE) !== -1) {
+    if (random() < 30 && world.bordering(tx, ty, idx, FIRE) !== -1) {
       world.doBorderBurn(tx, ty, idx, next)
       return
     }

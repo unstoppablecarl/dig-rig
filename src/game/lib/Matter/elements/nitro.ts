@@ -1,5 +1,5 @@
+import { random } from '../../../helpers/random'
 import { FIRE, MatterType, NITRO, SETTLED_FLAG } from '../_Matter-types.ts'
-import { rng } from '../MatterWorld.ts'
 import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
 import type { ElementDef } from '../elements.ts'
 
@@ -7,7 +7,7 @@ const def: ElementDef = {
   id: MatterType.NITRO,
   name: 'Nitro',
   action(world, tx, ty, idx, next): void {
-    if (rng() < 30 && world.borderingAdjacent(tx, ty, idx, FIRE) !== -1) {
+    if (random() < 30 && world.borderingAdjacent(tx, ty, idx, FIRE) !== -1) {
       world.doBorderBurn(tx, ty, idx, next)
       postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: 'nitro_explosion', x: tx, y: ty })
       return

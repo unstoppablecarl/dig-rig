@@ -1,5 +1,5 @@
+import { random } from '../../../helpers/random'
 import { EMPTY, MatterType, STEAM, WATER } from '../_Matter-types.ts'
-import { rng } from '../MatterWorld.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -9,7 +9,7 @@ const def: ElementDef = {
     const { tiles, width } = world
 
     // Rise upward (primary movement)
-    if (rng() < 70) {
+    if (random() < 70) {
       if (world.tryRise(idx, tx, ty, next)) return
     }
 
@@ -21,7 +21,7 @@ const def: ElementDef = {
     ) return
 
     // Condense near water
-    if (rng() < 5 && world.bordering(tx, ty, idx, WATER) !== -1) {
+    if (random() < 5 && world.bordering(tx, ty, idx, WATER) !== -1) {
       tiles[idx] = WATER
       world.markDirty(tx, ty)
       next.add(idx)
@@ -29,7 +29,7 @@ const def: ElementDef = {
     }
 
     // Slow disappearance when trapped
-    if (rng() < 1 && rng() < 5) {
+    if (random() < 1 && random() < 5) {
       // Check nothing below
       if (ty < world.height - 1 && (tiles[(ty + 1) * width + tx] & 0x7F) !== STEAM) {
         tiles[idx] = EMPTY

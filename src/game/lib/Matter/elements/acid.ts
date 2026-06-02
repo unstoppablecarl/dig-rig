@@ -1,8 +1,8 @@
+import { random } from '../../../helpers/random'
 import {
   ACID, CHILLED_ICE, EMPTY, ICE, MatterType,
   SALT_WATER, SETTLED_FLAG, WATER,
 } from '../_Matter-types.ts'
-import { rng } from '../MatterWorld.ts'
 import type { ElementDef } from '../elements.ts'
 
 // Types acid cannot dissolve
@@ -17,7 +17,7 @@ const def: ElementDef = {
     const { tiles, width, height } = world
 
     // Dissolve a bordering tile
-    if (rng() < 10) {
+    if (random() < 10) {
       const neighbors = [
         [tx,     ty + 1, idx + width ],
         [tx,     ty - 1, idx - width ],

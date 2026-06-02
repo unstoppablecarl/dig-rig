@@ -1,5 +1,5 @@
+import { random } from '../../../helpers/random'
 import { CONCRETE, MatterType, SETTLED_FLAG, SOLID } from '../_Matter-types.ts'
-import { rng } from '../MatterWorld.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -7,7 +7,7 @@ const def: ElementDef = {
   name: 'Concrete',
   action(world, tx, ty, idx, next): void {
     // Harden into SOLID near existing SOLID
-    if (rng() < 10 && rng() < 10) {
+    if (random() < 10 && random() < 10) {
       if (world.borderingAdjacent(tx, ty, idx, MatterType.SOLID) !== -1) {
         world.tiles[idx] = SOLID
         world.markDirty(tx, ty)
@@ -23,7 +23,7 @@ const def: ElementDef = {
 
     if (!moved) {
       // Slow harden even without adjacent solid
-      if (rng() < 10 && rng() < 10 && rng() < 5) {
+      if (random() < 10 && random() < 10 && random() < 5) {
         world.tiles[idx] = SOLID
         world.markDirty(tx, ty)
         return

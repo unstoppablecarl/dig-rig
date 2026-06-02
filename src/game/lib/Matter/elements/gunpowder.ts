@@ -1,5 +1,5 @@
+import { random } from '../../../helpers/random'
 import { FIRE, GUNPOWDER, MatterType, SETTLED_FLAG } from '../_Matter-types.ts'
-import { rng } from '../MatterWorld.ts'
 import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
 import type { ElementDef } from '../elements.ts'
 
@@ -8,9 +8,9 @@ const def: ElementDef = {
   name: 'Gunpowder',
   action(world, tx, ty, idx, next): void {
     // Explode near fire
-    if (rng() < 95 && world.bordering(tx, ty, idx, FIRE) !== -1) {
+    if (random() < 95 && world.bordering(tx, ty, idx, FIRE) !== -1) {
       const { tiles, width, height } = world
-      const burn = rng() < 60
+      const burn = random() < 60
 
       // 3×3 blast radius
       for (let dy = -1; dy <= 1; dy++) {
