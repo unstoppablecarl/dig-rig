@@ -19,6 +19,10 @@ body {
   align-items: center;
 }
 
+#game-container {
+  contain: layout style paint;
+}
+
 #fps-text {
   position: fixed;
   top: 10px;
