@@ -5,6 +5,7 @@ const def: ElementDef = {
   id: ROCK,
   name: 'Rock',
   lavaImmune: true,
+  collidesWhenSettled: true,
   sinksThrough: [WATER, OIL, SALT_WATER, LAVA, ACID],
   action(world, tx, ty, idx, next): void {
     const leftFirst = world.leftFirst

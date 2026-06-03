@@ -5,6 +5,7 @@ import type { ElementDef } from '../elements.ts'
 const def: ElementDef = {
   id: THERMITE,
   name: 'Thermite',
+  collidesWhenSettled: true,
   sinksThrough: [WATER, SALT_WATER, OIL],
   action(world, tx, ty, idx, next): void {
     if (world.surroundedByAdjacent(tx, ty, idx, THERMITE)) {

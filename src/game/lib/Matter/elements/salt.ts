@@ -5,6 +5,7 @@ import type { ElementDef } from '../elements.ts'
 const def: ElementDef = {
   id: SALT,
   name: 'Salt',
+  collidesWhenSettled: true,
   sinksThrough: [WATER, SALT_WATER],
   action(world, tx, ty, idx, next): void {
     // Dissolve in water → salt water

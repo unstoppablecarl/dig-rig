@@ -5,6 +5,7 @@ import type { ElementDef } from '../elements.ts'
 const def: ElementDef = {
   id: CONCRETE,
   name: 'Concrete',
+  collidesWhenSettled: true,
   sinksThrough: [WATER, SALT_WATER],
   action(world, tx, ty, idx, next): void {
     // Harden into SOLID near existing SOLID
