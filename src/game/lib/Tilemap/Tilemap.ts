@@ -227,6 +227,10 @@ export class Tilemap extends SceneBound {
     tileY: number,
     targetSize: number,
   ): void {
+    if (targetSize <= 0) {
+      tiles.length = 0
+      return
+    }
     if (targetSize >= tiles.length) return
 
     const last = tiles[targetSize - 1]
