@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { MatterWorld } from './MatterWorld'
+import { MatterWorker } from './MatterWorker'
 import { MatterWorkerInMsg, type WorkerInMessage, type WorkerOutMessage } from './_MatterWorker-types.ts'
 
 declare function postMessage(msg: WorkerOutMessage): void
@@ -8,7 +8,7 @@ declare let self: DedicatedWorkerGlobalScope & {
   onmessage: ((e: MessageEvent<WorkerInMessage>) => void) | null
 }
 
-const world = new MatterWorld()
+const world = new MatterWorker()
 
 self.onmessage = (e: MessageEvent<WorkerInMessage>) => {
   const msg = e.data

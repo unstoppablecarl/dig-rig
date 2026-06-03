@@ -5,7 +5,7 @@ import { ELEMENT_ACTIONS, LIQUID_TYPES, SINKS_THROUGH } from './elements.ts'
 
 const MAX_FLOW = 8
 
-export class MatterWorld {
+export class MatterWorker {
   tiles!: Uint32Array
   dirtyChunks!: Uint8Array
   width = 0
@@ -37,7 +37,10 @@ export class MatterWorld {
     this.ready = true
 
     // Self-scheduling so a slow step never queues up catch-up bursts
-    const loop = () => { this.step(); setTimeout(loop, 8) }
+    const loop = () => {
+      this.step()
+      setTimeout(loop, 8)
+    }
     setTimeout(loop, 8)
   }
 
@@ -300,10 +303,10 @@ export class MatterWorld {
   wakeSettledNeighbors(tx: number, ty: number, idx: number, type: MatterType, dest: Set<number>) {
     const { tiles, width, height } = this
     for (const nidx of [
-      ty > 0          ? idx - width : -1,
+      ty > 0 ? idx - width : -1,
       ty < height - 1 ? idx + width : -1,
-      tx > 0          ? idx - 1     : -1,
-      tx < width - 1  ? idx + 1     : -1,
+      tx > 0 ? idx - 1 : -1,
+      tx < width - 1 ? idx + 1 : -1,
     ]) {
       if (nidx === -1) continue
       const raw = tiles[nidx]

@@ -6,7 +6,7 @@ import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
 import { MatterType, TYPE_MASK } from './_Matter-types.ts'
 import { MatterWorkerInMsg, MatterWorkerOutMsg, type TypedMatterWorker } from './_MatterWorker-types.ts'
-import { ParticleManager } from '../Particles/ParticleManager.ts'
+import { ParticleBridge } from '../Particles/ParticleBridge.ts'
 import ParticleWorkerConstructor from './matter.worker.ts?worker'
 
 export class MatterBridge extends SceneBound {
@@ -15,7 +15,7 @@ export class MatterBridge extends SceneBound {
   private readonly dirtyChunks: Uint8Array
   private readonly numChunksX: number
   private readonly numChunksY: number
-  private readonly particleManager: ParticleManager
+  private readonly particleBridge: ParticleBridge
 
   constructor(public scene: GameLevel) {
     super(scene)
@@ -28,8 +28,8 @@ export class MatterBridge extends SceneBound {
     this.dirtyChunksBuffer = new SharedArrayBuffer(this.numChunksX * this.numChunksY)
     this.dirtyChunks = new Uint8Array(this.dirtyChunksBuffer)
 
-    this.particleManager = new ParticleManager(this.scene)
-    this.particleManager.onActivations = (indices) => {
+    this.particleBridge = new ParticleBridge(this.scene)
+    this.particleBridge.onActivations = (indices) => {
       this.worker?.postMessage({ type: MatterWorkerInMsg.ACTIVATE, indices })
     }
 
@@ -56,7 +56,7 @@ export class MatterBridge extends SceneBound {
       }
 
       if (e.data.type === MatterWorkerOutMsg.SPAWN_PARTICLE) {
-        this.particleManager.spawn(e.data.particleType, e.data.x, e.data.y)
+        this.particleBridge.spawn(e.data.particleType, e.data.x, e.data.y)
       }
     }
 
@@ -107,7 +107,7 @@ export class MatterBridge extends SceneBound {
   update() {
     if (this.destroyed) return
 
-    this.particleManager.update()
+    this.particleBridge.update()
 
     const chunkManager = this.scene.tilemap.chunkManager
 

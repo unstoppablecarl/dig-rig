@@ -4,7 +4,7 @@ import { ParticleType } from './_particle-types.ts'
 import { ParticleWorkerInMsg, ParticleWorkerOutMsg, type TypedParticleWorker } from './_ParticleWorker-types.ts'
 import ParticleWorkerConstructor from './particle.worker.ts?worker'
 
-export class ParticleManager extends SceneBound<GameLevel> {
+export class ParticleBridge extends SceneBound<GameLevel> {
   private readonly worker: TypedParticleWorker
   private readonly pixelSab: SharedArrayBuffer
   private readonly sabView: Uint8ClampedArray

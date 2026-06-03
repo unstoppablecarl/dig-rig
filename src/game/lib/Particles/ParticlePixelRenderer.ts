@@ -2,6 +2,7 @@ import type { Particle } from './Particle.ts'
 
 export class ParticlePixelRenderer {
   readonly buffer: Uint8ClampedArray
+  private readonly buf32: Uint32Array
 
   constructor(
     readonly width: number,
@@ -9,10 +10,11 @@ export class ParticlePixelRenderer {
     buffer?: Uint8ClampedArray,
   ) {
     this.buffer = buffer ?? new Uint8ClampedArray(width * height * 4)
+    this.buf32 = new Uint32Array(this.buffer.buffer, this.buffer.byteOffset, width * height)
   }
 
   clear() {
-    this.buffer.fill(0)
+    this.buf32.fill(0)
   }
 
   drawCircle(x: number, y: number, radius: number, color: number, alpha = 1) {
@@ -23,18 +25,15 @@ export class ParticlePixelRenderer {
     const G = (color >> 8) & 0xFF
     const B = color & 0xFF
     const A = Math.round(alpha * 255)
-    const { buffer, width, height } = this
+    const pixel32 = R | (G << 8) | (B << 16) | (A << 24)
+    const { buf32, width, height } = this
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
         if (dx * dx + dy * dy > r * r) continue
         const px = cx + dx
         const py = cy + dy
         if (px < 0 || px >= width || py < 0 || py >= height) continue
-        const i = (py * width + px) * 4
-        buffer[i]     = R
-        buffer[i + 1] = G
-        buffer[i + 2] = B
-        buffer[i + 3] = A
+        buf32[py * width + px] = pixel32
       }
     }
   }

@@ -1,7 +1,7 @@
 import type { MatterType } from './_Matter-types.ts'
-import type { MatterWorld } from './MatterWorld.ts'
+import type { MatterWorker } from './MatterWorker.ts'
 
-export type ElementAction = (world: MatterWorld, x: number, y: number, idx: number, next: Set<number>) => void
+export type ElementAction = (world: MatterWorker, x: number, y: number, idx: number, next: Set<number>) => void
 
 export type ElementDef = {
   name: string,

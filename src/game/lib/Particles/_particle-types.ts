@@ -1,5 +1,5 @@
 import type { Particle } from './Particle.ts'
-import type { ParticleContext } from './ParticleContext.ts'
+import type { ParticleWorker } from './ParticleWorker.ts'
 import type { ParticlePool } from './ParticlePool.ts'
 import type { ParticlePixelRenderer } from './ParticlePixelRenderer.ts'
 
@@ -20,12 +20,12 @@ export type ParticleDef = {
     p: Particle,
     spawnX: number,
     spawnY: number,
-    ctx: ParticleContext,
+    ctx: ParticleWorker,
   ) => void
   action: (
     p: Particle,
     renderer: ParticlePixelRenderer,
     pool: ParticlePool,
-    ctx: ParticleContext,
+    ctx: ParticleWorker,
   ) => void
 }
