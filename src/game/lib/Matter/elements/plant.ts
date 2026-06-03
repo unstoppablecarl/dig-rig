@@ -1,9 +1,9 @@
 import { random } from '../../../helpers/random'
-import { MatterType, SALT, WATER } from '../_Matter-types.ts'
+import { EMPTY, PLANT, SALT, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
-  id: MatterType.PLANT,
+  id: PLANT,
   name: 'Plant',
   passive: true,
   action(world, tx, ty, idx, next): void {
@@ -13,7 +13,7 @@ const def: ElementDef = {
     // Die from salt
     if (random() < 5) {
       if (world.bordering(tx, ty, idx, SALT) !== -1) {
-        world.tiles[idx] = MatterType.EMPTY
+        world.tiles[idx] = EMPTY
         world.markDirty(tx, ty)
         world.reactivateAround(tx, ty, next)
       }

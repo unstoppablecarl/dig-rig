@@ -1,11 +1,12 @@
 import { random } from '../../../helpers/random'
-import { FIRE, ICE, LAVA, MatterType, SALT, SALT_WATER, STEAM, WATER } from '../_Matter-types.ts'
+import { FIRE, ICE, LAVA, SALT, SALT_WATER, STEAM, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
-  id: MatterType.ICE,
+  id: ICE,
   name: 'Ice',
   passive: true,
+  acidImmune: true,
   action(world, tx, ty, idx, next): void {
     // Surrounded by ice — fully stable
     if (world.surroundedBy(tx, ty, idx, ICE)) return

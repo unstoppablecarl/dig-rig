@@ -1,13 +1,11 @@
 import { random } from '../../../helpers/random'
-import {
-  EMPTY, FIRE, LAVA, MatterType, OIL, ROCK, SALT_WATER, SETTLED_FLAG, STEAM, TYPE_MASK, WATER,
-} from '../_Matter-types.ts'
-import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
 import { ParticleType } from '../../Particles/_particle-types.ts'
+import { EMPTY, FIRE, LAVA, OIL, ROCK, SALT_WATER, SETTLED_FLAG, STEAM, TYPE_MASK, WATER } from '../_Matter-types.ts'
+import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
 import { type ElementDef, LAVA_IMMUNE } from '../elements.ts'
 
 const def: ElementDef = {
-  id: MatterType.LAVA,
+  id: LAVA,
   name: 'Lava',
   lavaImmune: true,
   liquid: true,
@@ -43,10 +41,10 @@ const def: ElementDef = {
     // Burn adjacent non-immune tiles (with proper X-boundary guards)
     if (random() < 25) {
       const burnCandidates: [number, number, number][] = [
-        [tx,     ty - 1, ty > 0          ? idx - width : -1],
-        [tx,     ty + 1, ty < height - 1 ? idx + width : -1],
-        [tx - 1, ty,     tx > 0          ? idx - 1     : -1],
-        [tx + 1, ty,     tx < width - 1  ? idx + 1     : -1],
+        [tx, ty - 1, ty > 0 ? idx - width : -1],
+        [tx, ty + 1, ty < height - 1 ? idx + width : -1],
+        [tx - 1, ty, tx > 0 ? idx - 1 : -1],
+        [tx + 1, ty, tx < width - 1 ? idx + 1 : -1],
       ]
       for (const [nx, ny, nidx] of burnCandidates) {
         if (nidx === -1) continue
@@ -81,9 +79,9 @@ const def: ElementDef = {
 
     // 15% chance to clear fire sideways so lava can flow horizontally through it
     if (random() < 15) {
-      const leftIdx  = tx > 0         ? idx - 1 : -1
+      const leftIdx = tx > 0 ? idx - 1 : -1
       const rightIdx = tx < width - 1 ? idx + 1 : -1
-      if (leftIdx  !== -1 && (tiles[leftIdx]  & TYPE_MASK) === FIRE) {
+      if (leftIdx !== -1 && (tiles[leftIdx] & TYPE_MASK) === FIRE) {
         tiles[leftIdx] = EMPTY
         world.markDirty(tx - 1, ty)
         world.reactivateAround(tx - 1, ty, next)
@@ -97,11 +95,11 @@ const def: ElementDef = {
 
     const leftFirst = world.leftFirst
     const moved =
-      world.tryMove(idx, tx, ty, tx,                         ty + 1, LAVA, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 :  1), ty + 1, LAVA, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ?  1 : -1), ty + 1, LAVA, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 :  1, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ?  1 : -1, next)
+      world.tryMove(idx, tx, ty, tx, ty + 1, LAVA, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, LAVA, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, LAVA, next) ||
+      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1, next) ||
+      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
 
     if (!moved) {
       world.tiles[idx] = LAVA | SETTLED_FLAG

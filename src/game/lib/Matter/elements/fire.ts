@@ -6,7 +6,6 @@ import {
   FIRE,
   FUSE,
   GUNPOWDER,
-  MatterType,
   NAPALM,
   NITRO,
   OIL,
@@ -20,7 +19,7 @@ import {
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
-  id: MatterType.FIRE,
+  id: FIRE,
   name: 'Fire',
   action(world, tx, ty, idx, next): void {
     const { tiles, width, height } = world

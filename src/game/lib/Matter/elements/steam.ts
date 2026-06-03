@@ -1,9 +1,9 @@
 import { random } from '../../../helpers/random'
-import { EMPTY, MatterType, STEAM, WATER } from '../_Matter-types.ts'
+import { EMPTY, STEAM, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
-  id: MatterType.STEAM,
+  id: STEAM,
   name: 'Steam',
   lavaImmune: true,
   action(world, tx, ty, idx, next): void {
@@ -17,8 +17,8 @@ const def: ElementDef = {
     // Spread sideways
     const leftFirst = world.leftFirst
     if (
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 :  1, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ?  1 : -1, next)
+      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1, next) ||
+      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
     ) return
 
     // Condense near water

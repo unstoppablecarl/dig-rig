@@ -1,11 +1,11 @@
 import { random } from '../../../helpers/random'
-import { FIRE, GUNPOWDER, MatterType, SETTLED_FLAG } from '../_Matter-types.ts'
-import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
 import { ParticleType } from '../../Particles/_particle-types.ts'
+import { FIRE, GUNPOWDER, SETTLED_FLAG } from '../_Matter-types.ts'
+import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
-  id: MatterType.GUNPOWDER,
+  id: GUNPOWDER,
   name: 'Gunpowder',
   action(world, tx, ty, idx, next): void {
     // Explode near fire
@@ -25,15 +25,20 @@ const def: ElementDef = {
       }
 
       // Spawn visual particle via main thread
-      postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: ParticleType.GUNPOWDER_EXPLOSION, x: tx, y: ty })
+      postMessage({
+        type: MatterWorkerOutMsg.SPAWN_PARTICLE,
+        particleType: ParticleType.GUNPOWDER_EXPLOSION,
+        x: tx,
+        y: ty,
+      })
       return
     }
 
     const leftFirst = world.leftFirst
     const moved =
-      world.tryMove(idx, tx, ty, tx,                        ty + 1, GUNPOWDER, next) ||
+      world.tryMove(idx, tx, ty, tx, ty + 1, GUNPOWDER, next) ||
       world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, GUNPOWDER, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ?  1 : -1), ty + 1, GUNPOWDER, next)
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, GUNPOWDER, next)
 
     if (!moved) {
       world.tiles[idx] = GUNPOWDER | SETTLED_FLAG

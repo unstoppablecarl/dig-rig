@@ -1,11 +1,11 @@
-import { MatterType, SAND, SAND_SETTLED } from '../_Matter-types.ts'
+import { ACID, OIL, SALT_WATER, SAND, SAND_SETTLED, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 import type { MatterWorld } from '../MatterWorld.ts'
 
 const def: ElementDef = {
-  id: MatterType.SAND,
+  id: SAND,
   name: 'Sand',
-  sinksThrough: [MatterType.WATER, MatterType.OIL, MatterType.SALT_WATER, MatterType.ACID],
+  sinksThrough: [WATER, OIL, SALT_WATER, ACID],
   action(world: MatterWorld, tx, ty, idx, next): void {
     const leftFirst = world.leftFirst
 

@@ -1,10 +1,11 @@
 import { random } from '../../../helpers/random'
-import { CHILLED_ICE, CRYO, EMPTY, ICE, LAVA, MatterType, OIL, ROCK, SALT_WATER, SETTLED_FLAG, WATER } from '../_Matter-types.ts'
+import { CHILLED_ICE, CRYO, EMPTY, ICE, LAVA, OIL, ROCK, SALT_WATER, SETTLED_FLAG, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
-  id: MatterType.CRYO,
+  id: CRYO,
   name: 'Cryo',
+  acidImmune: true,
   action(world, tx, ty, idx, next): void {
     // Lava contact: cryo evaporates, lava solidifies
     const lavaLoc = world.bordering(tx, ty, idx, LAVA)
@@ -32,18 +33,21 @@ const def: ElementDef = {
     }
 
     // Density sink: cryo is denser than water/salt-water/oil — displaced water freezes
-    if (world.doDensityLiquid(tx, ty, idx, next, WATER,      80, 40, CHILLED_ICE)) return
+    if (world.doDensityLiquid(tx, ty, idx, next, WATER, 80, 40, CHILLED_ICE)) return
     if (world.doDensityLiquid(tx, ty, idx, next, SALT_WATER, 80, 40, CHILLED_ICE)) return
-    if (world.doDensityLiquid(tx, ty, idx, next, OIL,        80, 40)) return
-    if (world.hasDensityBelow(tx, ty, WATER) || world.hasDensityBelow(tx, ty, SALT_WATER) || world.hasDensityBelow(tx, ty, OIL)) { next.add(idx); return }
+    if (world.doDensityLiquid(tx, ty, idx, next, OIL, 80, 40)) return
+    if (world.hasDensityBelow(tx, ty, WATER) || world.hasDensityBelow(tx, ty, SALT_WATER) || world.hasDensityBelow(tx, ty, OIL)) {
+      next.add(idx)
+      return
+    }
 
     const leftFirst = world.leftFirst
     const moved =
-      world.tryMove(idx, tx, ty, tx,                        ty + 1, CRYO, next) ||
+      world.tryMove(idx, tx, ty, tx, ty + 1, CRYO, next) ||
       world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, CRYO, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ?  1 : -1), ty + 1, CRYO, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 :  1, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ?  1 : -1, next)
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, CRYO, next) ||
+      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1, next) ||
+      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
 
     if (!moved) {
       // Freeze an adjacent water cell when immobile

@@ -1,8 +1,8 @@
-import { MatterType } from '../_Matter-types.ts'
+import { PERMANENT } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
-  id: MatterType.PERMANENT,
+  id: PERMANENT,
   name: 'Permanent',
   passive: true,
   lavaImmune: true,

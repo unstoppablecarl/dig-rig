@@ -1,29 +1,27 @@
 import { random } from '../../../helpers/random'
-import {
-  BURNING_THERMITE, EMPTY, FIRE, MatterType, SOLID, THERMITE,
-} from '../_Matter-types.ts'
-import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
 import { ParticleType } from '../../Particles/_particle-types.ts'
+import { BURNING_THERMITE, EMPTY, FIRE, LAVA, OIL, SALT_WATER, SOLID, THERMITE, WATER } from '../_Matter-types.ts'
+import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
-  id: MatterType.BURNING_THERMITE,
+  id: BURNING_THERMITE,
   name: 'Burning Thermite',
-  sinksThrough: [MatterType.WATER, MatterType.SALT_WATER, MatterType.OIL],
+  sinksThrough: [WATER, SALT_WATER, OIL],
   action(world, tx, ty, idx, next): void {
     const { tiles, width, height } = world
 
     // Set adjacent non-thermite/lava/solid to fire (up, left, right only)
     const sideNeighbors = [
       [tx, ty - 1, idx - width],
-      [tx - 1, ty, idx - 1   ],
-      [tx + 1, ty, idx + 1   ],
+      [tx - 1, ty, idx - 1],
+      [tx + 1, ty, idx + 1],
     ] as [number, number, number][]
 
     for (const [nx, ny, nidx] of sideNeighbors) {
       if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue
       const nt = tiles[nidx] & 0x7F
-      if (nt !== THERMITE && nt !== BURNING_THERMITE && nt !== MatterType.LAVA && nt !== SOLID) {
+      if (nt !== THERMITE && nt !== BURNING_THERMITE && nt !== LAVA && nt !== SOLID) {
         tiles[nidx] = FIRE
         world.markDirty(nx, ny)
         next.add(nidx)
@@ -32,8 +30,8 @@ const def: ElementDef = {
 
     // Burn through SOLID adjacent horizontally
     if (random() < 8) {
-      const wallLeft  = tx > 0          && (tiles[idx - 1]     & 0x7F) === SOLID ? idx - 1 : -1
-      const wallRight = tx < width - 1  && (tiles[idx + 1]     & 0x7F) === SOLID ? idx + 1 : -1
+      const wallLeft = tx > 0 && (tiles[idx - 1] & 0x7F) === SOLID ? idx - 1 : -1
+      const wallRight = tx < width - 1 && (tiles[idx + 1] & 0x7F) === SOLID ? idx + 1 : -1
       const wallBelow = ty < height - 1 && (tiles[idx + width] & 0x7F) === SOLID ? idx + width : -1
       for (const widx of [wallLeft, wallRight, wallBelow]) {
         if (widx === -1) continue

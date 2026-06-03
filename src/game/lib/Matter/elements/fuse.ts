@@ -1,8 +1,8 @@
-import { FIRE, MatterType } from '../_Matter-types.ts'
+import { FIRE, FUSE } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
-  id: MatterType.FUSE,
+  id: FUSE,
   name: 'Fuse',
   passive: true,
   action(world, tx, ty, idx, next): void {

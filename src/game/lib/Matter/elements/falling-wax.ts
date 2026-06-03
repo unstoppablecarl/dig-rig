@@ -1,8 +1,8 @@
-import { FALLING_WAX, FIRE, MatterType, WAX } from '../_Matter-types.ts'
+import { FALLING_WAX, FIRE, WAX } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
-  id: MatterType.FALLING_WAX,
+  id: FALLING_WAX,
   name: 'Falling Wax',
   action(world, tx, ty, idx, next): void {
     const moved = world.tryMove(idx, tx, ty, tx, ty + 1, FALLING_WAX, next)

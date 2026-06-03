@@ -1,11 +1,11 @@
 import { random } from '../../../helpers/random'
-import { MatterType, SALT, SALT_WATER, SETTLED_FLAG, WATER } from '../_Matter-types.ts'
+import { SALT, SALT_WATER, SETTLED_FLAG, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
-  id: MatterType.SALT,
+  id: SALT,
   name: 'Salt',
-  sinksThrough: [MatterType.WATER, MatterType.SALT_WATER],
+  sinksThrough: [WATER, SALT_WATER],
   action(world, tx, ty, idx, next): void {
     // Dissolve in water → salt water
     if (random() < 25) {
@@ -25,9 +25,9 @@ const def: ElementDef = {
 
     const leftFirst = world.leftFirst
     const moved =
-      world.tryMove(idx, tx, ty, tx,                        ty + 1, SALT, next) ||
+      world.tryMove(idx, tx, ty, tx, ty + 1, SALT, next) ||
       world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, SALT, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ?  1 : -1), ty + 1, SALT, next)
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, SALT, next)
 
     if (!moved) {
       world.tiles[idx] = SALT | SETTLED_FLAG

@@ -1,11 +1,11 @@
 import { random } from '../../../helpers/random'
-import { FIRE, MatterType } from '../_Matter-types.ts'
-import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
 import { ParticleType } from '../../Particles/_particle-types.ts'
+import { C4, FIRE } from '../_Matter-types.ts'
+import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
-  id: MatterType.C4,
+  id: C4,
   name: 'C4',
   passive: true,
   action(world, tx, ty, idx, next): void {

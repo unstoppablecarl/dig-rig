@@ -1,10 +1,11 @@
-import { LAVA, MatterType, OIL, SALT, SALT_WATER, SETTLED_FLAG, WATER } from '../_Matter-types.ts'
+import { LAVA, OIL, SALT, SALT_WATER, SETTLED_FLAG, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
-  id: MatterType.SALT_WATER,
+  id: SALT_WATER,
   name: 'Salt Water',
   lavaImmune: true,
+  acidImmune: true,
   liquid: true,
   action(world, tx, ty, idx, next): void {
     world.wakeSettledNeighbors(tx, ty, idx, LAVA, next)
