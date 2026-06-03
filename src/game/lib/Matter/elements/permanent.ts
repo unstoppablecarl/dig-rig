@@ -5,6 +5,7 @@ const def: ElementDef = {
   id: MatterType.PERMANENT,
   name: 'Permanent',
   passive: true,
+  lavaImmune: true,
 }
 
 export default def

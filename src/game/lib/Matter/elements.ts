@@ -8,20 +8,29 @@ export type ElementDef = {
   id: MatterType,
   action?: ElementAction,
   passive?: boolean,
+  lavaImmune?: boolean,
+  liquid?: boolean,
+  sinksThrough?: MatterType[],
 }
 
 const noop = () => {
 }
 
 export const ELEMENT_ACTIONS: ElementAction[] = []
-export const PASSIVE_ELEMENTS = new Set()
+export const PASSIVE_ELEMENTS = new Set<MatterType>()
 export const ELEMENT_NAMES = new Map<MatterType, string>()
+export const LAVA_IMMUNE = new Set<MatterType>()
+export const LIQUID_TYPES = new Set<MatterType>()
+export const SINKS_THROUGH: Partial<Record<MatterType, MatterType[]>> = {}
 
 function add({
                id,
                name,
                action = noop,
                passive = false,
+               lavaImmune = false,
+               liquid = false,
+               sinksThrough,
              }: ElementDef) {
 
   ELEMENT_ACTIONS[id] = action
@@ -30,7 +39,15 @@ function add({
   if (passive) {
     PASSIVE_ELEMENTS.add(id)
   }
-
+  if (lavaImmune) {
+    LAVA_IMMUNE.add(id)
+  }
+  if (liquid) {
+    LIQUID_TYPES.add(id)
+  }
+  if (sinksThrough) {
+    SINKS_THROUGH[id] = sinksThrough
+  }
   return id
 }
 

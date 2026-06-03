@@ -1,7 +1,7 @@
 import type { Particle } from './Particle.ts'
 import type { ParticleContext } from './ParticleContext.ts'
 import type { ParticlePool } from './ParticlePool.ts'
-import type { ParticleRenderer } from './ParticleRenderer.ts'
+import type { ParticlePixelRenderer } from './ParticlePixelRenderer.ts'
 
 export enum ParticleType {
   NONE,
@@ -24,7 +24,7 @@ export type ParticleDef = {
   ) => void
   action: (
     p: Particle,
-    renderer: ParticleRenderer,
+    renderer: ParticlePixelRenderer,
     pool: ParticlePool,
     ctx: ParticleContext,
   ) => void

@@ -1,27 +1,9 @@
 import { random } from '../../helpers/random'
 import { EMPTY, FIRE, MatterType, SAND, SETTLED_FLAG, TYPE_MASK, WATER } from './_Matter-types.ts'
 import { MatterWorkerOutMsg } from './_MatterWorker-types.ts'
-import { ELEMENT_ACTIONS } from './elements.ts'
+import { ELEMENT_ACTIONS, LIQUID_TYPES, SINKS_THROUGH } from './elements.ts'
 
 const MAX_FLOW = 8
-
-// Elements that can displace a settled liquid when they fall into it.
-// Indexed by the MOVING element's base type.
-const SINKS_THROUGH: Partial<Record<MatterType, MatterType[]>> = {
-  [MatterType.SAND]: [MatterType.WATER, MatterType.OIL, MatterType.SALT_WATER, MatterType.ACID],
-  [MatterType.SALT]: [MatterType.WATER, MatterType.SALT_WATER],
-  [MatterType.ROCK]: [MatterType.WATER, MatterType.OIL, MatterType.SALT_WATER, MatterType.LAVA, MatterType.ACID],
-  [MatterType.CONCRETE]: [MatterType.WATER, MatterType.SALT_WATER],
-  [MatterType.THERMITE]: [MatterType.WATER, MatterType.SALT_WATER, MatterType.OIL],
-  [MatterType.BURNING_THERMITE]: [MatterType.WATER, MatterType.SALT_WATER, MatterType.OIL],
-}
-
-// Elements whose settled state should also wake above-neighbours (liquids that
-// might need to flow in when space opens — same idea as sand, but horizontal).
-const LIQUID_TYPES = new Set<MatterType>([
-  MatterType.WATER, MatterType.OIL, MatterType.SALT_WATER, MatterType.LAVA,
-  MatterType.ACID, MatterType.NITRO,
-])
 
 export class MatterWorld {
   tiles!: Uint32Array
@@ -54,8 +36,9 @@ export class MatterWorld {
     this.chunksWidth = Math.ceil(width / chunkSize)
     this.ready = true
 
-    // 8ms so each tile's effective update rate stays ~60fps despite checkerboard halving
-    setInterval(() => this.step(), 8)
+    // Self-scheduling so a slow step never queues up catch-up bursts
+    const loop = () => { this.step(); setTimeout(loop, 8) }
+    setTimeout(loop, 8)
   }
 
   activate(indices: number[]) {

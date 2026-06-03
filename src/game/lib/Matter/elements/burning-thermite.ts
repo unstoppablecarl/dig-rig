@@ -9,6 +9,7 @@ import type { ElementDef } from '../elements.ts'
 const def: ElementDef = {
   id: MatterType.BURNING_THERMITE,
   name: 'Burning Thermite',
+  sinksThrough: [MatterType.WATER, MatterType.SALT_WATER, MatterType.OIL],
   action(world, tx, ty, idx, next): void {
     const { tiles, width, height } = world
 

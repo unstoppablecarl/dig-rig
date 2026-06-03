@@ -7,6 +7,7 @@ import type { ElementDef } from '../elements.ts'
 const def: ElementDef = {
   id: MatterType.NITRO,
   name: 'Nitro',
+  liquid: true,
   action(world, tx, ty, idx, next): void {
     if (random() < 30 && world.borderingAdjacent(tx, ty, idx, FIRE) !== -1) {
       world.doBorderBurn(tx, ty, idx, next)

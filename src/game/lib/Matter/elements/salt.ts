@@ -5,6 +5,7 @@ import type { ElementDef } from '../elements.ts'
 const def: ElementDef = {
   id: MatterType.SALT,
   name: 'Salt',
+  sinksThrough: [MatterType.WATER, MatterType.SALT_WATER],
   action(world, tx, ty, idx, next): void {
     // Dissolve in water → salt water
     if (random() < 25) {

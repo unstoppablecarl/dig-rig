@@ -5,6 +5,7 @@ import type { ElementDef } from '../elements.ts'
 const def: ElementDef = {
   id: MatterType.OIL,
   name: 'Oil',
+  liquid: true,
   action(world, tx, ty, idx, next): void {
     // Catch fire
     if (random() < 30 && world.bordering(tx, ty, idx, FIRE) !== -1) {

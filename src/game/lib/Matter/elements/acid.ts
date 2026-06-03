@@ -13,6 +13,7 @@ const ACID_IMMUNE = new Set([
 const def: ElementDef = {
   id: MatterType.ACID,
   name: 'Acid',
+  liquid: true,
   action(world, tx, ty, idx, next): void {
     const { tiles, width, height } = world
 

@@ -4,6 +4,8 @@ import type { ElementDef } from '../elements.ts'
 const def: ElementDef = {
   id: MatterType.SALT_WATER,
   name: 'Salt Water',
+  lavaImmune: true,
+  liquid: true,
   action(world, tx, ty, idx, next): void {
     world.wakeSettledNeighbors(tx, ty, idx, LAVA, next)
     world.wakeSettledNeighbors(tx, ty, idx, SALT, next)

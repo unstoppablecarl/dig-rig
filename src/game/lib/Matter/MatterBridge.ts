@@ -15,7 +15,7 @@ export class MatterBridge extends SceneBound {
   private readonly dirtyChunks: Uint8Array
   private readonly numChunksX: number
   private readonly numChunksY: number
-  private readonly particleLayer: ParticleManager
+  private readonly particleManager: ParticleManager
 
   constructor(public scene: GameLevel) {
     super(scene)
@@ -28,7 +28,10 @@ export class MatterBridge extends SceneBound {
     this.dirtyChunksBuffer = new SharedArrayBuffer(this.numChunksX * this.numChunksY)
     this.dirtyChunks = new Uint8Array(this.dirtyChunksBuffer)
 
-    this.particleLayer = new ParticleManager(this.scene)
+    this.particleManager = new ParticleManager(this.scene)
+    this.particleManager.onActivations = (indices) => {
+      this.worker?.postMessage({ type: MatterWorkerInMsg.ACTIVATE, indices })
+    }
 
     this.worker = new ParticleWorkerConstructor()
     this.worker.postMessage({
@@ -53,7 +56,7 @@ export class MatterBridge extends SceneBound {
       }
 
       if (e.data.type === MatterWorkerOutMsg.SPAWN_PARTICLE) {
-        this.particleLayer.spawn(e.data.particleType, e.data.x, e.data.y)
+        this.particleManager.spawn(e.data.particleType, e.data.x, e.data.y)
       }
     }
 
@@ -104,11 +107,7 @@ export class MatterBridge extends SceneBound {
   update() {
     if (this.destroyed) return
 
-    this.particleLayer.update()
-    const particleActivations = this.particleLayer.flushTileActivations()
-    if (particleActivations.length) {
-      this.worker.postMessage({ type: MatterWorkerInMsg.ACTIVATE, indices: particleActivations })
-    }
+    this.particleManager.update()
 
     const chunkManager = this.scene.tilemap.chunkManager
 

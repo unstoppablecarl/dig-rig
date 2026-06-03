@@ -4,6 +4,8 @@ import type { ElementDef } from '../elements.ts'
 const def: ElementDef = {
   id: MatterType.ROCK,
   name: 'Rock',
+  lavaImmune: true,
+  sinksThrough: [MatterType.WATER, MatterType.OIL, MatterType.SALT_WATER, MatterType.LAVA, MatterType.ACID],
   action(world, tx, ty, idx, next): void {
     const leftFirst = world.leftFirst
 

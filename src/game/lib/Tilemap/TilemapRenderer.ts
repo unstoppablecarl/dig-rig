@@ -70,6 +70,7 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean): string {
     uniform sampler2D uTerrain;
     uniform sampler2D uMask;
     uniform sampler2D uEffect;
+    uniform sampler2D uParticles;
 
     uniform float uInnerGlowStrength;
     uniform vec3 uGlowColor;
@@ -94,11 +95,23 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean): string {
     // phaser framework variable
     varying vec2 outTexCoord;
 
-    // Fast integer-free hash (avoids sin() which is slow on some GPUs)
     float hash(vec2 p) {
         p = fract(p * vec2(0.1031, 0.1030));
         p += dot(p, p + 33.33);
         return fract((p.x + p.y) * p.x);
+    }
+
+    // Smooth value noise: bilinear interpolation over 4 hash samples.
+    // Eliminates the banding that raw hash produces per texel.
+    float noise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        vec2 u = f * f * (3.0 - 2.0 * f);
+        return mix(
+            mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
+            mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+            u.y
+        );
     }
 
     float blendOverlay(float base, float blend) {
@@ -115,6 +128,11 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean): string {
     }
 
     void main() {
+        // Normalise time to seconds in a small range to avoid mediump precision loss
+        float t = mod(uTime * 0.001, 100.0);
+        // Tile-space UV: each unit = one tile. Use this for noise so frequency
+        // is expressed in tiles rather than normalised [0,1] UV space.
+        vec2 tileUV = outTexCoord / uInvTilemapSize;
         // uMask R channel: raw tile value (0–255), normalised to 0–1.
         // Bit 7 (raw >= 128) = SETTLED flag. Bits 0–6 = base MatterType.
         int raw      = int(texture2D(uMask, outTexCoord).r * 255.0 + 0.5);
@@ -187,14 +205,14 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean): string {
         }
         // ── New element types ────────────────────────────────────────────────
         else if (tileType == ${MatterType.FIRE}) {
-            float flicker = hash(outTexCoord * 50.0 + uTime * 3.0) * 0.3;
+            float flicker = noise(tileUV * 0.3 + vec2(t * 4.0, t * 2.3)) * 0.3;
             color = vec4(1.0, 0.3 + flicker, 0.05, 1.0);
         }
         else if (tileType == ${MatterType.OIL}) {
             color = vec4(0.36, 0.18, 0.04, 0.95);
         }
         else if (tileType == ${MatterType.LAVA}) {
-            float glow2 = hash(outTexCoord * 30.0 + uTime * 1.5) * 0.2;
+            float glow2 = noise(tileUV * 0.12 + vec2(t * 1.8, t * 1.1)) * 0.25;
             color = vec4(0.96 + glow2, 0.35 + glow2, 0.06, 1.0);
         }
         else if (tileType == ${MatterType.ROCK}) {
@@ -246,14 +264,14 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean): string {
             color = vec4(0.0, 0.84, 1.00, 0.80);
         }
         else if (tileType == ${MatterType.ACID}) {
-            float pulse = hash(outTexCoord * 20.0 + uTime * 2.0) * 0.15;
+            float pulse = noise(tileUV * 0.2 + vec2(t * 2.5, t * 1.4)) * 0.15;
             color = vec4(0.42 + pulse, 0.94, 0.16, 0.90);
         }
         else if (tileType == ${MatterType.THERMITE}) {
             color = vec4(0.76, 0.55, 0.27, 1.0);
         }
         else if (tileType == ${MatterType.BURNING_THERMITE}) {
-            float br = hash(outTexCoord * 40.0 + uTime * 4.0) * 0.2;
+            float br = noise(tileUV * 0.25 + vec2(t * 5.0, t * 3.1)) * 0.2;
             color = vec4(1.0, 0.51 + br, 0.51 + br, 1.0);
         }
         else if (tileType == ${MatterType.GUNPOWDER}) {
@@ -273,6 +291,13 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean): string {
             color = mix(color, vec4(eff.rgb, 1.0), eff.a);
         }
 
+        // uParticles: particle pixel layer written each frame by the particle worker.
+        // CanvasTexture uploads without UNPACK_FLIP_Y so its Y is inverted vs. the other textures.
+        vec4 pt = texture2D(uParticles, vec2(outTexCoord.x, 1.0 - outTexCoord.y));
+        if (pt.a > 0.004) {
+            color = mix(color, vec4(pt.rgb, 1.0), pt.a);
+        }
+
         if (color.a < 0.01) discard;
         gl_FragColor = color;
     }
@@ -282,7 +307,8 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean): string {
 export class TilemapRenderer extends SceneBound implements TilemapRendererConfig {
   private readonly chunkRenderer: TerrainChunkRenderer
   private readonly effectSystem: TerrainEffectSystem
-  private readonly shader: Shader
+  private readonly particleTexture: Phaser.Textures.CanvasTexture
+  private readonly particleImageData: ImageData
 
   readonly glowRadius = CONFIG_DEFAULTS.glowRadius
   readonly glowEnabled = CONFIG_DEFAULTS.glowEnabled
@@ -311,6 +337,9 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
     this.chunkRenderer = new TerrainChunkRenderer(scene)
     this.effectSystem = new TerrainEffectSystem(scene)
 
+    this.particleTexture = scene.textures.createCanvas('particle-pixels', width, height) as Phaser.Textures.CanvasTexture
+    this.particleImageData = new ImageData(width, height)
+
     const shader: Shader = scene.add.shader(
       {
         name: 'TerrainShader',
@@ -319,6 +348,7 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
           setUniform('uTerrain', 0)
           setUniform('uMask', 1)
           setUniform('uEffect', 2)
+          setUniform('uParticles', 3)
           setUniform('uGlowColor', this.glowColor)
           setUniform('uOutlineColor', this.outlineColor)
           setUniform('uInnerGlowStrength', this.glowStrength)
@@ -332,7 +362,7 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
           setUniform('uSandSettledOutlineColor', this.sandSettledOutlineColor)
           setUniform('uWaterColor', this.waterColor)
           setUniform('uWaterAlpha', this.waterAlpha)
-          setUniform('uTime', 0)
+          setUniform('uTime', scene.time.now)
           setUniform('uInvTilemapSize', [1.0 / width, 1.0 / height])
         },
       },
@@ -340,17 +370,23 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
       width, height,
     )
 
-    this.shader = shader
     shader.setOrigin(0, 0)
     shader.setTextures([
       terrainTexture,
       this.chunkRenderer.maskTexture,
       this.effectSystem.effectTexture,
+      this.particleTexture,
     ])
     scene.layers.terrain.add(shader)
 
     // Force shader compilation now (during create) to avoid a stall on the first rendered frame.
     ;(shader as any).renderNode?.programManager?.getCurrentProgramSuite?.()
+  }
+
+  updateParticlePixels(buf: Uint8ClampedArray) {
+    this.particleImageData.data.set(buf)
+    this.particleTexture.getContext().putImageData(this.particleImageData, 0, 0)
+    this.particleTexture.refresh()
   }
 
   addEffect(tx: number, ty: number, mode: FireMode, startTime?: number) {
@@ -372,7 +408,6 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
     }
 
     this.effectSystem.update()
-    this.shader.setUniform('uTime', this.scene.time.now)
   }
 
   protected onDestroy() {

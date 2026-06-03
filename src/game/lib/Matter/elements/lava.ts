@@ -4,14 +4,13 @@ import {
 } from '../_Matter-types.ts'
 import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import type { ElementDef } from '../elements.ts'
-
-// Elements lava cannot burn
-const LAVA_IMMUNE = new Set([LAVA, MatterType.SOLID, MatterType.PERMANENT, ROCK, WATER, SALT_WATER, STEAM])
+import { type ElementDef, LAVA_IMMUNE } from '../elements.ts'
 
 const def: ElementDef = {
   id: MatterType.LAVA,
   name: 'Lava',
+  lavaImmune: true,
+  liquid: true,
   action(world, tx, ty, idx, next): void {
     const { tiles, width, height } = world
 

@@ -5,6 +5,7 @@ import type { MatterWorld } from '../MatterWorld.ts'
 const def: ElementDef = {
   id: MatterType.SAND,
   name: 'Sand',
+  sinksThrough: [MatterType.WATER, MatterType.OIL, MatterType.SALT_WATER, MatterType.ACID],
   action(world: MatterWorld, tx, ty, idx, next): void {
     const leftFirst = world.leftFirst
 

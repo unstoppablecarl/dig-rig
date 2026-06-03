@@ -1,64 +1,55 @@
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { ParticleType } from './_particle-types.ts'
-import { makeParticleContext, type ParticleContext } from './ParticleContext.ts'
-import { ParticlePool } from './ParticlePool.ts'
-import { ParticleRenderer } from './ParticleRenderer.ts'
-import { PARTICLE_DEFS } from './particles.ts'
+import { ParticleWorkerInMsg, ParticleWorkerOutMsg, type TypedParticleWorker } from './_ParticleWorker-types.ts'
+import ParticleWorkerConstructor from './particle.worker.ts?worker'
 
-export class ParticleManager extends SceneBound {
-  readonly pool: ParticlePool
-  public pendingActivations: number[] = []
-  readonly renderer: ParticleRenderer
-  private context: ParticleContext
+export class ParticleManager extends SceneBound<GameLevel> {
+  private readonly worker: TypedParticleWorker
+  private readonly pixelSab: SharedArrayBuffer
+  private readonly sabView: Uint8ClampedArray
+  private readonly localBuf: Uint8ClampedArray
+
+  onActivations?: (indices: number[]) => void
 
   constructor(scene: GameLevel) {
     super(scene)
-    const graphics = scene.add.graphics()
-    scene.layers.terrainParticles.add(graphics)
-    this.renderer = new ParticleRenderer(graphics)
-    this.pool = new ParticlePool()
-    this.context = makeParticleContext(scene.tilemap, this.pendingActivations)
-  }
+    const { width, height } = scene.tilemap
 
-  flushTileActivations(): number[] {
-    const result = this.pendingActivations.slice()
-    this.pendingActivations.length = 0
-    return result
-  }
+    this.pixelSab = new SharedArrayBuffer(width * height * 4)
+    this.sabView = new Uint8ClampedArray(this.pixelSab)
+    this.localBuf = new Uint8ClampedArray(width * height * 4)
 
-  spawn(type: ParticleType, tileX: number, tileY: number) {
-    const def = PARTICLE_DEFS[type]
-    if (!def) return
-    const count = def.particlesToSpawn
-    for (let i = 0; i < count; i++) {
-      const p = this.pool.acquire(type, tileX, tileY)
-      if (!p) break
-      def.init(p, tileX, tileY, this.context)
+    this.worker = new ParticleWorkerConstructor() as TypedParticleWorker
+    this.worker.postMessage({
+      type: ParticleWorkerInMsg.INIT,
+      tilesSab: scene.tilemap.tilesBuffer,
+      pixelSab: this.pixelSab,
+      width,
+      height,
+    })
+
+    this.worker.onmessage = (e) => {
+      if (e.data.type === ParticleWorkerOutMsg.ACTIVATIONS) {
+        this.onActivations?.(e.data.indices)
+      }
     }
   }
 
-  update() {
-    this.renderer.clear()
+  spawn(type: ParticleType, x: number, y: number) {
+    this.worker.postMessage({ type: ParticleWorkerInMsg.SPAWN, particleType: type, x, y })
+  }
 
-    this.pool.forEachActive((p) => {
-      const def = PARTICLE_DEFS[p.particleType]
-      if (!def) {
-        this.pool.release(p)
-        return
-      }
-      def.action(p, this.renderer, this.pool, this.context)
-      p.actionIterations++
-    })
+  update() {
+    this.localBuf.set(this.sabView)
+    this.scene.tilemapRenderer.updateParticlePixels(this.localBuf)
   }
 
   protected onDestroy() {
-    super.onDestroy()
+    this.worker.terminate()
     // @ts-expect-error: destroy
-    this.pool = null
+    this.worker = null
     // @ts-expect-error: destroy
-    this.pendingActivations = null
-    // @ts-expect-error: destroy
-    this.renderer = null
+    this.onActivations = null
   }
 }

@@ -5,6 +5,7 @@ import type { ElementDef } from '../elements.ts'
 const def: ElementDef = {
   id: MatterType.STEAM,
   name: 'Steam',
+  lavaImmune: true,
   action(world, tx, ty, idx, next): void {
     const { tiles, width } = world
 

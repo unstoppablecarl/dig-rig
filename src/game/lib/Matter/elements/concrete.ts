@@ -5,6 +5,7 @@ import type { ElementDef } from '../elements.ts'
 const def: ElementDef = {
   id: MatterType.CONCRETE,
   name: 'Concrete',
+  sinksThrough: [MatterType.WATER, MatterType.SALT_WATER],
   action(world, tx, ty, idx, next): void {
     // Harden into SOLID near existing SOLID
     if (random() < 10 && random() < 10) {
