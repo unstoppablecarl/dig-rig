@@ -1,8 +1,11 @@
+import { ParticleType } from './_particle-types.ts'
+
 export class Particle {
-  particleType: string = ''
+  particleType: ParticleType
   x: number = 0
   y: number = 0
-  color: number = 0       // 0xRRGGBB
+  // 0xRRGGBB
+  color: number = 0
   velocity: number = 0
   angle: number = 0
   xVelocity: number = 0
@@ -17,7 +20,7 @@ export class Particle {
   data: Record<string, number> = {}
 
   reset() {
-    this.particleType = ''
+    this.particleType = ParticleType.NONE
     this.x = this.y = 0
     this.color = 0
     this.velocity = this.angle = 0

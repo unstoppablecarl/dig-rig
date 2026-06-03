@@ -1,3 +1,4 @@
+import type { ParticleType } from './_particle-types.ts'
 import { Particle } from './Particle.ts'
 
 const POOL_SIZE = 512
@@ -19,7 +20,7 @@ export class ParticlePool {
     }
   }
 
-  acquire(type: string, x: number, y: number): Particle | null {
+  acquire(type: ParticleType, x: number, y: number): Particle | null {
     if (!this.inactiveHead) return null
 
     const p = this.inactiveHead

@@ -6,7 +6,7 @@ import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
 import { MatterType, TYPE_MASK } from './_Matter-types.ts'
 import { MatterWorkerInMsg, MatterWorkerOutMsg, type TypedMatterWorker } from './_MatterWorker-types.ts'
-import { ParticleLayer } from '../Particles/ParticleLayer.ts'
+import { ParticleManager } from '../Particles/ParticleManager.ts'
 import ParticleWorkerConstructor from './matter.worker.ts?worker'
 
 export class MatterBridge extends SceneBound {
@@ -15,7 +15,7 @@ export class MatterBridge extends SceneBound {
   private readonly dirtyChunks: Uint8Array
   private readonly numChunksX: number
   private readonly numChunksY: number
-  private readonly particleLayer: ParticleLayer
+  private readonly particleLayer: ParticleManager
 
   constructor(public scene: GameLevel) {
     super(scene)
@@ -28,7 +28,7 @@ export class MatterBridge extends SceneBound {
     this.dirtyChunksBuffer = new SharedArrayBuffer(this.numChunksX * this.numChunksY)
     this.dirtyChunks = new Uint8Array(this.dirtyChunksBuffer)
 
-    this.particleLayer = new ParticleLayer(this.scene)
+    this.particleLayer = new ParticleManager(this.scene)
 
     this.worker = new ParticleWorkerConstructor()
     this.worker.postMessage({
@@ -105,6 +105,10 @@ export class MatterBridge extends SceneBound {
     if (this.destroyed) return
 
     this.particleLayer.update()
+    const particleActivations = this.particleLayer.flushTileActivations()
+    if (particleActivations.length) {
+      this.worker.postMessage({ type: MatterWorkerInMsg.ACTIVATE, indices: particleActivations })
+    }
 
     const chunkManager = this.scene.tilemap.chunkManager
 

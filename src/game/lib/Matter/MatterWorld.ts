@@ -313,6 +313,25 @@ export class MatterWorld {
 
   // ─── Higher-level helpers (mirrors project-sand World API) ────────────────
 
+  /** Clear SETTLED_FLAG on all 4-directional neighbours whose base type matches `type`. */
+  wakeSettledNeighbors(tx: number, ty: number, idx: number, type: MatterType, dest: Set<number>) {
+    const { tiles, width, height } = this
+    for (const nidx of [
+      ty > 0          ? idx - width : -1,
+      ty < height - 1 ? idx + width : -1,
+      tx > 0          ? idx - 1     : -1,
+      tx < width - 1  ? idx + 1     : -1,
+    ]) {
+      if (nidx === -1) continue
+      const raw = tiles[nidx]
+      if ((raw & TYPE_MASK) === type && (raw & SETTLED_FLAG)) {
+        tiles[nidx] = raw & ~SETTLED_FLAG
+        this.markDirty(nidx % width, nidx / width | 0)
+        dest.add(nidx)
+      }
+    }
+  }
+
   /** Return linear index of the first neighbour of `type` (4-directional), or -1. */
   bordering(tx: number, ty: number, idx: number, type: MatterType): number {
     const { tiles, width, height } = this

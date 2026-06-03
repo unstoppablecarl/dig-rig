@@ -56,8 +56,8 @@ export class Tilemap extends SceneBound {
 
     const n = width * height
     this._bfsVisited = new Uint8Array(n)
-    this._bfsQueue   = new Int32Array(n)
-    this._bfsComp    = new Int32Array(n)
+    this._bfsQueue = new Int32Array(n)
+    this._bfsComp = new Int32Array(n)
   }
 
   get tilesBuffer(): SharedArrayBuffer {
@@ -99,7 +99,7 @@ export class Tilemap extends SceneBound {
   // before calling this
   public setTile(x: number, y: number, value: MatterType) {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false
-    const id   = y * this.width + x
+    const id = y * this.width + x
     const prev = this.tiles[id]
     const prevType = prev & TYPE_MASK
     this.tiles[id] = value
@@ -118,14 +118,14 @@ export class Tilemap extends SceneBound {
   }
 
   public isSolid(x: number, y: number) {
-    const raw  = this.getTile(Math.floor(x), Math.floor(y))
+    const raw = this.getTile(Math.floor(x), Math.floor(y))
     const type = raw & TYPE_MASK
     if (type === MatterType.SOLID || type === MatterType.PERMANENT) return true
     // Granular materials are solid for physics only when settled
     if (raw & SETTLED_FLAG) {
       return type === MatterType.SAND || type === MatterType.ROCK ||
-             type === MatterType.CONCRETE || type === MatterType.SALT ||
-             type === MatterType.THERMITE
+        type === MatterType.CONCRETE || type === MatterType.SALT ||
+        type === MatterType.THERMITE
     }
     return false
   }
@@ -416,7 +416,7 @@ export class Tilemap extends SceneBound {
       this.getCircle(tileX, tileY, tileRadius, (x, y) => {
         if (this.getTile(x, y) !== MatterType.EMPTY) return
         if (x > px - PLAYER_RADIUS_X + velLeft && x < px + PLAYER_RADIUS_X + velRight &&
-            y > py - PLAYER_RADIUS_Y + velUp && y < py + PLAYER_RADIUS_Y + velDown) return
+          y > py - PLAYER_RADIUS_Y + velUp && y < py + PLAYER_RADIUS_Y + velDown) return
         tiles.push({ x, y, newValue: MatterType.SOLID })
       }, false, innerRadius)
       if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
@@ -479,14 +479,14 @@ export class Tilemap extends SceneBound {
       const px = player.x, py = player.y
       const vel = player.container.body?.velocity
       const vx = vel?.x ?? 0, vy = vel?.y ?? 0
-      const velLeft  = Math.max(Math.min(vx, 0), -PLAYER_CREATE_VEL_EXTEND)
-      const velRight = Math.min(Math.max(vx, 0),  PLAYER_CREATE_VEL_EXTEND)
-      const velUp    = Math.max(Math.min(vy, 0), -PLAYER_CREATE_VEL_EXTEND)
-      const velDown  = Math.min(Math.max(vy, 0),  PLAYER_CREATE_VEL_EXTEND)
-      const left  = px - PLAYER_RADIUS_X + velLeft
+      const velLeft = Math.max(Math.min(vx, 0), -PLAYER_CREATE_VEL_EXTEND)
+      const velRight = Math.min(Math.max(vx, 0), PLAYER_CREATE_VEL_EXTEND)
+      const velUp = Math.max(Math.min(vy, 0), -PLAYER_CREATE_VEL_EXTEND)
+      const velDown = Math.min(Math.max(vy, 0), PLAYER_CREATE_VEL_EXTEND)
+      const left = px - PLAYER_RADIUS_X + velLeft
       const right = px + PLAYER_RADIUS_X + velRight
-      const top   = py - PLAYER_RADIUS_Y + velUp
-      const bot   = py + PLAYER_RADIUS_Y + velDown
+      const top = py - PLAYER_RADIUS_Y + velUp
+      const bot = py + PLAYER_RADIUS_Y + velDown
       tiles = tiles.filter(({ x, y }) => !(x > left && x < right && y > top && y < bot))
       if (!tiles.length) return tiles
     }
@@ -672,5 +672,9 @@ export class Tilemap extends SceneBound {
     }
 
     return tilemap
+  }
+
+  outOfBounds(x: number, y: number): boolean {
+    return x < 0 || x >= this.width || y < 0 || y >= this.height
   }
 }

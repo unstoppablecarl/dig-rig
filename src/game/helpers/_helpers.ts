@@ -161,3 +161,8 @@ export function makeBitmaskIncrementer() {
 }
 
 export const isMatterTankFireMode = (mode: FireMode): mode is MatterTankFireMode => mode === FireMode.CREATE || mode === FireMode.DESTROY
+
+export const TWO_PI = Math.PI * 2
+export const HALF_PI = Math.PI / 2
+export const QUARTER_PI = Math.PI / 4
+export const EIGHTEENTH_PI = Math.PI / 18

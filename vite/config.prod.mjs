@@ -15,11 +15,9 @@ const phasermsg = () => {
 const baseConfig = {
   base: './',
   build: {
+    minify: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          phaser: ['phaser'],
-        },
       },
     },
   },
@@ -44,7 +42,8 @@ export default defineConfig(
   mergeConfig(baseConfig, {
     logLevel: 'warning',
     build: {
-      minify: 'terser',
+      minify: false,
+      // minify: 'terser',
       terserOptions: {
         compress: {
           passes: 2,

@@ -1,5 +1,8 @@
 import { random } from '../../../helpers/random'
-import { FIRE, LAVA, MatterType, ROCK, SALT_WATER, SETTLED_FLAG, STEAM, WATER } from '../_Matter-types.ts'
+import {
+  EMPTY, FIRE, LAVA, MatterType, OIL, ROCK, SALT_WATER, SETTLED_FLAG, STEAM, TYPE_MASK, WATER,
+} from '../_Matter-types.ts'
+import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 // Elements lava cannot burn
@@ -9,7 +12,7 @@ const def: ElementDef = {
   id: MatterType.LAVA,
   name: 'Lava',
   action(world, tx, ty, idx, next): void {
-    const { tiles, width } = world
+    const { tiles, width, height } = world
 
     // Turn to rock when touching water or salt-water
     let waterLoc = world.bordering(tx, ty, idx, WATER)
@@ -22,24 +25,73 @@ const def: ElementDef = {
       const wy = waterLoc / width | 0
       world.markDirty(wx, wy)
       next.add(waterLoc)
+      next.add(idx)
       return
     }
 
-    // Burn adjacent non-immune tiles
+    // Spawn a lava burst particle and self-destruct when adjacent to oil
+    if (random() < 4 && world.bordering(tx, ty, idx, OIL) !== -1) {
+      if (random() < 35) {
+        postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: 'lava_burst', x: tx, y: ty })
+        tiles[idx] = EMPTY
+        world.markDirty(tx, ty)
+        world.reactivateAround(tx, ty, next)
+        return
+      }
+    }
+
+    // Burn adjacent non-immune tiles (with proper X-boundary guards)
     if (random() < 25) {
-      const neighbors = [
-        idx - width, idx + width, idx - 1, idx + 1,
+      const burnCandidates: [number, number, number][] = [
+        [tx,     ty - 1, ty > 0          ? idx - width : -1],
+        [tx,     ty + 1, ty < height - 1 ? idx + width : -1],
+        [tx - 1, ty,     tx > 0          ? idx - 1     : -1],
+        [tx + 1, ty,     tx < width - 1  ? idx + 1     : -1],
       ]
-      for (const nidx of neighbors) {
-        if (nidx < 0 || nidx >= tiles.length) continue
-        const nt = tiles[nidx] & 0x7F
+      for (const [nx, ny, nidx] of burnCandidates) {
+        if (nidx === -1) continue
+        const nt = tiles[nidx] & TYPE_MASK
         if (!LAVA_IMMUNE.has(nt)) {
           tiles[nidx] = FIRE
-          const nx = nidx % width
-          const ny = nidx / width | 0
           world.markDirty(nx, ny)
           next.add(nidx)
         }
+      }
+    }
+
+    // Clear fire directly below so lava can fall through it
+    const downIdx = ty < height - 1 ? idx + width : -1
+    if (downIdx !== -1) {
+      const belowType = tiles[downIdx] & TYPE_MASK
+      if (belowType === FIRE) {
+        tiles[downIdx] = EMPTY
+        world.markDirty(tx, ty + 1)
+        world.reactivateAround(tx, ty + 1, next)
+      } else if (belowType === STEAM && random() < 95) {
+        // Lava sinks through steam — swap positions
+        tiles[downIdx] = LAVA
+        tiles[idx] = STEAM
+        world.markDirty(tx, ty)
+        world.markDirty(tx, ty + 1)
+        next.add(downIdx)
+        next.add(idx)
+        return
+      }
+    }
+
+    // 15% chance to clear fire sideways so lava can flow horizontally through it
+    if (random() < 15) {
+      const leftIdx  = tx > 0         ? idx - 1 : -1
+      const rightIdx = tx < width - 1 ? idx + 1 : -1
+      if (leftIdx  !== -1 && (tiles[leftIdx]  & TYPE_MASK) === FIRE) {
+        tiles[leftIdx] = EMPTY
+        world.markDirty(tx - 1, ty)
+        world.reactivateAround(tx - 1, ty, next)
+      }
+      if (rightIdx !== -1 && (tiles[rightIdx] & TYPE_MASK) === FIRE) {
+        tiles[rightIdx] = EMPTY
+        world.markDirty(tx + 1, ty)
+        world.reactivateAround(tx + 1, ty, next)
       }
     }
 
