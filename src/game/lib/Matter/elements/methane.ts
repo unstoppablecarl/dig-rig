@@ -1,6 +1,7 @@
 import { random } from '../../../helpers/random'
 import { FIRE, MatterType } from '../_Matter-types.ts'
 import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
+import { ParticleType } from '../../Particles/_particle-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -10,7 +11,7 @@ const def: ElementDef = {
     // Explode near fire
     if (random() < 25 && world.bordering(tx, ty, idx, FIRE) !== -1) {
       world.doBorderBurn(tx, ty, idx, next)
-      postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: 'methane_explosion', x: tx, y: ty })
+      postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: ParticleType.METHANE_EXPLOSION, x: tx, y: ty })
       return
     }
 

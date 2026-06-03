@@ -36,6 +36,7 @@ export function makeParticleContext(tilemap: Tilemap, pendingActivations: number
     const theta = Math.atan2(p.yVelocity, p.xVelocity)
     const tx = Math.round(p.x + Math.cos(theta) * radius)
     const ty = Math.round(p.y + Math.sin(theta) * radius)
+    if (tx < 0 || tx >= tilemap.width || ty < 0 || ty >= tilemap.height) return MatterType.EMPTY
     return getTileType(tx, ty)
   }
 
@@ -44,6 +45,8 @@ export function makeParticleContext(tilemap: Tilemap, pendingActivations: number
   }
 
   return {
+    width: tilemap.width,
+    height: tilemap.height,
     getTileType,
     setTileType,
     writeTileCircle,

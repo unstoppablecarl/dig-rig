@@ -164,6 +164,7 @@ export abstract class GameLevel extends Scene {
     this.preCreateLevel()
 
     this.startLevel()
+    this.terrainChunkBodyManager.trackAllDynamic()
 
     this.createUI()
   }

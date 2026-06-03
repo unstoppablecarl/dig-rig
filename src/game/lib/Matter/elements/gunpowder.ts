@@ -1,6 +1,7 @@
 import { random } from '../../../helpers/random'
 import { FIRE, GUNPOWDER, MatterType, SETTLED_FLAG } from '../_Matter-types.ts'
 import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
+import { ParticleType } from '../../Particles/_particle-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -24,7 +25,7 @@ const def: ElementDef = {
       }
 
       // Spawn visual particle via main thread
-      postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: 'gunpowder_explosion', x: tx, y: ty })
+      postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: ParticleType.GUNPOWDER_EXPLOSION, x: tx, y: ty })
       return
     }
 

@@ -1,7 +1,21 @@
 import { random } from '../../../helpers/random'
 import {
-  C4, EMPTY, FALLING_WAX, FIRE, FUSE, MatterType, OIL, PLANT,
-  SALT_WATER, STEAM, WAX, WATER,
+  C4,
+  EMPTY,
+  FALLING_WAX,
+  FIRE,
+  FUSE,
+  GUNPOWDER,
+  MatterType,
+  NAPALM,
+  NITRO,
+  OIL,
+  PLANT,
+  SALT_WATER,
+  STEAM,
+  THERMITE,
+  WATER,
+  WAX,
 } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
@@ -10,6 +24,12 @@ const def: ElementDef = {
   name: 'Fire',
   action(world, tx, ty, idx, next): void {
     const { tiles, width, height } = world
+
+    // Wake settled elements that react to fire but won't self-activate
+    world.wakeSettledNeighbors(tx, ty, idx, GUNPOWDER, next)
+    world.wakeSettledNeighbors(tx, ty, idx, NAPALM, next)
+    world.wakeSettledNeighbors(tx, ty, idx, NITRO, next)
+    world.wakeSettledNeighbors(tx, ty, idx, THERMITE, next)
 
     // Extinguished by water / salt-water
     if (random() < 80) {
@@ -95,8 +115,8 @@ const def: ElementDef = {
     if (random() < 40) {
       const xStart = Math.max(tx - 1, 0)
       const yStart = Math.max(ty - 1, 0)
-      const xEnd   = Math.min(tx + 2, width)
-      const yEnd   = Math.min(ty + 2, height)
+      const xEnd = Math.min(tx + 2, width)
+      const yEnd = Math.min(ty + 2, height)
       let flameOut = true
 
       outer: for (let y = yStart; y < yEnd; y++) {
@@ -105,7 +125,10 @@ const def: ElementDef = {
           const t = tiles[y * width + x]
           const bt = t & 0x7F
           if (bt === FIRE) continue
-          if (bt === PLANT || bt === FUSE || bt === OIL || bt === WAX) { flameOut = false; break outer }
+          if (bt === PLANT || bt === FUSE || bt === OIL || bt === WAX) {
+            flameOut = false
+            break outer
+          }
         }
       }
 

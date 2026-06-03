@@ -1,4 +1,4 @@
-import { LAVA, MatterType, OIL, SAND, SETTLED_FLAG, WATER, WATER_SETTLED } from '../_Matter-types.ts'
+import { LAVA, MatterType, OIL, SALT, SAND, SETTLED_FLAG, WATER, WATER_SETTLED } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -6,6 +6,7 @@ const def: ElementDef = {
   name: 'Water',
   action(world, tx, ty, idx, next): void {
     world.wakeSettledNeighbors(tx, ty, idx, LAVA, next)
+    world.wakeSettledNeighbors(tx, ty, idx, SALT, next)
 
     const leftFirst = world.leftFirst
     const moved =

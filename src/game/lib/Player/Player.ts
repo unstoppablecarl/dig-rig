@@ -316,6 +316,7 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     return angle
   }
 
+
   public update() {
     this.updateFacing()
     this.updatePosition()

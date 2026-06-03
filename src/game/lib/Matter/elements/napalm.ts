@@ -1,6 +1,7 @@
 import { random } from '../../../helpers/random'
 import { FIRE, MatterType, NAPALM, SETTLED_FLAG } from '../_Matter-types.ts'
 import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
+import { ParticleType } from '../../Particles/_particle-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -11,7 +12,7 @@ const def: ElementDef = {
       world.tiles[idx] = FIRE
       world.markDirty(tx, ty)
       next.add(idx)
-      postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: 'napalm_explosion', x: tx, y: ty })
+      postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: ParticleType.NAPALM_EXPLOSION, x: tx, y: ty })
       return
     }
 

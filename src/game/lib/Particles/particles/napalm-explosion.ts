@@ -17,6 +17,6 @@ export const NAPALM_EXPLOSION: ParticleDef = {
     p.x += p.xVelocity
     p.y += p.yVelocity
     p.size *= 1 + Math.random() * 0.1
-    if (p.actionIterations > p.data.maxIter) pool.release(p)
+    if (p.actionIterations > p.data.maxIter || world.outOfBounds(p)) pool.release(p)
   },
 }

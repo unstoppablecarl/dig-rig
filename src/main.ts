@@ -28,7 +28,7 @@ const config: GameConfig = {
   physics: {
     default: 'matter',
     matter: {
-      positionIterations: 40,
+      positionIterations: 8,
       gravity: { x: 0, y: GRAVITY },
       enableSleeping: false,
       debug: false,

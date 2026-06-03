@@ -31,7 +31,7 @@ export const LAVA_BURST: ParticleDef = {
     p.y = y2
 
     // Allow the particle to arc above the canvas top but retire it off the sides or bottom
-    if (world.outOfBounds(p)) {
+    if (p.x < 0 || p.x >= world.width || p.y >= world.height) {
       pool.release(p)
       return
     }

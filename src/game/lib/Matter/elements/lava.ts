@@ -3,6 +3,7 @@ import {
   EMPTY, FIRE, LAVA, MatterType, OIL, ROCK, SALT_WATER, SETTLED_FLAG, STEAM, TYPE_MASK, WATER,
 } from '../_Matter-types.ts'
 import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
+import { ParticleType } from '../../Particles/_particle-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 // Elements lava cannot burn
@@ -32,7 +33,7 @@ const def: ElementDef = {
     // Spawn a lava burst particle and self-destruct when adjacent to oil
     if (random() < 4 && world.bordering(tx, ty, idx, OIL) !== -1) {
       if (random() < 35) {
-        postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: 'lava_burst', x: tx, y: ty })
+        postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: ParticleType.LAVA_BURST, x: tx, y: ty })
         tiles[idx] = EMPTY
         world.markDirty(tx, ty)
         world.reactivateAround(tx, ty, next)
