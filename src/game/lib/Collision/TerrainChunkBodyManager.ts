@@ -136,7 +136,7 @@ export class TerrainChunkBodyManager extends SceneBound {
 
     if (rectangles.length === 0) return
 
-    const collisionFilter = { category: MASK_TERRAIN }
+    const collisionFilter = { category: MASK_TERRAIN, mask: 0xFFFFFFFF }
 
     // Create one part-body per merged rectangle (not added to the world individually)
     const parts = rectangles.map(r =>
