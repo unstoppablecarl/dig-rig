@@ -37,9 +37,9 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     this.renderer.setColor(FIRE_MODE_COLORS[this.fireMode.value()])
 
     const a = this.scene.playerActions
+    this.binder.addInputHoldRepeat(a.CHARGE_DECREASE, () => this.decreaseCharge())
+    this.binder.addInputHoldRepeat(a.CHARGE_INCREASE, () => this.increaseCharge())
     this.binder.addInput(() => [
-      a.CHARGE_DECREASE.onDown(() => this.decreaseCharge()),
-      a.CHARGE_INCREASE.onDown(() => this.increaseCharge()),
       a.PREV_FIRE_MODE.onDown(() => {
         this.fireMode.prev()
         this.onFireModeChange()
