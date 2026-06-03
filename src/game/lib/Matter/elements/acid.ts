@@ -1,5 +1,5 @@
 import { random } from '../../../helpers/random'
-import { ACID, EMPTY, SALT_WATER, SETTLED_FLAG, WATER } from '../_Matter-types.ts'
+import { ACID, EMPTY, SALT_WATER, SETTLED_FLAG, TYPE_MASK, WATER } from '../_Matter-types.ts'
 import { ACID_IMMUNE, type ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -21,7 +21,7 @@ const def: ElementDef = {
 
       for (const [nx, ny, nidx] of neighbors) {
         if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue
-        const nt = tiles[nidx] & 0x7F
+        const nt = tiles[nidx] & TYPE_MASK
         if (ACID_IMMUNE.has(nt)) continue
 
         if (ny === ty + 1) {

@@ -1,15 +1,13 @@
 import type { Particle } from './Particle.ts'
 
 export class ParticlePixelRenderer {
-  readonly buffer: Uint8ClampedArray
   private readonly buf32: Uint32Array
 
   constructor(
     readonly width: number,
     readonly height: number,
-    buffer?: Uint8ClampedArray,
+    readonly buffer: Uint8ClampedArray,
   ) {
-    this.buffer = buffer ?? new Uint8ClampedArray(width * height * 4)
     this.buf32 = new Uint32Array(this.buffer.buffer, this.buffer.byteOffset, width * height)
   }
 

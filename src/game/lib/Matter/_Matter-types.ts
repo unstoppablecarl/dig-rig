@@ -1,7 +1,24 @@
-// Bit 7 (0x80) marks a settled element — same type, no longer in activeSet.
-// Bits 0-6 (TYPE_MASK) hold the element id (0–127, max 128 elements).
-export const SETTLED_FLAG = 0x80
-export const TYPE_MASK = 0x7F
+// SETTLED_FLAG — bit 8 of a tile value. Set when an element has stopped moving
+// and been removed from the active set. Cleared on disturbance to re-activate it.
+//   tile = SAND | SETTLED_FLAG   → settled sand (0x103)
+//   tile & SETTLED_FLAG !== 0    → is this tile settled?
+//   tile & ~SETTLED_FLAG         → strip settled, get raw tile back
+export const SETTLED_FLAG = 0x100
+
+// TYPE_MASK — isolates the element ID from bits 0–7, ignoring settled and owner bits.
+//   tile & TYPE_MASK             → base MatterType (0–255)
+//   tile & TYPE_MASK === WATER   → is this tile water, settled or not?
+export const TYPE_MASK = 0xFF
+// TILE_STATE_MASK — type + settled bits only; strips owner and any upper bits.
+//   tile & TILE_STATE_MASK         → safe index into a 512-entry type+settled table
+export const TILE_STATE_MASK = TYPE_MASK | SETTLED_FLAG  // 0x1FF
+
+// OWNER_MASK / OWNER_SHIFT — bits 9–24 hold the owner ID (16 bits, 1–65535; 0 = world/unowned).
+//   (tile >>> OWNER_SHIFT) & 0xFFFF → owner ID as integer
+//   (tile & ~OWNER_MASK) | (id << OWNER_SHIFT) → write owner ID into a tile
+//   tile & ~OWNER_MASK             → strip owner, keep type + settled
+export const OWNER_SHIFT = 9
+export const OWNER_MASK = 0xFFFF << OWNER_SHIFT  // 0x1FFFE00
 
 export enum MatterType {
   EMPTY = 0,

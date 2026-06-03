@@ -1,19 +1,18 @@
 import { CHUNK_SIZE } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { MatterTypeValues, SETTLED_FLAG } from '../../Matter/_Matter-types.ts'
+import { MatterTypeValues, SETTLED_FLAG, TILE_STATE_MASK } from '../../Matter/_Matter-types.ts'
 import type { Chunk } from '../Chunk.ts'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
 
 // Mask pixel layout (little-endian Uint32: 0xAABBGGRR):
-//   R = raw tile value (0–255). Shader decodes via int(R * 255 + 0.5).
-//   Bit 7 (>= 128) signals SETTLED state; bits 0–6 are the base MatterType.
-// Typed array (index = tile byte) for O(1) array read vs. object hash lookup.
-const MASK_MAP = new Uint32Array(256)
+//   R = MatterType (0–255). G = SETTLED (0 or 255). B unused. A = 255.
+//   Index = tile & TILE_STATE_MASK (type bits 0–7 + settled bit 8).
+const MASK_MAP = new Uint32Array(512)
 for (const type of MatterTypeValues) {
   MASK_MAP[type]                = 0xFF000000 | type
-  MASK_MAP[type | SETTLED_FLAG] = 0xFF000000 | (type | SETTLED_FLAG)
+  MASK_MAP[type | SETTLED_FLAG] = 0xFF000000 | (0xFF << 8) | type
 }
 
 const CHUNK_BYTES = CHUNK_SIZE * CHUNK_SIZE * 4
@@ -55,7 +54,7 @@ export class TerrainChunkRenderer extends SceneBound {
         const flippedRow = (CHUNK_SIZE - 1 - y) * CHUNK_SIZE
         const srcRow = (offY + y) * mapWidth + offX
         for (let x = 0; x < CHUNK_SIZE; x++) {
-          pixels[flippedRow + x] = MASK_MAP[tiles[srcRow + x]]
+          pixels[flippedRow + x] = MASK_MAP[tiles[srcRow + x] & TILE_STATE_MASK]
         }
       }
     } else {
@@ -63,7 +62,7 @@ export class TerrainChunkRenderer extends SceneBound {
       for (let y = 0; y < CHUNK_SIZE; y++) {
         const flippedRow = (CHUNK_SIZE - 1 - y) * CHUNK_SIZE
         for (let x = 0; x < CHUNK_SIZE; x++) {
-          pixels[flippedRow + x] = MASK_MAP[tilemap.getTile(offX + x, offY + y)]
+          pixels[flippedRow + x] = MASK_MAP[tilemap.getTile(offX + x, offY + y) & TILE_STATE_MASK]
         }
       }
     }

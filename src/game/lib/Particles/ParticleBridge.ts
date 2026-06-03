@@ -8,7 +8,7 @@ export class ParticleBridge extends SceneBound<GameLevel> {
   private readonly worker: TypedParticleWorker
   private readonly pixelSab: SharedArrayBuffer
   private readonly sabView: Uint8ClampedArray
-  private readonly localBuf: Uint8ClampedArray
+  private readonly localBuf: Uint8Array
 
   onActivations?: (indices: number[]) => void
 
@@ -18,7 +18,7 @@ export class ParticleBridge extends SceneBound<GameLevel> {
 
     this.pixelSab = new SharedArrayBuffer(width * height * 4)
     this.sabView = new Uint8ClampedArray(this.pixelSab)
-    this.localBuf = new Uint8ClampedArray(width * height * 4)
+    this.localBuf = new Uint8Array(width * height * 4)
 
     this.worker = new ParticleWorkerConstructor() as TypedParticleWorker
     this.worker.postMessage({

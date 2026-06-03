@@ -14,6 +14,7 @@ import {
   STEAM,
   THERMITE,
   WATER,
+  TYPE_MASK,
   WAX,
 } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
@@ -122,7 +123,7 @@ const def: ElementDef = {
         for (let x = xStart; x < xEnd; x++) {
           if (y === ty && x === tx) continue
           const t = tiles[y * width + x]
-          const bt = t & 0x7F
+          const bt = t & TYPE_MASK
           if (bt === FIRE) continue
           if (bt === PLANT || bt === FUSE || bt === OIL || bt === WAX) {
             flameOut = false

@@ -10,6 +10,8 @@ import { TerrainChunkRenderer } from './TilemapRenderer/TerrainChunkRenderer.ts'
 import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'
 import Shader = GameObjects.Shader
 import CanvasTexture = Phaser.Textures.CanvasTexture
+import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
+import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
 
 
 const toVec3 = (c: number): [number, number, number] => [
@@ -133,11 +135,10 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean): string {
         // Tile-space UV: each unit = one tile. Use this for noise so frequency
         // is expressed in tiles rather than normalised [0,1] UV space.
         vec2 tileUV = outTexCoord / uInvTilemapSize;
-        // uMask R channel: raw tile value (0–255), normalised to 0–1.
-        // Bit 7 (raw >= 128) = SETTLED flag. Bits 0–6 = base MatterType.
-        int raw      = int(texture2D(uMask, outTexCoord).r * 255.0 + 0.5);
-        bool settled = raw >= 128;
-        int tileType = settled ? raw - 128 : raw;
+        // uMask R = MatterType (0–255), G = SETTLED (0 or 255).
+        vec2 mask    = texture2D(uMask, outTexCoord).rg;
+        int tileType = int(mask.r * 255.0 + 0.5);
+        bool settled = mask.g > 0.5;
 
         // Glow: find the minimum Manhattan distance from this tile to the
         // nearest EMPTY or WATER neighbour within glowRadius.
@@ -153,8 +154,7 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean): string {
                     int dx = j - ${GR};
                     if (dx != 0 || dy != 0) {
                         vec2 nUV = outTexCoord + vec2(float(dx), float(dy)) * uInvTilemapSize;
-                        int nr = int(texture2D(uMask, nUV).r * 255.0 + 0.5);
-                        int nt = nr >= 128 ? nr - 128 : nr;
+                        int nt = int(texture2D(uMask, nUV).r * 255.0 + 0.5);
                         if (nt == ${MatterType.EMPTY} || nt == ${MatterType.WATER}) {
                             int d = (dx >= 0 ? dx : -dx) + (dy >= 0 ? dy : -dy);
                             if (d < minDist) minDist = d;
@@ -292,7 +292,8 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean): string {
         }
 
         // uParticles: particle pixel layer written each frame by the particle worker.
-        // CanvasTexture uploads without UNPACK_FLIP_Y so its Y is inverted vs. the other textures.
+        // Uploaded via texSubImage2D without UNPACK_FLIP_Y, so row 0 lands at GL bottom.
+        // Y-flip corrects world-top=row0 to screen-top.
         vec4 pt = texture2D(uParticles, vec2(outTexCoord.x, 1.0 - outTexCoord.y));
         if (pt.a > 0.004) {
             color = mix(color, vec4(pt.rgb, 1.0), pt.a);
@@ -307,8 +308,8 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean): string {
 export class TilemapRenderer extends SceneBound implements TilemapRendererConfig {
   private readonly chunkRenderer: TerrainChunkRenderer
   private readonly effectSystem: TerrainEffectSystem
-  private readonly particleTexture: Phaser.Textures.CanvasTexture
-  private readonly particleImageData: ImageData
+  private readonly particleTexture: Phaser.Textures.Texture
+  private readonly particleWrapper: WebGLTextureWrapper
 
   readonly glowRadius = CONFIG_DEFAULTS.glowRadius
   readonly glowEnabled = CONFIG_DEFAULTS.glowEnabled
@@ -337,8 +338,9 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
     this.chunkRenderer = new TerrainChunkRenderer(scene)
     this.effectSystem = new TerrainEffectSystem(scene)
 
-    this.particleTexture = scene.textures.createCanvas('particle-pixels', width, height) as Phaser.Textures.CanvasTexture
-    this.particleImageData = new ImageData(width, height)
+    const [particleTexture, particleWrapper] = scene.initGLTexture('particle-pixels', width, height)
+    this.particleTexture = particleTexture
+    this.particleWrapper = particleWrapper
 
     const shader: Shader = scene.add.shader(
       {
@@ -383,10 +385,13 @@ export class TilemapRenderer extends SceneBound implements TilemapRendererConfig
     ;(shader as any).renderNode?.programManager?.getCurrentProgramSuite?.()
   }
 
-  updateParticlePixels(buf: Uint8ClampedArray) {
-    this.particleImageData.data.set(buf)
-    this.particleTexture.getContext().putImageData(this.particleImageData, 0, 0)
-    this.particleTexture.refresh()
+  updateParticlePixels(buf: Uint8Array) {
+    const { width, height } = this.scene.tilemap
+    const gl = (this.scene.renderer as WebGLRenderer).gl
+    gl.bindTexture(gl.TEXTURE_2D, this.particleWrapper.webGLTexture)
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, buf)
+    gl.bindTexture(gl.TEXTURE_2D, null)
   }
 
   addEffect(tx: number, ty: number, mode: FireMode, startTime?: number) {
