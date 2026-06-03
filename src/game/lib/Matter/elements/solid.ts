@@ -5,6 +5,8 @@ const def: ElementDef = {
   id: SOLID,
   name: 'Solid',
   passive: true,
+  // has small chance of lava hard coded
+  lavaImmune: true,
 }
 
 export default def

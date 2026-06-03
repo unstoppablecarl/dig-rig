@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 import type { ParticleWorkerInMessage, ParticleWorkerOutMessage } from './_ParticleWorker-types.ts'
 import { ParticleWorkerInMsg } from './_ParticleWorker-types.ts'
-import { ParticleWorker } from './ParticleWorker.ts'
+import { ParticleSim } from './ParticleSim.ts'
 
 declare function postMessage(msg: ParticleWorkerOutMessage): void
 
@@ -9,7 +9,7 @@ declare let self: DedicatedWorkerGlobalScope & {
   onmessage: ((e: MessageEvent<ParticleWorkerInMessage>) => void) | null
 }
 
-const world = new ParticleWorker()
+const world = new ParticleSim()
 
 self.onmessage = (e: MessageEvent<ParticleWorkerInMessage>) => {
   const msg = e.data

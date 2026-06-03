@@ -1,7 +1,7 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import { BURNING_THERMITE, EMPTY, FIRE, LAVA, OIL, SALT_WATER, SOLID, THERMITE, TYPE_MASK, WATER } from '../_Matter-types.ts'
-import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
+import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -57,7 +57,7 @@ const def: ElementDef = {
 
     // Spawn charged particle occasionally
     if (random() < 2 && random() < 7) {
-      postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: ParticleType.CHARGED_NITRO, x: tx, y: ty })
+      postMessage({ type: MatterCoordinatorOutMsg.SPAWN_PARTICLE, particleType: ParticleType.CHARGED_NITRO, x: tx, y: ty })
       tiles[idx] = FIRE
       world.markDirty(tx, ty)
       next.add(idx)

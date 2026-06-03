@@ -8,7 +8,7 @@ import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManage
 import { WeaponManagerInput } from '../lib/Input/InputControllers/WeaponManagerInput.ts'
 import { InputManager } from '../lib/Input/InputManager.ts'
 import { makePlayerActions, type PlayerActions } from '../lib/Input/PlayerActions.ts'
-import { MatterManager } from '../lib/Matter/MatterManager.ts'
+import { MatterManager } from '../lib/Matter/MatterTank/MatterManager.ts'
 import { VFXParticleManager } from '../lib/VFXParticles/VFXParticleManager.ts'
 import { TerrainBlobParticleManager } from '../lib/Tilemap/TerrainBlobParticleManager.ts'
 import { Player } from '../lib/Player/Player.ts'

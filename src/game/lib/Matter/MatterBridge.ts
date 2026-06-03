@@ -5,12 +5,12 @@ import { FireMode } from '../Player/_FireMode-types.ts'
 import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
 import { MatterType, TYPE_MASK } from './_Matter-types.ts'
-import { MatterWorkerInMsg, MatterWorkerOutMsg, type TypedMatterWorker } from './_MatterWorker-types.ts'
+import { MatterCoordinatorInMsg, MatterCoordinatorOutMsg, type TypedMatterCoordinatorWorker } from './MatterSim.types.ts'
 import { ParticleBridge } from '../Particles/ParticleBridge.ts'
-import ParticleWorkerConstructor from './matter.worker.ts?worker'
+import MatterCoordinatorConstructor from './MatterCoordinator.worker.ts?worker'
 
 export class MatterBridge extends SceneBound {
-  private readonly worker: TypedMatterWorker
+  private readonly worker: TypedMatterCoordinatorWorker
   private readonly dirtyChunksBuffer: SharedArrayBuffer
   private readonly dirtyChunks: Uint8Array
   private readonly numChunksX: number
@@ -30,12 +30,12 @@ export class MatterBridge extends SceneBound {
 
     this.particleBridge = new ParticleBridge(this.scene)
     this.particleBridge.onActivations = (indices) => {
-      this.worker?.postMessage({ type: MatterWorkerInMsg.ACTIVATE, indices })
+      this.worker?.postMessage({ type: MatterCoordinatorInMsg.ACTIVATE, indices })
     }
 
-    this.worker = new ParticleWorkerConstructor()
+    this.worker = new MatterCoordinatorConstructor()
     this.worker.postMessage({
-      type: MatterWorkerInMsg.INIT,
+      type: MatterCoordinatorInMsg.INIT,
       tilesBuffer: tilemap.tilesBuffer,
       dirtyChunksBuffer: this.dirtyChunksBuffer,
       width: tilemap.width,
@@ -44,7 +44,7 @@ export class MatterBridge extends SceneBound {
     })
 
     this.worker.onmessage = (e) => {
-      if (e.data.type === MatterWorkerOutMsg.SETTLED) {
+      if (e.data.type === MatterCoordinatorOutMsg.SETTLED) {
         const { tilemapRenderer } = this.scene
         const now = this.scene.time.now
         for (const idx of e.data.indices) {
@@ -55,13 +55,13 @@ export class MatterBridge extends SceneBound {
         return
       }
 
-      if (e.data.type === MatterWorkerOutMsg.SPAWN_PARTICLE) {
+      if (e.data.type === MatterCoordinatorOutMsg.SPAWN_PARTICLE) {
         this.particleBridge.spawn(e.data.particleType, e.data.x, e.data.y)
       }
     }
 
     tilemap.onTileEmpty = (tx, ty) => {
-      this.worker.postMessage({ type: MatterWorkerInMsg.CHECK, tx, ty })
+      this.worker.postMessage({ type: MatterCoordinatorInMsg.CHECK, tx, ty })
     }
 
     tilemap.onIslandDetected = (islands) => {
@@ -80,7 +80,7 @@ export class MatterBridge extends SceneBound {
     const tilemap = this.scene.tilemap
     const indices = tiles.map(({ x, y }) => y * tilemap.width + x)
     if (indices.length) {
-      this.worker.postMessage({ type: MatterWorkerInMsg.ACTIVATE, indices })
+      this.worker.postMessage({ type: MatterCoordinatorInMsg.ACTIVATE, indices })
     }
   }
 
@@ -100,7 +100,7 @@ export class MatterBridge extends SceneBound {
       }
     }
     if (indices.length) {
-      this.worker.postMessage({ type: MatterWorkerInMsg.ACTIVATE, indices })
+      this.worker.postMessage({ type: MatterCoordinatorInMsg.ACTIVATE, indices })
     }
   }
 

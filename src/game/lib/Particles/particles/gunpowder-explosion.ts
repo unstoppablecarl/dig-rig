@@ -16,7 +16,7 @@ export const GUNPOWDER_EXPLOSION: ParticleDef = {
     const x2 = p.x + p.xVelocity
     const y2 = p.y + p.yVelocity
     renderer.drawThickLine(p.x, p.y, x2, y2, p.size, p.color)
-    world.setTileType(Math.round(x2), Math.round(y2), MatterType.FIRE)
+    world.destroyTile(Math.round(x2), Math.round(y2), MatterType.FIRE)
     p.x = x2
     p.y = y2
     p.yVelocity += 0.3

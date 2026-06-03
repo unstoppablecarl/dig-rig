@@ -1,7 +1,7 @@
 import type { MatterType } from './_Matter-types.ts'
-import type { MatterWorker } from './MatterWorker.ts'
+import type { MatterSim } from './MatterSim.ts'
 
-export type ElementAction = (world: MatterWorker, x: number, y: number, idx: number, next: Set<number>) => void
+export type ElementAction = (world: MatterSim, x: number, y: number, idx: number, next: Set<number>) => void
 
 export type ElementDef = {
   name: string,
@@ -11,6 +11,7 @@ export type ElementDef = {
   lavaImmune?: boolean,
   acidImmune?: boolean,
   liquid?: boolean,
+  collidesWhenSettled?: boolean,
   sinksThrough?: MatterType[],
 }
 
@@ -22,7 +23,7 @@ export const PASSIVE_ELEMENTS = new Set<MatterType>()
 export const ELEMENT_NAMES = new Map<MatterType, string>()
 export const LAVA_IMMUNE = new Set<MatterType>()
 export const ACID_IMMUNE = new Set<MatterType>()
-
+export const COLLIDES_WHEN_SETTLED = new Set<MatterType>()
 export const LIQUID_TYPES = new Set<MatterType>()
 export const SINKS_THROUGH: Partial<Record<MatterType, MatterType[]>> = {}
 
@@ -33,6 +34,7 @@ function add({
                passive = false,
                lavaImmune = false,
                acidImmune = false,
+               collidesWhenSettled = false,
                liquid = false,
                sinksThrough,
              }: ElementDef) {
@@ -51,6 +53,9 @@ function add({
   }
   if (liquid) {
     LIQUID_TYPES.add(id)
+  }
+  if (collidesWhenSettled) {
+    COLLIDES_WHEN_SETTLED.add(id)
   }
   if (sinksThrough) {
     SINKS_THROUGH[id] = sinksThrough

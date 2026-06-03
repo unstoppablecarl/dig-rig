@@ -1,25 +1,21 @@
 import { random } from '../../helpers/random'
 import { EMPTY, FIRE, MatterType, SAND, SETTLED_FLAG, TYPE_MASK, WATER } from './_Matter-types.ts'
-import { MatterWorkerOutMsg } from './_MatterWorker-types.ts'
 import { ELEMENT_ACTIONS, LIQUID_TYPES, SINKS_THROUGH } from './elements.ts'
 
 const MAX_FLOW = 8
 
-export class MatterWorker {
+export class MatterSim {
   tiles!: Uint32Array
   dirtyChunks!: Uint8Array
   width = 0
   height = 0
   chunkSize = 0
   chunksWidth = 0
-  activeSet = new Set<number>()
 
-  private frame = 0
-  ready = false
-
-  // Owned by step(), valid only during a step() call
-  justSettled: number[] = []
+  // Set externally by coordinator/pool before processSubset
+  frame = 0
   leftFirst = false
+  justSettled: number[] = []
 
   init(
     tilesBuffer: SharedArrayBuffer,
@@ -34,29 +30,21 @@ export class MatterWorker {
     this.height = height
     this.chunkSize = chunkSize
     this.chunksWidth = Math.ceil(width / chunkSize)
-    this.ready = true
-
-    // Self-scheduling so a slow step never queues up catch-up bursts
-    const loop = () => {
-      this.step()
-      setTimeout(loop, 8)
-    }
-    setTimeout(loop, 8)
   }
 
-  activate(indices: number[]) {
+  // Wakes tiles in `target`. Called by coordinator on ACTIVATE messages.
+  activate(indices: number[], target: Set<number>) {
     for (const idx of indices) {
       if (idx < 0 || idx >= this.tiles.length) continue
       const raw = this.tiles[idx]
       const t = raw & TYPE_MASK
 
       if (t === SAND) {
-        // Clear any settled state and wake it
         this.tiles[idx] = SAND
-        this.activeSet.add(idx)
+        target.add(idx)
       } else if (t === WATER) {
         this.tiles[idx] = WATER
-        this.activeSet.add(idx)
+        target.add(idx)
       } else if (
         t !== EMPTY &&
         t !== MatterType.SOLID &&
@@ -67,15 +55,31 @@ export class MatterWorker {
         t !== MatterType.CHILLED_ICE &&
         t !== MatterType.PLANT
       ) {
-        // All other active elements (FIRE, OIL, LAVA, STEAM, etc.)
         this.tiles[idx] = raw & ~SETTLED_FLAG
-        this.activeSet.add(idx)
+        target.add(idx)
       }
     }
   }
 
-  check(tx: number, ty: number) {
-    this.reactivateAround(tx, ty, this.activeSet)
+  // Runs element actions for the given tile indices. Pool workers call this
+  // once per round with their assigned subset of the active set.
+  processSubset(indices: number[], next: Set<number>) {
+    const phase = this.frame % 2
+    for (const idx of indices) {
+      const tx = idx % this.width
+      const ty = idx / this.width | 0
+
+      // Per-cell checkerboard: defer wrong-phase cells to next step to prevent
+      // double-processing when an element moves into a neighbour's position.
+      if ((tx + ty) % 2 !== phase) {
+        next.add(idx)
+        continue
+      }
+
+      const raw = this.tiles[idx]
+      const tile = (raw & TYPE_MASK) as MatterType
+      ELEMENT_ACTIONS[tile]?.(this, tx, ty, idx, next)
+    }
   }
 
   markDirty(tx: number, ty: number) {
@@ -443,40 +447,6 @@ export class MatterWorker {
     tiles[idx] = FIRE
     this.markDirty(tx, ty)
     next.add(idx)
-  }
-
-  // ─── Main simulation loop ─────────────────────────────────────────────────
-
-  step() {
-    if (!this.ready) return
-    if (this.activeSet.size === 0) return
-
-    const phase = this.frame % 2
-    this.frame++
-    this.leftFirst = phase === 0
-    const next = new Set<number>()
-    this.justSettled = []
-
-    for (const idx of this.activeSet) {
-      const tx = idx % this.width
-      const ty = idx / this.width | 0
-
-      // Checkerboard: skip wrong-phase cells (defer to next step)
-      if ((tx + ty) % 2 !== phase) {
-        next.add(idx)
-        continue
-      }
-
-      const raw = this.tiles[idx]
-      const tile = (raw & TYPE_MASK) as MatterType
-
-      ELEMENT_ACTIONS[tile]?.(this, tx, ty, idx, next)
-    }
-
-    this.activeSet = next
-    if (this.justSettled.length > 0) {
-      postMessage({ type: MatterWorkerOutMsg.SETTLED, indices: this.justSettled })
-    }
   }
 }
 

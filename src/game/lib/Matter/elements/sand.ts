@@ -1,12 +1,13 @@
 import { ACID, OIL, SALT_WATER, SAND, SAND_SETTLED, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
-import type { MatterWorker } from '../MatterWorker.ts'
+import type { MatterSim } from '../MatterSim.ts'
 
 const def: ElementDef = {
   id: SAND,
   name: 'Sand',
+  collidesWhenSettled: true,
   sinksThrough: [WATER, OIL, SALT_WATER, ACID],
-  action(world: MatterWorker, tx, ty, idx, next): void {
+  action(world: MatterSim, tx, ty, idx, next): void {
     const leftFirst = world.leftFirst
 
     const moved =

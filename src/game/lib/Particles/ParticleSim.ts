@@ -7,7 +7,7 @@ import { ParticlePixelRenderer } from './ParticlePixelRenderer.ts'
 import { ParticlePool } from './ParticlePool.ts'
 import { PARTICLE_DEFS } from './particles.ts'
 
-export class ParticleWorker {
+export class ParticleSim {
   tiles: Uint32Array
   width = 0
   height = 0
@@ -74,6 +74,15 @@ export class ParticleWorker {
     const tiles = this.tiles
     const cur = tiles[y * width + x] & TYPE_MASK
     if (cur === MatterType.SOLID || cur === MatterType.PERMANENT) return
+    tiles[y * width + x] = type
+    this.pendingActivations.push(y * width + x)
+  }
+
+  destroyTile(x: number, y: number, type: MatterType) {
+    const width = this.width
+    if (x < 0 || x >= width || y < 0 || y >= this.height) return
+    const tiles = this.tiles
+    if ((tiles[y * width + x] & TYPE_MASK) === MatterType.PERMANENT) return
     tiles[y * width + x] = type
     this.pendingActivations.push(y * width + x)
   }

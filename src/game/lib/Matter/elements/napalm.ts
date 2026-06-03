@@ -1,7 +1,7 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import { FIRE, NAPALM, SETTLED_FLAG } from '../_Matter-types.ts'
-import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
+import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -13,7 +13,7 @@ const def: ElementDef = {
       world.markDirty(tx, ty)
       next.add(idx)
       postMessage({
-        type: MatterWorkerOutMsg.SPAWN_PARTICLE,
+        type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
         particleType: ParticleType.NAPALM_EXPLOSION,
         x: tx,
         y: ty,

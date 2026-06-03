@@ -205,8 +205,7 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean): string {
         }
         // ── New element types ────────────────────────────────────────────────
         else if (tileType == ${MatterType.FIRE}) {
-            float flicker = noise(tileUV * 0.3 + vec2(t * 4.0, t * 2.3)) * 0.3;
-            color = vec4(1.0, 0.3 + flicker, 0.05, 1.0);
+            color = vec4(1.0, 0.0, 0.0, 1.0);
         }
         else if (tileType == ${MatterType.OIL}) {
             color = vec4(0.36, 0.18, 0.04, 0.95);
@@ -296,7 +295,7 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean): string {
         // Y-flip corrects world-top=row0 to screen-top.
         vec4 pt = texture2D(uParticles, vec2(outTexCoord.x, 1.0 - outTexCoord.y));
         if (pt.a > 0.004) {
-            color = mix(color, vec4(pt.rgb, 1.0), pt.a);
+            color = mix(color, vec4(pt.rgb, 1.0), pt.a * 0.5);
         }
 
         if (color.a < 0.01) discard;

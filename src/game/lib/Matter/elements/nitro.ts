@@ -1,7 +1,7 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import { FIRE, NITRO, SETTLED_FLAG } from '../_Matter-types.ts'
-import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
+import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -11,7 +11,7 @@ const def: ElementDef = {
   action(world, tx, ty, idx, next): void {
     if (random() < 30 && world.borderingAdjacent(tx, ty, idx, FIRE) !== -1) {
       world.doBorderBurn(tx, ty, idx, next)
-      postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: ParticleType.NITRO_EXPLOSION, x: tx, y: ty })
+      postMessage({ type: MatterCoordinatorOutMsg.SPAWN_PARTICLE, particleType: ParticleType.NITRO_EXPLOSION, x: tx, y: ty })
       return
     }
 

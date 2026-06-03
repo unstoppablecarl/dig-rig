@@ -37,7 +37,7 @@ export const LAVA_BURST: ParticleDef = {
       + (p.data.yAcceleration * p.actionIterations * p.actionIterations) / 2
     renderer.drawThickLine(p.x, p.y, x2, y2, p.size, p.color)
     // Trail leaves fire in the world
-    world.setTileType(Math.round(x2), Math.round(y2), FIRE)
+    world.destroyTile(Math.round(x2), Math.round(y2), FIRE)
     p.x = x2
     p.y = y2
 

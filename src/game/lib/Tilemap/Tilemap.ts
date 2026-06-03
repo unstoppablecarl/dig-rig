@@ -5,6 +5,7 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import { MatterType, SETTLED_FLAG, TYPE_MASK } from '../Matter/_Matter-types.ts'
+import { COLLIDES_WHEN_SETTLED } from '../Matter/elements.ts'
 import { FireMode } from '../Player/_FireMode-types.ts'
 import { PLAYER_HEIGHT, PLAYER_WIDTH } from '../Player/Player.ts'
 import { ChunkManager } from './ChunkManager.ts'
@@ -121,11 +122,8 @@ export class Tilemap extends SceneBound {
     const raw = this.getTile(Math.floor(x), Math.floor(y))
     const type = raw & TYPE_MASK
     if (type === MatterType.SOLID || type === MatterType.PERMANENT) return true
-    // Granular materials are solid for physics only when settled
     if (raw & SETTLED_FLAG) {
-      return type === MatterType.SAND || type === MatterType.ROCK ||
-        type === MatterType.CONCRETE || type === MatterType.SALT ||
-        type === MatterType.THERMITE
+      return COLLIDES_WHEN_SETTLED.has(type)
     }
     return false
   }

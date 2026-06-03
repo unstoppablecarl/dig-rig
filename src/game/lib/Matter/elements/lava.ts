@@ -1,7 +1,7 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { EMPTY, FIRE, LAVA, OIL, ROCK, SALT_WATER, SETTLED_FLAG, STEAM, TYPE_MASK, WATER } from '../_Matter-types.ts'
-import { MatterWorkerOutMsg } from '../_MatterWorker-types.ts'
+import { EMPTY, FIRE, LAVA, OIL, ROCK, SALT_WATER, SETTLED_FLAG, SOLID, STEAM, TYPE_MASK, WATER } from '../_Matter-types.ts'
+import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 import { type ElementDef, LAVA_IMMUNE } from '../elements.ts'
 
 const def: ElementDef = {
@@ -30,7 +30,7 @@ const def: ElementDef = {
     // Spawn a lava burst particle and self-destruct when adjacent to oil
     if (random() < 4 && world.bordering(tx, ty, idx, OIL) !== -1) {
       if (random() < 35) {
-        postMessage({ type: MatterWorkerOutMsg.SPAWN_PARTICLE, particleType: ParticleType.LAVA_BURST, x: tx, y: ty })
+        postMessage({ type: MatterCoordinatorOutMsg.SPAWN_PARTICLE, particleType: ParticleType.LAVA_BURST, x: tx, y: ty })
         tiles[idx] = EMPTY
         world.markDirty(tx, ty)
         world.reactivateAround(tx, ty, next)
@@ -38,7 +38,27 @@ const def: ElementDef = {
       }
     }
 
-    // Burn adjacent non-immune tiles (with proper X-boundary guards)
+    // Slowly melt adjacent SOLID into LAVA (~0.5% chance, matching project-sand WALL→LAVA)
+    if (random() < 1 && random() < 50) {
+      const meltLoc = world.borderingAdjacent(tx, ty, idx, SOLID)
+      if (meltLoc !== -1) {
+        tiles[meltLoc] = LAVA
+        const mx = meltLoc % width
+        const my = meltLoc / width | 0
+        world.markDirty(mx, my)
+        next.add(meltLoc)
+      }
+    }
+
+    // Spawn fire in empty space directly above (6% chance, like project-sand)
+    const upIdx = ty > 0 ? idx - width : -1
+    if (upIdx !== -1 && random() < 6 && (tiles[upIdx] & TYPE_MASK) === EMPTY) {
+      tiles[upIdx] = FIRE
+      world.markDirty(tx, ty - 1)
+      next.add(upIdx)
+    }
+
+    // Burn adjacent non-immune tiles (4-directional, SOLID is now lava-immune so skipped)
     if (random() < 25) {
       const burnCandidates: [number, number, number][] = [
         [tx, ty - 1, ty > 0 ? idx - width : -1],
