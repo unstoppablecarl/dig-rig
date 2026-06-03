@@ -1,7 +1,7 @@
 import { GameObjects, Math as PMath, Time } from 'phaser'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { ParticleTarget } from '../../types.ts'
-import { MatterTank } from '../Matter/MatterTank.ts'
+import { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
 import { FireMode } from '../Player/_FireMode-types'
 import { Projectile } from '../Projectiles/Projectile.ts'
 import Container = GameObjects.Container

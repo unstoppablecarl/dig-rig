@@ -1,6 +1,6 @@
-import type { GameLevel } from '../../scenes/GameLevel.ts'
+import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { MatterTank } from './MatterTank.ts'
-import { SceneBound } from '../../helpers/SceneBound.ts'
+import { SceneBound } from '../../../helpers/SceneBound.ts'
 
 export class MatterManager extends SceneBound {
   public matterTanks = new Set<MatterTank>

@@ -9,7 +9,7 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import { MASK_PLAYER, MASK_TERRAIN } from '../Collision/BodyCategories.ts'
-import { MatterTank } from '../Matter/MatterTank.ts'
+import { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
 import { EventsBinder } from '../Util/EventsBinder.ts'
 import Animation = Animations.Animation
 import AnimationFrame = Animations.AnimationFrame
