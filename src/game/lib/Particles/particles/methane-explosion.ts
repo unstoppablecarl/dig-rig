@@ -1,5 +1,5 @@
 import { FIRE_COLOR } from '../../../config/colors.ts'
-import { MatterType } from '../../Matter/_Matter-types.ts'
+import { FIRE } from '../../Matter/_Matter-types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
 export const METHANE_EXPLOSION: ParticleDef = {
@@ -10,7 +10,7 @@ export const METHANE_EXPLOSION: ParticleDef = {
   },
   action(p, renderer, pool, world) {
     renderer.drawCircleFromParticle(p, p.size, p.color)
-    world.writeTileCircle(p.x, p.y, p.size / 2, MatterType.FIRE)
+    world.writeTileCircle(p.x, p.y, p.size / 2, FIRE)
     if (p.actionIterations > 2) pool.release(p)
   },
 }

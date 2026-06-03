@@ -1,6 +1,17 @@
 import { LAVA_COLOR, ROCK_COLOR } from '../../../config/colors.ts'
 import { EIGHTEENTH_PI, HALF_PI, QUARTER_PI } from '../../../helpers/_helpers.ts'
-import { MatterType } from '../../Matter/_Matter-types.ts'
+import {
+  CHILLED_ICE,
+  CRYO, FIRE,
+  ICE,
+  LAVA,
+  MatterType,
+  PERMANENT,
+  ROCK,
+  SALT_WATER,
+  SOLID,
+  WATER,
+} from '../../Matter/_Matter-types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
 export const LAVA_BURST: ParticleDef = {
@@ -26,7 +37,7 @@ export const LAVA_BURST: ParticleDef = {
       + (p.data.yAcceleration * p.actionIterations * p.actionIterations) / 2
     renderer.drawThickLine(p.x, p.y, x2, y2, p.size, p.color)
     // Trail leaves fire in the world
-    world.setTileType(Math.round(x2), Math.round(y2), MatterType.FIRE)
+    world.setTileType(Math.round(x2), Math.round(y2), FIRE)
     p.x = x2
     p.y = y2
 
@@ -43,22 +54,22 @@ export const LAVA_BURST: ParticleDef = {
       const tile = world.tileAtTip(p)
       let splatColor = -1
       let splatTile: MatterType | null = null
-      if (tile === MatterType.WATER || tile === MatterType.SALT_WATER) {
+      if (tile === WATER || tile === SALT_WATER) {
         if (Math.random() < 0.58) {
           splatColor = ROCK_COLOR
-          splatTile = MatterType.ROCK
+          splatTile = ROCK
         }
-      } else if (tile === MatterType.LAVA || tile === MatterType.ROCK) {
+      } else if (tile === LAVA || tile === ROCK) {
         if (Math.random() < 0.75) {
           splatColor = LAVA_COLOR
-          splatTile = MatterType.LAVA
+          splatTile = LAVA
         }
-      } else if (tile === MatterType.ICE || tile === MatterType.CHILLED_ICE || tile === MatterType.CRYO) {
+      } else if (tile === ICE || tile === CHILLED_ICE || tile === CRYO) {
         if (Math.random() < 0.70) {
           splatColor = ROCK_COLOR
-          splatTile = MatterType.ROCK
+          splatTile = ROCK
         }
-      } else if (tile === MatterType.SOLID || tile === MatterType.PERMANENT) {
+      } else if (tile === SOLID || tile === PERMANENT) {
         if (Math.random() < 0.25) splatColor = LAVA_COLOR  // visual only — don't overwrite structural tiles
       }
       if (splatColor !== -1) {

@@ -19,8 +19,8 @@ export const GUNPOWDER_EXPLOSION: ParticleDef = {
     world.setTileType(Math.round(x2), Math.round(y2), MatterType.FIRE)
     p.x = x2
     p.y = y2
+    p.yVelocity += 0.3
     if (p.actionIterations % 5 === 0) p.size /= 1.3
-    if (p.actionIterations % 15 === 0) p.yVelocity += 10 * (p.actionIterations / 5)
     if (p.size < 1.75) pool.release(p)
     else if (world.outOfBounds(p)) pool.release(p)
   },
