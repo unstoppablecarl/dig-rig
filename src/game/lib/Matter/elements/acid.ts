@@ -1,6 +1,8 @@
 import { random } from '../../../helpers/random'
-import { ACID, EMPTY, matterType, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
+import { ACID, EMPTY, makeTypeMask, matterType, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
 import { ACID_IMMUNE, type ElementDef } from '../elements.ts'
+
+const IS_SETTLED = makeTypeMask(ACID, EMPTY)
 
 export const ACID_DEF: ElementDef = {
   name: 'Acid',
@@ -62,6 +64,10 @@ export const ACID_DEF: ElementDef = {
     if (!moved) {
       world.tiles[idx] = setSettled(ACID, true)
       world.markDirty(tx, ty)
+
+      if (!world.surroundedByMask(tx, ty, idx, IS_SETTLED)) {
+        next.add(idx)
+      }
     }
   },
 }

@@ -7,7 +7,7 @@ import {
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 import { type ElementDef, LAVA_IMMUNE } from '../elements.ts'
 
-const SETTLED_OK = makeTypeMask(LAVA, EMPTY)
+const IS_SETTLED = makeTypeMask(LAVA, EMPTY)
 
 export const LAVA_DEF: ElementDef = {
   name: 'Lava',
@@ -46,7 +46,7 @@ export const LAVA_DEF: ElementDef = {
     if (random() < 1 && random() < 50) {
       const meltLoc = world.borderingAdjacent(tx, ty, idx, SOLID)
       if (meltLoc !== -1) {
-        tiles[meltLoc] = LAVA
+        tiles[meltLoc] = EMPTY
         const mx = meltLoc % width
         const my = meltLoc / width | 0
         world.markDirty(mx, my)
@@ -129,7 +129,7 @@ export const LAVA_DEF: ElementDef = {
       world.tiles[idx] = setSettled(LAVA, true)
       world.markDirty(tx, ty)
 
-      if (!world.surroundedByMask(tx, ty, idx, SETTLED_OK)) {
+      if (!world.surroundedByMask(tx, ty, idx, IS_SETTLED)) {
         next.add(idx)
       }
     }
