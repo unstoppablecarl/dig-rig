@@ -81,7 +81,7 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
   }
 
   onMouseWheel(deltaY: number): boolean {
-    this.adjustCharge(Math.round(deltaY * 10))
+    this.adjustCharge(Math.round(deltaY * -10))
     return true
   }
 
