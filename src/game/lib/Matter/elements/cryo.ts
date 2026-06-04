@@ -1,5 +1,5 @@
 import { random } from '../../../helpers/random'
-import { CHILLED_ICE, CRYO, EMPTY, ICE, LAVA, OIL, ROCK, SALT_WATER, SETTLED_FLAG, WATER } from '../_Matter-types.ts'
+import { CHILLED_ICE, CRYO, EMPTY, ICE, LAVA, OIL, ROCK, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -70,7 +70,7 @@ const def: ElementDef = {
         return
       }
 
-      world.tiles[idx] = CRYO | SETTLED_FLAG
+      world.tiles[idx] = setSettled(CRYO, true)
       world.markDirty(tx, ty)
     }
   },

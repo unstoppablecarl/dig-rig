@@ -1,6 +1,6 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { BURNING_THERMITE, EMPTY, FIRE, LAVA, OIL, SALT_WATER, SOLID, THERMITE, TYPE_MASK, WATER } from '../_Matter-types.ts'
+import { BURNING_THERMITE, EMPTY, FIRE, LAVA, matterType, OIL, SALT_WATER, SOLID, THERMITE, WATER } from '../_Matter-types.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 import type { ElementDef } from '../elements.ts'
 
@@ -20,7 +20,7 @@ const def: ElementDef = {
 
     for (const [nx, ny, nidx] of sideNeighbors) {
       if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue
-      const nt = tiles[nidx] & TYPE_MASK
+      const nt = matterType(tiles[nidx])
       if (nt !== THERMITE && nt !== BURNING_THERMITE && nt !== LAVA && nt !== SOLID) {
         tiles[nidx] = FIRE
         world.markDirty(nx, ny)
@@ -30,9 +30,9 @@ const def: ElementDef = {
 
     // Burn through SOLID adjacent horizontally
     if (random() < 8) {
-      const wallLeft = tx > 0 && (tiles[idx - 1] & TYPE_MASK) === SOLID ? idx - 1 : -1
-      const wallRight = tx < width - 1 && (tiles[idx + 1] & TYPE_MASK) === SOLID ? idx + 1 : -1
-      const wallBelow = ty < height - 1 && (tiles[idx + width] & TYPE_MASK) === SOLID ? idx + width : -1
+      const wallLeft = tx > 0 && matterType(tiles[idx - 1]) === SOLID ? idx - 1 : -1
+      const wallRight = tx < width - 1 && matterType(tiles[idx + 1]) === SOLID ? idx + 1 : -1
+      const wallBelow = ty < height - 1 && matterType(tiles[idx + width]) === SOLID ? idx + width : -1
       for (const widx of [wallLeft, wallRight, wallBelow]) {
         if (widx === -1) continue
         tiles[widx] = EMPTY

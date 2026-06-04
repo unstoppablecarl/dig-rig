@@ -1,4 +1,4 @@
-import { ACID, LAVA, OIL, ROCK, SALT_WATER, SETTLED_FLAG, WATER } from '../_Matter-types.ts'
+import { ACID, LAVA, OIL, ROCK, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -16,7 +16,7 @@ const def: ElementDef = {
       world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, ROCK, next)
 
     if (!moved) {
-      world.tiles[idx] = ROCK | SETTLED_FLAG
+      world.tiles[idx] = setSettled(ROCK, true)
       world.markDirty(tx, ty)
     }
   },

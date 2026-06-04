@@ -1,4 +1,4 @@
-import { LAVA, OIL, SALT, SALT_WATER, SETTLED_FLAG, WATER } from '../_Matter-types.ts'
+import { LAVA, OIL, SALT, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -29,7 +29,7 @@ const def: ElementDef = {
       return
     }
 
-    world.tiles[idx] = SALT_WATER | SETTLED_FLAG
+    world.tiles[idx] = setSettled(SALT_WATER, true)
     world.markDirty(tx, ty)
   },
 }

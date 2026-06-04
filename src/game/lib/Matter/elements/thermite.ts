@@ -1,5 +1,5 @@
 import { random } from '../../../helpers/random'
-import { BURNING_THERMITE, FIRE, OIL, SALT_WATER, SETTLED_FLAG, THERMITE, WATER } from '../_Matter-types.ts'
+import { BURNING_THERMITE, FIRE, OIL, SALT_WATER, setSettled, THERMITE, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -9,7 +9,7 @@ const def: ElementDef = {
   sinksThrough: [WATER, SALT_WATER, OIL],
   action(world, tx, ty, idx, next): void {
     if (world.surroundedByAdjacent(tx, ty, idx, THERMITE)) {
-      world.tiles[idx] = THERMITE | SETTLED_FLAG
+      world.tiles[idx] = setSettled(THERMITE, true)
       world.markDirty(tx, ty)
       return
     }
@@ -29,7 +29,7 @@ const def: ElementDef = {
       world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, THERMITE, next)
 
     if (!moved) {
-      world.tiles[idx] = THERMITE | SETTLED_FLAG
+      world.tiles[idx] = setSettled(THERMITE, true)
       world.markDirty(tx, ty)
     }
   },

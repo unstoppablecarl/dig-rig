@@ -1,5 +1,5 @@
 import { random } from '../../../helpers/random'
-import { SALT, SALT_WATER, SETTLED_FLAG, WATER } from '../_Matter-types.ts'
+import { SALT, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -31,7 +31,7 @@ const def: ElementDef = {
       world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, SALT, next)
 
     if (!moved) {
-      world.tiles[idx] = SALT | SETTLED_FLAG
+      world.tiles[idx] = setSettled(SALT, true)
       world.markDirty(tx, ty)
     }
   },

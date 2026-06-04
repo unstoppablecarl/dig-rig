@@ -9,16 +9,68 @@ export const SETTLED_FLAG = 0x100
 //   tile & TYPE_MASK             → base MatterType (0–255)
 //   tile & TYPE_MASK === WATER   → is this tile water, settled or not?
 export const TYPE_MASK = 0xFF
-// TILE_STATE_MASK — type + settled bits only; strips owner and any upper bits.
-//   tile & TILE_STATE_MASK         → safe index into a 512-entry type+settled table
+//   TILE_STATE_MASK — type + settled bits only; strips owner and any upper bits.
+//   tile & TILE_STATE_MASK → safe index into a 512-entry type+settled table
 export const TILE_STATE_MASK = TYPE_MASK | SETTLED_FLAG  // 0x1FF
 
 // OWNER_MASK / OWNER_SHIFT — bits 9–24 hold the owner ID (16 bits, 1–65535; 0 = world/unowned).
-//   (tile >>> OWNER_SHIFT) & 0xFFFF → owner ID as integer
+//   (tile >>> OWNER_SHIFT) & 0xFFFF            → owner ID as integer
 //   (tile & ~OWNER_MASK) | (id << OWNER_SHIFT) → write owner ID into a tile
-//   tile & ~OWNER_MASK             → strip owner, keep type + settled
+//   tile & ~OWNER_MASK                         → strip owner, keep type + settled
 export const OWNER_SHIFT = 9
 export const OWNER_MASK = 0xFFFF << OWNER_SHIFT  // 0x1FFFE00
+
+// setSettled — sets or clears SETTLED_FLAG, leaving all other bits intact.
+export function setSettled(value: number, settled: boolean): number {
+  return settled ? (value | SETTLED_FLAG) : (value & ~SETTLED_FLAG)
+}
+
+export function isSettled(value: number): boolean {
+  return (value & SETTLED_FLAG) !== 0
+}
+
+// setOwner — writes `owner` into bits 9–24, leaving type and settled bits intact.
+export function setOwner(value: number, owner: number): number {
+  return (value & ~OWNER_MASK) | ((owner & 0xFFFF) << OWNER_SHIFT)
+}
+
+// getOwner — extracts the owner ID from bits 9–24 (0 = unowned/world).
+export function getOwner(value: number): number {
+  return (value >>> OWNER_SHIFT) & 0xFFFF
+}
+
+// clearOwner — sets the owner field to 0 (NONE), leaving type and settled bits intact.
+export function clearOwner(value: number): number {
+  return value & ~OWNER_MASK
+}
+
+export function matterType(value: number): MatterType {
+  return (value & TYPE_MASK) as MatterType
+}
+
+// TypeMask — 256-bit bitmask over MatterType values (8 × Uint32, 32 bytes).
+// Supports up to 256 distinct types; each type t occupies bit (t & 31) of word (t >>> 5).
+//
+// Usage: declare the mask once in module scope,
+// then test individual types with typeInMask at runtime:
+//
+//   const FLAMMABLE = makeTypeMask(OIL, NAPALM, PLANT, FUSE)
+//   if (typeInMask(FLAMMABLE, tiles[nidx] & TYPE_MASK)) { ... }
+export type TypeMask = Uint32Array
+
+// makeTypeMask(...types) — build a TypeMask from a list of MatterType values.
+// Call once at module scope, never inside a hot loop.
+export function makeTypeMask(...types: MatterType[]): TypeMask {
+  const mask = new Uint32Array(8)
+  for (const t of types) mask[t >>> 5] |= 1 << (t & 31)
+  return mask
+}
+
+// typeInMask(mask, t) — O(1) membership test; two bitwise ops, no allocation.
+// V8 inlines this at call sites after JIT warmup.
+export function typeInMask(mask: TypeMask, t: number): boolean {
+  return (mask[t >>> 5] & (1 << (t & 31))) !== 0
+}
 
 export enum MatterType {
   EMPTY = 0,

@@ -1,5 +1,5 @@
 import { random } from '../../../helpers/random'
-import { ACID, EMPTY, SALT_WATER, SETTLED_FLAG, TYPE_MASK, WATER } from '../_Matter-types.ts'
+import { ACID, EMPTY, matterType, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
 import { ACID_IMMUNE, type ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -21,7 +21,7 @@ const def: ElementDef = {
 
       for (const [nx, ny, nidx] of neighbors) {
         if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue
-        const nt = tiles[nidx] & TYPE_MASK
+        const nt = matterType(tiles[nidx])
         if (ACID_IMMUNE.has(nt)) continue
 
         if (ny === ty + 1) {
@@ -61,7 +61,7 @@ const def: ElementDef = {
       world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
 
     if (!moved) {
-      world.tiles[idx] = ACID | SETTLED_FLAG
+      world.tiles[idx] = setSettled(ACID, true)
       world.markDirty(tx, ty)
     }
   },

@@ -1,6 +1,6 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { FIRE, GUNPOWDER, SETTLED_FLAG } from '../_Matter-types.ts'
+import { FIRE, GUNPOWDER, setSettled } from '../_Matter-types.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 import type { ElementDef } from '../elements.ts'
 
@@ -41,7 +41,7 @@ const def: ElementDef = {
       world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, GUNPOWDER, next)
 
     if (!moved) {
-      world.tiles[idx] = GUNPOWDER | SETTLED_FLAG
+      world.tiles[idx] = setSettled(GUNPOWDER, true)
       world.markDirty(tx, ty)
     }
   },

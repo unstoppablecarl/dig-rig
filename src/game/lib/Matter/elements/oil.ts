@@ -1,5 +1,5 @@
 import { random } from '../../../helpers/random'
-import { FIRE, OIL, SETTLED_FLAG } from '../_Matter-types.ts'
+import { FIRE, OIL, setSettled } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -22,7 +22,7 @@ const def: ElementDef = {
       world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
 
     if (!moved) {
-      world.tiles[idx] = OIL | SETTLED_FLAG
+      world.tiles[idx] = setSettled(OIL, true)
       world.markDirty(tx, ty)
     }
   },

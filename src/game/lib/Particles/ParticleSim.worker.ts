@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
-import type { ParticleWorkerInMessage, ParticleWorkerOutMessage } from './_ParticleWorker-types.ts'
-import { ParticleWorkerInMsg } from './_ParticleWorker-types.ts'
+import type { ParticleWorkerInMessage, ParticleWorkerOutMessage } from './ParticleSim.types.ts'
+import { ParticleWorkerInMsg } from './ParticleSim.types.ts'
 import { ParticleSim } from './ParticleSim.ts'
 
 declare function postMessage(msg: ParticleWorkerOutMessage): void

@@ -1,5 +1,5 @@
 import { random } from '../../helpers/random'
-import { EMPTY, FIRE, MatterType, SAND, SETTLED_FLAG, TYPE_MASK, WATER } from './_Matter-types.ts'
+import { EMPTY, FIRE, isSettled, MatterType, matterType, SAND, setSettled, type TypeMask, typeInMask, WATER } from './_Matter-types.ts'
 import { ELEMENT_ACTIONS, LIQUID_TYPES, SINKS_THROUGH } from './elements.ts'
 
 const MAX_FLOW = 8
@@ -37,7 +37,7 @@ export class MatterSim {
     for (const idx of indices) {
       if (idx < 0 || idx >= this.tiles.length) continue
       const raw = this.tiles[idx]
-      const t = raw & TYPE_MASK
+      const t = matterType(raw)
 
       if (t === SAND) {
         this.tiles[idx] = SAND
@@ -55,7 +55,7 @@ export class MatterSim {
         t !== MatterType.CHILLED_ICE &&
         t !== MatterType.PLANT
       ) {
-        this.tiles[idx] = raw & ~SETTLED_FLAG
+        this.tiles[idx] = setSettled(raw, false)
         target.add(idx)
       }
     }
@@ -77,7 +77,7 @@ export class MatterSim {
       }
 
       const raw = this.tiles[idx]
-      const tile = (raw & TYPE_MASK) as MatterType
+      const tile = matterType(raw)
       ELEMENT_ACTIONS[tile]?.(this, tx, ty, idx, next)
     }
   }
@@ -99,8 +99,8 @@ export class MatterSim {
         if (ax < 0 || ax >= width) continue
         const idx = aboveY * width + ax
         const raw = tiles[idx]
-        if (raw & SETTLED_FLAG) {
-          tiles[idx] = raw & ~SETTLED_FLAG
+        if (isSettled(raw)) {
+          tiles[idx] = setSettled(raw, false)
           this.markDirty(ax, aboveY)
           dest.add(idx)
         }
@@ -115,8 +115,8 @@ export class MatterSim {
       if (ax < 0 || ax >= width || ay < 0) continue
       const idx = ay * width + ax
       const raw = tiles[idx]
-      if ((raw & SETTLED_FLAG) && LIQUID_TYPES.has((raw & TYPE_MASK) as MatterType)) {
-        tiles[idx] = raw & ~SETTLED_FLAG
+      if (isSettled(raw) && LIQUID_TYPES.has(matterType(raw))) {
+        tiles[idx] = setSettled(raw, false)
         dest.add(idx)
       }
     }
@@ -128,8 +128,8 @@ export class MatterSim {
         if (ax < 0 || ax >= width) break
         const sidx = ty * width + ax
         const raw = tiles[sidx]
-        if (!(raw & SETTLED_FLAG) || !LIQUID_TYPES.has((raw & TYPE_MASK) as MatterType)) break
-        tiles[sidx] = raw & ~SETTLED_FLAG
+        if (!isSettled(raw) || !LIQUID_TYPES.has(matterType(raw))) break
+        tiles[sidx] = setSettled(raw, false)
         dest.add(sidx)
       }
     }
@@ -147,7 +147,7 @@ export class MatterSim {
     if (toTx < 0 || toTx >= width || toTy < 0 || toTy >= height) return false
     const toIdx = toTy * width + toTx
     const rawTo = tiles[toIdx]
-    const toType = rawTo & TYPE_MASK
+    const toType = matterType(rawTo)
 
     // Sand/heavy particles sink through lighter liquids
     const sinksThrough = SINKS_THROUGH[tileType as MatterType]
@@ -195,10 +195,10 @@ export class MatterSim {
       if (tx < 0 || tx >= width) continue
       const toIdx = ty * width + tx
       const rawTo = tiles[toIdx]
-      const toType = rawTo & TYPE_MASK
+      const toType = matterType(rawTo)
       if (toType !== EMPTY) continue
 
-      tiles[toIdx] = tiles[fromIdx] & TYPE_MASK
+      tiles[toIdx] = matterType(tiles[fromIdx])
       tiles[fromIdx] = EMPTY
       this.markDirty(fromTx, fromTy)
       this.markDirty(tx, ty)
@@ -227,20 +227,20 @@ export class MatterSim {
     displacedAs?: number,
   ): boolean {
     const { tiles, width, height } = this
-    const selfType = tiles[idx] & TYPE_MASK
+    const selfType = matterType(tiles[idx])
     const leftFirst = this.leftFirst
     let targetIdx = -1
 
     if (random() < sinkChance && ty < height - 1) {
       const row = (ty + 1) * width
-      if ((tiles[row + tx] & TYPE_MASK) === lighter) {
+      if (matterType(tiles[row + tx]) === lighter) {
         targetIdx = row + tx
       } else {
         const dx1 = leftFirst ? -1 : 1
         const nx1 = tx + dx1, nx2 = tx - dx1
-        if (nx1 >= 0 && nx1 < width && (tiles[row + nx1] & TYPE_MASK) === lighter)
+        if (nx1 >= 0 && nx1 < width && matterType(tiles[row + nx1]) === lighter)
           targetIdx = row + nx1
-        else if (nx2 >= 0 && nx2 < width && (tiles[row + nx2] & TYPE_MASK) === lighter)
+        else if (nx2 >= 0 && nx2 < width && matterType(tiles[row + nx2]) === lighter)
           targetIdx = row + nx2
       }
     }
@@ -248,9 +248,9 @@ export class MatterSim {
     if (targetIdx === -1 && random() < equalizeChance) {
       const dx1 = leftFirst ? -1 : 1
       const nx1 = tx + dx1, nx2 = tx - dx1
-      if (nx1 >= 0 && nx1 < width && (tiles[ty * width + nx1] & TYPE_MASK) === lighter)
+      if (nx1 >= 0 && nx1 < width && matterType(tiles[ty * width + nx1]) === lighter)
         targetIdx = ty * width + nx1
-      else if (nx2 >= 0 && nx2 < width && (tiles[ty * width + nx2] & TYPE_MASK) === lighter)
+      else if (nx2 >= 0 && nx2 < width && matterType(tiles[ty * width + nx2]) === lighter)
         targetIdx = ty * width + nx2
     }
 
@@ -277,15 +277,15 @@ export class MatterSim {
     if (ty >= this.height - 1) return false
     const { tiles, width } = this
     const row = (ty + 1) * width
-    if ((tiles[row + tx] & TYPE_MASK) === lighter) return true
-    if (tx > 0 && (tiles[row + tx - 1] & TYPE_MASK) === lighter) return true
-    if (tx < width - 1 && (tiles[row + tx + 1] & TYPE_MASK) === lighter) return true
+    if (matterType(tiles[row + tx]) === lighter) return true
+    if (tx > 0 && matterType(tiles[row + tx - 1]) === lighter) return true
+    if (tx < width - 1 && matterType(tiles[row + tx + 1]) === lighter) return true
     return false
   }
 
   tryFlowHorizontal(
     fromIdx: number, fromTx: number, fromTy: number,
-    dir: number,
+    dir: -1 | 1,
     next: Set<number>,
   ): boolean {
     const { tiles, width, height } = this
@@ -293,12 +293,12 @@ export class MatterSim {
     for (let d = 1; d <= MAX_FLOW; d++) {
       const nx = fromTx + dir * d
       if (nx < 0 || nx >= width) break
-      if ((tiles[fromTy * width + nx] & TYPE_MASK) !== EMPTY) break
+      if (matterType(tiles[fromTy * width + nx]) !== EMPTY) break
       dist = d
-      if (fromTy + 1 < height && (tiles[(fromTy + 1) * width + nx] & TYPE_MASK) === EMPTY) break
+      if (fromTy + 1 < height && matterType(tiles[(fromTy + 1) * width + nx]) === EMPTY) break
     }
     if (dist === 0) return false
-    return this.tryMove(fromIdx, fromTx, fromTy, fromTx + dir * dist, fromTy, tiles[fromIdx] & TYPE_MASK, next)
+    return this.tryMove(fromIdx, fromTx, fromTy, fromTx + dir * dist, fromTy, matterType(tiles[fromIdx]), next)
   }
 
   // ─── Higher-level helpers (mirrors project-sand World API) ────────────────
@@ -314,8 +314,8 @@ export class MatterSim {
     ]) {
       if (nidx === -1) continue
       const raw = tiles[nidx]
-      if ((raw & TYPE_MASK) === type && (raw & SETTLED_FLAG)) {
-        tiles[nidx] = raw & ~SETTLED_FLAG
+      if (matterType(raw) === type && isSettled(raw)) {
+        tiles[nidx] = setSettled(raw, false)
         this.markDirty(nidx % width, nidx / width | 0)
         dest.add(nidx)
       }
@@ -330,10 +330,10 @@ export class MatterSim {
     const right = tx < width - 1 ? idx + 1 : -1
     const up = ty > 0 ? idx - width : -1
 
-    if (down !== -1 && (tiles[down] & TYPE_MASK) === type) return down
-    if (left !== -1 && (tiles[left] & TYPE_MASK) === type) return left
-    if (right !== -1 && (tiles[right] & TYPE_MASK) === type) return right
-    if (up !== -1 && (tiles[up] & TYPE_MASK) === type) return up
+    if (down !== -1 && matterType(tiles[down]) === type) return down
+    if (left !== -1 && matterType(tiles[left]) === type) return left
+    if (right !== -1 && matterType(tiles[right]) === type) return right
+    if (up !== -1 && matterType(tiles[up]) === type) return up
     return -1
   }
 
@@ -345,17 +345,17 @@ export class MatterSim {
 
     if (!atBottom) {
       const b = idx + width
-      if ((tiles[b] & TYPE_MASK) === type) return b
-      if (tx > 0 && (tiles[b - 1] & TYPE_MASK) === type) return b - 1
-      if (tx < width - 1 && (tiles[b + 1] & TYPE_MASK) === type) return b + 1
+      if (matterType(tiles[b]) === type) return b
+      if (tx > 0 && matterType(tiles[b - 1]) === type) return b - 1
+      if (tx < width - 1 && matterType(tiles[b + 1]) === type) return b + 1
     }
-    if (tx > 0 && (tiles[idx - 1] & TYPE_MASK) === type) return idx - 1
-    if (tx < width - 1 && (tiles[idx + 1] & TYPE_MASK) === type) return idx + 1
+    if (tx > 0 && matterType(tiles[idx - 1]) === type) return idx - 1
+    if (tx < width - 1 && matterType(tiles[idx + 1]) === type) return idx + 1
     if (!atTop) {
       const a = idx - width
-      if ((tiles[a] & TYPE_MASK) === type) return a
-      if (tx > 0 && (tiles[a - 1] & TYPE_MASK) === type) return a - 1
-      if (tx < width - 1 && (tiles[a + 1] & TYPE_MASK) === type) return a + 1
+      if (matterType(tiles[a]) === type) return a
+      if (tx > 0 && matterType(tiles[a - 1]) === type) return a - 1
+      if (tx < width - 1 && matterType(tiles[a + 1]) === type) return a + 1
     }
     return -1
   }
@@ -363,10 +363,20 @@ export class MatterSim {
   /** True if all 4 cardinal neighbours match `type`. */
   surroundedBy(tx: number, ty: number, idx: number, type: MatterType): boolean {
     const { tiles, width, height } = this
-    if (ty < height - 1 && (tiles[idx + width] & TYPE_MASK) !== type) return false
-    if (ty > 0 && (tiles[idx - width] & TYPE_MASK) !== type) return false
-    if (tx > 0 && (tiles[idx - 1] & TYPE_MASK) !== type) return false
-    if (tx < width - 1 && (tiles[idx + 1] & TYPE_MASK) !== type) return false
+    if (ty < height - 1 && matterType(tiles[idx + width]) !== type) return false
+    if (ty > 0           && matterType(tiles[idx - width]) !== type) return false
+    if (tx > 0           && matterType(tiles[idx - 1])     !== type) return false
+    if (tx < width - 1   && matterType(tiles[idx + 1])     !== type) return false
+    return true
+  }
+
+  /** True if all 4 cardinal neighbours are in the TypeMask. */
+  surroundedByMask(tx: number, ty: number, idx: number, mask: TypeMask): boolean {
+    const { tiles, width, height } = this
+    if (ty < height - 1 && !typeInMask(mask, matterType(tiles[idx + width]))) return false
+    if (ty > 0           && !typeInMask(mask, matterType(tiles[idx - width]))) return false
+    if (tx > 0           && !typeInMask(mask, matterType(tiles[idx - 1]    ))) return false
+    if (tx < width - 1   && !typeInMask(mask, matterType(tiles[idx + 1]    ))) return false
     return true
   }
 
@@ -378,17 +388,17 @@ export class MatterSim {
 
     if (!atBottom) {
       const b = idx + width
-      if ((tiles[b] & TYPE_MASK) !== type) return false
-      if (tx > 0 && (tiles[b - 1] & TYPE_MASK) !== type) return false
-      if (tx < width - 1 && (tiles[b + 1] & TYPE_MASK) !== type) return false
+      if (matterType(tiles[b])     !== type) return false
+      if (tx > 0           && matterType(tiles[b - 1]) !== type) return false
+      if (tx < width - 1   && matterType(tiles[b + 1]) !== type) return false
     }
-    if (tx > 0 && (tiles[idx - 1] & TYPE_MASK) !== type) return false
-    if (tx < width - 1 && (tiles[idx + 1] & TYPE_MASK) !== type) return false
+    if (tx > 0           && matterType(tiles[idx - 1]) !== type) return false
+    if (tx < width - 1   && matterType(tiles[idx + 1]) !== type) return false
     if (!atTop) {
       const a = idx - width
-      if ((tiles[a] & TYPE_MASK) !== type) return false
-      if (tx > 0 && (tiles[a - 1] & TYPE_MASK) !== type) return false
-      if (tx < width - 1 && (tiles[a + 1] & TYPE_MASK) !== type) return false
+      if (matterType(tiles[a])     !== type) return false
+      if (tx > 0           && matterType(tiles[a - 1]) !== type) return false
+      if (tx < width - 1   && matterType(tiles[a + 1]) !== type) return false
     }
     return true
   }
@@ -419,7 +429,7 @@ export class MatterSim {
     if (random() >= chance) return false
     const loc = this.borderingAdjacent(tx, ty, idx, intoType)
     if (loc === -1) return false
-    this.tiles[loc] = this.tiles[idx] & TYPE_MASK
+    this.tiles[loc] = matterType(this.tiles[idx])
     const lx = loc % this.width
     const ly = loc / this.width | 0
     this.markDirty(lx, ly)
@@ -449,5 +459,3 @@ export class MatterSim {
     next.add(idx)
   }
 }
-
-

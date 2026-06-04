@@ -1,6 +1,6 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { FIRE, NITRO, SETTLED_FLAG } from '../_Matter-types.ts'
+import { FIRE, NITRO, setSettled } from '../_Matter-types.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 import type { ElementDef } from '../elements.ts'
 
@@ -24,7 +24,7 @@ const def: ElementDef = {
       world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
 
     if (!moved) {
-      world.tiles[idx] = NITRO | SETTLED_FLAG
+      world.tiles[idx] = setSettled(NITRO, true)
       world.markDirty(tx, ty)
     }
   },

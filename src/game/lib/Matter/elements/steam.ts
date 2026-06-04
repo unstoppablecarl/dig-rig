@@ -1,5 +1,5 @@
 import { random } from '../../../helpers/random'
-import { EMPTY, STEAM, TYPE_MASK, WATER } from '../_Matter-types.ts'
+import { EMPTY, matterType, STEAM, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -32,7 +32,7 @@ const def: ElementDef = {
     // Slow disappearance when trapped
     if (random() < 1 && random() < 5) {
       // Check nothing below
-      if (ty < world.height - 1 && (tiles[(ty + 1) * width + tx] & TYPE_MASK) !== STEAM) {
+      if (ty < world.height - 1 && matterType(tiles[(ty + 1) * width + tx]) !== STEAM) {
         tiles[idx] = EMPTY
         world.markDirty(tx, ty)
         world.reactivateAround(tx, ty, next)

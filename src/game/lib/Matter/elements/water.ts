@@ -1,4 +1,4 @@
-import { LAVA, OIL, SALT, SAND, SETTLED_FLAG, WATER, WATER_SETTLED } from '../_Matter-types.ts'
+import { LAVA, matterType, OIL, SALT, SAND, setSettled, WATER, WATER_SETTLED } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -36,7 +36,7 @@ const def: ElementDef = {
     if (ty > 0) {
       const aboveIdx = (ty - 1) * world.width + tx
       const raw = world.tiles[aboveIdx]
-      if ((raw & ~SETTLED_FLAG) === SAND) {
+      if (matterType(raw) === SAND) {
         world.tiles[aboveIdx] = SAND
         world.markDirty(tx, ty - 1)
         next.add(aboveIdx)

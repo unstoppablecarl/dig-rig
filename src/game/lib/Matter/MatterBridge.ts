@@ -4,7 +4,7 @@ import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { FireMode } from '../Player/_FireMode-types.ts'
 import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
-import { MatterType, TYPE_MASK } from './_Matter-types.ts'
+import { matterType, MatterType } from './_Matter-types.ts'
 import { MatterCoordinatorInMsg, MatterCoordinatorOutMsg, type TypedMatterCoordinatorWorker } from './MatterSim.types.ts'
 import { ParticleBridge } from '../Particles/ParticleBridge.ts'
 import MatterCoordinatorConstructor from './MatterCoordinator.worker.ts?worker'
@@ -94,7 +94,7 @@ export class MatterBridge extends SceneBound {
         if (dx * dx + dy * dy > radius * radius) continue
         const x = tx + dx
         const y = ty + dy
-        if ((tilemap.getTile(x, y) & TYPE_MASK) !== MatterType.EMPTY) continue
+        if (matterType(tilemap.getTile(x, y)) !== MatterType.EMPTY) continue
         tilemap.setTile(x, y, value)
         indices.push(y * tilemap.width + x)
       }

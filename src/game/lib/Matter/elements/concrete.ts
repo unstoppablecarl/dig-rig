@@ -1,5 +1,5 @@
 import { random } from '../../../helpers/random'
-import { CONCRETE, SALT_WATER, SETTLED_FLAG, SOLID, WATER } from '../_Matter-types.ts'
+import { CONCRETE, SALT_WATER, setSettled, SOLID, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
 const def: ElementDef = {
@@ -30,7 +30,7 @@ const def: ElementDef = {
         world.markDirty(tx, ty)
         return
       }
-      world.tiles[idx] = CONCRETE | SETTLED_FLAG
+      world.tiles[idx] = setSettled(CONCRETE, true)
       world.markDirty(tx, ty)
     }
   },

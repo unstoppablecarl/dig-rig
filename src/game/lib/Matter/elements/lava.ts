@@ -1,8 +1,13 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { EMPTY, FIRE, LAVA, OIL, ROCK, SALT_WATER, SETTLED_FLAG, SOLID, STEAM, TYPE_MASK, WATER } from '../_Matter-types.ts'
+import {
+  EMPTY, FIRE, LAVA, makeTypeMask,
+  matterType, OIL, ROCK, SALT_WATER, setSettled, SOLID, STEAM, WATER,
+} from '../_Matter-types.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 import { type ElementDef, LAVA_IMMUNE } from '../elements.ts'
+
+const SETTLED_OK = makeTypeMask(LAVA, EMPTY)
 
 const def: ElementDef = {
   id: LAVA,
@@ -52,7 +57,7 @@ const def: ElementDef = {
 
     // Spawn fire in empty space directly above (6% chance, like project-sand)
     const upIdx = ty > 0 ? idx - width : -1
-    if (upIdx !== -1 && random() < 6 && (tiles[upIdx] & TYPE_MASK) === EMPTY) {
+    if (upIdx !== -1 && random() < 6 && matterType(tiles[upIdx]) === EMPTY) {
       tiles[upIdx] = FIRE
       world.markDirty(tx, ty - 1)
       next.add(upIdx)
@@ -68,7 +73,7 @@ const def: ElementDef = {
       ]
       for (const [nx, ny, nidx] of burnCandidates) {
         if (nidx === -1) continue
-        const nt = tiles[nidx] & TYPE_MASK
+        const nt = matterType(tiles[nidx])
         if (!LAVA_IMMUNE.has(nt)) {
           tiles[nidx] = FIRE
           world.markDirty(nx, ny)
@@ -80,7 +85,7 @@ const def: ElementDef = {
     // Clear fire directly below so lava can fall through it
     const downIdx = ty < height - 1 ? idx + width : -1
     if (downIdx !== -1) {
-      const belowType = tiles[downIdx] & TYPE_MASK
+      const belowType = matterType(tiles[downIdx])
       if (belowType === FIRE) {
         tiles[downIdx] = EMPTY
         world.markDirty(tx, ty + 1)
@@ -101,12 +106,12 @@ const def: ElementDef = {
     if (random() < 15) {
       const leftIdx = tx > 0 ? idx - 1 : -1
       const rightIdx = tx < width - 1 ? idx + 1 : -1
-      if (leftIdx !== -1 && (tiles[leftIdx] & TYPE_MASK) === FIRE) {
+      if (leftIdx !== -1 && matterType(tiles[leftIdx]) === FIRE) {
         tiles[leftIdx] = EMPTY
         world.markDirty(tx - 1, ty)
         world.reactivateAround(tx - 1, ty, next)
       }
-      if (rightIdx !== -1 && (tiles[rightIdx] & TYPE_MASK) === FIRE) {
+      if (rightIdx !== -1 && matterType(tiles[rightIdx]) === FIRE) {
         tiles[rightIdx] = EMPTY
         world.markDirty(tx + 1, ty)
         world.reactivateAround(tx + 1, ty, next)
@@ -122,8 +127,12 @@ const def: ElementDef = {
       world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
 
     if (!moved) {
-      world.tiles[idx] = LAVA | SETTLED_FLAG
+      world.tiles[idx] = setSettled(LAVA, true)
       world.markDirty(tx, ty)
+
+      if (!world.surroundedByMask(tx, ty, idx, SETTLED_OK)) {
+        next.add(idx)
+      }
     }
   },
 }

@@ -1,7 +1,7 @@
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { ParticleType } from './_particle-types.ts'
-import { ParticleWorkerInMsg, ParticleWorkerOutMsg, type TypedParticleWorker } from './_ParticleWorker-types.ts'
+import { ParticleWorkerInMsg, ParticleWorkerOutMsg, type TypedParticleWorker } from './ParticleSim.types.ts'
 import ParticleWorkerConstructor from './ParticleSim.worker.ts?worker'
 
 export class ParticleBridge extends SceneBound<GameLevel> {
