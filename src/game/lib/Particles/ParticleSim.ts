@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { MatterType, TYPE_MASK } from '../Matter/_Matter-types.ts'
+import { matterType, MatterType } from '../Matter/_Matter-types.ts'
 import type { ParticleType } from './_particle-types.ts'
 import { ParticleWorkerOutMsg } from './ParticleSim.types.ts'
 import type { Particle } from './Particle.ts'
@@ -65,14 +65,14 @@ export class ParticleSim {
 
   getTileType(x: number, y: number): MatterType {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return MatterType.PERMANENT
-    return (this.tiles[y * this.width + x] & TYPE_MASK) as MatterType
+    return matterType(this.tiles[y * this.width + x])
   }
 
   setTileType(x: number, y: number, type: MatterType) {
     const width = this.width
     if (x < 0 || x >= width || y < 0 || y >= this.height) return
     const tiles = this.tiles
-    const cur = tiles[y * width + x] & TYPE_MASK
+    const cur = matterType(tiles[y * width + x])
     if (cur === MatterType.SOLID || cur === MatterType.PERMANENT) return
     tiles[y * width + x] = type
     this.pendingActivations.push(y * width + x)
@@ -82,7 +82,7 @@ export class ParticleSim {
     const width = this.width
     if (x < 0 || x >= width || y < 0 || y >= this.height) return
     const tiles = this.tiles
-    if ((tiles[y * width + x] & TYPE_MASK) === MatterType.PERMANENT) return
+    if (matterType(tiles[y * width + x]) === MatterType.PERMANENT) return
     tiles[y * width + x] = type
     this.pendingActivations.push(y * width + x)
   }
@@ -105,7 +105,7 @@ export class ParticleSim {
     const ty = Math.round(p.y + Math.sin(theta) * radius)
     const width = this.width
     if (tx < 0 || tx >= width || ty < 0 || ty >= this.height) return MatterType.EMPTY
-    return (this.tiles[ty * width + tx] & TYPE_MASK) as MatterType
+    return matterType(this.tiles[ty * width + tx]) as MatterType
   }
 
   outOfBounds(p: Particle): boolean {

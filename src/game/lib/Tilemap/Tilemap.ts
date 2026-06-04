@@ -4,7 +4,7 @@ import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
-import { MatterType, SETTLED_FLAG, TYPE_MASK } from '../Matter/_Matter-types.ts'
+import { isSettled, matterType, MatterType } from '../Matter/_Matter-types.ts'
 import { COLLIDES_WHEN_SETTLED } from '../Matter/elements.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
@@ -91,7 +91,7 @@ export class Tilemap extends SceneBound {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false
     const id = y * this.width + x
     const prev = this.tiles[id]
-    const prevType = prev & TYPE_MASK
+    const prevType = matterType(prev)
     this.tiles[id] = value
     this.chunkManager.setDirty(x, y, prev, value)
     if (prevType === MatterType.SOLID && value !== MatterType.SOLID) this.matter--
@@ -109,9 +109,9 @@ export class Tilemap extends SceneBound {
 
   public isSolid(x: number, y: number) {
     const raw = this.getTile(Math.floor(x), Math.floor(y))
-    const type = raw & TYPE_MASK
+    const type = matterType(raw)
     if (type === MatterType.SOLID || type === MatterType.PERMANENT) return true
-    if (raw & SETTLED_FLAG) {
+    if (isSettled(raw)) {
       return COLLIDES_WHEN_SETTLED.has(type)
     }
     return false
@@ -133,7 +133,7 @@ export class Tilemap extends SceneBound {
     tileY: number,
     terrainType: MatterType,
   ) {
-    return (this.getTile(tileX, tileY) & TYPE_MASK) === terrainType
+    return matterType(this.getTile(tileX, tileY)) === terrainType
   }
 
   public checkCircleCollision(
@@ -143,7 +143,7 @@ export class Tilemap extends SceneBound {
     terrainType: MatterType,
   ) {
     return this.getCircle(tileX, tileY, tileRadius, (x, y) => {
-      return (this.getTile(x, y) & TYPE_MASK) === terrainType
+      return matterType(this.getTile(x, y)) === terrainType
     }, true)
   }
 
@@ -360,7 +360,7 @@ export class Tilemap extends SceneBound {
       const stepX = x + stepDx * i
       const stepY = y + stepDy * i
 
-      const collision = (this.getTileFromWorld(stepX, stepY) & TYPE_MASK) !== MatterType.EMPTY
+      const collision = matterType(this.getTileFromWorld(stepX, stepY)) !== MatterType.EMPTY
       if (collision) {
         return {
           collision: true,
@@ -450,7 +450,7 @@ export class Tilemap extends SceneBound {
         this._collisionPosition.y = Math.round(startY + ny * prev)
         return this._collisionPosition
       }
-      if (types.has((this.getTile(x, y) & TYPE_MASK) as MatterType)) {
+      if (types.has(matterType(this.getTile(x, y)))) {
         this._collisionPosition.x = x
         this._collisionPosition.y = y
         return this._collisionPosition

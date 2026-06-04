@@ -7,8 +7,9 @@ import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
 
 // Mask pixel layout (little-endian Uint32: 0xAABBGGRR):
-//   R = MatterType (0–255). G = SETTLED (0 or 255). B unused. A = 255.
-//   Index = tile & TILE_STATE_MASK (type bits 0–7 + settled bit 8).
+// converts tile & TILE_STATE_MASK to rgb values used by shader
+// R = MatterType (0–255). G = SETTLED (0 or 255). B unused. A = 255.
+// Index = tile & TILE_STATE_MASK (type bits 0–7 + settled bit 8).
 const MASK_MAP = new Uint32Array(512)
 for (const type of MatterTypeValues) {
   MASK_MAP[type]                = 0xFF000000 | type
