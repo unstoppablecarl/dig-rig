@@ -10,7 +10,6 @@ export const BURNING_THERMITE_DEF: ElementDef = {
   action(world, tx, ty, idx, next): void {
     const { tiles, width, height } = world
 
-    // Set adjacent non-thermite/lava/solid to fire (up, left, right only)
     const sideNeighbors = [
       [tx, ty - 1, idx - width],
       [tx - 1, ty, idx - 1],
