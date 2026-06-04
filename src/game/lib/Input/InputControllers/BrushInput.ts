@@ -1,8 +1,9 @@
 import { GameObjects, Input, Scenes } from 'phaser'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { MatterType } from '../../Matter/_Matter-types.ts'
-import { FireMode } from '../../Player/_FireMode-types'
-import type { TileEffectResult } from '../../Tilemap/Tilemap.ts'
+import { ProjectileEffect } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
+import type { ProjectileEffectResult } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
+import { applyEffect } from '../../Tilemap/TileMutation.ts'
 import { InputController } from './InputController.ts'
 import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
 import POINTER_DOWN = Input.Events.POINTER_DOWN
@@ -18,7 +19,7 @@ export class BrushInput extends InputController {
   private isDrawing = false
   private isCreating = false
   private brushDirty = true
-  private _effectTiles: TileEffectResult[] = []
+  private _effectTiles: ProjectileEffectResult[] = []
 
   public element: MatterType = MatterType.SOLID
 
@@ -86,8 +87,8 @@ export class BrushInput extends InputController {
 
   apply(tileX: number, tileY: number) {
     if (this.element === MatterType.SOLID) {
-      const mode = this.isCreating ? FireMode.CREATE : FireMode.DESTROY
-      this.scene.tilemap.applyEffect(this._effectTiles, tileX, tileY, this.radius, mode)
+      const effect = this.isCreating ? ProjectileEffect.CREATE_SOLID : ProjectileEffect.DESTROY
+      applyEffect(this.scene.tilemap, this._effectTiles, tileX, tileY, this.radius, effect)
     } else {
       this.scene.matterBridge.addElement(this.element, tileX, tileY, this.radius)
     }

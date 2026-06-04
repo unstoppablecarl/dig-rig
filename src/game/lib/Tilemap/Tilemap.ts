@@ -6,8 +6,6 @@ import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import { MatterType, SETTLED_FLAG, TYPE_MASK } from '../Matter/_Matter-types.ts'
 import { COLLIDES_WHEN_SETTLED } from '../Matter/elements.ts'
-import { FireMode } from '../Player/_FireMode-types.ts'
-import { PLAYER_HEIGHT, PLAYER_WIDTH } from '../Player/Player.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
 
@@ -15,15 +13,6 @@ export type Tile = { x: number, y: number }
 
 const BFS_DX = [-1, 1, 0, 0]
 const BFS_DY = [0, 0, -1, 1]
-
-const PLAYER_RADIUS_X = PLAYER_WIDTH * 0.5
-const PLAYER_RADIUS_Y = PLAYER_HEIGHT * 0.5
-// How far the player AABB is extended in the direction of movement when filtering creates.
-const PLAYER_CREATE_VEL_EXTEND = 8
-
-export type TileEffectResult = Tile & {
-  newValue: MatterType,
-}
 
 export class Tilemap extends SceneBound {
   private readonly sab: SharedArrayBuffer
@@ -219,47 +208,6 @@ export class Tilemap extends SceneBound {
     if (returnBoolOnFirstMatch) return false
   }
 
-  // Assumes tiles is sorted center-outward. commitEffectTiles sorts before calling this.
-  // Keeps the inner core intact and randomly samples only the outermost ring.
-  private truncatePreservingCenter<T extends { x: number; y: number }>(
-    tiles: T[],
-    tileX: number,
-    tileY: number,
-    targetSize: number,
-  ): void {
-    if (targetSize <= 0) {
-      tiles.length = 0
-      return
-    }
-    if (targetSize >= tiles.length) return
-
-    const last = tiles[targetSize - 1]
-    const cutoffD2 = (last.x - tileX) ** 2 + (last.y - tileY) ** 2
-
-    let ringStart = targetSize - 1
-    while (ringStart > 0 && (tiles[ringStart - 1].x - tileX) ** 2 + (tiles[ringStart - 1].y - tileY) ** 2 === cutoffD2) {
-      ringStart--
-    }
-
-    let ringEnd = targetSize
-    while (ringEnd < tiles.length && (tiles[ringEnd].x - tileX) ** 2 + (tiles[ringEnd].y - tileY) ** 2 === cutoffD2) {
-      ringEnd++
-    }
-
-    // Partial Fisher-Yates: randomly select `need` tiles from the ring in-place, O(need)
-    const need = targetSize - ringStart
-    const ringSize = ringEnd - ringStart
-    for (let i = 0; i < need; i++) {
-      const j = i + Math.floor(Math.random() * (ringSize - i))
-      const a = ringStart + i
-      const b = ringStart + j
-      const tmp = tiles[a]
-      tiles[a] = tiles[b]
-      tiles[b] = tmp
-    }
-    tiles.length = targetSize
-  }
-
   // Returns the subset of newTiles that form a floating island (not connected to any
   // PERMANENT tile or world boundary via solid).  Relies on chunkManager.anchored
   // flags being current before this is called.
@@ -339,7 +287,7 @@ export class Tilemap extends SceneBound {
   // because PERMANENT tiles exist at the world boundary which is never far from
   // any solid tile.  Genuine islands exhaust their component and are detected
   // regardless of size.
-  private findNewlyDisconnectedByDestruction(destroyedTiles: Tile[]): Tile[] {
+  public findNewlyDisconnectedByDestruction(destroyedTiles: Tile[]): Tile[] {
     const { width, height, tiles, _bfsVisited: vis, _bfsQueue: queue, _bfsComp: comp } = this
     vis.fill(0)
 
@@ -397,132 +345,6 @@ export class Tilemap extends SceneBound {
     }
 
     return islandTiles
-  }
-
-  // SOLID creation: geometric circle through EMPTY tiles only — water is a hard wall.
-  // Island detection fires onIslandDetected for any tiles not connected to permanent
-  // terrain or world bounds so they can be converted to sand.
-  public applyEffect(out: TileEffectResult[], tileX: number, tileY: number, tileRadius: number, mode: FireMode, tilesToModify = Number.MAX_VALUE, innerRadius = 0) {
-    const tiles = out
-    tiles.length = 0
-
-    if (mode === FireMode.CREATE) {
-      const { x: px, y: py } = this.scene.player
-      const vel = this.scene.player.container.body?.velocity
-      const vx = vel?.x ?? 0, vy = vel?.y ?? 0
-      const MAX_VEL_EXTEND = 8
-      const velLeft = Math.max(Math.min(vx, 0), -MAX_VEL_EXTEND)
-      const velRight = Math.min(Math.max(vx, 0), MAX_VEL_EXTEND)
-      const velUp = Math.max(Math.min(vy, 0), -MAX_VEL_EXTEND)
-      const velDown = Math.min(Math.max(vy, 0), MAX_VEL_EXTEND)
-      this.getCircle(tileX, tileY, tileRadius, (x, y) => {
-        if (this.getTile(x, y) !== MatterType.EMPTY) return
-        if (x > px - PLAYER_RADIUS_X + velLeft && x < px + PLAYER_RADIUS_X + velRight &&
-          y > py - PLAYER_RADIUS_Y + velUp && y < py + PLAYER_RADIUS_Y + velDown) return
-        tiles.push({ x, y, newValue: MatterType.SOLID })
-      }, false, innerRadius)
-      if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
-      this.chunkManager.computeAnchored()
-      const islands = this.findIslandTiles(tiles)
-      if (islands.length) this.onIslandDetected?.(islands)
-
-    } else if (mode === FireMode.DESTROY) {
-      this.getCircle(tileX, tileY, tileRadius, (x, y) => {
-        const type = this.getTile(x, y) & TYPE_MASK
-        if (
-          type === MatterType.PERMANENT ||
-          type === MatterType.EMPTY ||
-          type === MatterType.SAND ||
-          type === MatterType.WATER
-        ) return
-        tiles.push({ x, y, newValue: MatterType.EMPTY })
-      })
-      if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
-      const newIslands = this.findNewlyDisconnectedByDestruction(tiles)
-      if (newIslands.length) this.onIslandDetected?.(newIslands)
-
-    } else if (mode === FireMode.MELT) {
-      this.getCircle(tileX, tileY, tileRadius, (x, y) => {
-        const type = this.getTile(x, y) & TYPE_MASK
-        let newValue: MatterType
-        if (type === MatterType.SOLID) newValue = MatterType.SAND
-        else if (type === MatterType.SAND) newValue = MatterType.WATER
-        else return
-        tiles.push({ x, y, newValue })
-      })
-      if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
-      this.onActivateTiles?.(tiles)
-      const newIslands = this.findNewlyDisconnectedByDestruction(tiles)
-      if (newIslands.length) this.onIslandDetected?.(newIslands)
-
-    } else if (mode === FireMode.SOLIDIFY) {
-      this.getCircle(tileX, tileY, tileRadius, (x, y) => {
-        const type = this.getTile(x, y) & TYPE_MASK
-        let newValue: MatterType
-        if (type === MatterType.WATER) newValue = MatterType.SAND
-        else if (type === MatterType.SAND) newValue = MatterType.SOLID
-        else return
-        tiles.push({ x, y, newValue })
-      })
-      if (!this.commitEffectTiles(tiles, tileX, tileY, tilesToModify, mode)) return tiles
-      this.onActivateTiles?.(tiles)
-      this.chunkManager.computeAnchored()
-      const islands = this.findIslandTiles(tiles)
-      if (islands.length) this.onIslandDetected?.(islands)
-    }
-
-    return tiles
-  }
-
-  public applyCreateTiles(tiles: Tile[]): Tile[] {
-    if (!tiles.length) return tiles
-    const player = this.scene.player
-    if (player) {
-      const px = player.x, py = player.y
-      const vel = player.container.body?.velocity
-      const vx = vel?.x ?? 0, vy = vel?.y ?? 0
-      const velLeft = Math.max(Math.min(vx, 0), -PLAYER_CREATE_VEL_EXTEND)
-      const velRight = Math.min(Math.max(vx, 0), PLAYER_CREATE_VEL_EXTEND)
-      const velUp = Math.max(Math.min(vy, 0), -PLAYER_CREATE_VEL_EXTEND)
-      const velDown = Math.min(Math.max(vy, 0), PLAYER_CREATE_VEL_EXTEND)
-      const left = px - PLAYER_RADIUS_X + velLeft
-      const right = px + PLAYER_RADIUS_X + velRight
-      const top = py - PLAYER_RADIUS_Y + velUp
-      const bot = py + PLAYER_RADIUS_Y + velDown
-      tiles = tiles.filter(({ x, y }) => !(x > left && x < right && y > top && y < bot))
-      if (!tiles.length) return tiles
-    }
-    const startTime = this.scene.time.now
-    for (const { x, y } of tiles) {
-      this.scene.tilemapRenderer.addEffect(x, y, FireMode.CREATE, startTime)
-      this.setTile(x, y, MatterType.SOLID)
-    }
-    this.chunkManager.computeAnchored()
-    const islands = this.findIslandTiles(tiles)
-    if (islands.length) this.onIslandDetected?.(islands)
-    return tiles
-  }
-
-  private commitEffectTiles(
-    tiles: TileEffectResult[],
-    tileX: number,
-    tileY: number,
-    tilesToModify: number,
-    mode: FireMode,
-  ): boolean {
-    if (tilesToModify < tiles.length) {
-      tiles.sort((a, b) =>
-        ((a.x - tileX) ** 2 + (a.y - tileY) ** 2) - ((b.x - tileX) ** 2 + (b.y - tileY) ** 2),
-      )
-    }
-    this.truncatePreservingCenter(tiles, tileX, tileY, tilesToModify)
-    if (!tiles.length) return false
-    const startTime = this.scene.time.now
-    for (const { x, y, newValue } of tiles) {
-      this.scene.tilemapRenderer.addEffect(x, y, mode, startTime)
-      this.setTile(x, y, newValue)
-    }
-    return true
   }
 
   checkForCollision(x: number, y: number, vx: number, vy: number, dt: number, scale = 1): {

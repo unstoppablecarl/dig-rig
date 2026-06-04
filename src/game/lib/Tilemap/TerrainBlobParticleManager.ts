@@ -3,13 +3,15 @@ import { FIRE_MODE_COLORS } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { FireMode } from '../Player/_FireMode-types'
-import type { TileEffectResult } from './Tilemap.ts'
+import { EFFECT_BY_FIRE_MODE } from '../Projectiles/ProjectileEffect/ProjectileEffect.ts'
+import type { ProjectileEffectResult } from '../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
+import { applyEffect } from './TileMutation.ts'
 import { VFXTerrainParticle } from '../VFXParticles/VFXTerrainParticle.ts'
 
 export class TerrainBlobParticleManager extends SceneBound {
   public particles: VFXTerrainParticle[] = []
   private graphics: GameObjects.Graphics
-  private _effectTiles: TileEffectResult[] = []
+  private _effectTiles: ProjectileEffectResult[] = []
 
   constructor(public scene: GameLevel) {
     super(scene)
@@ -58,7 +60,7 @@ export class TerrainBlobParticleManager extends SceneBound {
 
     if (result.collision) {
       const { stepX, stepY } = result
-      this.scene.tilemap.applyEffect(this._effectTiles, stepX, stepY, d.radius, d.mode)
+      applyEffect(this.scene.tilemap, this._effectTiles, stepX, stepY, d.radius, EFFECT_BY_FIRE_MODE[d.mode])
       return false
     } else {
       const { dx, dy } = result

@@ -43,7 +43,7 @@ export class TunnelDestroyProjectile extends BaseProjectile {
 
     const charge = this.charge()
     if (charge > 0) {
-      const tiles = this.destroyTiles(charge)
+      const tiles = this.applyTiles(charge)
       if (tiles.length > 0) {
         this.sweepQueue.push({ cx: this.x, cy: this.y, radius: this.radius, remaining: tiles.slice() })
       }

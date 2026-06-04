@@ -61,15 +61,7 @@ export class Projectile extends BaseProjectile {
       }
     } else {
       if (this.charge() > 0) {
-        if (this.mode === FireMode.DESTROY) {
-          this.destroyTiles(this.charge())
-        }
-        if (this.mode === FireMode.MELT) {
-          this.meltTiles(this.charge())
-        }
-        if (this.mode === FireMode.SOLIDIFY) {
-          this.solidifyTiles(this.charge())
-        }
+        this.applyTiles(this.charge())
       }
 
       const easedValue = PMath.Easing.Circular.In(this.lifespanPercent)
@@ -114,7 +106,7 @@ export class Projectile extends BaseProjectile {
 
         const charge = this.charge()
         if (charge > 0) {
-          this.createTiles(charge)
+          this.applyTiles(charge)
         }
       },
     })

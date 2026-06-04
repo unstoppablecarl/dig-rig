@@ -5,6 +5,9 @@ import type { Position } from '../../../types.ts'
 import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponConstantInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponConstantInput.ts'
 import { EMPTY } from '../../Matter/_Matter-types.ts'
+import { ProjectileEffect } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
+import type { ProjectileEffectResult } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
+import { commitTilesList } from '../../Tilemap/TileMutation.ts'
 import { MatterTank } from '../../Matter/MatterTank/MatterTank.ts'
 import type { SweepRecord } from '../../Projectiles/TunnelDestroyProjectile.ts'
 import { TunnelDestroyProjectile } from '../../Projectiles/TunnelDestroyProjectile.ts'
@@ -15,7 +18,7 @@ import UPDATE = Scenes.Events.UPDATE
 // Per-tile safe radius: tiles this close to the player are held in the record's
 // remaining list and retried next frame instead of being created immediately.
 // Must exceed PLAYER_RADIUS_Y + PLAYER_CREATE_VEL_EXTEND (~23) to stay clear of
-// applyCreateTiles' AABB filter.
+// CREATE effect's filterTile.
 const TILE_SAFE_RADIUS = 25
 const TILE_SAFE_RSQ = TILE_SAFE_RADIUS * TILE_SAFE_RADIUS
 
@@ -29,6 +32,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
 
   private _restoreVisited = new Set<number>()
   private _restoreResult: Tile[] = []
+  private _commitOut: ProjectileEffectResult[] = []
   private _emitPos: Position = { x: 0, y: 0 }
 
   constructor(
@@ -255,7 +259,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   }
 
   private _applyCreate(tiles: Tile[]) {
-    const created = this.scene.tilemap.applyCreateTiles(tiles)
+    const created = commitTilesList(this.scene.tilemap, tiles, ProjectileEffect.CREATE_SOLID, this._commitOut)
     if (!created.length) return
     this.matterTank.addPendingCharge(FireMode.CREATE, created.length)
     const source = this.scene.player.matterParticleEmitPosition(this._emitPos)

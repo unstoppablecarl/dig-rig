@@ -1,11 +1,14 @@
-import { isMatterTankFireMode } from '../../helpers/_helpers.ts'
-import { shuffleArray } from '../../helpers/array.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
 import { FireMode } from '../Player/_FireMode-types'
-import type { Tile, TileEffectResult } from '../Tilemap/Tilemap.ts'
+import { applyEffect } from '../Tilemap/TileMutation.ts'
+import { EFFECT_BY_FIRE_MODE } from './ProjectileEffect/ProjectileEffect.ts'
+import type {
+  ProjectileEffectDef,
+  ProjectileEffectResult,
+} from './ProjectileEffect/_ProjectileEffect.types.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
 import { ProjectileRenderer } from './ProjectileRenderer.ts'
 
@@ -18,6 +21,7 @@ export type BaseProjectileConstructor<T extends BaseProjectile> = new (...args: 
 export abstract class BaseProjectile extends SceneBound {
   public tilesToModify: number = -1
   public radius = 0
+  public effect: ProjectileEffectDef
 
   protected vx: number = 0
   protected vy: number = 0
@@ -40,7 +44,7 @@ export abstract class BaseProjectile extends SceneBound {
     protected renderer: ProjectileRenderer | null = null,
   ) {
     super(scene)
-
+    this.effect = EFFECT_BY_FIRE_MODE[mode]
     this.renderer?.attachToProjectile(this)
   }
 
@@ -63,114 +67,47 @@ export abstract class BaseProjectile extends SceneBound {
     this.initialVY = this.vy = vy * velocity
     this.fired = true
 
-    if (isMatterTankFireMode(this.mode)) {
-      this.matterTank.addPendingCharge(this.mode, this.tilesToModify)
+    if (this.effect.chargeMode !== null) {
+      this.matterTank.addPendingCharge(this.effect.chargeMode, this.tilesToModify)
     }
   }
 
   abstract update(dt: number): void
 
   private _emitPos = { x: 0, y: 0 }
-  private _effectTiles: TileEffectResult[] = []
+  private _effectTiles: ProjectileEffectResult[] = []
 
-  protected solidifyTiles(count: number) {
-    const tileX = this.x
-    const tileY = this.y
-    const tiles = this.scene.tilemap.applyEffect(this._effectTiles, tileX, tileY, this.radius, FireMode.SOLIDIFY, count)
-    const changed = tiles.length
-    this.tilesModified += changed
-    return changed
-  }
-
-  protected meltTiles(count: number) {
-    const tileX = this.x
-    const tileY = this.y
-    const tiles = this.scene.tilemap.applyEffect(this._effectTiles, tileX, tileY, this.radius, FireMode.MELT, count)
-    const changed = tiles.length
-    this.tilesModified += changed
-    return changed
-  }
-
-  protected createTiles(count: number, innerRadius = 0) {
-    const tiles = this.scene.tilemap.applyEffect(
-      this._effectTiles,
-      this.x,
-      this.y,
-      this.radius,
-      FireMode.CREATE,
-      count,
-      innerRadius,
+  protected applyTiles(count: number, innerRadius = 0): ProjectileEffectResult[] {
+    const tiles = applyEffect(
+      this.scene.tilemap, this._effectTiles, this.x, this.y, this.radius, this.effect, count, innerRadius,
     )
-
     const changed = tiles.length
+    if (!changed) return tiles
     this.tilesModified += changed
-
-    let source: Position
-    if ('matterParticleEmitPosition' in this.source) {
-      source = this.source.matterParticleEmitPosition(this._emitPos)
-    } else {
-      source = this.source
+    this.effect.onApplied(
+      this.scene.tilemap,
+      this._resolveEmitPos(),
+      this._resolveCollectPos(),
+      tiles,
+    )
+    if (this.effect.chargeMode !== null) {
+      this.matterTank.applyPendingCharge(this.effect.chargeMode, changed)
     }
-
-    const shuffled = shuffleArray(tiles)
-    for (const tile of shuffled) {
-      const target = {
-        x: tile.x,
-        y: tile.y,
-      }
-      this.scene.vfxParticleManager.spawnMatter(source, target, true)
-    }
-    this.matterTank.applyPendingCharge(FireMode.CREATE, changed)
-
-    return tiles.length
-  }
-
-  protected createTilesFromList(tiles: Tile[]): number {
-    const created = this.scene.tilemap.applyCreateTiles(tiles)
-    const changed = created.length
-    if (!changed) return 0
-    this.tilesModified += changed
-    let source: Position
-    if ('matterParticleEmitPosition' in this.source) {
-      source = this.source.matterParticleEmitPosition(this._emitPos)
-    } else {
-      source = this.source
-    }
-    shuffleArray(created)
-    for (const tile of created) {
-      this.scene.vfxParticleManager.spawnMatter(source, tile, true)
-    }
-    this.matterTank.applyPendingCharge(FireMode.CREATE, changed)
-    return changed
-  }
-
-  protected destroyTiles(count: number): Tile[] {
-    const tileX = this.x
-    const tileY = this.y
-    const tiles = this.scene.tilemap.applyEffect(this._effectTiles, tileX, tileY, this.radius, FireMode.DESTROY, count)
-    const changed = tiles.length
-    this.tilesModified += changed
-    if (changed) {
-      let target: Position
-      if ('matterParticleCollectPosition' in this.source) {
-        target = this.source.matterParticleCollectPosition()
-      } else {
-        target = this.source
-      }
-
-      const shuffled = shuffleArray(tiles)
-      for (const tile of shuffled) {
-        const source = {
-          x: tile.x,
-          y: tile.y,
-        }
-        this.scene.vfxParticleManager.spawnMatter(source, target, false)
-      }
-
-      this.matterTank.applyPendingCharge(FireMode.DESTROY, tiles.length)
-    }
-
     return tiles
+  }
+
+  private _resolveEmitPos(): Position {
+    if ('matterParticleEmitPosition' in this.source) {
+      return this.source.matterParticleEmitPosition(this._emitPos)
+    }
+    return this.source
+  }
+
+  private _resolveCollectPos(): Position {
+    if ('matterParticleCollectPosition' in this.source) {
+      return this.source.matterParticleCollectPosition()
+    }
+    return this.source
   }
 
   charge() {
@@ -178,8 +115,8 @@ export abstract class BaseProjectile extends SceneBound {
   }
 
   protected onDestroy() {
-    if (isMatterTankFireMode(this.mode)) {
-      this.matterTank.removePendingCharge(this.mode, this.charge())
+    if (this.effect.chargeMode !== null) {
+      this.matterTank.removePendingCharge(this.effect.chargeMode, this.charge())
     }
     this.manager?.remove(this)
     this.renderer?.destroy()
