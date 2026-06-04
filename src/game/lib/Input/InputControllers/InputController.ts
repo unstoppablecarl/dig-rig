@@ -40,6 +40,8 @@ export abstract class InputController extends SceneBound<GameLevel> {
 
   protected onDisable?(): void
 
+  onWheel?(deltaY: number): boolean
+
   protected onDestroy() {
     this.setInputEnabled(false)
     // @ts-expect-error: destroy

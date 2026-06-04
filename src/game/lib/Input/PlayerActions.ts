@@ -13,6 +13,7 @@ export const PlayerAction = {
   MOVE_LEFT: 'MOVE_LEFT',
   MOVE_RIGHT: 'MOVE_RIGHT',
   JUMP: 'JUMP',
+  ZOOM_MODIFIER: 'ZOOM_MODIFIER',
 } as const
 
 export type PlayerActionKey = keyof typeof PlayerAction

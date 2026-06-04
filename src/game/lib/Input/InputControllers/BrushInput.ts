@@ -1,11 +1,10 @@
 import { GameObjects, Input, Scenes } from 'phaser'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { MatterType } from '../../Matter/_Matter-types.ts'
-import { ProjectileEffect } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import type { ProjectileEffectResult } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
+import { ProjectileEffect } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import { applyEffect } from '../../Tilemap/TileMutation.ts'
 import { InputController } from './InputController.ts'
-import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
 import POINTER_DOWN = Input.Events.POINTER_DOWN
 import POINTER_MOVE = Input.Events.POINTER_MOVE
 import POINTER_UP = Input.Events.POINTER_UP
@@ -35,7 +34,6 @@ export class BrushInput extends InputController {
     this.addEvent(this.scene.input, POINTER_MOVE, this.pointermove)
     this.addEvent(this.scene.input, POINTER_DOWN, this.pointerdown)
     this.addEvent(this.scene.input, POINTER_UP, this.pointerup)
-    this.addEvent(this.scene.input, GAMEOBJECT_POINTER_WHEEL, this.wheel)
     this.addEvent(this.scene.events, UPDATE, this.update)
   }
 
@@ -68,13 +66,14 @@ export class BrushInput extends InputController {
     this.isDrawing = false
   }
 
-  wheel(_pointer: Pointer, _gameObjects: any, _deltaX: number, deltaY: number) {
+  onWheel(deltaY: number) {
     if (deltaY > 0) {
       this.radius = Math.max(this.minRadius, this.radius - 1)
     } else {
       this.radius = Math.min(this.maxRadius, this.radius + 1)
     }
     this.brushDirty = true
+    return true
   }
 
   update() {

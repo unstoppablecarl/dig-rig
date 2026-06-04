@@ -170,10 +170,10 @@ export function makeGUI(game: GameLevel) {
   playerFolder.addBinding(player.isTouching, 'ground', { readonly: true })
 
   const brushFolder = pane.addFolder({ title: 'Brush' })
-  const getBrushBtnLabel = () => (game.inputManager.mode === InputMode.BRUSH ? 'Disable' : 'Enable') + ' Brush'
+  const getBrushBtnLabel = () => (game.inputManager.inputMode === InputMode.BRUSH ? 'Disable' : 'Enable') + ' Brush'
   const brushToggle = brushFolder.addButton({ title: getBrushBtnLabel() })
     .on('click', () => {
-      if (game.inputManager.mode === InputMode.BRUSH) {
+      if (game.inputManager.inputMode === InputMode.BRUSH) {
         game.inputManager.setMode(InputMode.WEAPON)
       } else {
         game.inputManager.setMode(InputMode.BRUSH)

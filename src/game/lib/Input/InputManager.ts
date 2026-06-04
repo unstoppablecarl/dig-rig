@@ -5,6 +5,7 @@ import { BrushInput } from './InputControllers/BrushInput.ts'
 import { FireGroupInput } from './InputControllers/FireGroupInput.ts'
 import type { InputController } from './InputControllers/InputController.ts'
 import { ZoomInput } from './InputControllers/ZoomInput.ts'
+import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
 
 export enum InputMode {
   WEAPON,
@@ -13,7 +14,8 @@ export enum InputMode {
 
 export class InputManager extends SceneBound {
   private modeControllers: Record<InputMode, InputController[]>
-  private _mode: InputMode
+  private readonly zoomInput: ZoomInput
+  private mode: InputMode
   brushInput: BrushInput
 
   constructor(
@@ -21,14 +23,13 @@ export class InputManager extends SceneBound {
   ) {
     super(scene)
 
-    const zoomInput = new ZoomInput(scene)
+    this.zoomInput = new ZoomInput(scene)
     const brushInput = this.brushInput = new BrushInput(scene)
     const fireGroupInput = new FireGroupInput(scene)
     const playerWeaponManager = scene.playerWeaponManager
 
     this.modeControllers = {
       [InputMode.WEAPON]: [
-        zoomInput,
         playerWeaponManager,
         fireGroupInput,
       ],
@@ -36,6 +37,8 @@ export class InputManager extends SceneBound {
         brushInput,
       ],
     }
+
+    scene.input.on(GAMEOBJECT_POINTER_WHEEL, this.handleMouseWheel, this)
 
     this.setMode(InputMode.WEAPON)
 
@@ -49,21 +52,32 @@ export class InputManager extends SceneBound {
     ])
   }
 
-  get mode() {
-    return this._mode
+  private handleMouseWheel(_ptr: any, _objs: any, _dx: number, deltaY: number) {
+    if (!this.modeControllers) return
+    // valid zoom wheel input
+    if (this.zoomInput.onWheel(deltaY)) return
+    // find first valid wheel input
+    for (const c of this.modeControllers[this.mode]) {
+      if (c.onWheel?.(deltaY)) break
+    }
+  }
+
+  get inputMode() {
+    return this.mode
   }
 
   setMode(mode: InputMode) {
-    if (this._mode === mode) return
-    if (this._mode !== undefined) {
-      for (const c of this.modeControllers[this._mode]) c.setInputEnabled(false)
+    if (this.mode === mode) return
+    if (this.mode !== undefined) {
+      for (const c of this.modeControllers[this.mode]) c.setInputEnabled(false)
     }
-    this._mode = mode
+    this.mode = mode
     for (const c of this.modeControllers[mode]) c.setInputEnabled(true)
   }
 
   protected onDestroy() {
-    const all = new Set(Object.values(this.modeControllers).flat())
+    const all = new Set([this.zoomInput, ...Object.values(this.modeControllers).flat()])
+    this.scene.input.off(GAMEOBJECT_POINTER_WHEEL, this.handleMouseWheel, this)
     for (const c of all) c.destroy()
     // @ts-expect-error: destroy
     this.modeControllers = null

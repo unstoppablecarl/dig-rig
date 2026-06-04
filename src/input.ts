@@ -20,4 +20,5 @@ export const INPUT_ACTIONS: Record<PlayerActionKey, Binding> = {
   [PlayerAction.MOVE_RIGHT]: [RIGHT, 'd'],
   [PlayerAction.MOVE_DOWN]: [DOWN, 's'],
   [PlayerAction.JUMP]: [UP, SPACE, 'w'],
+  [PlayerAction.ZOOM_MODIFIER]: 'SHIFT',
 }
