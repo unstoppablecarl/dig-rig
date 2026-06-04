@@ -1,4 +1,5 @@
 import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { CompositeActionInput } from './PlayerActions/CompositeActionInput.ts'
 import { KeyActionInput } from './PlayerActions/KeyActionInput.ts'
 import { PointerActionInput } from './PlayerActions/PointerActionInput.ts'
 
@@ -18,12 +19,11 @@ export const PlayerAction = {
 
 export type PlayerActionKey = keyof typeof PlayerAction
 
-export const POINTER_LEFT = 'POINTER_LEFT' as const
-export const POINTER_RIGHT = 'POINTER_RIGHT' as const
+export const POINTER_LEFT = 'Mouse Left' as const
+export const POINTER_RIGHT = 'Mouse Right' as const
 export type PointerBinding = typeof POINTER_LEFT | typeof POINTER_RIGHT
 
-export type KeyBinding = string | number | (string | number)[]
-export type Binding = KeyBinding | PointerBinding
+export type Binding = (string | number | PointerBinding)[]
 
 export interface ActionInput {
   isDown(): boolean
@@ -41,10 +41,18 @@ export function makePlayerActions(scene: GameLevel, bindings: Record<PlayerActio
 }
 
 function makeActionInput(scene: GameLevel, binding: Binding): ActionInput {
-  if (binding === POINTER_LEFT) return new PointerActionInput(scene, 'LEFT')
-  if (binding === POINTER_RIGHT) return new PointerActionInput(scene, 'RIGHT')
-  const keys = Array.isArray(binding) ? binding : [binding]
-  return new KeyActionInput(scene, keys)
+  const keys: (string | number)[] = []
+  const inputs: ActionInput[] = []
+
+  for (const item of binding) {
+    if (item === POINTER_LEFT) inputs.push(new PointerActionInput(scene, 'LEFT'))
+    else if (item === POINTER_RIGHT) inputs.push(new PointerActionInput(scene, 'RIGHT'))
+    else keys.push(item)
+  }
+
+  if (keys.length) inputs.push(new KeyActionInput(scene, keys))
+  if (inputs.length === 1) return inputs[0]
+  return new CompositeActionInput(inputs)
 }
 
 
