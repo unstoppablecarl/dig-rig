@@ -7,7 +7,6 @@ import type { ProjectileEffectDef, ProjectileEffectResult } from '../_Projectile
 const DESTROY_SKIP = new Set([MatterType.PERMANENT, MatterType.EMPTY, MatterType.SAND, MatterType.WATER])
 
 export const DESTROY_EFFECT: ProjectileEffectDef = {
-  fireMode: FireMode.DESTROY,
   chargeMode: FireMode.DESTROY,
   convertMatterType: (t: MatterType) => DESTROY_SKIP.has(t) ? null : MatterType.EMPTY,
   onTilesCommitted(tm: Tilemap, out: ProjectileEffectResult[]): void {
