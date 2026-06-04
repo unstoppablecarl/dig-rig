@@ -1,5 +1,5 @@
 import { random } from '../../../helpers/random'
-import { ACID, EMPTY, makeTypeMask, matterType, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
+import { ACID, EMPTY, makeTypeMask, matterType, SALT_WATER, setSettled, SOLID, WATER } from '../_Matter-types.ts'
 import { ACID_IMMUNE, type ElementDef } from '../elements.ts'
 
 const IS_SETTLED = makeTypeMask(ACID, EMPTY)
@@ -49,6 +49,18 @@ export const ACID_DEF: ElementDef = {
     if (world.doDensityLiquid(tx, ty, idx, next, WATER, 25, 30)) return
     if (world.doDensityLiquid(tx, ty, idx, next, SALT_WATER, 25, 30)) return
     if (world.hasDensityBelow(tx, ty, WATER) || world.hasDensityBelow(tx, ty, SALT_WATER)) {
+      next.add(idx)
+      return
+    }
+
+    // stickiness
+    const touchingSolid =
+      (ty > 0 && matterType(tiles[idx - width]) === SOLID) ||
+      (ty < height - 1 && matterType(tiles[idx + width]) === SOLID) ||
+      (tx > 0 && matterType(tiles[idx - 1]) === SOLID) ||
+      (tx < width - 1 && matterType(tiles[idx + 1]) === SOLID)
+
+    if (touchingSolid && random() >= 3) {
       next.add(idx)
       return
     }
