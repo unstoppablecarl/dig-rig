@@ -1,9 +1,8 @@
 import { random } from '../../../helpers/random'
-import { CHILLED_ICE, FIRE, ICE, LAVA, SALT, SALT_WATER, STEAM, WATER } from '../_Matter-types.ts'
+import { FIRE, ICE, LAVA, SALT, SALT_WATER, STEAM, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
-const def: ElementDef = {
-  id: CHILLED_ICE,
+export const CHILLED_ICE_DEF: ElementDef = {
   name: 'Chilled Ice',
   passive: true,
   acidImmune: true,
@@ -34,5 +33,3 @@ const def: ElementDef = {
     world.doGrow(tx, ty, idx, next, WATER, 50)
   },
 }
-
-export default def

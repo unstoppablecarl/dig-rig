@@ -4,8 +4,7 @@ import { BURNING_THERMITE, EMPTY, FIRE, LAVA, matterType, OIL, SALT_WATER, SOLID
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 import type { ElementDef } from '../elements.ts'
 
-const def: ElementDef = {
-  id: BURNING_THERMITE,
+export const BURNING_THERMITE_DEF: ElementDef = {
   name: 'Burning Thermite',
   sinksThrough: [WATER, SALT_WATER, OIL],
   action(world, tx, ty, idx, next): void {
@@ -64,5 +63,3 @@ const def: ElementDef = {
     }
   },
 }
-
-export default def

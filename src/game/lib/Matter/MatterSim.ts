@@ -152,7 +152,7 @@ export class MatterSim {
     // Sand/heavy particles sink through lighter liquids
     const sinksThrough = SINKS_THROUGH[tileType as MatterType]
     const canEnter = toType === EMPTY
-      || (sinksThrough !== undefined && sinksThrough.includes(toType as MatterType))
+      || (sinksThrough !== undefined && sinksThrough.has(toType as MatterType))
 
     if (!canEnter) return false
 

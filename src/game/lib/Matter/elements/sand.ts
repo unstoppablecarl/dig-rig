@@ -2,8 +2,7 @@ import { ACID, OIL, SALT_WATER, SAND, SAND_SETTLED, WATER } from '../_Matter-typ
 import type { ElementDef } from '../elements.ts'
 import type { MatterSim } from '../MatterSim.ts'
 
-const def: ElementDef = {
-  id: SAND,
+export const SAND_DEF: ElementDef = {
   name: 'Sand',
   collidesWhenSettled: true,
   sinksThrough: [WATER, OIL, SALT_WATER, ACID],
@@ -22,5 +21,3 @@ const def: ElementDef = {
     }
   },
 }
-
-export default def

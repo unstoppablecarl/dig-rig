@@ -2,8 +2,7 @@ import { random } from '../../../helpers/random'
 import { EMPTY, matterType, STEAM, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
-const def: ElementDef = {
-  id: STEAM,
+export const STEAM_DEF: ElementDef = {
   name: 'Steam',
   lavaImmune: true,
   action(world, tx, ty, idx, next): void {
@@ -43,5 +42,3 @@ const def: ElementDef = {
     next.add(idx)
   },
 }
-
-export default def

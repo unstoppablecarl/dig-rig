@@ -2,8 +2,7 @@ import { random } from '../../../helpers/random'
 import { ACID, EMPTY, matterType, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
 import { ACID_IMMUNE, type ElementDef } from '../elements.ts'
 
-const def: ElementDef = {
-  id: ACID,
+export const ACID_DEF: ElementDef = {
   name: 'Acid',
   liquid: true,
   acidImmune: true,
@@ -66,5 +65,3 @@ const def: ElementDef = {
     }
   },
 }
-
-export default def

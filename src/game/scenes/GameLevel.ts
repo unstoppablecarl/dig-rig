@@ -8,15 +8,15 @@ import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManage
 import { WeaponManagerInput } from '../lib/Input/InputControllers/WeaponManagerInput.ts'
 import { InputManager } from '../lib/Input/InputManager.ts'
 import { makePlayerActions, type PlayerActions } from '../lib/Input/PlayerActions.ts'
+import { MatterBridge } from '../lib/Matter/MatterBridge.ts'
 import { MatterManager } from '../lib/Matter/MatterTank/MatterManager.ts'
-import { VFXParticleManager } from '../lib/VFXParticles/VFXParticleManager.ts'
-import { TerrainBlobParticleManager } from '../lib/Tilemap/TerrainBlobParticleManager.ts'
 import { Player } from '../lib/Player/Player.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
-import { MatterBridge } from '../lib/Matter/MatterBridge.ts'
+import { TerrainBlobParticleManager } from '../lib/Tilemap/TerrainBlobParticleManager.ts'
 import { Tilemap } from '../lib/Tilemap/Tilemap.ts'
 import { TilemapRenderer, type TilemapRendererConfig } from '../lib/Tilemap/TilemapRenderer.ts'
 import { CameraController } from '../lib/UI/CameraController.ts'
+import { VFXParticleManager } from '../lib/VFXParticles/VFXParticleManager.ts'
 import { BgScene } from './Layers/BgScene.ts'
 import { UIScene } from './Layers/UIScene.ts'
 import type { LevelEntryWithId, LevelId } from './Levels'
@@ -24,9 +24,9 @@ import Group = GameObjects.Group
 import Layer = GameObjects.Layer
 import Rectangle = Geom.Rectangle
 import MouseManager = Input.Mouse.MouseManager
-import CanvasTexture = Phaser.Textures.CanvasTexture
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
+import CanvasTexture = Phaser.Textures.CanvasTexture
 import NEAREST = Textures.FilterMode.NEAREST
 
 type Layers = {

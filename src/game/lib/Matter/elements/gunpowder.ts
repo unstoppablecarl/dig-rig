@@ -4,8 +4,7 @@ import { FIRE, GUNPOWDER, setSettled } from '../_Matter-types.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 import type { ElementDef } from '../elements.ts'
 
-const def: ElementDef = {
-  id: GUNPOWDER,
+export const GUNPOWDER_DEF: ElementDef = {
   name: 'Gunpowder',
   action(world, tx, ty, idx, next): void {
     // Explode near fire
@@ -46,5 +45,3 @@ const def: ElementDef = {
     }
   },
 }
-
-export default def

@@ -9,8 +9,7 @@ import { type ElementDef, LAVA_IMMUNE } from '../elements.ts'
 
 const SETTLED_OK = makeTypeMask(LAVA, EMPTY)
 
-const def: ElementDef = {
-  id: LAVA,
+export const LAVA_DEF: ElementDef = {
   name: 'Lava',
   lavaImmune: true,
   liquid: true,
@@ -136,5 +135,3 @@ const def: ElementDef = {
     }
   },
 }
-
-export default def

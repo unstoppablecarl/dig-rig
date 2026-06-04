@@ -1,8 +1,7 @@
 import { LAVA, OIL, SALT, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
-const def: ElementDef = {
-  id: SALT_WATER,
+export const SALT_WATER_DEF: ElementDef = {
   name: 'Salt Water',
   lavaImmune: true,
   acidImmune: true,
@@ -33,5 +32,3 @@ const def: ElementDef = {
     world.markDirty(tx, ty)
   },
 }
-
-export default def

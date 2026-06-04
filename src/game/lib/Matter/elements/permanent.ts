@@ -1,11 +1,7 @@
-import { PERMANENT } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
-const def: ElementDef = {
-  id: PERMANENT,
+export const PERMANENT_DEF: ElementDef = {
   name: 'Permanent',
   passive: true,
   lavaImmune: true,
 }
-
-export default def

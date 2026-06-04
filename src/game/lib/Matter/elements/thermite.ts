@@ -2,8 +2,7 @@ import { random } from '../../../helpers/random'
 import { BURNING_THERMITE, FIRE, OIL, SALT_WATER, setSettled, THERMITE, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
-const def: ElementDef = {
-  id: THERMITE,
+export const THERMITE_DEF: ElementDef = {
   name: 'Thermite',
   collidesWhenSettled: true,
   sinksThrough: [WATER, SALT_WATER, OIL],
@@ -34,5 +33,3 @@ const def: ElementDef = {
     }
   },
 }
-
-export default def

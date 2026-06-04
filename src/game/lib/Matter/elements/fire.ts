@@ -19,8 +19,7 @@ import {
 } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
-const def: ElementDef = {
-  id: FIRE,
+export const FIRE_DEF: ElementDef = {
   name: 'Fire',
   action(world, tx, ty, idx, next): void {
     const { tiles, width, height } = world
@@ -148,5 +147,3 @@ const def: ElementDef = {
     next.add(idx)
   },
 }
-
-export default def

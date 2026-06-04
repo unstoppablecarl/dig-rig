@@ -1,8 +1,7 @@
 import { ACID, LAVA, OIL, ROCK, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
-const def: ElementDef = {
-  id: ROCK,
+export const ROCK_DEF: ElementDef = {
   name: 'Rock',
   lavaImmune: true,
   collidesWhenSettled: true,
@@ -21,5 +20,3 @@ const def: ElementDef = {
     }
   },
 }
-
-export default def

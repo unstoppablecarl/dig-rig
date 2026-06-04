@@ -1,12 +1,8 @@
-import { EMPTY } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
-const def: ElementDef = {
-  id: EMPTY,
+export const EMPTY_DEF: ElementDef = {
   name: 'Empty',
   passive: true,
   lavaImmune: true,
   acidImmune: true,
 }
-
-export default def

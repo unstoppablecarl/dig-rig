@@ -2,8 +2,7 @@ import { random } from '../../../helpers/random'
 import { FIRE, ICE, LAVA, SALT, SALT_WATER, STEAM, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
-const def: ElementDef = {
-  id: ICE,
+export const ICE_DEF: ElementDef = {
   name: 'Ice',
   passive: true,
   acidImmune: true,
@@ -52,5 +51,3 @@ const def: ElementDef = {
     }
   },
 }
-
-export default def

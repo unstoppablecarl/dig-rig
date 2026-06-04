@@ -2,8 +2,7 @@ import { random } from '../../../helpers/random'
 import { SALT, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
-const def: ElementDef = {
-  id: SALT,
+export const SALT_DEF: ElementDef = {
   name: 'Salt',
   collidesWhenSettled: true,
   sinksThrough: [WATER, SALT_WATER],
@@ -36,5 +35,3 @@ const def: ElementDef = {
     }
   },
 }
-
-export default def

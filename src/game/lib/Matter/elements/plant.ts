@@ -1,9 +1,8 @@
 import { random } from '../../../helpers/random'
-import { EMPTY, PLANT, SALT, WATER } from '../_Matter-types.ts'
+import { EMPTY, SALT, WATER } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
 
-const def: ElementDef = {
-  id: PLANT,
+export const PLANT_DEF: ElementDef = {
   name: 'Plant',
   passive: true,
   action(world, tx, ty, idx, next): void {
@@ -20,5 +19,3 @@ const def: ElementDef = {
     }
   },
 }
-
-export default def
