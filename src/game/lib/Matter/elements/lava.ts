@@ -54,7 +54,7 @@ export const LAVA_DEF: ElementDef = {
       }
     }
 
-    // Spawn fire in empty space directly above (6% chance, like project-sand)
+    // Spawn fire in empty space directly above
     const upIdx = ty > 0 ? idx - width : -1
     if (upIdx !== -1 && random() < 6 && matterType(tiles[upIdx]) === EMPTY) {
       tiles[upIdx] = FIRE
@@ -62,7 +62,7 @@ export const LAVA_DEF: ElementDef = {
       next.add(upIdx)
     }
 
-    // Burn adjacent non-immune tiles (4-directional, SOLID is now lava-immune so skipped)
+    // Burn adjacent non-immune tiles (4-directional, SOLID is lava-immune so skipped)
     if (random() < 25) {
       const burnCandidates: [number, number, number][] = [
         [tx, ty - 1, ty > 0 ? idx - width : -1],
