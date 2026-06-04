@@ -66,7 +66,7 @@ export class BrushInput extends InputController {
     this.isDrawing = false
   }
 
-  onWheel(deltaY: number) {
+  onMouseWheel(deltaY: number) {
     if (deltaY > 0) {
       this.radius = Math.max(this.minRadius, this.radius - 1)
     } else {

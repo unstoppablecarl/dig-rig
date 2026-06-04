@@ -55,10 +55,10 @@ export class InputManager extends SceneBound {
   private handleMouseWheel(_ptr: any, _objs: any, _dx: number, deltaY: number) {
     if (!this.modeControllers) return
     // valid zoom wheel input
-    if (this.zoomInput.onWheel(deltaY)) return
+    if (this.zoomInput.onMouseWheel(deltaY)) return
     // find first valid wheel input
     for (const c of this.modeControllers[this.mode]) {
-      if (c.onWheel?.(deltaY)) break
+      if (c.onMouseWheel?.(deltaY)) break
     }
   }
 

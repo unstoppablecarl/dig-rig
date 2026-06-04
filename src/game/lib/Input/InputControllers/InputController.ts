@@ -40,7 +40,7 @@ export abstract class InputController extends SceneBound<GameLevel> {
 
   protected onDisable?(): void
 
-  onWheel?(deltaY: number): boolean
+  onMouseWheel?(deltaY: number): boolean
 
   protected onDestroy() {
     this.setInputEnabled(false)

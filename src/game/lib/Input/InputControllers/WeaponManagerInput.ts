@@ -18,7 +18,7 @@ export interface Weapon {
   readonly displayName: string
   readonly slot: number
   destroy(): void
-
+  onMouseWheel?(deltaY: number): boolean
   getSuffix?: () => string
 }
 
@@ -62,6 +62,10 @@ export class WeaponManagerInput extends InputController {
 
   protected onDisable() {
     this._active.setEnabled(false)
+  }
+
+  onMouseWheel(deltaY: number): boolean {
+    return this._active.onMouseWheel?.(deltaY) ?? false
   }
 
   keydown(event: KeyboardEvent) {

@@ -1,4 +1,3 @@
-
 import { FIRE_MODE_COLORS } from '../../../config/colors.ts'
 import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
@@ -6,10 +5,10 @@ import type { Position } from '../../../types.ts'
 import { GameEvent } from '../../events.ts'
 import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponRapidFireInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponRapidFireInput.ts'
+import { MatterType, MatterTypeValues } from '../../Matter/_Matter-types.ts'
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
 import { tilesToRadius } from '../../Projectiles/projectile-radius'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
-import { MatterType, MatterTypeValues } from '../../Matter/_Matter-types.ts'
 import { FireMode, FireModeValues } from '../_FireMode-types'
 
 const MIN_CHARGE = 10
@@ -24,7 +23,7 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
 
   private targetPos: Position
   private fireMode: PlayerFireModeState
-  rateOfFireMs = 50
+  rateOfFireMs = 100
 
   constructor(
     public scene: GameLevel,
@@ -37,8 +36,8 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     this.renderer.setColor(FIRE_MODE_COLORS[this.fireMode.value()])
 
     const a = this.scene.playerActions
-    this.binder.addInputHoldRepeat(a.CHARGE_DECREASE, () => this.decreaseCharge())
-    this.binder.addInputHoldRepeat(a.CHARGE_INCREASE, () => this.increaseCharge())
+    this.binder.addInputHoldRepeat(a.CHARGE_DECREASE, () => this.adjustCharge(-100))
+    this.binder.addInputHoldRepeat(a.CHARGE_INCREASE, () => this.adjustCharge(100))
     this.binder.addInput(() => [
       a.PREV_FIRE_MODE.onDown(() => {
         this.fireMode.prev()
@@ -81,15 +80,16 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     this.clampCharge()
   }
 
-  increaseCharge(): void {
-    const changed = this.setCharge(this.charge + 100)
-    if (!changed) {
-      this.scene.EVENTS.emit(GameEvent.MESSAGE, 'Max Available in Matter Tank')
-    }
+  onMouseWheel(deltaY: number): boolean {
+    this.adjustCharge(Math.round(deltaY * 10))
+    return true
   }
 
-  decreaseCharge(): void {
-    this.setCharge(this.charge - 100)
+  adjustCharge(value: number): void {
+    const changed = this.setCharge(this.charge + value)
+    if (value > 0 && !changed) {
+      this.scene.EVENTS.emit(GameEvent.MESSAGE, 'Max Available in Matter Tank')
+    }
   }
 
   getSuffix(): string {
