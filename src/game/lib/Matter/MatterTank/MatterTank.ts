@@ -8,6 +8,7 @@ export class MatterTank {
 
   constructor(
     private manager: MatterManager,
+    readonly id: number,
     public matterMax = 5000,
     matter = 0,
     tweenFrom = 0,

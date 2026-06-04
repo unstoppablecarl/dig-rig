@@ -3,9 +3,10 @@ import { MatterTank } from './MatterTank.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 
 export class MatterManager extends SceneBound {
-  public matterTanks = new Set<MatterTank>
+  public matterTanks = new Map<number, MatterTank>
   public playerMatterTank: MatterTank
 
+  protected idIncrement = 1
   constructor(
     public scene: GameLevel,
   ) {
@@ -19,6 +20,7 @@ export class MatterManager extends SceneBound {
   ) {
     this.playerMatterTank = new MatterTank(
       this,
+      0,
       matterMax,
       matter,
       tweenFrom,
@@ -32,13 +34,15 @@ export class MatterManager extends SceneBound {
     matter: number,
   ) {
 
+    let id = this.idIncrement++
     const tank = new MatterTank(
       this,
+      id,
       matterMax,
       matter,
     )
 
-    this.matterTanks.add(tank)
+    this.matterTanks.set(id, tank)
 
     return tank
   }
@@ -54,7 +58,7 @@ export class MatterManager extends SceneBound {
   enemiesMatter() {
     let sum = 0
 
-    for (const tank of this.matterTanks) {
+    for (const tank of this.matterTanks.values()) {
       sum += tank.matterContained()
     }
     return sum
@@ -65,12 +69,12 @@ export class MatterManager extends SceneBound {
   }
 
   remove(tank: MatterTank) {
-    this.matterTanks?.delete(tank)
+    this.matterTanks?.delete(tank.id)
   }
 
   protected onDestroy() {
     this.playerMatterTank?.destroy()
-    for (const tank of this.matterTanks) {
+    for (const tank of this.matterTanks.values()) {
       tank.destroy()
     }
     // @ts-expect-error: destroy
