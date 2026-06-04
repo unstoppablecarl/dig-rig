@@ -15,15 +15,11 @@ export class ParticlePixelRenderer {
     this.buf32.fill(0)
   }
 
-  drawCircle(x: number, y: number, radius: number, color: number, alpha = 1) {
+  drawCircle(x: number, y: number, radius: number, color: number) {
     const r = Math.max(1, Math.round(radius))
     const cx = Math.round(x)
     const cy = Math.round(y)
-    const R = (color >> 16) & 0xFF
-    const G = (color >> 8) & 0xFF
-    const B = color & 0xFF
-    const A = Math.round(alpha * 255)
-    const pixel32 = R | (G << 8) | (B << 16) | (A << 24)
+
     const { buf32, width, height } = this
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
@@ -31,7 +27,7 @@ export class ParticlePixelRenderer {
         const px = cx + dx
         const py = cy + dy
         if (px < 0 || px >= width || py < 0 || py >= height) continue
-        buf32[py * width + px] = pixel32
+        buf32[py * width + px] = color
       }
     }
   }

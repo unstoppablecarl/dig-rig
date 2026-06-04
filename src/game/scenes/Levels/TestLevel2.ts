@@ -1,7 +1,7 @@
 import { PERMANENT, SOLID } from '../../lib/Matter/_Matter-types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
-import type { TilemapRendererConfig } from '../../lib/Tilemap/TilemapRenderer.ts'
+import type { TilemapRendererConfig } from '../../lib/Tilemap/TilemapRendererConfig'
 import { GameLevel } from '../GameLevel.ts'
 import terrain from './TestLevel2/TestLevel2.png'
 import CanvasTexture = Phaser.Textures.CanvasTexture

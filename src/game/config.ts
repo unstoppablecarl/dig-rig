@@ -10,6 +10,8 @@ export const PLAYER_MATTER_TANK_SIZE = 5000
 
 export const GLOW_ENABLED = true
 
+// debug
+export const DRAW_TERRAIN_SETTLED_DEBUG = false
 export const DRAW_PARTICLE_DEBUG = false
 export const DRAW_WORLD_BORDER_DEBUG = true
 export const AUTO_START_LEVEL_INDEX = 0
