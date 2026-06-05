@@ -1,12 +1,14 @@
-import type { Scene } from 'phaser'
+import type { UIState } from '../../../store/uiState.ts'
+import type { GameLevel } from '../GameLevel.ts'
 
 export interface LevelEntry {
   displayName: string
-  load: () => Promise<{ default: new () => Scene }>
+  load: () => Promise<{ default: new () => GameLevel }>
 }
 
-export interface LevelEntryWithId extends LevelEntry {
-  id: LevelId
+export interface LevelInit extends LevelEntry {
+  id: LevelId,
+  uiState: UIState
 }
 
 export type LevelId = keyof typeof LEVELS

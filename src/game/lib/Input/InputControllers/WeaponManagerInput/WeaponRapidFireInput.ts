@@ -21,13 +21,12 @@ export abstract class WeaponRapidFireInput extends InputController {
     if (this.coolDown > 0) return
 
     const a = this.scene.playerActions
-    const fireGroup = this.scene.playerWeaponManager.fireGroup
 
     let mode: FireMode
     if (a.FIRE_SECONDARY.isDown()) {
-      mode = fireGroup.secondary()
+      mode = this.scene.weaponUIState.fireGroupSecondary
     } else if (a.FIRE_PRIMARY.isDown()) {
-      mode = fireGroup.primary()
+      mode = this.scene.weaponUIState.fireGroupPrimary
     } else {
       this.coolDown = 0
       return

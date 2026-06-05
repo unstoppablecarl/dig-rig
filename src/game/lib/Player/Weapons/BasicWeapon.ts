@@ -8,33 +8,16 @@ import { FireMode } from '../_FireMode-types'
 import UPDATE = Scenes.Events.UPDATE
 
 export class BasicWeapon extends WeaponChargeInput implements ChargeableWeapon {
-  readonly displayName = 'Basic'
 
   private queued: Projectile | null = null
 
-  constructor(
-    public scene: GameLevel,
-    readonly slot: number,
-  ) {
+  constructor(scene: GameLevel) {
     super(scene)
     this.binder.add(scene.events, UPDATE, this.update, this)
   }
 
   getFireMode(): FireMode {
     return this.mode
-  }
-
-  uiStatusControls() {
-    const controls = '[LMB] = charge DESTROY | [RMB] = charge CREATE'
-    if (!this.isCharging) {
-      return controls
-    }
-    return [
-      `Mode: ${FireMode[this.mode]}`,
-      `Charge: ${this.getCharge()}`,
-      controls,
-    ]
-      .join(' | ')
   }
 
   private _pos: Position = { x: 0, y: 0 }

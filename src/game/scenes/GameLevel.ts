@@ -2,9 +2,13 @@ import { GameObjects, Geom, Input, Scene, Textures } from 'phaser'
 import { loadPixelSpriteSheets } from '../../assets/asset-loader.ts'
 import { PLAYER_SPRITE_SHEET_ASSETS } from '../../assets/player/player-sprite-sheet-assets.ts'
 import { INPUT_ACTIONS } from '../../input.ts'
+import { type BrushUIState, useBrushUIState } from '../../store/brushUIState.ts'
+import { type UIState, useUIState } from '../../store/uiState.ts'
+import { useWeaponUIState, type WeaponUIState } from '../../store/weaponUIState.ts'
 import { DRAW_WORLD_BORDER_DEBUG } from '../config.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
+import { GAME_LEVEL_LOADED } from '../lib/events.ts'
 import { WeaponManagerInput } from '../lib/Input/InputControllers/WeaponManagerInput.ts'
 import { InputManager } from '../lib/Input/InputManager.ts'
 import { makePlayerActions, type PlayerActions } from '../lib/Input/PlayerActions.ts'
@@ -20,7 +24,7 @@ import { CameraController } from '../lib/UI/CameraController.ts'
 import { VFXParticleManager } from '../lib/VFXParticles/VFXParticleManager.ts'
 import { BgScene } from './Layers/BgScene.ts'
 import { UIScene } from './Layers/UIScene.ts'
-import type { LevelEntryWithId, LevelId } from './Levels'
+import type { LevelId, LevelInit } from './Levels'
 import Group = GameObjects.Group
 import Layer = GameObjects.Layer
 import Rectangle = Geom.Rectangle
@@ -61,8 +65,14 @@ export abstract class GameLevel extends Scene {
   public playerActions: PlayerActions
   public terrainBlobParticleManager: TerrainBlobParticleManager
   public matterBridge: MatterBridge
+  public uiState: UIState
+  public weaponUIState: WeaponUIState
+  public brushUIState: BrushUIState
+
   public ui: UIScene
   protected id: LevelId
+
+  private nextFpsUpdate = 0
 
   protected makeTilemapRenderer(tilemap: Tilemap): TilemapRenderer {
     return new TilemapRenderer(this, this.getTerrainTexture(tilemap), this.tilemapRendererConfig())
@@ -96,9 +106,15 @@ export abstract class GameLevel extends Scene {
     }
   }
 
-  init(entry: LevelEntryWithId) {
+  init(entry: LevelInit) {
     this.id = entry.id
     this.displayName = entry.displayName
+    this.uiState = useUIState()
+    this.uiState.levelId = this.id
+
+    this.brushUIState = useBrushUIState()
+    this.weaponUIState = useWeaponUIState()
+
     this.ui = this.registerSubScene(UIScene)
     this.registerSubScene(BgScene)
 
@@ -168,11 +184,13 @@ export abstract class GameLevel extends Scene {
     this.terrainChunkBodyManager.trackAllDynamic()
 
     this.createUI()
+
+    this.game.events.emit(GAME_LEVEL_LOADED, this)
   }
 
   private createUI() {
     this.scene
-      .launch(UIScene.ID, { gameScene: this })
+      .launch(UIScene.ID, { gameScene: this, levelId: this.id })
       .bringToTop(UIScene.ID)
       .launch(BgScene.ID, { gameScene: this })
       .sendToBack(BgScene.ID)
@@ -226,8 +244,13 @@ export abstract class GameLevel extends Scene {
     }
   }
 
-  update(_time: number, delta: number) {
+  update(time: number, delta: number) {
     const dt = getDeltaT(delta)
+
+    if (time > this.nextFpsUpdate) {
+      this.uiState.fps = Math.floor(this.game.loop.actualFps)
+      this.nextFpsUpdate = time + 500
+    }
 
     this.matterBridge.update()
     this.cameraController.update()

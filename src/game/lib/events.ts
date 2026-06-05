@@ -1,12 +1,12 @@
-import type { Weapon } from './Input/InputControllers/WeaponManagerInput.ts'
+// usage: game.events.on(GAME_LEVEL_LOADED, (scene: GameLevel) => {})
+export const GAME_LEVEL_LOADED = 'GAME_LEVEL_LOADED' as const
 
+// usage: scene.EVENTS.on(GameEvent.*, () => {})
 export enum GameEvent {
-  UI_WEAPON_UPDATE = 'UI_WEAPON_UPDATE',
   MESSAGE = 'MESSAGE',
 }
 
 export interface EventMap {
-  [GameEvent.UI_WEAPON_UPDATE]: [Weapon]
   [GameEvent.MESSAGE]: [string]
 }
 

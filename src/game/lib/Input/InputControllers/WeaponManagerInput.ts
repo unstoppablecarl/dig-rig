@@ -1,21 +1,14 @@
 import { Input } from 'phaser'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
+import { GAME_LEVEL_LOADED } from '../../events.ts'
 import { FireMode } from '../../Player/_FireMode-types'
-import { PlayerFireGroupState } from '../../Player/PlayerFireGroupState.ts'
-import { BasicWeapon } from '../../Player/Weapons/BasicWeapon.ts'
-import { BurstWeapon } from '../../Player/Weapons/BurstWeapon.ts'
-import { InstantWeapon } from '../../Player/Weapons/InstantWeapon.ts'
-import { RapidWeapon } from '../../Player/Weapons/RapidWeapon.ts'
-import { TorchWeapon } from '../../Player/Weapons/TorchWeapon.ts'
-import { TunnelWeapon } from '../../Player/Weapons/TunnelWeapon.ts'
+import { SLOT_TO_WEAPON, WEAPONS, type WeaponSlot } from '../../Player/weapons.ts'
 import { InputController } from './InputController.ts'
 import ANY_KEY_DOWN = Input.Keyboard.Events.ANY_KEY_DOWN
 
 export interface Weapon {
   setEnabled(value: boolean): void
   enabled: boolean
-  readonly displayName: string
-  readonly slot: number
   destroy(): void
   onMouseWheel?(deltaY: number): boolean
   uiStatusControls?(): string
@@ -27,42 +20,35 @@ export interface ChargeableWeapon extends Weapon {
 }
 
 export class WeaponManagerInput extends InputController {
-  private readonly weapons = new Map<number, Weapon | ChargeableWeapon>()
+  private readonly weapons = new Map<WeaponSlot, Weapon | ChargeableWeapon>()
 
   private _active: Weapon | ChargeableWeapon
-  fireGroup: PlayerFireGroupState
 
   constructor(scene: GameLevel) {
     super(scene)
 
-    this.fireGroup = new PlayerFireGroupState()
     this.addEvent(this.scene.input.keyboard!, ANY_KEY_DOWN, this.keydown)
 
-    const weapons = [
-      BasicWeapon,
-      BurstWeapon,
-      RapidWeapon,
-      TorchWeapon,
-      TunnelWeapon,
-      InstantWeapon,
-    ]
-
-    for (const [index, Def] of weapons.entries()) {
-      const slot = index + 1
-      this.weapons.set(slot, new Def(scene, slot))
+    for (const item of Object.values(WEAPONS)) {
+      this.weapons.set(item.slot, new item.constructor(scene))
     }
 
     this._active = this.weapons.get(1) as Weapon
+
+    this.addEvent(this.scene.game.events, GAME_LEVEL_LOADED, () => {
+      this.setActive(this.scene.weaponUIState.slot)
+      if(!this._active){
+        debugger
+      }
+    })
   }
 
   protected onEnable() {
     this._active.setEnabled(true)
-    this.scene.ui.weapon?.setWeapon(this._active)
   }
 
   protected onDisable() {
     this._active.setEnabled(false)
-    this.scene.ui.weapon?.clear()
   }
 
   onMouseWheel(deltaY: number): boolean {
@@ -70,7 +56,7 @@ export class WeaponManagerInput extends InputController {
   }
 
   keydown(event: KeyboardEvent) {
-    const key = parseInt(event.key, 10)
+    const key = parseInt(event.key, 10) as WeaponSlot
     if (Number.isNaN(key)) return
 
     if (this.weapons.has(key)) {
@@ -78,19 +64,14 @@ export class WeaponManagerInput extends InputController {
     }
   }
 
-  private setActive(slot: number) {
+  private setActive(slot: WeaponSlot) {
     if (!this.enabled) return
     this._active.setEnabled(false)
 
-    const weapon = this.weapons.get(slot) as Weapon
+    const weapon = this.weapons.get(slot)!
     weapon.setEnabled(true)
     this._active = weapon
-
-    this.scene.ui.weapon.setWeapon(weapon)
-  }
-
-  activeWeaponSlot(): number {
-    return this._active.slot
+    this.scene.weaponUIState.id = SLOT_TO_WEAPON[slot].id
   }
 
   activeWeapon(): Weapon | ChargeableWeapon {

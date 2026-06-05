@@ -1,5 +1,6 @@
 import { Input } from 'phaser'
 import { SceneBound } from '../../helpers/SceneBound.ts'
+import { InputTypes } from './_input.types.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { BrushInput } from './InputControllers/BrushInput.ts'
 import { FireGroupInput } from './InputControllers/FireGroupInput.ts'
@@ -7,15 +8,10 @@ import type { InputController } from './InputControllers/InputController.ts'
 import { ZoomInput } from './InputControllers/ZoomInput.ts'
 import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
 
-export enum InputMode {
-  WEAPON,
-  BRUSH
-}
-
 export class InputManager extends SceneBound {
-  private modeControllers: Record<InputMode, InputController[]>
+  private modeControllers: Record<InputTypes, InputController[]>
   private readonly zoomInput: ZoomInput
-  private mode: InputMode
+  private mode: InputTypes
   brushInput: BrushInput
 
   constructor(
@@ -29,18 +25,18 @@ export class InputManager extends SceneBound {
     const playerWeaponManager = scene.playerWeaponManager
 
     this.modeControllers = {
-      [InputMode.WEAPON]: [
+      [InputTypes.WEAPON]: [
         playerWeaponManager,
         fireGroupInput,
       ],
-      [InputMode.BRUSH]: [
+      [InputTypes.BRUSH]: [
         brushInput,
       ],
     }
 
     scene.input.on(GAMEOBJECT_POINTER_WHEEL, this.handleMouseWheel, this)
 
-    this.setMode(InputMode.WEAPON)
+    this.setMode(scene.uiState.inputMode)
 
     // prevent default browser actions for arrow keys and space
     scene.input.keyboard!.addCapture([
@@ -66,13 +62,14 @@ export class InputManager extends SceneBound {
     return this.mode
   }
 
-  setMode(mode: InputMode) {
+  setMode(mode: InputTypes) {
     if (this.mode === mode) return
     if (this.mode !== undefined) {
       for (const c of this.modeControllers[this.mode]) c.setInputEnabled(false)
     }
     this.mode = mode
     for (const c of this.modeControllers[mode]) c.setInputEnabled(true)
+    this.scene.uiState.inputMode = this.mode
   }
 
   protected onDestroy() {

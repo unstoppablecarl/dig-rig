@@ -1,4 +1,5 @@
 import { defineConfig, mergeConfig } from 'vite';
+import vue from '@vitejs/plugin-vue'
 
 const phasermsg = () => {
   return {
@@ -21,6 +22,9 @@ const baseConfig = {
       },
     },
   },
+  plugins: [
+    vue(),
+  ],
   css: {
     preprocessorOptions: {
       scss: {
@@ -42,8 +46,7 @@ export default defineConfig(
   mergeConfig(baseConfig, {
     logLevel: 'warning',
     build: {
-      minify: false,
-      // minify: 'terser',
+      minify: 'terser',
       terserOptions: {
         compress: {
           passes: 2,

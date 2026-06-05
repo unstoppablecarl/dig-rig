@@ -25,8 +25,6 @@ const TILE_SAFE_RSQ = TILE_SAFE_RADIUS * TILE_SAFE_RADIUS
 const MAX_RESTORE_PARTICLES = 40
 
 export class TunnelWeapon extends WeaponConstantInput implements Weapon {
-  readonly displayName = 'Tunnel'
-
   private projectileDestroy: TunnelDestroyProjectile | null = null
   readonly matterTank: MatterTank
 
@@ -35,10 +33,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   private _commitOut: ProjectileEffectResult[] = []
   private _emitPos: Position = { x: 0, y: 0 }
 
-  constructor(
-    public scene: GameLevel,
-    readonly slot: number,
-  ) {
+  constructor(scene: GameLevel) {
     super(scene)
     this.matterTank = new MatterTank(scene.matterManager, TunnelDestroyProjectile.MAX_TILES_TO_MOD * 5)
     // Registered directly so restore runs every frame regardless of active weapon / firing state.

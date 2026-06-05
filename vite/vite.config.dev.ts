@@ -1,9 +1,10 @@
 import { defineConfig, mergeConfig } from 'vite';
-import { baseConfig } from './config.prod.mjs';
+import { baseConfig } from './vite.config.prod.js';
 
 export default defineConfig(
   mergeConfig(baseConfig, {
-    plugins: [],
+    plugins: [
+    ],
     server: {
       headers: {
         'Cross-Origin-Opener-Policy': 'same-origin',

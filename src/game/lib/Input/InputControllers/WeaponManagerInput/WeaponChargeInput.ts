@@ -29,12 +29,10 @@ export abstract class WeaponChargeInput extends InputController {
       a.FIRE_PRIMARY.onDown(() => {
         this.isCharging = true
         this.mode = FireMode.DESTROY
-        this.scene.ui.weapon.notifyChanged()
       }),
       a.FIRE_SECONDARY.onDown(() => {
         this.isCharging = true
         this.mode = FireMode.CREATE
-        this.scene.ui.weapon.notifyChanged()
       }),
       a.FIRE_PRIMARY.onUp(stopCharging),
       a.FIRE_SECONDARY.onUp(stopCharging),
@@ -69,7 +67,7 @@ export abstract class WeaponChargeInput extends InputController {
     const dt = getDeltaT(delta)
     this.charge = Math.min(this.charge + Math.floor(this.chargeRate * dt), maxCharge)
     this.getQueuedProjectile(this.mode).setTilesToModify(this.charge)
-    this.scene.ui.weapon.notifyChanged()
+    this.scene.weaponUIState.charge = this.charge
   }
 
   getMaxCharge(): number {

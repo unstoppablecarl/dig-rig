@@ -1,6 +1,5 @@
 import { FIRE_MODE_COLORS } from '../../../config/colors.ts'
 import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
-import { INPUT_ACTIONS } from '../../../../input.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import { GameEvent } from '../../events.ts'
@@ -16,8 +15,6 @@ const MIN_CHARGE = 10
 const COLLISION_TYPES = new Set(MatterTypeValues.filter(v => v !== MatterType.EMPTY))
 
 export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
-  readonly displayName = 'Instant'
-
   private renderer: ProjectileRenderer
 
   private charge: number = -1
@@ -26,10 +23,7 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
   private fireMode: PlayerFireModeState
   rateOfFireMs = 100
 
-  constructor(
-    public scene: GameLevel,
-    readonly slot: number,
-  ) {
+  constructor(scene: GameLevel) {
     super(scene)
     this.fireMode = new PlayerFireModeState()
 
@@ -56,20 +50,9 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     this.scene.projectiles.fireForPlayer(InstantProjectile, available, this.fireMode.value(), 0, this.targetPos, 0, null)
   }
 
-  uiStatusControls() {
-    const prev = INPUT_ACTIONS.PREV_FIRE_MODE.join(',')
-    const next = INPUT_ACTIONS.NEXT_FIRE_MODE.join(',')
-    const sub = INPUT_ACTIONS.CHARGE_DECREASE.join(',')
-    const add = INPUT_ACTIONS.CHARGE_INCREASE.join(',')
-    return [
-      `Mode: ${FireMode[this.fireMode.value()]} [${prev}] / [${next}] = prev / next`,
-      `Charge: ${this.charge} [Mouse Wheel] & [${sub}] / [${add}] = -/+`,
-    ].join(' | ')
-  }
-
   onFireModeChange(): void {
     this.renderer.setColor(FIRE_MODE_COLORS[this.fireMode.value()])
-    this.scene.ui.weapon.notifyChanged()
+    this.scene.weaponUIState.fireMode = this.fireMode.value()
   }
 
   setEnabled(value: boolean) {
@@ -116,7 +99,7 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     const radius = tilesToRadius(charge)
     this.renderer.setRadius(radius)
 
-    this.scene.ui.weapon.notifyChanged()
+    this.scene.weaponUIState.charge = this.charge
 
     return true
   }

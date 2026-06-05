@@ -20,15 +20,12 @@ export class BrushInput extends InputController {
   private brushDirty = true
   private _effectTiles: ProjectileEffectResult[] = []
 
-  private _element: MatterType = MatterType.SOLID
-
   get element(): MatterType {
-    return this._element
+    return this.scene?.brushUIState?.matterType ?? MatterType.SOLID
   }
 
   set element(value: MatterType) {
-    this._element = value
-    this.scene.ui.brush?.setMatterType(value)
+    this.scene.brushUIState.matterType = value
   }
 
   constructor(
@@ -48,13 +45,10 @@ export class BrushInput extends InputController {
 
   protected onEnable() {
     this.graphics.setActive(true).setVisible(true)
-    this.scene.ui.brush?.setRadius(this.radius)
-    this.scene.ui.brush?.setMatterType(this._element)
   }
 
   protected onDisable() {
     this.graphics.setActive(false).setVisible(false)
-    this.scene.ui.brush?.clear()
   }
 
   pointermove(pointer: Pointer) {
@@ -85,7 +79,8 @@ export class BrushInput extends InputController {
       this.radius = Math.min(this.maxRadius, this.radius + 1)
     }
     this.brushDirty = true
-    this.scene.ui.brush?.setRadius(this.radius)
+    this.scene.brushUIState.radius = this.radius
+
     return true
   }
 
@@ -93,7 +88,7 @@ export class BrushInput extends InputController {
     if (!this.brushDirty) return
     this.brushDirty = false
     this.graphics.clear()
-    this.graphics.lineStyle(4, 0xffff00, 1)
+    this.graphics.lineStyle(2, 0xffff00, 1)
     this.graphics.strokeCircle(this.mouseX, this.mouseY, this.radius)
   }
 

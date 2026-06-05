@@ -1,6 +1,6 @@
-import type { Scene } from 'phaser'
-import DESTROY = Phaser.Scenes.Events.DESTROY
-import SHUTDOWN = Phaser.Scenes.Events.SHUTDOWN
+import { Scenes, type Scene } from 'phaser'
+import DESTROY = Scenes.Events.DESTROY
+import SHUTDOWN = Scenes.Events.SHUTDOWN
 
 export class SceneBound<T extends Scene = Scene> {
   private _destroyed = false

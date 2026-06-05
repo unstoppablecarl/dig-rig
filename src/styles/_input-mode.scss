@@ -18,12 +18,13 @@ $padding: 8px 10px;
   flex-direction: row;
   align-items: stretch;
   white-space: nowrap;
+  font-size: 12px;
 }
 
 .imu-header {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 10px;
   padding: $padding;
   strong {
     color: rgba(255, 255, 255, 0.9);
@@ -31,7 +32,6 @@ $padding: 8px 10px;
 }
 
 .imu-label {
-  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -45,6 +45,7 @@ $padding: 8px 10px;
 .imu-section {
   display: flex;
   align-items: center;
+  gap: 5px;
   padding: $padding;
   border-left: 1px solid rgba(255, 255, 255, 0.25);
   color: rgba(255, 255, 255, 0.45);
@@ -52,13 +53,12 @@ $padding: 8px 10px;
   kbd {
     display: inline-block;
     padding: 0 4px;
-    margin: 0 5px;
     font-family: monospace;
     font-size: 10px;
     line-height: 15px;
     color: rgba(255, 255, 255, 0.8);
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-bottom-width: 2px;
     border-radius: 3px;
   }

@@ -1,0 +1,34 @@
+<script setup lang="ts">
+import type { Component } from 'vue'
+import { InputTypes } from '../game/lib/Input/_input.types.ts'
+import { PlayerWeapon } from '../game/lib/Player/weapons.ts'
+import { useUIState } from '../store/uiState.ts'
+import { useWeaponUIState } from '../store/weaponUIState.ts'
+import BrushInputMode from './InputMode/BrushInputMode.vue'
+import BasicWeaponComp from './InputMode/WeaponInputMode/BasicWeapon.vue'
+import BurstOrRapidWeaponComp from './InputMode/WeaponInputMode/BurstOrRapidWeapon.vue'
+import InstantWeaponComp from './InputMode/WeaponInputMode/InstantWeapon.vue'
+import TorchWeaponComp from './InputMode/WeaponInputMode/TorchWeapon.vue'
+import TunnelWeaponComp from './InputMode/WeaponInputMode/TunnelWeapon.vue'
+import WeaponInputMode from './InputMode/WeaponInputMode.vue'
+
+const WEAPON_COMPONENTS: Record<PlayerWeapon, Component> = {
+  [PlayerWeapon.BASIC]: BasicWeaponComp,
+  [PlayerWeapon.BURST]: BurstOrRapidWeaponComp,
+  [PlayerWeapon.RAPID]: BurstOrRapidWeaponComp,
+  [PlayerWeapon.INSTANT]: InstantWeaponComp,
+  [PlayerWeapon.TORCH]: TorchWeaponComp,
+  [PlayerWeapon.TUNNEL]: TunnelWeaponComp,
+}
+
+const uiState = useUIState()
+const weaponUIState = useWeaponUIState()
+</script>
+<template>
+  <div id="current-input-mode-text">
+    <WeaponInputMode v-if="uiState.inputMode === InputTypes.WEAPON">
+      <component :is="WEAPON_COMPONENTS[weaponUIState.id]" />
+    </WeaponInputMode>
+    <BrushInputMode v-else-if="uiState.inputMode === InputTypes.BRUSH" />
+  </div>
+</template>
