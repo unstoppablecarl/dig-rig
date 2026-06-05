@@ -1,4 +1,4 @@
-export enum InputTypes {
+export enum InputMode {
   WEAPON,
   BRUSH,
 }

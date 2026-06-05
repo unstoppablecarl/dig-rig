@@ -1,14 +1,14 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, ref } from 'vue'
-import { InputTypes } from '../game/lib/Input/_input.types.ts'
+import { InputMode } from '../game/lib/Input/_input.types.ts'
 import { type LevelId, LEVELS } from '../game/scenes/Levels'
 
 export type UIState = ReturnType<typeof useUIState>
 
 type SerializedData = {
   levelId: LevelId,
-  inputMode: InputTypes,
+  inputMode: InputMode,
 }
 
 let DEFAULT_LEVEL_ID = Object.keys(LEVELS)[0] as LevelId
@@ -22,7 +22,7 @@ export const useUIState = defineStore('ui-state', () => {
     return LEVELS[levelId.value].displayName
   })
 
-  const inputMode = ref<InputTypes>(InputTypes.WEAPON)
+  const inputMode = ref<InputMode>(InputMode.WEAPON)
 
   const state = {
     levelId,

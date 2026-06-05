@@ -1,7 +1,7 @@
 import * as EssentialsPlugin from '@tweakpane/plugin-essentials'
 import { Pane } from 'tweakpane'
 import { launchLevel } from './launcher.ts'
-import { InputTypes } from './lib/Input/_input.types.ts'
+import { InputMode } from './lib/Input/_input.types.ts'
 import { ELEMENT_NAMES } from './lib/Matter/elements.ts'
 import type { GameLevel } from './scenes/GameLevel.ts'
 import { type LevelEntry, type LevelId, LEVELS } from './scenes/Levels'
@@ -171,13 +171,13 @@ export function makeGUI(game: GameLevel) {
   playerFolder.addBinding(player.isTouching, 'ground', { readonly: true })
 
   const brushFolder = pane.addFolder({ title: 'Brush' })
-  const getBrushBtnLabel = () => (game.inputManager.inputMode === InputTypes.BRUSH ? 'Disable' : 'Enable') + ' Brush'
+  const getBrushBtnLabel = () => (game.inputManager.inputMode === InputMode.BRUSH ? 'Disable' : 'Enable') + ' Brush'
   const brushToggle = brushFolder.addButton({ title: getBrushBtnLabel() })
     .on('click', () => {
-      if (game.inputManager.inputMode === InputTypes.BRUSH) {
-        game.inputManager.setMode(InputTypes.WEAPON)
+      if (game.inputManager.inputMode === InputMode.BRUSH) {
+        game.inputManager.setMode(InputMode.WEAPON)
       } else {
-        game.inputManager.setMode(InputTypes.BRUSH)
+        game.inputManager.setMode(InputMode.BRUSH)
       }
 
       brushToggle.title = getBrushBtnLabel()

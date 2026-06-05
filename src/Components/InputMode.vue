@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
-import { InputTypes } from '../game/lib/Input/_input.types.ts'
+import { InputMode } from '../game/lib/Input/_input.types.ts'
 import { PlayerWeapon } from '../game/lib/Player/weapons.ts'
 import { useUIState } from '../store/uiState.ts'
 import { useWeaponUIState } from '../store/weaponUIState.ts'
@@ -26,9 +26,9 @@ const weaponUIState = useWeaponUIState()
 </script>
 <template>
   <div id="current-input-mode-text">
-    <WeaponInputMode v-if="uiState.inputMode === InputTypes.WEAPON">
+    <WeaponInputMode v-if="uiState.inputMode === InputMode.WEAPON">
       <component :is="WEAPON_COMPONENTS[weaponUIState.id]" />
     </WeaponInputMode>
-    <BrushInputMode v-else-if="uiState.inputMode === InputTypes.BRUSH" />
+    <BrushInputMode v-else-if="uiState.inputMode === InputMode.BRUSH" />
   </div>
 </template>

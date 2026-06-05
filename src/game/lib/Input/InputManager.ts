@@ -1,6 +1,6 @@
 import { Input } from 'phaser'
 import { SceneBound } from '../../helpers/SceneBound.ts'
-import { InputTypes } from './_input.types.ts'
+import { InputMode } from './_input.types.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { BrushInput } from './InputControllers/BrushInput.ts'
 import { FireGroupInput } from './InputControllers/FireGroupInput.ts'
@@ -9,9 +9,9 @@ import { ZoomInput } from './InputControllers/ZoomInput.ts'
 import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
 
 export class InputManager extends SceneBound {
-  private modeControllers: Record<InputTypes, InputController[]>
+  private modeControllers: Record<InputMode, InputController[]>
   private readonly zoomInput: ZoomInput
-  private mode: InputTypes
+  private mode: InputMode
   brushInput: BrushInput
 
   constructor(
@@ -25,11 +25,11 @@ export class InputManager extends SceneBound {
     const playerWeaponManager = scene.playerWeaponManager
 
     this.modeControllers = {
-      [InputTypes.WEAPON]: [
+      [InputMode.WEAPON]: [
         playerWeaponManager,
         fireGroupInput,
       ],
-      [InputTypes.BRUSH]: [
+      [InputMode.BRUSH]: [
         brushInput,
       ],
     }
@@ -62,7 +62,7 @@ export class InputManager extends SceneBound {
     return this.mode
   }
 
-  setMode(mode: InputTypes) {
+  setMode(mode: InputMode) {
     if (this.mode === mode) return
     if (this.mode !== undefined) {
       for (const c of this.modeControllers[this.mode]) c.setInputEnabled(false)
