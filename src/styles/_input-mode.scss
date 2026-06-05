@@ -1,0 +1,65 @@
+$padding: 8px 10px;
+
+#current-input-mode-text {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  padding: 0 2px;
+  background: rgba(0, 0, 0, 0.88);
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  border-right: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 0 6px 0 0;
+  min-width: 200px;
+  color: rgba(255, 255, 255, 0.77);
+}
+
+.imu {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  white-space: nowrap;
+}
+
+.imu-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: $padding;
+  strong {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.imu-label {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.imu-slot {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.imu-section {
+  display: flex;
+  align-items: center;
+  padding: $padding;
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.45);
+
+  kbd {
+    display: inline-block;
+    padding: 0 4px;
+    margin: 0 5px;
+    font-family: monospace;
+    font-size: 10px;
+    line-height: 15px;
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-bottom-width: 2px;
+    border-radius: 3px;
+  }
+}

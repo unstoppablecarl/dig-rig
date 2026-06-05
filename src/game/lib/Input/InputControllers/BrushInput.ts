@@ -20,7 +20,16 @@ export class BrushInput extends InputController {
   private brushDirty = true
   private _effectTiles: ProjectileEffectResult[] = []
 
-  public element: MatterType = MatterType.SOLID
+  private _element: MatterType = MatterType.SOLID
+
+  get element(): MatterType {
+    return this._element
+  }
+
+  set element(value: MatterType) {
+    this._element = value
+    this.scene.ui.brush?.setMatterType(value)
+  }
 
   constructor(
     public scene: GameLevel,
@@ -39,10 +48,13 @@ export class BrushInput extends InputController {
 
   protected onEnable() {
     this.graphics.setActive(true).setVisible(true)
+    this.scene.ui.brush?.setRadius(this.radius)
+    this.scene.ui.brush?.setMatterType(this._element)
   }
 
   protected onDisable() {
     this.graphics.setActive(false).setVisible(false)
+    this.scene.ui.brush?.clear()
   }
 
   pointermove(pointer: Pointer) {
@@ -73,6 +85,7 @@ export class BrushInput extends InputController {
       this.radius = Math.min(this.maxRadius, this.radius + 1)
     }
     this.brushDirty = true
+    this.scene.ui.brush?.setRadius(this.radius)
     return true
   }
 

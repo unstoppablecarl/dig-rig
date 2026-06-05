@@ -1,5 +1,5 @@
-import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
+import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponConstantInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponConstantInput.ts'
@@ -16,6 +16,11 @@ export class TorchWeapon extends WeaponConstantInput implements Weapon {
     readonly slot: number,
   ) {
     super(scene)
+  }
+
+  uiStatusControls() {
+    const group = this.scene.playerWeaponManager.fireGroup
+    return `[LMB]: ${FireMode[group.primary()]} | [RMB]: ${FireMode[group.secondary()]}`
   }
 
   private _pos: Position = { x: 0, y: 0 }

@@ -19,10 +19,12 @@ export abstract class WeaponConstantInput extends InputController {
       a.FIRE_PRIMARY.onDown(() => {
         this.firing = true
         this.mode = this.getPrimary()
+        this.scene.ui.weapon.notifyChanged()
       }),
       a.FIRE_SECONDARY.onDown(() => {
         this.firing = true
         this.mode = this.getSecondary()
+        this.scene.ui.weapon.notifyChanged()
       }),
       a.FIRE_PRIMARY.onUp(() => {
         this.firing = false
@@ -39,6 +41,10 @@ export abstract class WeaponConstantInput extends InputController {
 
   protected getSecondary(): FireMode {
     return this.scene.playerWeaponManager.fireGroup.secondary()
+  }
+
+  getFireMode(): FireMode {
+    return this.mode
   }
 
   setEnabled(value: boolean) {

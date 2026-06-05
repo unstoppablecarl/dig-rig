@@ -1,3 +1,4 @@
+import { INPUT_ACTIONS } from '../../../../input.ts'
 import { throttle } from '../../../helpers/_helpers.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
@@ -25,6 +26,13 @@ export class BurstWeapon extends WeaponSingleFireInput implements Weapon {
     this.fire = throttle((mode: FireMode) => {
       this.fireBurst(mode)
     }, THROTTLE_MS)
+  }
+
+  uiStatusControls() {
+    const group = this.scene.playerWeaponManager.fireGroup
+    const prev = INPUT_ACTIONS.PREV_FIRE_MODE.join(',')
+    const next = INPUT_ACTIONS.NEXT_FIRE_MODE.join(',')
+    return `Group: ${FireMode[group.primary()]} / ${FireMode[group.secondary()]} [${prev}] / [${next}] = cycle`
   }
 
   fireBurst(mode: FireMode) {

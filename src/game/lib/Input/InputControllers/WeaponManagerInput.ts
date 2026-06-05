@@ -1,6 +1,5 @@
 import { Input } from 'phaser'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { GameEvent } from '../../events.ts'
 import { FireMode } from '../../Player/_FireMode-types'
 import { PlayerFireGroupState } from '../../Player/PlayerFireGroupState.ts'
 import { BasicWeapon } from '../../Player/Weapons/BasicWeapon.ts'
@@ -19,7 +18,7 @@ export interface Weapon {
   readonly slot: number
   destroy(): void
   onMouseWheel?(deltaY: number): boolean
-  getSuffix?: () => string
+  uiStatusControls?(): string
 }
 
 export interface ChargeableWeapon extends Weapon {
@@ -58,10 +57,12 @@ export class WeaponManagerInput extends InputController {
 
   protected onEnable() {
     this._active.setEnabled(true)
+    this.scene.ui.weapon?.setWeapon(this._active)
   }
 
   protected onDisable() {
     this._active.setEnabled(false)
+    this.scene.ui.weapon?.clear()
   }
 
   onMouseWheel(deltaY: number): boolean {
@@ -85,7 +86,7 @@ export class WeaponManagerInput extends InputController {
     weapon.setEnabled(true)
     this._active = weapon
 
-    this.scene.EVENTS.emit(GameEvent.UI_WEAPON_UPDATE, weapon)
+    this.scene.ui.weapon.setWeapon(weapon)
   }
 
   activeWeaponSlot(): number {

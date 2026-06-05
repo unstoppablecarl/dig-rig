@@ -8,8 +8,14 @@ export class FireGroupInput extends InputController {
 
     const a = this.scene.playerActions
     this.addInput(() => [
-      a.PREV_FIRE_MODE.onDown(() => scene.playerWeaponManager.fireGroup.prev()),
-      a.NEXT_FIRE_MODE.onDown(() => scene.playerWeaponManager.fireGroup.next()),
+      a.PREV_FIRE_MODE.onDown(() => {
+        scene.playerWeaponManager.fireGroup.prev()
+        scene.ui.weapon.notifyChanged()
+      }),
+      a.NEXT_FIRE_MODE.onDown(() => {
+        scene.playerWeaponManager.fireGroup.next()
+        scene.ui.weapon.notifyChanged()
+      }),
     ])
   }
 }

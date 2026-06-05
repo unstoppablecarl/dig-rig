@@ -1,3 +1,4 @@
+import { INPUT_ACTIONS } from '../../../../input.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
 import { WeaponRapidFireInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponRapidFireInput.ts'
@@ -17,6 +18,13 @@ export class RapidWeapon extends WeaponRapidFireInput implements Weapon {
     readonly slot: number,
   ) {
     super(scene)
+  }
+
+  uiStatusControls() {
+    const group = this.scene.playerWeaponManager.fireGroup
+    const prev = INPUT_ACTIONS.PREV_FIRE_MODE.join(',')
+    const next = INPUT_ACTIONS.NEXT_FIRE_MODE.join(',')
+    return `Group: ${FireMode[group.primary()]} / ${FireMode[group.secondary()]} [${prev}] / [${next}] = cycle`
   }
 
   fire(mode: FireMode) {
