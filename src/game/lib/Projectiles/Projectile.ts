@@ -38,10 +38,10 @@ export class Projectile extends BaseProjectile {
           const stepX = this.x + stepDx * i
           const stepY = this.y + stepDy * i
 
-        const collision = this.scene.tilemap.getTileFromWorld(
+          const collision = this.scene.tilemap.getTileFromWorld(
             stepX,
             stepY,
-        ) !== MatterType.EMPTY
+          ) !== MatterType.EMPTY
 
           if (collision) {
             this.x = stepX - stepDx

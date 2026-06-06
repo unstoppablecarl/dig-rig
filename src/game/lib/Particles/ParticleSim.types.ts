@@ -11,12 +11,12 @@ export enum ParticleWorkerOutMsg {
 
 export type ParticleWorkerInMessage =
   | {
-    type: ParticleWorkerInMsg.INIT
-    tilesSab: SharedArrayBuffer
-    pixelSab: SharedArrayBuffer
-    width: number
-    height: number
-  }
+  type: ParticleWorkerInMsg.INIT
+  tilesSab: SharedArrayBuffer
+  pixelSab: SharedArrayBuffer
+  width: number
+  height: number
+}
   | { type: ParticleWorkerInMsg.SPAWN; particleType: ParticleType; x: number; y: number }
 
 export type ParticleWorkerOutMessage =

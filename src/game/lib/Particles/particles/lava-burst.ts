@@ -2,7 +2,8 @@ import { LAVA_COLOR, ROCK_COLOR } from '../../../config/colors.ts'
 import { EIGHTEENTH_PI, HALF_PI, QUARTER_PI } from '../../../helpers/_helpers.ts'
 import {
   CHILLED_ICE,
-  CRYO, FIRE,
+  CRYO,
+  FIRE,
   ICE,
   LAVA,
   MatterType,

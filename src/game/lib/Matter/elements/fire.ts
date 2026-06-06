@@ -6,6 +6,7 @@ import {
   FIRE,
   FUSE,
   GUNPOWDER,
+  matterType,
   NAPALM,
   NITRO,
   OIL,
@@ -14,7 +15,6 @@ import {
   STEAM,
   THERMITE,
   WATER,
-  matterType,
   WAX,
 } from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'

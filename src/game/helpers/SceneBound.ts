@@ -1,4 +1,4 @@
-import { Scenes, type Scene } from 'phaser'
+import { type Scene, Scenes } from 'phaser'
 import DESTROY = Scenes.Events.DESTROY
 import SHUTDOWN = Scenes.Events.SHUTDOWN
 
@@ -26,5 +26,6 @@ export class SceneBound<T extends Scene = Scene> {
   }
 
   // Override this to release resources. this.scene is still set when called.
-  protected onDestroy(): void {}
+  protected onDestroy(): void {
+  }
 }

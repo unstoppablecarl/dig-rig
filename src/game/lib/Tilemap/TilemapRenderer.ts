@@ -36,7 +36,7 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean, debugSettled:
       uniform vec3 uGlowColor;
       uniform vec3 uOutlineColor;
       uniform float uOutlineOpacity;
-      
+
       uniform vec3 uPermanentTileColor;
       uniform vec3 uSandColor;
       uniform vec3 uSandSettledColor;

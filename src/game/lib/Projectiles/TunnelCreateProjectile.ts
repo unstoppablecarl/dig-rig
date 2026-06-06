@@ -1,7 +1,7 @@
 import { Time } from 'phaser'
+import { EMPTY } from '../Matter/_Matter-types.ts'
 
 import { FireMode } from '../Player/_FireMode-types'
-import { EMPTY } from '../Matter/_Matter-types.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
 import { BaseProjectile } from './BaseProjectile.ts'
 import TimerEvent = Time.TimerEvent

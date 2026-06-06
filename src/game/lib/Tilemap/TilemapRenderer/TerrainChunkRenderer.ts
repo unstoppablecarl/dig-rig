@@ -12,7 +12,7 @@ import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
 // Index = tile & TILE_STATE_MASK (type bits 0–7 + settled bit 8).
 const MASK_MAP = new Uint32Array(512)
 for (const type of MatterTypeValues) {
-  MASK_MAP[type]                = 0xFF000000 | type
+  MASK_MAP[type] = 0xFF000000 | type
   MASK_MAP[type | SETTLED_FLAG] = 0xFF000000 | (0xFF << 8) | type
 }
 

@@ -37,7 +37,7 @@ export class WeaponManagerInput extends InputController {
 
     this.addEvent(this.scene.game.events, GAME_LEVEL_LOADED, () => {
       this.setActive(this.scene.weaponUIState.slot)
-      if(!this._active){
+      if (!this._active) {
         debugger
       }
     })

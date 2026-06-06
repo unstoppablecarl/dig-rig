@@ -1,7 +1,7 @@
 import { Input } from 'phaser'
 import { SceneBound } from '../../helpers/SceneBound.ts'
-import { InputMode } from './_input.types.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { InputMode } from './_input.types.ts'
 import { BrushInput } from './InputControllers/BrushInput.ts'
 import { FireGroupInput } from './InputControllers/FireGroupInput.ts'
 import type { InputController } from './InputControllers/InputController.ts'

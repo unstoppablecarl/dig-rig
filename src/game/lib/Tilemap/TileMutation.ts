@@ -31,7 +31,6 @@ export function applyEffect(
   return out
 }
 
-
 function commitTiles(
   tilemap: Tilemap,
   tiles: ProjectileEffectResult[],

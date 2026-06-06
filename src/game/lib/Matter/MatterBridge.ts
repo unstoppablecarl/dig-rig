@@ -1,13 +1,17 @@
 import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { ParticleBridge } from '../Particles/ParticleBridge.ts'
 import { FireMode } from '../Player/_FireMode-types.ts'
 import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
 import { matterType, MatterType } from './_Matter-types.ts'
-import { MatterCoordinatorInMsg, MatterCoordinatorOutMsg, type TypedMatterCoordinatorWorker } from './MatterSim.types.ts'
-import { ParticleBridge } from '../Particles/ParticleBridge.ts'
 import MatterCoordinatorConstructor from './MatterCoordinator.worker.ts?worker'
+import {
+  MatterCoordinatorInMsg,
+  MatterCoordinatorOutMsg,
+  type TypedMatterCoordinatorWorker,
+} from './MatterSim.types.ts'
 
 export class MatterBridge extends SceneBound {
   private readonly worker: TypedMatterCoordinatorWorker

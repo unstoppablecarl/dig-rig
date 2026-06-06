@@ -5,12 +5,12 @@ import { PlayerWeapon } from '../game/lib/Player/weapons.ts'
 import { useUIState } from '../store/uiState.ts'
 import { useWeaponUIState } from '../store/weaponUIState.ts'
 import BrushInputMode from './InputMode/BrushInputMode.vue'
+import WeaponInputMode from './InputMode/WeaponInputMode.vue'
 import BasicWeaponComp from './InputMode/WeaponInputMode/BasicWeapon.vue'
 import BurstOrRapidWeaponComp from './InputMode/WeaponInputMode/BurstOrRapidWeapon.vue'
 import InstantWeaponComp from './InputMode/WeaponInputMode/InstantWeapon.vue'
 import TorchWeaponComp from './InputMode/WeaponInputMode/TorchWeapon.vue'
 import TunnelWeaponComp from './InputMode/WeaponInputMode/TunnelWeapon.vue'
-import WeaponInputMode from './InputMode/WeaponInputMode.vue'
 
 const WEAPON_COMPONENTS: Record<PlayerWeapon, Component> = {
   [PlayerWeapon.BASIC]: BasicWeaponComp,

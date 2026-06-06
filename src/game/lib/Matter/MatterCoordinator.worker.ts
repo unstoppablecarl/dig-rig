@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { MatterCoordinator } from './MatterCoordinator.ts'
-import { MatterCoordinatorInMsg, type MatterCoordinatorInMessage } from './MatterSim.types.ts'
+import { type MatterCoordinatorInMessage, MatterCoordinatorInMsg } from './MatterSim.types.ts'
 import MatterSimWorkerConstructor from './MatterSim.worker.ts?worker'
 
 declare let self: DedicatedWorkerGlobalScope & {

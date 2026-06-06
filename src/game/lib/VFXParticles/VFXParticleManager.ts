@@ -4,7 +4,7 @@ import { CREATE_COLOR_RGB, DESTROY_COLOR_RGB } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
-import { VFXMatterParticle, PARTICLE_SIZE } from './VFXMatterParticle.ts'
+import { PARTICLE_SIZE, VFXMatterParticle } from './VFXMatterParticle.ts'
 import Color = Display.Color
 import Graphics = GameObjects.Graphics
 import ParticleEmitter = GameObjects.Particles.ParticleEmitter
@@ -63,7 +63,7 @@ export class VFXParticleManager extends SceneBound {
     colorFrom: Color,
     colorTo: Color,
   ) {
-    if(MAX_MATTER_PARTICLES <= 0) return
+    if (MAX_MATTER_PARTICLES <= 0) return
     const particle = this.emitter.emitParticleAt(source.x, source.y, 1) as VFXMatterParticle
     particle?.init(target, staticTarget, colorFrom, colorTo)
   }

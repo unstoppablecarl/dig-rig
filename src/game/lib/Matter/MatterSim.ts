@@ -1,5 +1,16 @@
 import { random } from '../../helpers/random'
-import { EMPTY, FIRE, isSettled, MatterType, matterType, SAND, setSettled, type TypeMask, typeInMask, WATER } from './_Matter-types.ts'
+import {
+  EMPTY,
+  FIRE,
+  isSettled,
+  MatterType,
+  matterType,
+  SAND,
+  setSettled,
+  typeInMask,
+  type TypeMask,
+  WATER,
+} from './_Matter-types.ts'
 import { ELEMENT_ACTIONS, LIQUID_TYPES, SINKS_THROUGH } from './elements.ts'
 
 const MAX_FLOW = 8
@@ -364,9 +375,9 @@ export class MatterSim {
   surroundedBy(tx: number, ty: number, idx: number, type: MatterType): boolean {
     const { tiles, width, height } = this
     if (ty < height - 1 && matterType(tiles[idx + width]) !== type) return false
-    if (ty > 0           && matterType(tiles[idx - width]) !== type) return false
-    if (tx > 0           && matterType(tiles[idx - 1])     !== type) return false
-    if (tx < width - 1   && matterType(tiles[idx + 1])     !== type) return false
+    if (ty > 0 && matterType(tiles[idx - width]) !== type) return false
+    if (tx > 0 && matterType(tiles[idx - 1]) !== type) return false
+    if (tx < width - 1 && matterType(tiles[idx + 1]) !== type) return false
     return true
   }
 
@@ -374,9 +385,9 @@ export class MatterSim {
   surroundedByMask(tx: number, ty: number, idx: number, mask: TypeMask): boolean {
     const { tiles, width, height } = this
     if (ty < height - 1 && !typeInMask(mask, matterType(tiles[idx + width]))) return false
-    if (ty > 0           && !typeInMask(mask, matterType(tiles[idx - width]))) return false
-    if (tx > 0           && !typeInMask(mask, matterType(tiles[idx - 1]    ))) return false
-    if (tx < width - 1   && !typeInMask(mask, matterType(tiles[idx + 1]    ))) return false
+    if (ty > 0 && !typeInMask(mask, matterType(tiles[idx - width]))) return false
+    if (tx > 0 && !typeInMask(mask, matterType(tiles[idx - 1]))) return false
+    if (tx < width - 1 && !typeInMask(mask, matterType(tiles[idx + 1]))) return false
     return true
   }
 
@@ -388,17 +399,17 @@ export class MatterSim {
 
     if (!atBottom) {
       const b = idx + width
-      if (matterType(tiles[b])     !== type) return false
-      if (tx > 0           && matterType(tiles[b - 1]) !== type) return false
-      if (tx < width - 1   && matterType(tiles[b + 1]) !== type) return false
+      if (matterType(tiles[b]) !== type) return false
+      if (tx > 0 && matterType(tiles[b - 1]) !== type) return false
+      if (tx < width - 1 && matterType(tiles[b + 1]) !== type) return false
     }
-    if (tx > 0           && matterType(tiles[idx - 1]) !== type) return false
-    if (tx < width - 1   && matterType(tiles[idx + 1]) !== type) return false
+    if (tx > 0 && matterType(tiles[idx - 1]) !== type) return false
+    if (tx < width - 1 && matterType(tiles[idx + 1]) !== type) return false
     if (!atTop) {
       const a = idx - width
-      if (matterType(tiles[a])     !== type) return false
-      if (tx > 0           && matterType(tiles[a - 1]) !== type) return false
-      if (tx < width - 1   && matterType(tiles[a + 1]) !== type) return false
+      if (matterType(tiles[a]) !== type) return false
+      if (tx > 0 && matterType(tiles[a - 1]) !== type) return false
+      if (tx < width - 1 && matterType(tiles[a + 1]) !== type) return false
     }
     return true
   }

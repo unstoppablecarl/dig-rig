@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
+import { type PoolInMessage, PoolInMsg, type PoolOutMessage, PoolOutMsg } from './MatterCoordinator.types.ts'
 import { MatterSim } from './MatterSim.ts'
-import { PoolInMsg, PoolOutMsg, type PoolInMessage, type PoolOutMessage } from './MatterCoordinator.types.ts'
 import type { WorkerOutMessage } from './MatterSim.types.ts'
 
 declare function postMessage(msg: PoolOutMessage | WorkerOutMessage): void

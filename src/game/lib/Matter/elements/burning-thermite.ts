@@ -1,8 +1,19 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { BURNING_THERMITE, EMPTY, FIRE, LAVA, matterType, OIL, SALT_WATER, SOLID, THERMITE, WATER } from '../_Matter-types.ts'
-import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
+import {
+  BURNING_THERMITE,
+  EMPTY,
+  FIRE,
+  LAVA,
+  matterType,
+  OIL,
+  SALT_WATER,
+  SOLID,
+  THERMITE,
+  WATER,
+} from '../_Matter-types.ts'
 import type { ElementDef } from '../elements.ts'
+import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 export const BURNING_THERMITE_DEF: ElementDef = {
   name: 'Burning Thermite',
@@ -55,7 +66,12 @@ export const BURNING_THERMITE_DEF: ElementDef = {
 
     // Spawn charged particle occasionally
     if (random() < 2 && random() < 7) {
-      postMessage({ type: MatterCoordinatorOutMsg.SPAWN_PARTICLE, particleType: ParticleType.CHARGED_NITRO, x: tx, y: ty })
+      postMessage({
+        type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
+        particleType: ParticleType.CHARGED_NITRO,
+        x: tx,
+        y: ty,
+      })
       tiles[idx] = FIRE
       world.markDirty(tx, ty)
       next.add(idx)

@@ -4,11 +4,8 @@ import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
 import { FireMode } from '../Player/_FireMode-types'
 import { applyEffect } from '../Tilemap/TileMutation.ts'
+import type { ProjectileEffectDef, ProjectileEffectResult } from './ProjectileEffect/_ProjectileEffect.types.ts'
 import { EFFECT_BY_FIRE_MODE } from './ProjectileEffect/ProjectileEffect.ts'
-import type {
-  ProjectileEffectDef,
-  ProjectileEffectResult,
-} from './ProjectileEffect/_ProjectileEffect.types.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
 import { ProjectileRenderer } from './ProjectileRenderer.ts'
 

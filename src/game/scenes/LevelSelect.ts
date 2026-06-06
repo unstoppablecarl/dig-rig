@@ -1,6 +1,6 @@
 import { Input, Scene } from 'phaser'
-import { launchLevel } from '../launcher.ts'
 import { AUTO_START_LEVEL_INDEX } from '../config.ts'
+import { launchLevel } from '../launcher.ts'
 import { type LevelEntry, type LevelId, LEVELS } from './Levels'
 import POINTER_DOWN = Input.Events.POINTER_DOWN
 

@@ -1,11 +1,21 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import {
-  EMPTY, FIRE, LAVA, makeTypeMask,
-  matterType, OIL, ROCK, SALT_WATER, setSettled, SOLID, STEAM, WATER,
+  EMPTY,
+  FIRE,
+  LAVA,
+  makeTypeMask,
+  matterType,
+  OIL,
+  ROCK,
+  SALT_WATER,
+  setSettled,
+  SOLID,
+  STEAM,
+  WATER,
 } from '../_Matter-types.ts'
-import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 import { type ElementDef, LAVA_IMMUNE } from '../elements.ts'
+import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 const IS_SETTLED = makeTypeMask(LAVA, EMPTY)
 
@@ -34,7 +44,12 @@ export const LAVA_DEF: ElementDef = {
     // Spawn a lava burst particle and self-destruct when adjacent to oil
     if (random() < 4 && world.bordering(tx, ty, idx, OIL) !== -1) {
       if (random() < 35) {
-        postMessage({ type: MatterCoordinatorOutMsg.SPAWN_PARTICLE, particleType: ParticleType.LAVA_BURST, x: tx, y: ty })
+        postMessage({
+          type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
+          particleType: ParticleType.LAVA_BURST,
+          x: tx,
+          y: ty,
+        })
         tiles[idx] = EMPTY
         world.markDirty(tx, ty)
         world.reactivateAround(tx, ty, next)

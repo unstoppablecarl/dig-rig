@@ -14,7 +14,6 @@ const CHARGE = 10
 export class BurstWeapon extends WeaponSingleFireInput implements Weapon {
   public fire: (mode: FireMode) => void
 
-
   constructor(scene: GameLevel) {
     super(scene)
 

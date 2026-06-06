@@ -1,11 +1,11 @@
 /// <reference lib="webworker" />
 import { matterType, MatterType } from '../Matter/_Matter-types.ts'
 import type { ParticleType } from './_particle-types.ts'
-import { ParticleWorkerOutMsg } from './ParticleSim.types.ts'
 import type { Particle } from './Particle.ts'
 import { ParticlePixelRenderer } from './ParticlePixelRenderer.ts'
 import { ParticlePool } from './ParticlePool.ts'
 import { PARTICLE_DEFS } from './particles.ts'
+import { ParticleWorkerOutMsg } from './ParticleSim.types.ts'
 
 export class ParticleSim {
   tiles: Uint32Array

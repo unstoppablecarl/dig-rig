@@ -1,8 +1,8 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import { FIRE, GUNPOWDER, setSettled } from '../_Matter-types.ts'
-import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 import type { ElementDef } from '../elements.ts'
+import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 export const GUNPOWDER_DEF: ElementDef = {
   name: 'Gunpowder',

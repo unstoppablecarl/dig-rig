@@ -10,7 +10,8 @@ import { MatterSim } from './MatterSim.ts'
 import { MatterCoordinatorOutMsg, type WorkerOutMessage } from './MatterSim.types.ts'
 
 export class MatterCoordinator {
-  constructor(private readonly post: (msg: WorkerOutMessage) => void) {}
+  constructor(private readonly post: (msg: WorkerOutMessage) => void) {
+  }
 
   private sim!: MatterSim
   private pool: Worker[] = []

@@ -3,10 +3,10 @@ import { FIRE_MODE_COLORS } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { FireMode } from '../Player/_FireMode-types'
-import { EFFECT_BY_FIRE_MODE } from '../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import type { ProjectileEffectResult } from '../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
-import { applyEffect } from './TileMutation.ts'
+import { EFFECT_BY_FIRE_MODE } from '../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import { VFXTerrainParticle } from '../VFXParticles/VFXTerrainParticle.ts'
+import { applyEffect } from './TileMutation.ts'
 
 export class TerrainBlobParticleManager extends SceneBound {
   public particles: VFXTerrainParticle[] = []

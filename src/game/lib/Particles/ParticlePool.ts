@@ -70,7 +70,10 @@ export class ParticlePool {
   get activeCount(): number {
     let count = 0
     let p = this.activeHead
-    while (p) { count++; p = p.next }
+    while (p) {
+      count++
+      p = p.next
+    }
     return count
   }
 }

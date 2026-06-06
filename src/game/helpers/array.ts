@@ -1,4 +1,3 @@
-
 // removes an element from an array in-place using the swap-and-pop method.
 export function removeIndex<T>(arr: T[], indexToRemove: number): void {
   // Check if the index is valid

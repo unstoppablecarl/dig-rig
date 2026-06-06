@@ -128,7 +128,7 @@ export class TerrainChunkBodyManager extends SceneBound {
         x: startTX,
         y: startTY,
         w: endTX - startTX,
-        h: endTY - startTY
+        h: endTY - startTY,
       }]
     } else {
       rectangles = this.findTileRectanglesInChunk(startTX, startTY, endTX, endTY)

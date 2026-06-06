@@ -1,7 +1,7 @@
 import type { Particle } from './Particle.ts'
-import type { ParticleSim } from './ParticleSim.ts'
-import type { ParticlePool } from './ParticlePool.ts'
 import type { ParticlePixelRenderer } from './ParticlePixelRenderer.ts'
+import type { ParticlePool } from './ParticlePool.ts'
+import type { ParticleSim } from './ParticleSim.ts'
 
 export enum ParticleType {
   NONE,
