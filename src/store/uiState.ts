@@ -15,6 +15,7 @@ let DEFAULT_LEVEL_ID = Object.keys(LEVELS)[0] as LevelId
 
 export const useUIState = defineStore('ui-state', () => {
   const fps = ref(0)
+  const helpModal = ref(false)
 
   const levelId = ref<LevelId>(DEFAULT_LEVEL_ID)
   const currentLevelDisplayName = computed(() => {
@@ -50,6 +51,7 @@ export const useUIState = defineStore('ui-state', () => {
     fps,
     levelId,
     inputMode,
+    helpModal,
 
     // readonly
     currentLevelDisplayName,

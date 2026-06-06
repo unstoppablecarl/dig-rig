@@ -1,8 +1,10 @@
 <script setup lang="ts">
-const model = defineModel<boolean>({ default: false })
+import { useUIState } from '../store/uiState.ts'
+
+const uiState = useUIState()
 </script>
 <template>
-  <div id="help" :class="{ show: model }" @click="model = false">
+  <div class="help-modal" :class="{ show: uiState.helpModal  }" @click="uiState.helpModal = false">
     <div class="controls">
       <div style="text-align: right">[Close X]</div>
       <table class="table-controls">
@@ -41,7 +43,7 @@ const model = defineModel<boolean>({ default: false })
   </div>
 </template>
 <style lang="scss">
-#help {
+.help-modal {
   display: none;
   position: absolute;
   background: rgba(0, 0, 0, .5);

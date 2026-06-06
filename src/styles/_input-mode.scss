@@ -1,6 +1,6 @@
 $padding: 8px 10px;
 
-#current-input-mode-text {
+.current-input-mode {
   position: fixed;
   bottom: 0;
   left: 0;
@@ -26,6 +26,7 @@ $padding: 8px 10px;
   align-items: center;
   gap: 10px;
   padding: $padding;
+
   strong {
     color: rgba(255, 255, 255, 0.9);
   }

@@ -25,7 +25,7 @@ const uiState = useUIState()
 const weaponUIState = useWeaponUIState()
 </script>
 <template>
-  <div id="current-input-mode-text">
+  <div class="current-input-mode">
     <WeaponInputMode v-if="uiState.inputMode === InputMode.WEAPON">
       <component :is="WEAPON_COMPONENTS[weaponUIState.id]" />
     </WeaponInputMode>
