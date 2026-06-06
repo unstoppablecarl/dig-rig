@@ -1,8 +1,7 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, ref } from 'vue'
-import { FireMode } from '../game/lib/Player/_FireMode-types.ts'
-import { FireGroup, FireGroupModes, FireGroupValues } from '../game/lib/Player/PlayerFireGroupState.ts'
+import { FireGroup, FireGroupModes, FireGroupValues, FireMode } from '../game/lib/Player/_FireMode-types.ts'
 import { PlayerWeapon, WEAPONS } from '../game/lib/Player/weapons.ts'
 
 export type WeaponUIState = ReturnType<typeof useWeaponUIState>

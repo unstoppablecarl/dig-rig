@@ -34,11 +34,11 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     this.binder.addInputHoldRepeat(a.CHARGE_DECREASE, () => this.adjustCharge(-100))
     this.binder.addInputHoldRepeat(a.CHARGE_INCREASE, () => this.adjustCharge(100))
     this.binder.addInput(() => [
-      a.PREV_FIRE_MODE.onDown(() => {
+      a.PREV_MODE.onDown(() => {
         this.fireMode.prev()
         this.onFireModeChange()
       }),
-      a.NEXT_FIRE_MODE.onDown(() => {
+      a.NEXT_MODE.onDown(() => {
         this.fireMode.next()
         this.onFireModeChange()
       }),

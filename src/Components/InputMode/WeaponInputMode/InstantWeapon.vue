@@ -4,8 +4,8 @@ import { useWeaponUIState } from '../../../store/weaponUIState.ts'
 
 const state = useWeaponUIState()
 
-const prev = INPUT_ACTIONS.PREV_FIRE_MODE.join(',')
-const next = INPUT_ACTIONS.NEXT_FIRE_MODE.join(',')
+const prev = INPUT_ACTIONS.PREV_MODE.join(',')
+const next = INPUT_ACTIONS.NEXT_MODE.join(',')
 const sub = INPUT_ACTIONS.CHARGE_DECREASE.join(',')
 const add = INPUT_ACTIONS.CHARGE_INCREASE.join(',')
 

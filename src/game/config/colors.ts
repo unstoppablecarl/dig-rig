@@ -1,7 +1,6 @@
 import { Display } from 'phaser'
 import type { RGBColor } from '../../types/_types.ts'
-import { FireMode } from '../lib/Player/_FireMode-types'
-import { FireGroup } from '../lib/Player/PlayerFireGroupState.ts'
+import { FireGroup, FireMode } from '../lib/Player/_FireMode-types'
 import GetColor = Display.Color.GetColor
 import Interpolate = Display.Color.Interpolate
 import ValueToColor = Display.Color.ValueToColor
