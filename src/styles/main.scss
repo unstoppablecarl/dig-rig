@@ -17,6 +17,18 @@ body {
   width: 30px;
 }
 
+.matter-tank-text {
+  padding: 1px 2px;
+  font-size: 5px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(#fff, 0.33);
+  border-radius: 3px;
+  text-align: center;
+  font-family: monospace;
+  //width: 50px;
+}
+
 // tweak pane scrolling
 .tp-dfwv {
   max-height: 98vh;

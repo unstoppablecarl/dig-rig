@@ -37,7 +37,7 @@ export class Driller extends GameObject implements ParticleTarget {
 
     this.text = scene.add.dom(0, sprite.height)
       .createFromHTML('<div/>')
-    this.text.node.classList.add('debug-text')
+    this.text.node.classList.add('matter-tank-text')
 
     this.container.add(this.text)
     scene.layers.enemies.add(this.container)
