@@ -70,6 +70,7 @@ export class ProjectileRenderer extends SceneBound {
   }
 
   setVisible(visible: boolean) {
+    if (this.destroyed) return
     this.container.visible = visible
     this.container.active = visible
   }
