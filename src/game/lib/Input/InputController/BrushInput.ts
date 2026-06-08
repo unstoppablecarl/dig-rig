@@ -25,6 +25,7 @@ export class BrushInput extends InputController {
   }
 
   set element(value: MatterType) {
+    if (this.destroyed) return
     this.scene.brushUIState.matterType = value
   }
 
