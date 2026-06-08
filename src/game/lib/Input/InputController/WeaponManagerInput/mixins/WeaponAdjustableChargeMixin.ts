@@ -28,12 +28,18 @@ export function WeaponAdjustableChargeMixin<TBase extends AbstractMixinConstruct
       }
     }
 
-    protected abstract getCharge(): number
+    protected getCharge(): number {
+      return this.scene.weaponUIState.charge
+    }
 
     protected setCharge(val: number): boolean {
       val = Math.max(this.MIN_CHARGE, val)
-
-      return val !== this.getCharge()
+      const changed = val !== this.getCharge()
+      if (changed) {
+        this.scene.weaponUIState.charge = val
+        return true
+      }
+      return false
     }
 
     protected clampCharge(mode: FireMode) {

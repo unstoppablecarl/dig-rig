@@ -21,14 +21,6 @@ export abstract class WeaponRapidFireInput extends WeaponAdjustableCharge {
     addFireGroupInput(this)
   }
 
-  protected setCharge(val: number): boolean {
-    if (super.setCharge(val)) {
-      this.scene.weaponUIState.charge = val
-      return true
-    }
-    return false
-  }
-
   update(_time: number, delta: number) {
     this.coolDown -= delta
 
