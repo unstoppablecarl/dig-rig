@@ -107,6 +107,7 @@ export class ProjectileRenderer extends SceneBound {
   }
 
   private draw() {
+    if (this.destroyed) return
     const w = 1
     const radius = this._radius
     const color = this._color
