@@ -12,7 +12,6 @@ type SerializedData = {
 
 export const useInstantWeaponUIState = defineStore('instant-weapon-ui-state', () => {
   const fireMode = ref<FireMode>(FireMode.DESTROY)
-  const charge = ref(0)
   const fireModeIndex = computed(() => FireModeValues.indexOf(fireMode.value))
   const fireModeDisplayName = computed(() => FireMode[fireMode.value])
 
@@ -20,7 +19,6 @@ export const useInstantWeaponUIState = defineStore('instant-weapon-ui-state', ()
 
   const state = {
     fireMode,
-    charge,
   }
 
   const defaults: SerializedData = {
@@ -65,7 +63,6 @@ export const useInstantWeaponUIState = defineStore('instant-weapon-ui-state', ()
     nextFireMode,
 
     fireMode,
-    charge,
 
     // readonly
     fireModeIndex,

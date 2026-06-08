@@ -1,8 +1,9 @@
 import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
-import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
-import { WeaponConstantInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponConstantInput.ts'
+import type { Weapon } from '../../Input/InputController/WeaponManagerInput.ts'
+import { addFireGroupInput } from '../../Input/InputController/WeaponManagerInput/_helpers.ts'
+import { WeaponConstantInput } from '../../Input/InputController/WeaponManagerInput/WeaponConstantInput.ts'
 import { TorchProjectile } from '../../Projectiles/TorchProjectile.ts'
 import { FireMode } from '../_FireMode-types'
 
@@ -13,7 +14,7 @@ export class TorchWeapon extends WeaponConstantInput implements Weapon {
 
   constructor(scene: GameLevel) {
     super(scene)
-    this.addFireGroupInput()
+    addFireGroupInput(this)
   }
 
   updateFiring(value: boolean, mode: FireMode): void {

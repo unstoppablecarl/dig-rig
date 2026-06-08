@@ -1,4 +1,4 @@
-import { InputController } from '../Input/InputControllers/InputController.ts'
+import { InputController } from '../Input/InputController/InputController.ts'
 import { PlayerWeapon } from './weapons.ts'
 
 export type WeaponDef = {

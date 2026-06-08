@@ -2,21 +2,17 @@ import { FIRE_MODE_COLORS } from '../../../config/colors.ts'
 import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
-import { GameEvent } from '../../events.ts'
-import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
-import { WeaponRapidFireInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponRapidFireInput.ts'
+import type { Weapon } from '../../Input/InputController/WeaponManagerInput.ts'
+import { WeaponRapidFireInput } from '../../Input/InputController/WeaponManagerInput/WeaponRapidFireInput.ts'
 import { MatterType, MatterTypeValues } from '../../Matter/_Matter-types.ts'
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
 import { tilesToRadius } from '../../Projectiles/projectile-radius'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
 
-const MIN_CHARGE = 10
 const COLLISION_TYPES = new Set(MatterTypeValues.filter(v => v !== MatterType.EMPTY))
 
 export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
   private renderer: ProjectileRenderer
-
-  private charge: number = -1
 
   private targetPos: Position
   rateOfFireMs = 100
@@ -25,11 +21,9 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     super(scene)
 
     this.renderer = new ProjectileRenderer(scene)
-    this.renderer.setColor(FIRE_MODE_COLORS[this.scene.instantWeaponUIState.fireMode])
+    this.renderer.setColor(FIRE_MODE_COLORS[this.getFireMode()])
 
     const a = this.scene.playerActions
-    this.binder.addInputHoldRepeat(a.CHARGE_DECREASE, () => this.adjustCharge(-100))
-    this.binder.addInputHoldRepeat(a.CHARGE_INCREASE, () => this.adjustCharge(100))
     this.binder.addInput(() => [
       a.PREV_MODE.onDown(() => {
         this.scene.instantWeaponUIState.prevFireMode()
@@ -43,14 +37,18 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
   }
 
   fire() {
-    const available = this.clampCharge()
-    this.scene.projectiles.fireForPlayer(InstantProjectile, available, this.scene.instantWeaponUIState.fireMode, 0, this.targetPos, 0, null)
+    let charge = this.clampCharge(this.getFireMode())
+    this.scene.projectiles.fireForPlayer(InstantProjectile, charge, this.getFireMode(), 0, this.targetPos, 0, null)
+  }
+
+  getFireMode() {
+    return this.scene.instantWeaponUIState.fireMode
   }
 
   setEnabled(value: boolean) {
     super.setEnabled(value)
     if (value) {
-      this.setCharge(2000)
+      this.setCharge(this.scene.weaponUIState.charge)
     }
     this.renderer.setVisible(value)
   }
@@ -64,41 +62,29 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     this.targetPos = this.scene.tilemap.getAngleRayCollision(armPosition.x, armPosition.y, armAngle, COLLISION_TYPES)
 
     this.renderer.setPosition(this.targetPos)
-    this.clampCharge()
   }
 
-  onMouseWheel(deltaY: number): boolean {
-    this.adjustCharge(Math.round(deltaY * -10))
-    return true
-  }
-
-  adjustCharge(value: number): void {
-    const changed = this.setCharge(this.charge + value)
-    if (value > 0 && !changed) {
-      this.scene.EVENTS.emit(GameEvent.MESSAGE, 'Max Available in Matter Tank')
-    }
+  protected getCharge(): number {
+    return this.scene.weaponUIState.charge
   }
 
   protected setCharge(val: number): boolean {
-    val = Math.max(MIN_CHARGE, val)
-    const mode = this.scene.instantWeaponUIState.fireMode
-    let charge = val
-    if (isMatterTankFireMode(mode)) {
-      charge = this.scene.player.matterTank.clampToChargeAvailable(val, mode)
+    if (super.setCharge(val)) {
+      this.onChargeChanged()
+      return true
     }
-    if (charge === this.charge) return false
-    this.charge = charge
-    const radius = tilesToRadius(charge)
-    this.renderer.setRadius(radius)
 
-    this.scene.instantWeaponUIState.charge = this.charge
-
-    return true
+    return false
   }
 
-  protected clampCharge() {
-    this.setCharge(this.charge)
-    return this.charge
+  private onChargeChanged() {
+    const mode = this.getFireMode()
+    let val = this.getCharge()
+    if (isMatterTankFireMode(mode)) {
+      val = this.scene.player.matterTank.clampToChargeAvailable(val, mode)
+    }
+    const radius = tilesToRadius(val)
+    this.renderer.setRadius(radius)
   }
 
   protected onDestroy() {

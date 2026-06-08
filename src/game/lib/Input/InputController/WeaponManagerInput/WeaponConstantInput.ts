@@ -33,19 +33,6 @@ export abstract class WeaponConstantInput extends InputController {
     ])
   }
 
-  protected addFireGroupInput() {
-
-    const a = this.scene.playerActions
-    this.addInput(() => [
-      a.PREV_MODE.onDown(() => {
-        this.scene.weaponUIState.prevFireGroup()
-      }),
-      a.NEXT_MODE.onDown(() => {
-        this.scene.weaponUIState.nextFireGroup()
-      }),
-    ])
-  }
-
   setEnabled(value: boolean) {
     this.setInputEnabled(value)
   }
@@ -58,9 +45,5 @@ export abstract class WeaponConstantInput extends InputController {
 
   update(_time: number, _delta: number) {
     this.updateFiring(this.firing, this.mode)
-  }
-
-  protected onDestroy() {
-    super.onDestroy()
   }
 }

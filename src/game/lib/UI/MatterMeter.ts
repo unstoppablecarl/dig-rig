@@ -2,7 +2,7 @@ import { GameObjects, type Scene, Tweens } from 'phaser'
 import { CREATE_COLOR, DESTROY_COLOR } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import type { ChargeableWeapon, Weapon } from '../Input/InputControllers/WeaponManagerInput.ts'
+import type { ChargeableWeapon, Weapon } from '../Input/InputController/WeaponManagerInput.ts'
 import type { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
 import { FireMode } from '../Player/_FireMode-types'
 import DOMElement = GameObjects.DOMElement

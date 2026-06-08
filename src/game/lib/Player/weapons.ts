@@ -1,7 +1,6 @@
 import type { WeaponDef } from './_weapon.types.ts'
 
 import { BasicWeapon } from './Weapons/BasicWeapon.ts'
-import { BurstWeapon } from './Weapons/BurstWeapon.ts'
 import { InstantWeapon } from './Weapons/InstantWeapon.ts'
 import { RapidWeapon } from './Weapons/RapidWeapon.ts'
 import { TorchWeapon } from './Weapons/TorchWeapon.ts'
@@ -9,7 +8,6 @@ import { TunnelWeapon } from './Weapons/TunnelWeapon.ts'
 
 export enum PlayerWeapon {
   BASIC = 'BASIC',
-  BURST = 'BURST',
   RAPID = 'RAPID',
   INSTANT = 'INSTANT',
   TORCH = 'TORCH',
@@ -23,35 +21,29 @@ export const WEAPONS = {
     constructor: BasicWeapon,
     slot: 1,
   },
-  [PlayerWeapon.BURST]: {
-    id: PlayerWeapon.BURST,
-    displayName: 'Burst',
-    constructor: BurstWeapon,
-    slot: 2,
-  },
   [PlayerWeapon.RAPID]: {
     id: PlayerWeapon.RAPID,
     displayName: 'Rapid',
     constructor: RapidWeapon,
-    slot: 3,
+    slot: 2,
   },
   [PlayerWeapon.INSTANT]: {
     id: PlayerWeapon.INSTANT,
     displayName: 'Instant',
     constructor: InstantWeapon,
-    slot: 4,
+    slot: 3,
   },
   [PlayerWeapon.TORCH]: {
     id: PlayerWeapon.TORCH,
     displayName: 'Torch',
     constructor: TorchWeapon,
-    slot: 5,
+    slot: 4,
   },
   [PlayerWeapon.TUNNEL]: {
     id: PlayerWeapon.TUNNEL,
     displayName: 'Tunnel',
     constructor: TunnelWeapon,
-    slot: 6,
+    slot: 5,
   },
 } as const satisfies Record<PlayerWeapon, WeaponDef>
 

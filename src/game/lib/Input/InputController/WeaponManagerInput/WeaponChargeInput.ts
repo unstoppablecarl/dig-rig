@@ -4,6 +4,7 @@ import { GameEvent } from '../../../events.ts'
 import { FireMode } from '../../../Player/_FireMode-types'
 import type { Projectile } from '../../../Projectiles/Projectile.ts'
 import { InputController } from '../InputController.ts'
+import { addFireGroupInput } from './_helpers.ts'
 
 export abstract class WeaponChargeInput extends InputController {
   // charge per second
@@ -26,13 +27,8 @@ export abstract class WeaponChargeInput extends InputController {
 
     const a = this.scene.playerActions
 
+    addFireGroupInput(this)
     this.addInput(() => [
-      a.PREV_MODE.onDown(() => {
-        scene.weaponUIState.prevFireGroup()
-      }),
-      a.NEXT_MODE.onDown(() => {
-        scene.weaponUIState.nextFireGroup()
-      }),
       a.FIRE_PRIMARY.onDown(() => {
         this.isCharging = true
         this.mode = FireMode.DESTROY

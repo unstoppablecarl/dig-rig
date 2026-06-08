@@ -20,7 +20,7 @@ export abstract class InputController extends SceneBound<GameLevel> {
     this.binder.add(emitter, event, handler, context)
   }
 
-  protected addInput(input: InputBinder | InputBinder[]) {
+  addInput(input: InputBinder | InputBinder[]) {
     this.binder.addInput(input)
   }
 

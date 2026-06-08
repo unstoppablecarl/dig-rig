@@ -2,9 +2,9 @@ import { Input } from 'phaser'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { InputMode } from './_input.types.ts'
-import { BrushInput } from './InputControllers/BrushInput.ts'
-import type { InputController } from './InputControllers/InputController.ts'
-import { ZoomInput } from './InputControllers/ZoomInput.ts'
+import { BrushInput } from './InputController/BrushInput.ts'
+import type { InputController } from './InputController/InputController.ts'
+import { ZoomInput } from './InputController/ZoomInput.ts'
 import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
 
 export class InputManager extends SceneBound {
