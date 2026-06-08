@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { FireGroup, FireGroupModes, FireGroupValues, FireMode } from '../game/lib/Player/_FireMode-types.ts'
 import { PlayerWeapon, WEAPONS } from '../game/lib/Player/weapons.ts'
 
@@ -65,10 +65,6 @@ export const useWeaponUIState = defineStore('weapon-ui-state', () => {
     state,
     defaults,
   )
-
-  watch(charge, () => {
-    debugger
-  })
 
   return {
     $reset,
