@@ -84,12 +84,10 @@ export class MatterMeter extends SceneBound {
       .setFillStyle(DESTROY_COLOR, PENDING_ALPHA)
       .setDepth(100)
 
-
     this.createPending = scene.add.rectangle(chargeR.x + 1, chargeR.y, 30, chargeR.h)
       .setOrigin(0.5, 0)
       .setFillStyle(CREATE_COLOR, PENDING_ALPHA)
       .setDepth(100)
-
 
     this.text = scene.add.dom(border.x, border.getBounds().bottom + TEXT_BG_HEIGHT * 0.5)
       .setW(this.matter.width)
@@ -168,6 +166,9 @@ export class MatterMeter extends SceneBound {
         this.createCharge.y = this.createPending.getBounds().bottom
         const createPercent = Math.min(1, weapon.getCharge() / this.matterTank.chargeAvailable(FireMode.CREATE))
         this.createCharge.scaleY = createPercent * matterTank.getChargeAvailablePercent(FireMode.CREATE)
+      } else {
+        this.destroyCharge.scaleY = 0
+        this.createCharge.scaleY = 0
       }
     } else {
       this.destroyCharge.scaleY = 0
