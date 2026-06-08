@@ -1,12 +1,11 @@
-import { FIRE_MODE_COLORS } from '../../../config/colors.ts'
+import { computed } from 'vue'
 import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
-import type { Weapon } from '../../Input/InputController/WeaponManagerInput.ts'
 import { WeaponRapidFireInput } from '../../Input/InputController/WeaponInputControllers/WeaponRapidFireInput.ts'
+import type { Weapon } from '../../Input/InputController/WeaponManagerInput.ts'
 import { MatterType, MatterTypeValues } from '../../Matter/_Matter-types.ts'
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
-import { tilesToRadius } from '../../Projectiles/projectile-radius'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
 
 const COLLISION_TYPES = new Set(MatterTypeValues.filter(v => v !== MatterType.EMPTY))
@@ -20,18 +19,24 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
   constructor(scene: GameLevel) {
     super(scene)
 
-    this.renderer = new ProjectileRenderer(scene)
-    this.renderer.setColor(FIRE_MODE_COLORS[this.getFireMode()])
+    const charge = computed(() => {
+      const mode = this.scene.instantWeaponUIState.fireMode
+      let val = this.scene.weaponUIState.charge
+      if (isMatterTankFireMode(mode) && this.scene.player) {
+        val = this.scene.player.matterTank.clampToChargeAvailable(val, mode)
+      }
+      return val
+    })
+
+    this.renderer = new ProjectileRenderer(scene, () => scene.instantWeaponUIState.fireModeColor, charge)
 
     const a = this.scene.playerActions
     this.binder.addInput(() => [
       a.PREV_MODE.onDown(() => {
         this.scene.instantWeaponUIState.prevFireMode()
-        this.renderer.setColor(this.scene.instantWeaponUIState.fireModeColor)
       }),
       a.NEXT_MODE.onDown(() => {
         this.scene.instantWeaponUIState.nextFireMode()
-        this.renderer.setColor(this.scene.instantWeaponUIState.fireModeColor)
       }),
     ])
   }
@@ -66,25 +71,6 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
 
   getCharge(): number {
     return this.scene.weaponUIState.charge
-  }
-
-  protected setCharge(val: number): boolean {
-    if (super.setCharge(val)) {
-      this.onChargeChanged()
-      return true
-    }
-
-    return false
-  }
-
-  private onChargeChanged() {
-    const mode = this.getFireMode()
-    let val = this.getCharge()
-    if (isMatterTankFireMode(mode)) {
-      val = this.scene.player.matterTank.clampToChargeAvailable(val, mode)
-    }
-    const radius = tilesToRadius(val)
-    this.renderer.setRadius(radius)
   }
 
   protected onDestroy() {

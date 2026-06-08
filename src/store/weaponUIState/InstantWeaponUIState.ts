@@ -14,7 +14,6 @@ export const useInstantWeaponUIState = defineStore('instant-weapon-ui-state', ()
   const fireMode = ref<FireMode>(FireMode.DESTROY)
   const fireModeIndex = computed(() => FireModeValues.indexOf(fireMode.value))
   const fireModeDisplayName = computed(() => FireMode[fireMode.value])
-
   const fireModeColor = computed(() => FIRE_MODE_COLORS[fireMode.value])
 
   const state = {
