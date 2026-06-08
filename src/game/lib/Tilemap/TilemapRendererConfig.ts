@@ -1,6 +1,6 @@
 import { DRAW_TERRAIN_SETTLED_DEBUG, GLOW_ENABLED } from '../../config'
 import { PERMANENT_COLOR_RGB } from '../../config/colors.ts'
-import { rgbToVec3 } from '../../helpers/colors'
+import { rgbToVec3 } from '../../helpers/color-converters'
 import Color = Phaser.Display.Color
 
 const toVec3 = (c: Color): [number, number, number] => [
