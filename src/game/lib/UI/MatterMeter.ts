@@ -159,6 +159,8 @@ export class MatterMeter extends SceneBound {
         this.charge.scaleY = chargePercent * matterTank.getChargeAvailablePercent(FireMode.CREATE)
         this.charge.fillColor = CREATE_COLOR
       }
+    } else {
+      this.charge.scaleY = 0
     }
 
     this.prevMatter = matterTank.matterContained()
