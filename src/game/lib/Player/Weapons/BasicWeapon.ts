@@ -1,60 +1,34 @@
 import { Scenes } from 'phaser'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
-import type { ChargeableWeapon } from '../../Input/InputController/WeaponManagerInput.ts'
-import { WeaponChargeInput } from '../../Input/InputController/WeaponManagerInput/WeaponChargeInput.ts'
+import { WeaponSingleFireInput } from '../../Input/InputController/WeaponInputControllers/WeaponSingleFireInput.ts'
+import type { FireGroupWeapon } from '../../Input/InputController/WeaponManagerInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
 import { FireMode } from '../_FireMode-types'
 import UPDATE = Scenes.Events.UPDATE
 
-export class BasicWeapon extends WeaponChargeInput implements ChargeableWeapon {
-  private queued: Projectile | null = null
+export class BasicWeapon extends WeaponSingleFireInput implements FireGroupWeapon {
 
   constructor(scene: GameLevel) {
     super(scene)
     this.binder.add(scene.events, UPDATE, this.update, this)
   }
 
-  getFireMode(): FireMode {
-    return this.mode
+  fire(mode: FireMode) {
+    this.scene.projectiles.fireForPlayer(Projectile, this.clampCharge(mode), mode)
   }
 
-  private _pos: Position = { x: 0, y: 0 }
-
-  getQueuedProjectile(mode: FireMode) {
-    if (this.queued && this.queued.mode !== mode) {
-      this.queued.destroy()
-      this.queued = null
-    }
-    if (!this.queued) {
-      const pos = this.scene.player.getProjectilePosition(0, this._pos)
-      this.queued = this.scene.projectiles.add(Projectile, this.scene.player, this.scene.player.matterTank, pos.x, pos.y, 1, mode)
-    }
-    return this.queued
+  setEnabled(value: boolean) {
+    super.setEnabled(value)
+    this.scene.previewProjectileRenderer.setVisible(value)
   }
 
-  fireQueued() {
-    if (!this.queued) {
-      throw new Error('No projectile queued')
-    }
+  _startPos: Position = { x: 0, y: 0 }
 
+  update(_time: number, _delta: number) {
     const player = this.scene.player
-    this.queued.fire(player.getProjectileAngle())
-    this.queued = null
-  }
+    const startPos = player.getProjectilePosition(0, this._startPos)
 
-  update(_time: number, delta: number) {
-    super.update(_time, delta)
-    if (this.queued) {
-      const pos = this.scene.player.getProjectilePosition(this.queued.radius, this._pos)
-      this.queued.x = pos.x
-      this.queued.y = pos.y
-    }
-  }
-
-  protected onDestroy() {
-    super.onDestroy()
-    this.queued?.destroy()
-    this.queued = null
+    this.scene.previewProjectileRenderer.setPosition(startPos)
   }
 }

@@ -2,13 +2,14 @@ import { Scenes } from 'phaser'
 import type { GameLevel } from '../../../../scenes/GameLevel.ts'
 import { FireMode } from '../../../Player/_FireMode-types'
 import { InputController } from '../InputController.ts'
-import { addFireGroupInput } from './_helpers.ts'
 import { WeaponAdjustableChargeMixin } from './mixins/WeaponAdjustableChargeMixin.ts'
+import { WeaponFireGroupCycleMixin } from './mixins/WeaponFireGroupCycleMixin.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 const WeaponAdjustableCharge = WeaponAdjustableChargeMixin(InputController)
+const Mix = WeaponFireGroupCycleMixin(WeaponAdjustableCharge)
 
-export abstract class WeaponRapidFireInput extends WeaponAdjustableCharge {
+export abstract class WeaponRapidFireInput extends Mix {
   protected coolDown = 0
   abstract readonly rateOfFireMs: number
 
@@ -18,7 +19,7 @@ export abstract class WeaponRapidFireInput extends WeaponAdjustableCharge {
     super(scene)
     this.addEvent(this.scene.events, UPDATE, this.update)
     this.addChargeInput()
-    addFireGroupInput(this)
+    this.addFireGroupInput()
   }
 
   update(_time: number, delta: number) {

@@ -3,7 +3,7 @@ import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import type { Weapon } from '../../Input/InputController/WeaponManagerInput.ts'
-import { WeaponRapidFireInput } from '../../Input/InputController/WeaponManagerInput/WeaponRapidFireInput.ts'
+import { WeaponRapidFireInput } from '../../Input/InputController/WeaponInputControllers/WeaponRapidFireInput.ts'
 import { MatterType, MatterTypeValues } from '../../Matter/_Matter-types.ts'
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
 import { tilesToRadius } from '../../Projectiles/projectile-radius'
@@ -64,7 +64,7 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     this.renderer.setPosition(this.targetPos)
   }
 
-  protected getCharge(): number {
+  getCharge(): number {
     return this.scene.weaponUIState.charge
   }
 

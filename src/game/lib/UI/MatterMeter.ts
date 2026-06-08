@@ -2,9 +2,9 @@ import { GameObjects, type Scene, Tweens } from 'phaser'
 import { CREATE_COLOR, DESTROY_COLOR } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import type { ChargeableWeapon, Weapon } from '../Input/InputController/WeaponManagerInput.ts'
+import type { FireGroupWeapon, Weapon } from '../Input/InputController/WeaponManagerInput.ts'
 import type { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
-import { FireMode } from '../Player/_FireMode-types'
+import { FireGroup, FireMode } from '../Player/_FireMode-types'
 import DOMElement = GameObjects.DOMElement
 import Rectangle = GameObjects.Rectangle
 import Tween = Tweens.Tween
@@ -21,7 +21,8 @@ export class MatterMeter extends SceneBound {
 
   private prevMatter: number
   private prevMatterText = ''
-  private charge: Rectangle
+  private destroyCharge: Rectangle
+  private createCharge: Rectangle
   private text: DOMElement
   private tween: Tween | null = null
 
@@ -40,6 +41,7 @@ export class MatterMeter extends SceneBound {
     const BORDER_COLOR = 0xffffff
     const METER_COLOR = 0xffffff
     const PENDING_ALPHA = 0.5
+    const CHARGE_ALPHA = 0.75
     const TEXT_BG_HEIGHT = 30
     const margin = 2
 
@@ -65,18 +67,29 @@ export class MatterMeter extends SceneBound {
       .setOrigin(0.5, 1)
       .setFillStyle(METER_COLOR)
       .setScale(1, matterTank.matterStart / matterTank.matterMax)
+      .setDepth(0)
 
-    this.charge = scene.add.rectangle(chargeR.x + 1, chargeR.y, chargeR.w, chargeR.h)
+    this.destroyCharge = scene.add.rectangle(chargeR.x + 1, chargeR.y, chargeR.w, chargeR.h)
       .setOrigin(0.5, 1)
-      .setFillStyle(0xffffff, 1)
+      .setFillStyle(DESTROY_COLOR, CHARGE_ALPHA)
+      .setDepth(100)
+
+    this.createCharge = scene.add.rectangle(chargeR.x + 1, chargeR.y, chargeR.w, chargeR.h)
+      .setOrigin(0.5, 0)
+      .setFillStyle(CREATE_COLOR, CHARGE_ALPHA)
+      .setDepth(100)
 
     this.destroyPending = scene.add.rectangle(chargeR.x + 1, chargeR.y, 30, chargeR.h)
       .setOrigin(0.5, 1)
       .setFillStyle(DESTROY_COLOR, PENDING_ALPHA)
+      .setDepth(100)
+
 
     this.createPending = scene.add.rectangle(chargeR.x + 1, chargeR.y, 30, chargeR.h)
       .setOrigin(0.5, 0)
       .setFillStyle(CREATE_COLOR, PENDING_ALPHA)
+      .setDepth(100)
+
 
     this.text = scene.add.dom(border.x, border.getBounds().bottom + TEXT_BG_HEIGHT * 0.5)
       .setW(this.matter.width)
@@ -93,7 +106,7 @@ export class MatterMeter extends SceneBound {
       this.destroyPending,
       this.matter,
       this.createPending,
-      this.charge,
+      this.destroyCharge,
       textBG,
     ])
   }
@@ -143,24 +156,22 @@ export class MatterMeter extends SceneBound {
     this.createPending.y = matterTopY
     this.createPending.scaleY = Math.max(matterTank.getPendingChargePercent(FireMode.CREATE) + diffY, 0)
 
-    const weapon = this.gameLevel.playerWeaponManager.activeWeapon() as Weapon | ChargeableWeapon
-    if ('getChargePercent' in weapon) {
-      const chargePercent = weapon.getChargePercent()
-      const mode = weapon.getFireMode()
+    const weapon = this.gameLevel.playerWeaponManager.activeWeapon() as Weapon | FireGroupWeapon
+    if ('getFireGroup' in weapon) {
+      const group = weapon.getFireGroup()
 
-      if (mode === FireMode.DESTROY) {
-        this.charge.setOrigin(0.5, 1)
-        this.charge.y = this.destroyPending.getBounds().y
-        this.charge.scaleY = chargePercent * matterTank.getChargeAvailablePercent(FireMode.DESTROY)
-        this.charge.fillColor = DESTROY_COLOR
-      } else if (mode === FireMode.CREATE) {
-        this.charge.setOrigin(0.5, 0)
-        this.charge.y = this.createPending.getBounds().bottom
-        this.charge.scaleY = chargePercent * matterTank.getChargeAvailablePercent(FireMode.CREATE)
-        this.charge.fillColor = CREATE_COLOR
+      if (group === FireGroup.CREATE_DESTROY) {
+        this.destroyCharge.y = this.destroyPending.getBounds().y
+        const destroyPercent = Math.min(1, weapon.getCharge() / this.matterTank.chargeAvailable(FireMode.DESTROY))
+        this.destroyCharge.scaleY = destroyPercent * matterTank.getChargeAvailablePercent(FireMode.DESTROY)
+
+        this.createCharge.y = this.createPending.getBounds().bottom
+        const createPercent = Math.min(1, weapon.getCharge() / this.matterTank.chargeAvailable(FireMode.CREATE))
+        this.createCharge.scaleY = createPercent * matterTank.getChargeAvailablePercent(FireMode.CREATE)
       }
     } else {
-      this.charge.scaleY = 0
+      this.destroyCharge.scaleY = 0
+      this.createCharge.scaleY = 0
     }
 
     this.prevMatter = matterTank.matterContained()

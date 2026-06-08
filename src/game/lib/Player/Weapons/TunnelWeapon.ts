@@ -2,8 +2,8 @@ import { Scenes } from 'phaser'
 import { shuffleArray } from '../../../helpers/array.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
+import { WeaponConstantInput } from '../../Input/InputController/WeaponInputControllers/WeaponConstantInput.ts'
 import type { Weapon } from '../../Input/InputController/WeaponManagerInput.ts'
-import { WeaponConstantInput } from '../../Input/InputController/WeaponManagerInput/WeaponConstantInput.ts'
 import { EMPTY } from '../../Matter/_Matter-types.ts'
 import { MatterTank } from '../../Matter/MatterTank/MatterTank.ts'
 import type { ProjectileEffectResult } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
@@ -42,6 +42,10 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
 
   private _startPos: Position = { x: 0, y: 0 }
   private _pos: Position = { x: 0, y: 0 }
+
+  getCharge(): number {
+    return 0
+  }
 
   updateFiring(value: boolean): void {
     if (this.projectileDestroy) {

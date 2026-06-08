@@ -28,7 +28,7 @@ export function WeaponAdjustableChargeMixin<TBase extends AbstractMixinConstruct
       }
     }
 
-    protected getCharge(): number {
+    getCharge(): number {
       return this.scene.weaponUIState.charge
     }
 

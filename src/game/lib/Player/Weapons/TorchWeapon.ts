@@ -1,25 +1,33 @@
 import { isMatterTankFireMode } from '../../../helpers/_helpers.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
-import type { Weapon } from '../../Input/InputController/WeaponManagerInput.ts'
-import { addFireGroupInput } from '../../Input/InputController/WeaponManagerInput/_helpers.ts'
-import { WeaponConstantInput } from '../../Input/InputController/WeaponManagerInput/WeaponConstantInput.ts'
+import {
+  WeaponAdjustableChargeMixin,
+} from '../../Input/InputController/WeaponInputControllers/mixins/WeaponAdjustableChargeMixin.ts'
+import {
+  WeaponFireGroupCycleMixin,
+} from '../../Input/InputController/WeaponInputControllers/mixins/WeaponFireGroupCycleMixin.ts'
+import { WeaponConstantInput } from '../../Input/InputController/WeaponInputControllers/WeaponConstantInput.ts'
+import type { FireGroupWeapon } from '../../Input/InputController/WeaponManagerInput.ts'
 import { TorchProjectile } from '../../Projectiles/TorchProjectile.ts'
 import { FireMode } from '../_FireMode-types'
 
-export class TorchWeapon extends WeaponConstantInput implements Weapon {
+const WeaponAdjustableCharge = WeaponAdjustableChargeMixin(WeaponConstantInput)
+const Mix = WeaponFireGroupCycleMixin(WeaponAdjustableCharge)
+
+export class TorchWeapon extends Mix implements FireGroupWeapon {
   private projectile: TorchProjectile | null = null
 
   private _pos: Position = { x: 0, y: 0 }
 
   constructor(scene: GameLevel) {
     super(scene)
-    addFireGroupInput(this)
+    this.addFireGroupInput()
   }
 
   updateFiring(value: boolean, mode: FireMode): void {
     if (value && !this.projectile) {
-      let charge = Infinity
+      let charge = this.getCharge()
       if (isMatterTankFireMode(mode)) {
         charge = this.scene.player.matterTank.chargeAvailable(mode)
       }

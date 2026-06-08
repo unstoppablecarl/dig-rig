@@ -2,8 +2,6 @@ import { BaseProjectile } from './BaseProjectile.ts'
 
 export class TorchProjectile extends BaseProjectile {
 
-  radius = 20
-
   update() {
     if (!this.fired) return
 

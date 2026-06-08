@@ -1,7 +1,7 @@
 import { Input } from 'phaser'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { GAME_LEVEL_LOADED } from '../../events.ts'
-import { FireMode } from '../../Player/_FireMode-types'
+import { FireGroup } from '../../Player/_FireMode-types'
 import { SLOT_TO_WEAPON, WEAPONS, type WeaponSlot } from '../../Player/weapons.ts'
 import { InputController } from './InputController.ts'
 import ANY_KEY_DOWN = Input.Keyboard.Events.ANY_KEY_DOWN
@@ -12,17 +12,17 @@ export interface Weapon {
   destroy(): void
   onMouseWheel?(deltaY: number): boolean
   uiStatusControls?(): string
+  getCharge(): number
 }
 
-export interface ChargeableWeapon extends Weapon {
-  getChargePercent(): number
-  getFireMode(): FireMode
+export interface FireGroupWeapon extends Weapon {
+  getFireGroup(): FireGroup
 }
 
 export class WeaponManagerInput extends InputController {
-  private readonly weapons = new Map<WeaponSlot, Weapon | ChargeableWeapon>()
+  private readonly weapons = new Map<WeaponSlot, Weapon | FireGroupWeapon>()
 
-  private _active: Weapon | ChargeableWeapon
+  private _active: Weapon | FireGroupWeapon
 
   constructor(scene: GameLevel) {
     super(scene)
@@ -74,7 +74,7 @@ export class WeaponManagerInput extends InputController {
     this.scene.weaponUIState.id = SLOT_TO_WEAPON[slot].id
   }
 
-  activeWeapon(): Weapon | ChargeableWeapon {
+  activeWeapon(): Weapon | FireGroupWeapon {
     return this._active
   }
 

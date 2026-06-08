@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, ref } from 'vue'
+import { FIRE_GROUP_COLORS } from '../game/config/colors.ts'
 import { FireGroup, FireGroupModes, FireGroupValues, FireMode } from '../game/lib/Player/_FireMode-types.ts'
 import { PlayerWeapon, WEAPONS } from '../game/lib/Player/weapons.ts'
 
@@ -9,12 +10,13 @@ export type WeaponUIState = ReturnType<typeof useWeaponUIState>
 type SerializedData = {
   id: PlayerWeapon
   fireGroup: FireGroup,
+  charge: number,
 }
 
 export const useWeaponUIState = defineStore('weapon-ui-state', () => {
   const id = ref<PlayerWeapon>(PlayerWeapon.BASIC)
   const fireGroup = ref<FireGroup>(FireGroup.CREATE_DESTROY)
-  const charge = ref(0)
+  const charge = ref(20)
 
   const displayName = computed(() => WEAPONS[id.value].displayName)
   const slot = computed(() => WEAPONS[id.value].slot)
@@ -26,6 +28,8 @@ export const useWeaponUIState = defineStore('weapon-ui-state', () => {
 
   const fireGroupPrimaryName = computed(() => FireMode[fireGroupPrimary.value])
   const fireGroupSecondaryName = computed(() => FireMode[fireGroupSecondary.value])
+
+  const fireGroupColor = computed(() => FIRE_GROUP_COLORS[fireGroup.value])
 
   function prevFireGroup() {
     let index: number
@@ -50,11 +54,13 @@ export const useWeaponUIState = defineStore('weapon-ui-state', () => {
   const state = {
     id,
     fireGroup,
+    charge,
   }
 
   const defaults: SerializedData = {
     id: id.value,
     fireGroup: fireGroup.value,
+    charge: charge.value,
   }
 
   const {
@@ -85,6 +91,7 @@ export const useWeaponUIState = defineStore('weapon-ui-state', () => {
     fireGroupSecondary,
     fireGroupPrimaryName,
     fireGroupSecondaryName,
+    fireGroupColor,
   }
 }, {
   persist: true,

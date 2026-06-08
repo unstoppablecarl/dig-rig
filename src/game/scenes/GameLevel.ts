@@ -17,6 +17,7 @@ import { MatterBridge } from '../lib/Matter/MatterBridge.ts'
 import { MatterManager } from '../lib/Matter/MatterTank/MatterManager.ts'
 import { Player } from '../lib/Player/Player.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
+import { makePreviewProjectileRenderer, ProjectileRenderer } from '../lib/Projectiles/ProjectileRenderer.ts'
 import { TerrainBlobParticleManager } from '../lib/Tilemap/TerrainBlobParticleManager.ts'
 import { Tilemap } from '../lib/Tilemap/Tilemap.ts'
 import { TilemapRenderer } from '../lib/Tilemap/TilemapRenderer.ts'
@@ -70,6 +71,7 @@ export abstract class GameLevel extends Scene {
   public weaponUIState: WeaponUIState
   public instantWeaponUIState: InstantWeaponUIState
   public brushUIState: BrushUIState
+  public previewProjectileRenderer: ProjectileRenderer
 
   public ui: UIScene
   protected id: LevelId
@@ -205,6 +207,7 @@ export abstract class GameLevel extends Scene {
 
   private preCreateLevel() {
     this.layers = this.makeLayers()
+    this.previewProjectileRenderer = makePreviewProjectileRenderer(this)
 
     this.matterManager = new MatterManager(this)
     this.tilemap = this.makeTileMap()
