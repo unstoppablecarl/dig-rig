@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { FireGroup, FireGroupModes, FireGroupValues, FireMode } from '../game/lib/Player/_FireMode-types.ts'
 import { PlayerWeapon, WEAPONS } from '../game/lib/Player/weapons.ts'
 
@@ -8,13 +8,11 @@ export type WeaponUIState = ReturnType<typeof useWeaponUIState>
 
 type SerializedData = {
   id: PlayerWeapon
-  instantWeaponFireMode: FireMode | null
   fireGroup: FireGroup,
 }
 
 export const useWeaponUIState = defineStore('weapon-ui-state', () => {
   const id = ref<PlayerWeapon>(PlayerWeapon.BASIC)
-  const instantWeaponFireMode = ref<FireMode | null>(null)
   const fireGroup = ref<FireGroup>(FireGroup.CREATE_DESTROY)
   const charge = ref(0)
 
@@ -51,13 +49,11 @@ export const useWeaponUIState = defineStore('weapon-ui-state', () => {
 
   const state = {
     id,
-    instantWeaponFireMode: instantWeaponFireMode,
     fireGroup,
   }
 
   const defaults: SerializedData = {
     id: id.value,
-    instantWeaponFireMode: instantWeaponFireMode.value,
     fireGroup: fireGroup.value,
   }
 
@@ -70,6 +66,10 @@ export const useWeaponUIState = defineStore('weapon-ui-state', () => {
     defaults,
   )
 
+  watch(charge, () => {
+    debugger
+  })
+
   return {
     $reset,
     $serializeState,
@@ -79,7 +79,6 @@ export const useWeaponUIState = defineStore('weapon-ui-state', () => {
     nextFireGroup,
 
     id,
-    instantWeaponFireMode,
     fireGroup,
     charge,
 
