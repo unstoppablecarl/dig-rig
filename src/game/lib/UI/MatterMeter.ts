@@ -1,4 +1,5 @@
 import { GameObjects, type Scene, Tweens } from 'phaser'
+import { watch, type WatchHandle } from 'vue'
 import { CREATE_COLOR, DESTROY_COLOR } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
@@ -27,6 +28,7 @@ export class MatterMeter extends SceneBound {
   private tween: Tween | null = null
 
   private matterTank: MatterTank
+  private unwatchTank: WatchHandle
 
   constructor(
     public scene: Scene,
@@ -34,9 +36,13 @@ export class MatterMeter extends SceneBound {
   ) {
     super(scene)
 
-    const matterTank = gameLevel.player.matterTank
-    this.prevMatter = matterTank.matterStart
-    this.matterTank = matterTank
+    this.unwatchTank = watch(
+      () => gameLevel.weaponUIState.activeMatterTank,
+      (tank) => {
+        if (tank) this.setMatterTank(tank as MatterTank)
+      },
+      { immediate: true },
+    )
 
     const BORDER_COLOR = 0xffffff
     const METER_COLOR = 0xffffff
@@ -66,7 +72,6 @@ export class MatterMeter extends SceneBound {
     this.matter = scene.add.rectangle(fillR.x + 0.5, fillR.y, fillR.w, fillR.h)
       .setOrigin(0.5, 1)
       .setFillStyle(METER_COLOR)
-      .setScale(1, matterTank.matterStart / matterTank.matterMax)
       .setDepth(0)
 
     this.destroyCharge = scene.add.rectangle(chargeR.x + 1, chargeR.y, chargeR.w, chargeR.h)
@@ -111,6 +116,7 @@ export class MatterMeter extends SceneBound {
 
   update() {
     const matterTank = this.matterTank
+    if (!matterTank) return
 
     let diffY: number
     if (SHOW_TWEEN) {
@@ -183,6 +189,7 @@ export class MatterMeter extends SceneBound {
   }
 
   protected onDestroy() {
+    this.unwatchTank()
     this.tween?.stop()
     // @ts-expect-error: destroy
     this.gameLevel = null

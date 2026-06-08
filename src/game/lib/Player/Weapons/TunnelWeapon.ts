@@ -58,12 +58,12 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
 
   protected onEnable() {
     this.initDestroyProjectile()
-    this.scene.ui.matterMeter.setMatterTank(this.matterTank)
+    this.scene.weaponUIState.activeMatterTank = this.matterTank
   }
 
   protected onDisable() {
     super.onDisable()
-    this.scene.ui.matterMeter.setMatterTank(this.scene.player.matterTank)
+    this.scene.weaponUIState.activeMatterTank = this.scene.player.matterTank
   }
 
   private initDestroyProjectile() {

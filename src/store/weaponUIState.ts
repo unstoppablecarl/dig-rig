@@ -2,8 +2,10 @@ import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, ref } from 'vue'
 import { FIRE_GROUP_COLORS } from '../game/config/colors.ts'
+import type { MatterTank } from '../game/lib/Matter/MatterTank/MatterTank.ts'
 import { FireGroup, FireGroupModes, FireGroupValues, FireMode } from '../game/lib/Player/_FireMode-types.ts'
 import { PlayerWeapon, WEAPONS } from '../game/lib/Player/weapons.ts'
+import { rawRef } from './_helpers.ts'
 
 export type WeaponUIState = ReturnType<typeof useWeaponUIState>
 
@@ -17,6 +19,8 @@ export const useWeaponUIState = defineStore('weapon-ui-state', () => {
   const id = ref<PlayerWeapon>(PlayerWeapon.BASIC)
   const fireGroup = ref<FireGroup>(FireGroup.CREATE_DESTROY)
   const charge = ref(20)
+
+  const activeMatterTank = rawRef<MatterTank | null>(null)
 
   const displayName = computed(() => WEAPONS[id.value].displayName)
   const slot = computed(() => WEAPONS[id.value].slot)
@@ -83,6 +87,7 @@ export const useWeaponUIState = defineStore('weapon-ui-state', () => {
     id,
     fireGroup,
     charge,
+    activeMatterTank,
 
     // readonly
     slot,

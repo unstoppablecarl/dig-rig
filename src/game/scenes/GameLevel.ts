@@ -232,6 +232,7 @@ export abstract class GameLevel extends Scene {
     })
 
     this.player = this.makePlayer()
+    this.weaponUIState.activeMatterTank = this.player.matterTank
 
     this.matter.world.setBounds(
       0, 0,
