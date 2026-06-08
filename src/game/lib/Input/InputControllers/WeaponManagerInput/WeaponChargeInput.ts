@@ -25,7 +25,14 @@ export abstract class WeaponChargeInput extends InputController {
     }
 
     const a = this.scene.playerActions
+
     this.addInput(() => [
+      a.PREV_MODE.onDown(() => {
+        scene.weaponUIState.prevFireGroup()
+      }),
+      a.NEXT_MODE.onDown(() => {
+        scene.weaponUIState.nextFireGroup()
+      }),
       a.FIRE_PRIMARY.onDown(() => {
         this.isCharging = true
         this.mode = FireMode.DESTROY

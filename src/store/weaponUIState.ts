@@ -8,13 +8,13 @@ export type WeaponUIState = ReturnType<typeof useWeaponUIState>
 
 type SerializedData = {
   id: PlayerWeapon
-  fireMode: FireMode | null
+  instantWeaponFireMode: FireMode | null
   fireGroup: FireGroup,
 }
 
 export const useWeaponUIState = defineStore('weapon-ui-state', () => {
   const id = ref<PlayerWeapon>(PlayerWeapon.BASIC)
-  const fireMode = ref<FireMode | null>(null)
+  const instantWeaponFireMode = ref<FireMode | null>(null)
   const fireGroup = ref<FireGroup>(FireGroup.CREATE_DESTROY)
   const charge = ref(0)
 
@@ -51,51 +51,37 @@ export const useWeaponUIState = defineStore('weapon-ui-state', () => {
 
   const state = {
     id,
-    fireMode,
+    instantWeaponFireMode: instantWeaponFireMode,
     fireGroup,
   }
 
   const defaults: SerializedData = {
     id: id.value,
-    fireMode: fireMode.value,
+    instantWeaponFireMode: instantWeaponFireMode.value,
     fireGroup: fireGroup.value,
   }
 
-  const mapper = makeSimplePersistMapper<SerializedData>(
+  const {
+    $reset,
+    $serializeState,
+    $restoreState,
+  } = makeSimplePersistMapper<SerializedData>(
     state,
     defaults,
   )
-
-  function $reset() {
-    // uses defaults to reset all state
-    mapper.$reset()
-  }
-
-  function $serializeState(): SerializedData {
-    return {
-      // unwraps reactive values for serialization
-      ...mapper.$serializeState(),
-    }
-  }
-
-  function $restoreState(data: SerializedData) {
-    // set all states from storage
-    mapper.$restoreState(data)
-  }
-
-  console.log('SLOT', slot.value)
 
   return {
     $reset,
     $serializeState,
     $restoreState,
-    id,
-    fireMode,
-    fireGroup,
-    charge,
 
     prevFireGroup,
     nextFireGroup,
+
+    id,
+    instantWeaponFireMode,
+    fireGroup,
+    charge,
 
     // readonly
     slot,

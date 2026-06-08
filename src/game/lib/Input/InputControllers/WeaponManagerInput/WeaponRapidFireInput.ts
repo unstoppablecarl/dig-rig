@@ -13,6 +13,15 @@ export abstract class WeaponRapidFireInput extends InputController {
   ) {
     super(scene)
     this.addEvent(this.scene.events, UPDATE, this.update)
+    const a = this.scene.playerActions
+    this.addInput(() => [
+      a.PREV_MODE.onDown(() => {
+        scene.weaponUIState.prevFireGroup()
+      }),
+      a.NEXT_MODE.onDown(() => {
+        scene.weaponUIState.nextFireGroup()
+      }),
+    ])
   }
 
   update(_time: number, delta: number) {

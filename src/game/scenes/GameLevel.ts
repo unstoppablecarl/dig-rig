@@ -5,6 +5,7 @@ import { INPUT_ACTIONS } from '../../input.ts'
 import { type BrushUIState, useBrushUIState } from '../../store/brushUIState.ts'
 import { type UIState, useUIState } from '../../store/uiState.ts'
 import { useWeaponUIState, type WeaponUIState } from '../../store/weaponUIState.ts'
+import { type InstantWeaponUIState, useInstantWeaponUIState } from '../../store/weaponUIState/InstantWeaponUIState.ts'
 import { DRAW_WORLD_BORDER_DEBUG } from '../config.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
@@ -67,6 +68,7 @@ export abstract class GameLevel extends Scene {
   public matterBridge: MatterBridge
   public uiState: UIState
   public weaponUIState: WeaponUIState
+  public instantWeaponUIState: InstantWeaponUIState
   public brushUIState: BrushUIState
 
   public ui: UIScene
@@ -114,6 +116,7 @@ export abstract class GameLevel extends Scene {
 
     this.brushUIState = useBrushUIState()
     this.weaponUIState = useWeaponUIState()
+    this.instantWeaponUIState = useInstantWeaponUIState()
 
     this.ui = this.registerSubScene(UIScene)
     this.registerSubScene(BgScene)

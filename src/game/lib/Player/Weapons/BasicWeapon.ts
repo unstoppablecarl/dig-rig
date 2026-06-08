@@ -8,7 +8,6 @@ import { FireMode } from '../_FireMode-types'
 import UPDATE = Scenes.Events.UPDATE
 
 export class BasicWeapon extends WeaponChargeInput implements ChargeableWeapon {
-
   private queued: Projectile | null = null
 
   constructor(scene: GameLevel) {

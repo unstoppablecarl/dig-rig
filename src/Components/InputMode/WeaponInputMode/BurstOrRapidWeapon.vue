@@ -14,8 +14,16 @@ const next = INPUT_ACTIONS.NEXT_MODE.join(',')
   </span>
 
   <span class="imu-section">
-    <kbd>LMB</kbd> = {{ state.fireGroupPrimaryName }}
-    <kbd>RMB</kbd> = {{ state.fireGroupSecondaryName }}
+    <span>
+      <kbd>LMB</kbd> = {{ state.fireGroupPrimaryName }}
+    </span>
+    <span>
+      <kbd>RMB</kbd> = {{ state.fireGroupSecondaryName }}
+    </span>
+  </span>
+
+  <span class="imu-section">
+    <strong>Charge: </strong> {{ state.charge }}
   </span>
 </template>
 <style lang="scss">

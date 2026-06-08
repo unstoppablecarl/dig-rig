@@ -9,7 +9,6 @@ import { MatterType, MatterTypeValues } from '../../Matter/_Matter-types.ts'
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
 import { tilesToRadius } from '../../Projectiles/projectile-radius'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
-import { FireMode, FireModeValues } from '../_FireMode-types'
 
 const MIN_CHARGE = 10
 const COLLISION_TYPES = new Set(MatterTypeValues.filter(v => v !== MatterType.EMPTY))
@@ -20,39 +19,32 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
   private charge: number = -1
 
   private targetPos: Position
-  private fireMode: PlayerFireModeState
   rateOfFireMs = 100
 
   constructor(scene: GameLevel) {
     super(scene)
-    this.fireMode = new PlayerFireModeState()
 
     this.renderer = new ProjectileRenderer(scene)
-    this.renderer.setColor(FIRE_MODE_COLORS[this.fireMode.value()])
+    this.renderer.setColor(FIRE_MODE_COLORS[this.scene.instantWeaponUIState.fireMode])
 
     const a = this.scene.playerActions
     this.binder.addInputHoldRepeat(a.CHARGE_DECREASE, () => this.adjustCharge(-100))
     this.binder.addInputHoldRepeat(a.CHARGE_INCREASE, () => this.adjustCharge(100))
     this.binder.addInput(() => [
       a.PREV_MODE.onDown(() => {
-        this.fireMode.prev()
-        this.onFireModeChange()
+        this.scene.instantWeaponUIState.prevFireMode()
+        this.renderer.setColor(this.scene.instantWeaponUIState.fireModeColor)
       }),
       a.NEXT_MODE.onDown(() => {
-        this.fireMode.next()
-        this.onFireModeChange()
+        this.scene.instantWeaponUIState.nextFireMode()
+        this.renderer.setColor(this.scene.instantWeaponUIState.fireModeColor)
       }),
     ])
   }
 
   fire() {
     const available = this.clampCharge()
-    this.scene.projectiles.fireForPlayer(InstantProjectile, available, this.fireMode.value(), 0, this.targetPos, 0, null)
-  }
-
-  onFireModeChange(): void {
-    this.renderer.setColor(FIRE_MODE_COLORS[this.fireMode.value()])
-    this.scene.weaponUIState.fireMode = this.fireMode.value()
+    this.scene.projectiles.fireForPlayer(InstantProjectile, available, this.scene.instantWeaponUIState.fireMode, 0, this.targetPos, 0, null)
   }
 
   setEnabled(value: boolean) {
@@ -89,7 +81,7 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
 
   protected setCharge(val: number): boolean {
     val = Math.max(MIN_CHARGE, val)
-    const mode = this.fireMode.value()
+    const mode = this.scene.instantWeaponUIState.fireMode
     let charge = val
     if (isMatterTankFireMode(mode)) {
       charge = this.scene.player.matterTank.clampToChargeAvailable(val, mode)
@@ -99,7 +91,7 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     const radius = tilesToRadius(charge)
     this.renderer.setRadius(radius)
 
-    this.scene.weaponUIState.charge = this.charge
+    this.scene.instantWeaponUIState.charge = this.charge
 
     return true
   }
@@ -116,45 +108,5 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     this.renderer = null
     // @ts-expect-error: destroy
     this.fireMode = null
-  }
-}
-
-export class PlayerFireModeState {
-  private index = 0
-  private _fireMode: FireMode
-
-  constructor(mode: FireMode = FireMode.DESTROY) {
-    this.set(mode)
-  }
-
-  value() {
-    return this._fireMode
-  }
-
-  set(fireMode: FireMode) {
-    this._fireMode = fireMode
-    this.index = FireModeValues.indexOf(fireMode)
-  }
-
-  prev() {
-    let index: number
-    if (this.index === 0) {
-      index = FireModeValues.length - 1
-    } else {
-      index = this.index - 1
-    }
-    this.set(FireModeValues[index])
-    return this._fireMode
-  }
-
-  next() {
-    let index: number
-    if (this.index === FireModeValues.length - 1) {
-      index = 0
-    } else {
-      index = this.index + 1
-    }
-    this.set(FireModeValues[index])
-    return this._fireMode
   }
 }
