@@ -1,6 +1,6 @@
 import { shuffleArray } from '../../../helpers/array.ts'
 import type { Position } from '../../../types.ts'
-import { MatterType } from '../../Matter/_Matter-types.ts'
+import { MatterType, MatterTypeSet } from '../../Matter/_Matter-types.ts'
 import { PASSIVE_ELEMENTS } from '../../Matter/elements.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
 import type { Tilemap } from '../../Tilemap/Tilemap.ts'
@@ -37,6 +37,7 @@ export function makeCreateEffect(type: MatterType): ProjectileEffectDef {
   return {
     chargeMode: FireMode.CREATE,
     filterTile: filterPlayerAABB,
+    reactsWithMatterTypes: new MatterTypeSet(type),
     convertMatterType: (t) => t === MatterType.EMPTY ? type : null,
     onTilesCommitted: passive ? solidCreateTilesCommitted : liquidCreateTilesCommitted,
     onApplied: passive ? solidCreateApplied : noVFX,

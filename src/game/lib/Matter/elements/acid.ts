@@ -1,8 +1,8 @@
 import { random } from '../../../helpers/random'
-import { ACID, EMPTY, makeTypeMask, matterType, SALT_WATER, setSettled, SOLID, WATER } from '../_Matter-types.ts'
+import { ACID, EMPTY, matterType, MatterTypeSet, SALT_WATER, setSettled, SOLID, WATER } from '../_Matter-types.ts'
 import { ACID_IMMUNE, type ElementDef } from '../elements.ts'
 
-const IS_SETTLED = makeTypeMask(ACID, EMPTY)
+const IS_SETTLED = new MatterTypeSet(ACID, EMPTY)
 
 export const ACID_DEF: ElementDef = {
   name: 'Acid',

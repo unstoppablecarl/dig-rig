@@ -4,7 +4,7 @@ import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
-import { isSettled, matterType, MatterType } from '../Matter/_Matter-types.ts'
+import { isSettled, MatterType, matterType, MatterTypeSet } from '../Matter/_Matter-types.ts'
 import { COLLIDES_WHEN_SETTLED } from '../Matter/elements.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
@@ -411,7 +411,7 @@ export class Tilemap extends SceneBound {
     startX: number,
     startY: number,
     angle: number,
-    types: Set<MatterType>,
+    types: MatterTypeSet,
     maxDistance = this.diagonalDistance,
   ): Position {
     const vx = Math.cos(angle)
@@ -432,7 +432,7 @@ export class Tilemap extends SceneBound {
     startY: number,
     directionX: number,
     directionY: number,
-    types: Set<MatterType>,
+    types: MatterTypeSet,
     maxDistance = this.diagonalDistance,
   ): Position {
     const len = Math.sqrt(directionX * directionX + directionY * directionY)

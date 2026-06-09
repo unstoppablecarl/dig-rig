@@ -5,10 +5,9 @@ import {
   isSettled,
   MatterType,
   matterType,
+  MatterTypeSet,
   SAND,
   setSettled,
-  typeInMask,
-  type TypeMask,
   WATER,
 } from './_Matter-types.ts'
 import { ELEMENT_ACTIONS, LIQUID_TYPES, SINKS_THROUGH } from './elements.ts'
@@ -163,7 +162,7 @@ export class MatterSim {
     // Sand/heavy particles sink through lighter liquids
     const sinksThrough = SINKS_THROUGH[tileType as MatterType]
     const canEnter = toType === EMPTY
-      || (sinksThrough !== undefined && sinksThrough.has(toType as MatterType))
+      || (sinksThrough !== undefined && sinksThrough.has(toType))
 
     if (!canEnter) return false
 
@@ -381,13 +380,13 @@ export class MatterSim {
     return true
   }
 
-  /** True if all 4 cardinal neighbours are in the TypeMask. */
-  surroundedByMask(tx: number, ty: number, idx: number, mask: TypeMask): boolean {
+  /** True if all 4 cardinal neighbours are in the MatterTypeSet. */
+  surroundedByMask(tx: number, ty: number, idx: number, mask: MatterTypeSet): boolean {
     const { tiles, width, height } = this
-    if (ty < height - 1 && !typeInMask(mask, matterType(tiles[idx + width]))) return false
-    if (ty > 0 && !typeInMask(mask, matterType(tiles[idx - width]))) return false
-    if (tx > 0 && !typeInMask(mask, matterType(tiles[idx - 1]))) return false
-    if (tx < width - 1 && !typeInMask(mask, matterType(tiles[idx + 1]))) return false
+    if (ty < height - 1 && !mask.has(matterType(tiles[idx + width]))) return false
+    if (ty > 0 && !mask.has(matterType(tiles[idx - width]))) return false
+    if (tx > 0 && !mask.has(matterType(tiles[idx - 1]))) return false
+    if (tx < width - 1 && !mask.has(matterType(tiles[idx + 1]))) return false
     return true
   }
 

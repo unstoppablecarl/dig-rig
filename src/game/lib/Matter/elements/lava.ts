@@ -4,8 +4,8 @@ import {
   EMPTY,
   FIRE,
   LAVA,
-  makeTypeMask,
   matterType,
+  MatterTypeSet,
   OIL,
   ROCK,
   SALT_WATER,
@@ -17,7 +17,7 @@ import {
 import { type ElementDef, LAVA_IMMUNE } from '../elements.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
-const IS_SETTLED = makeTypeMask(LAVA, EMPTY)
+const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)
 
 export const LAVA_DEF: ElementDef = {
   name: 'Lava',

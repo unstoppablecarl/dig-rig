@@ -44,32 +44,40 @@ export function clearOwner(value: number): number {
   return value & ~OWNER_MASK
 }
 
+// extracts MatterType
 export function matterType(value: number): MatterType {
   return (value & TYPE_MASK) as MatterType
 }
 
-// TypeMask — 256-bit bitmask over MatterType values (8 × Uint32, 32 bytes).
-// Supports up to 256 distinct types; each type t occupies bit (t & 31) of word (t >>> 5).
-//
-// Usage: declare the mask once in module scope,
-// then test individual types with typeInMask at runtime:
-//
-//   const FLAMMABLE = makeTypeMask(OIL, NAPALM, PLANT, FUSE)
-//   if (typeInMask(FLAMMABLE, tiles[nidx] & TYPE_MASK)) { ... }
-export type TypeMask = Uint32Array
+export class MatterTypeSet {
+  // TypeMask — 256-bit bitmask over MatterType values (8 × Uint32, 32 bytes).
+  // Supports up to 256 distinct types; each type t occupies bit (t & 31) of word (t >>> 5).
+  private readonly _mask = new Uint32Array(8)
 
-// makeTypeMask(...types) — build a TypeMask from a list of MatterType values.
-// Call once at module scope, never inside a hot loop.
-export function makeTypeMask(...types: MatterType[]): TypeMask {
-  const mask = new Uint32Array(8)
-  for (const t of types) mask[t >>> 5] |= 1 << (t & 31)
-  return mask
-}
+  constructor(
+    ...types: MatterType[]
+  ) {
+    for (const t of types) this.add(t)
+  }
 
-// typeInMask(mask, t) — O(1) membership test; two bitwise ops, no allocation.
-// V8 inlines this at call sites after JIT warmup.
-export function typeInMask(mask: TypeMask, t: number): boolean {
-  return (mask[t >>> 5] & (1 << (t & 31))) !== 0
+  add(type: MatterType): void {
+    // (type & 31) same as: type % 32
+    // similar to: const a = new Array(32).fill(0); a[type % 32] = 1
+    const lookupMask = 1 << (type & 31)
+    // same as: const index = Math.floor(t / 32)
+    const index = type >>> 5
+    // merge
+    this._mask[index] |= lookupMask
+  }
+
+  has(type: MatterType): boolean {
+    // (type & 31) same as: type % 32
+    // similar to: const a = new Array(32).fill(0); a[type % 32] = 1
+    const lookupMask = 1 << (type & 31)
+    // same as: const index = Math.floor(t / 32)
+    const index = type >>> 5
+    return (this._mask[index] & lookupMask) !== 0
+  }
 }
 
 export enum MatterType {
@@ -145,3 +153,7 @@ export const MatterTypeValues = Object.values(MatterType).filter(
 export const MatterTypeKeyValues = Object.fromEntries(
   MatterTypeValues.map((key) => [MatterType[key as any], key]),
 )
+
+export function matterTypeSetExcluding(exclude: MatterType[]): MatterTypeSet {
+  return new MatterTypeSet(...MatterTypeValues.filter(v => !exclude.includes(v)))
+}

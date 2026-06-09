@@ -13,6 +13,7 @@ import {
   ICE,
   LAVA,
   type MatterType,
+  MatterTypeSet,
   METHANE,
   NAPALM,
   NITRO,
@@ -76,13 +77,13 @@ const noop = () => {
 }
 
 export const ELEMENT_ACTIONS: ElementAction[] = []
-export const PASSIVE_ELEMENTS = new Set<MatterType>()
+export const PASSIVE_ELEMENTS = new MatterTypeSet()
 export const ELEMENT_NAMES = new Map<MatterType, string>()
-export const LAVA_IMMUNE = new Set<MatterType>()
-export const ACID_IMMUNE = new Set<MatterType>()
-export const COLLIDES_WHEN_SETTLED = new Set<MatterType>()
-export const LIQUID_TYPES = new Set<MatterType>()
-export const SINKS_THROUGH: Partial<Record<MatterType, Set<MatterType>>> = {}
+export const LAVA_IMMUNE = new MatterTypeSet()
+export const ACID_IMMUNE = new MatterTypeSet()
+export const COLLIDES_WHEN_SETTLED = new MatterTypeSet()
+export const LIQUID_TYPES = new MatterTypeSet()
+export const SINKS_THROUGH: Partial<Record<MatterType, MatterTypeSet>> = {}
 
 function add(id: MatterType, {
   name,
@@ -102,7 +103,7 @@ function add(id: MatterType, {
   if (acidImmune) ACID_IMMUNE.add(id)
   if (liquid) LIQUID_TYPES.add(id)
   if (collidesWhenSettled) COLLIDES_WHEN_SETTLED.add(id)
-  if (sinksThrough) SINKS_THROUGH[id] = new Set(sinksThrough)
+  if (sinksThrough) SINKS_THROUGH[id] = new MatterTypeSet(...sinksThrough)
 }
 
 add(EMPTY, EMPTY_DEF)

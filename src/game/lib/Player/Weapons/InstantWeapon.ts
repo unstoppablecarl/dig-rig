@@ -4,11 +4,9 @@ import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import { WeaponRapidFireInput } from '../../Input/InputController/WeaponInputControllers/WeaponRapidFireInput.ts'
 import type { Weapon } from '../../Input/InputController/WeaponManagerInput.ts'
-import { MatterType, MatterTypeValues } from '../../Matter/_Matter-types.ts'
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
+import { EFFECT_BY_FIRE_MODE } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
-
-const COLLISION_TYPES = new Set(MatterTypeValues.filter(v => v !== MatterType.EMPTY))
 
 export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
   private renderer: ProjectileRenderer
@@ -64,6 +62,7 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     super.update(_time, delta)
     const armPosition = this.scene.player.getProjectilePosition(0, this._playerArmPos)
     const armAngle = this.scene.player.getProjectileAngle()
+    const COLLISION_TYPES = EFFECT_BY_FIRE_MODE[this.getFireMode()].reactsWithMatterTypes
     this.targetPos = this.scene.tilemap.getAngleRayCollision(armPosition.x, armPosition.y, armAngle, COLLISION_TYPES)
 
     this.renderer.setPosition(this.targetPos)
