@@ -1,4 +1,4 @@
-// removes an element from an array in-place using the swap-and-pop method.
+// removes an matterType from an array in-place using the swap-and-pop method.
 export function removeIndex<T>(arr: T[], indexToRemove: number): void {
   // Check if the index is valid
   if (indexToRemove < 0 || indexToRemove >= arr.length) {
@@ -8,7 +8,7 @@ export function removeIndex<T>(arr: T[], indexToRemove: number): void {
   const lastIndex = arr.length - 1
 
   if (indexToRemove !== lastIndex) {
-    // replace the element to be removed with the last element
+    // replace the matterType to be removed with the last matterType
     arr[indexToRemove] = arr[lastIndex]
   }
 

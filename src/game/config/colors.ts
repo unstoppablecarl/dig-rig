@@ -38,7 +38,7 @@ export const FIRE_MODE_COLORS_RGB = Object.fromEntries(
   }),
 ) as Record<FireMode, RGBColor>
 
-// 0xRRGGBB color constants matching the GLSL element colors
+// 0xRRGGBB color constants matching the GLSL matterType colors
 export const FIRE_COLOR = 0xff0000
 export const LAVA_COLOR = 0xF55A0F
 export const ROCK_COLOR = 0x442808

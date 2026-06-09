@@ -1,8 +1,7 @@
 import { random } from '../../../helpers/random'
-import { FIRE, ICE, LAVA, SALT, SALT_WATER, STEAM, WATER } from '../_Matter-types.ts'
-import type { ElementDef } from '../elements.ts'
+import { type MatterDef, FIRE, ICE, LAVA, SALT, SALT_WATER, STEAM, WATER } from '../_Matter-types.ts'
 
-export const CHILLED_ICE_DEF: ElementDef = {
+export const CHILLED_ICE_DEF: MatterDef = {
   name: 'Chilled Ice',
   passive: true,
   acidImmune: true,

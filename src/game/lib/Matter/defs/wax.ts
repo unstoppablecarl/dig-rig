@@ -1,7 +1,6 @@
-import { FALLING_WAX, FIRE } from '../_Matter-types.ts'
-import type { ElementDef } from '../elements.ts'
+import { type MatterDef, FALLING_WAX, FIRE } from '../_Matter-types.ts'
 
-export const WAX_DEF: ElementDef = {
+export const WAX_DEF: MatterDef = {
   name: 'Wax',
   passive: true,
   action(world, tx, ty, idx, next): void {

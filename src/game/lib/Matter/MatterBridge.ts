@@ -88,7 +88,7 @@ export class MatterBridge extends SceneBound {
     }
   }
 
-  addElement(value: MatterType, tx: number, ty: number, radius = 8) {
+  addMatter(value: MatterType, tx: number, ty: number, radius = 8) {
     const { tilemap } = this.scene
     tx = Math.floor(tx)
     ty = Math.floor(ty)

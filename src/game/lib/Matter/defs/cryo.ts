@@ -1,8 +1,19 @@
 import { random } from '../../../helpers/random'
-import { CHILLED_ICE, CRYO, EMPTY, ICE, LAVA, OIL, ROCK, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
-import type { ElementDef } from '../elements.ts'
+import {
+  CHILLED_ICE,
+  CRYO,
+  type MatterDef,
+  EMPTY,
+  ICE,
+  LAVA,
+  OIL,
+  ROCK,
+  SALT_WATER,
+  setSettled,
+  WATER,
+} from '../_Matter-types.ts'
 
-export const CRYO_DEF: ElementDef = {
+export const CRYO_DEF: MatterDef = {
   name: 'Cryo',
   acidImmune: true,
   action(world, tx, ty, idx, next): void {

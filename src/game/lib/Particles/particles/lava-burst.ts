@@ -48,7 +48,7 @@ export const LAVA_BURST: ParticleDef = {
       return
     }
 
-    // 25% chance per frame: check what element the tip is about to hit
+    // 25% chance per frame: check what matterType the tip is about to hit
     if (Math.random() < 0.25) {
       // Update yVelocity to the current value so tileAtTip uses the right direction
       p.yVelocity = p.data.initYVelocity + p.data.yAcceleration * p.actionIterations

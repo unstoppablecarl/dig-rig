@@ -1,10 +1,9 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { FIRE } from '../_Matter-types.ts'
-import type { ElementDef } from '../elements.ts'
+import { type MatterDef, FIRE } from '../_Matter-types.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
-export const C4_DEF: ElementDef = {
+export const C4_DEF: MatterDef = {
   name: 'C4',
   passive: true,
   action(world, tx, ty, idx, next): void {

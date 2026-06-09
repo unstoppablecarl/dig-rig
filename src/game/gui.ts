@@ -2,7 +2,7 @@ import * as EssentialsPlugin from '@tweakpane/plugin-essentials'
 import { Pane } from 'tweakpane'
 import { launchLevel } from './launcher.ts'
 import { InputMode } from './lib/Input/_input.types.ts'
-import { ELEMENT_NAMES } from './lib/Matter/elements.ts'
+import { MATTER_NAMES } from './lib/Matter/matter.ts'
 import type { GameLevel } from './scenes/GameLevel.ts'
 import { type LevelEntry, type LevelId, LEVELS } from './scenes/Levels'
 
@@ -110,10 +110,10 @@ export function makeGUI(game: GameLevel) {
 
   const addMatterFolder = pane.addFolder({ title: 'Add Matter' })
   ;
-  [...ELEMENT_NAMES.entries()].forEach(([key, value]) => {
+  [...MATTER_NAMES.entries()].forEach(([key, value]) => {
     addMatterFolder.addButton({ title: 'Add ' + value })
       .on('click', () => {
-        game.matterBridge.addElement(key, game.player.x, game.player.y - 100)
+        game.matterBridge.addMatter(key, game.player.x, game.player.y - 100)
       })
   })
 
@@ -183,14 +183,14 @@ export function makeGUI(game: GameLevel) {
       brushToggle.title = getBrushBtnLabel()
     })
 
-  const brushOptions = [...ELEMENT_NAMES.entries()].map(([key, value]) => {
+  const brushOptions = [...MATTER_NAMES.entries()].map(([key, value]) => {
     return {
       text: value,
       value: key,
     }
   })
 
-  brushFolder.addBinding(game.inputManager.brushInput, 'element', {
+  brushFolder.addBinding(game.inputManager.brushInput, 'matterType', {
     view: 'list',
     label: 'Mode',
     options: brushOptions,

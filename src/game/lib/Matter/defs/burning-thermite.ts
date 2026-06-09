@@ -1,7 +1,7 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import {
-  BURNING_THERMITE,
+  BURNING_THERMITE, type MatterDef,
   EMPTY,
   FIRE,
   LAVA,
@@ -12,10 +12,9 @@ import {
   THERMITE,
   WATER,
 } from '../_Matter-types.ts'
-import type { ElementDef } from '../elements.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
-export const BURNING_THERMITE_DEF: ElementDef = {
+export const BURNING_THERMITE_DEF: MatterDef = {
   name: 'Burning Thermite',
   sinksThrough: [WATER, SALT_WATER, OIL],
   action(world, tx, ty, idx, next): void {

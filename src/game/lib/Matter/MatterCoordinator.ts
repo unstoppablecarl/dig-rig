@@ -34,7 +34,7 @@ export class MatterCoordinator {
   //   C D C D
   //   A B A B      Every chunk's 8 neighbors are in different rounds, so
   //   C D C D      same-round chunks are always ≥1 chunk apart in both axes.
-  //                This makes 8-directional element reads safe under parallel
+  //                This makes 8-directional matterType reads safe under parallel
   //                execution: any adjacent tile belongs to an inactive round.
   private readonly rounds: number[][] = [[], [], [], []]
   private readonly allSettled: number[] = []
@@ -93,7 +93,7 @@ export class MatterCoordinator {
       this.pendingResolvers[workerIdx] = null
       return
     }
-    // SPAWN_PARTICLE and any other element-action postMessage calls:
+    // SPAWN_PARTICLE and any other matterType-action postMessage calls:
     // pool workers call postMessage() which reaches the coordinator;
     // forward straight to the main thread.
     this.post(msg as WorkerOutMessage)

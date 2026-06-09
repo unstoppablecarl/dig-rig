@@ -1,10 +1,9 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { FIRE, NAPALM, setSettled } from '../_Matter-types.ts'
-import type { ElementDef } from '../elements.ts'
+import { type MatterDef, FIRE, NAPALM, setSettled } from '../_Matter-types.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
-export const NAPALM_DEF: ElementDef = {
+export const NAPALM_DEF: MatterDef = {
   name: 'Napalm',
   action(world, tx, ty, idx, next): void {
     if (random() < 25 && world.bordering(tx, ty, idx, FIRE) !== -1) {

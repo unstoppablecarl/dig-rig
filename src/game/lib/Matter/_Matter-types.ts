@@ -1,11 +1,13 @@
-// SETTLED_FLAG — bit 8 of a tile value. Set when an element has stopped moving
+// SETTLED_FLAG — bit 8 of a tile value. Set when an matterType has stopped moving
 // and been removed from the active set. Cleared on disturbance to re-activate it.
 //   tile = SAND | SETTLED_FLAG   → settled sand (0x103)
 //   tile & SETTLED_FLAG !== 0    → is this tile settled?
 //   tile & ~SETTLED_FLAG         → strip settled, get raw tile back
+import type { MatterAction } from './matter.ts'
+
 export const SETTLED_FLAG = 0x100
 
-// TYPE_MASK — isolates the element ID from bits 0–7, ignoring settled and owner bits.
+// TYPE_MASK — isolates the matterType ID from bits 0–7, ignoring settled and owner bits.
 //   tile & TYPE_MASK             → base MatterType (0–255)
 //   tile & TYPE_MASK === WATER   → is this tile water, settled or not?
 export const TYPE_MASK = 0xFF
@@ -116,7 +118,7 @@ export enum MatterType {
 export const SAND_SETTLED = MatterType.SAND | SETTLED_FLAG  // 0x83
 export const WATER_SETTLED = MatterType.WATER | SETTLED_FLAG  // 0x85
 
-// Short-hand re-exports (matches project-sand naming used across element files)
+// Short-hand re-exports (matches project-sand naming used across matterType files)
 export const EMPTY = MatterType.EMPTY
 export const SOLID = MatterType.SOLID
 export const PERMANENT = MatterType.PERMANENT
@@ -156,4 +158,15 @@ export const MatterTypeKeyValues = Object.fromEntries(
 
 export function matterTypeSetExcluding(exclude: MatterType[]): MatterTypeSet {
   return new MatterTypeSet(...MatterTypeValues.filter(v => !exclude.includes(v)))
+}
+
+export type MatterDef = {
+  name: string,
+  action?: MatterAction,
+  passive?: boolean,
+  lavaImmune?: boolean,
+  acidImmune?: boolean,
+  liquid?: boolean,
+  collidesWhenSettled?: boolean,
+  sinksThrough?: MatterType[],
 }

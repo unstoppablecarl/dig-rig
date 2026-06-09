@@ -1,4 +1,5 @@
 import { random } from '../../helpers/random'
+import { LIQUID_TYPES, SINKS_THROUGH } from './_Matter-meta'
 import {
   EMPTY,
   FIRE,
@@ -10,7 +11,7 @@ import {
   setSettled,
   WATER,
 } from './_Matter-types.ts'
-import { ELEMENT_ACTIONS, LIQUID_TYPES, SINKS_THROUGH } from './elements.ts'
+import { MATTER_ACTIONS } from './matter.ts'
 
 const MAX_FLOW = 8
 
@@ -71,7 +72,7 @@ export class MatterSim {
     }
   }
 
-  // Runs element actions for the given tile indices. Pool workers call this
+  // Runs matterType actions for the given tile indices. Pool workers call this
   // once per round with their assigned subset of the active set.
   processSubset(indices: number[], next: Set<number>) {
     const phase = this.frame % 2
@@ -80,7 +81,7 @@ export class MatterSim {
       const ty = idx / this.width | 0
 
       // Per-cell checkerboard: defer wrong-phase cells to next step to prevent
-      // double-processing when an element moves into a neighbour's position.
+      // double-processing when an matterType moves into a neighbour's position.
       if ((tx + ty) % 2 !== phase) {
         next.add(idx)
         continue
@@ -88,7 +89,7 @@ export class MatterSim {
 
       const raw = this.tiles[idx]
       const tile = matterType(raw)
-      ELEMENT_ACTIONS[tile]?.(this, tx, ty, idx, next)
+      MATTER_ACTIONS[tile]?.(this, tx, ty, idx, next)
     }
   }
 
@@ -183,14 +184,14 @@ export class MatterSim {
     return true
   }
 
-  // Moves element upward — used by gases and steam.
+  // Moves matterType upward — used by gases and steam.
   tryRise(
     fromIdx: number, fromTx: number, fromTy: number,
     next: Set<number>,
   ): boolean {
     const { width, tiles } = this
     if (fromTy === 0) {
-      // Hit top — element disappears
+      // Hit top — matterType disappears
       tiles[fromIdx] = EMPTY
       this.markDirty(fromTx, fromTy)
       return true
@@ -220,13 +221,13 @@ export class MatterSim {
   }
 
   /**
-   * Liquid density displacement — current element sinks into lighter liquid below or beside it,
+   * Liquid density displacement — current matterType sinks into lighter liquid below or beside it,
    * and the lighter liquid rises to fill the gap. Mirrors project-sand doDensityLiquid.
    *
-   * `lighter`         — element type that the current element is denser than
+   * `lighter`         — matterType type that the current matterType is denser than
    * `sinkChance`      — 0-99: probability to try below-adjacent first
    * `equalizeChance`  — 0-99: probability to try horizontal equalization if sinking fails
-   * `displacedAs`     — if provided, the displaced lighter element becomes this type instead
+   * `displacedAs`     — if provided, the displaced lighter matterType becomes this type instead
    *                     (used by cryo to freeze displaced water into CHILLED_ICE)
    */
   doDensityLiquid(
@@ -276,7 +277,7 @@ export class MatterSim {
     next.add(targetIdx)
 
     if (displacedAs === undefined) next.add(idx)
-    // Wake any settled elements above idx that could now sink through the displaced lighter liquid
+    // Wake any settled defs above idx that could now sink through the displaced lighter liquid
     this.reactivateAround(tx, ty, next)
 
     return true

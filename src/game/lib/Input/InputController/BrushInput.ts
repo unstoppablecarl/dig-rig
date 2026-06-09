@@ -20,11 +20,11 @@ export class BrushInput extends InputController {
   private brushDirty = true
   private _effectTiles: ProjectileEffectResult[] = []
 
-  get element(): MatterType {
+  get matterType(): MatterType {
     return this.scene?.brushUIState?.matterType ?? MatterType.SOLID
   }
 
-  set element(value: MatterType) {
+  set matterType(value: MatterType) {
     if (this.destroyed) return
     this.scene.brushUIState.matterType = value
   }
@@ -94,11 +94,11 @@ export class BrushInput extends InputController {
   }
 
   apply(tileX: number, tileY: number) {
-    if (this.element === MatterType.SOLID) {
+    if (this.matterType === MatterType.SOLID) {
       const effect = this.isCreating ? ProjectileEffect.CREATE_SOLID : ProjectileEffect.DESTROY
       applyEffect(this.scene.tilemap, this._effectTiles, tileX, tileY, this.radius, effect)
     } else {
-      this.scene.matterBridge.addElement(this.element, tileX, tileY, this.radius)
+      this.scene.matterBridge.addMatter(this.matterType, tileX, tileY, this.radius)
     }
   }
 

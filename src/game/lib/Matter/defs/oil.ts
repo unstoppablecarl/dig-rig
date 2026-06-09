@@ -1,8 +1,7 @@
 import { random } from '../../../helpers/random'
-import { FIRE, OIL, setSettled } from '../_Matter-types.ts'
-import type { ElementDef } from '../elements.ts'
+import { type MatterDef, FIRE, OIL, setSettled } from '../_Matter-types.ts'
 
-export const OIL_DEF: ElementDef = {
+export const OIL_DEF: MatterDef = {
   name: 'Oil',
   liquid: true,
   action(world, tx, ty, idx, next): void {

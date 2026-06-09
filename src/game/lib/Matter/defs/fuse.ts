@@ -1,7 +1,6 @@
-import { FIRE } from '../_Matter-types.ts'
-import type { ElementDef } from '../elements.ts'
+import { type MatterDef, FIRE } from '../_Matter-types.ts'
 
-export const FUSE_DEF: ElementDef = {
+export const FUSE_DEF: MatterDef = {
   name: 'Fuse',
   passive: true,
   action(world, tx, ty, idx, next): void {

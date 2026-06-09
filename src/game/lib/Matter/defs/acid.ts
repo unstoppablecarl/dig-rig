@@ -1,10 +1,20 @@
 import { random } from '../../../helpers/random'
-import { ACID, EMPTY, matterType, MatterTypeSet, SALT_WATER, setSettled, SOLID, WATER } from '../_Matter-types.ts'
-import { ACID_IMMUNE, type ElementDef } from '../elements.ts'
+import { ACID_IMMUNE } from '../_Matter-meta'
+import {
+  ACID,
+  type MatterDef,
+  EMPTY,
+  matterType,
+  MatterTypeSet,
+  SALT_WATER,
+  setSettled,
+  SOLID,
+  WATER,
+} from '../_Matter-types.ts'
 
 const IS_SETTLED = new MatterTypeSet(ACID, EMPTY)
 
-export const ACID_DEF: ElementDef = {
+export const ACID_DEF: MatterDef = {
   name: 'Acid',
   liquid: true,
   acidImmune: true,

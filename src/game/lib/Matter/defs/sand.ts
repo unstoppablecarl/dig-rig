@@ -1,8 +1,7 @@
-import { ACID, OIL, SALT_WATER, SAND, SAND_SETTLED, WATER } from '../_Matter-types.ts'
-import type { ElementDef } from '../elements.ts'
+import { ACID, type MatterDef, OIL, SALT_WATER, SAND, SAND_SETTLED, WATER } from '../_Matter-types.ts'
 import type { MatterSim } from '../MatterSim.ts'
 
-export const SAND_DEF: ElementDef = {
+export const SAND_DEF: MatterDef = {
   name: 'Sand',
   collidesWhenSettled: true,
   sinksThrough: [WATER, OIL, SALT_WATER, ACID],

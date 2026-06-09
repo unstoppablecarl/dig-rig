@@ -4,8 +4,8 @@ import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
+import { COLLIDES_WHEN_SETTLED } from '../Matter/_Matter-meta'
 import { isSettled, MatterType, matterType, MatterTypeSet } from '../Matter/_Matter-types.ts'
-import { COLLIDES_WHEN_SETTLED } from '../Matter/elements.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
 

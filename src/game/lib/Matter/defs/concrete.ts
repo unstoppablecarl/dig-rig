@@ -1,8 +1,7 @@
 import { random } from '../../../helpers/random'
-import { CONCRETE, SALT_WATER, setSettled, SOLID, WATER } from '../_Matter-types.ts'
-import type { ElementDef } from '../elements.ts'
+import { CONCRETE, type MatterDef, SALT_WATER, setSettled, SOLID, WATER } from '../_Matter-types.ts'
 
-export const CONCRETE_DEF: ElementDef = {
+export const CONCRETE_DEF: MatterDef = {
   name: 'Concrete',
   collidesWhenSettled: true,
   sinksThrough: [WATER, SALT_WATER],

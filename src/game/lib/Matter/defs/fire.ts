@@ -1,6 +1,6 @@
 import { random } from '../../../helpers/random'
 import {
-  C4,
+  C4, type MatterDef,
   EMPTY,
   FALLING_WAX,
   FIRE,
@@ -17,14 +17,13 @@ import {
   WATER,
   WAX,
 } from '../_Matter-types.ts'
-import type { ElementDef } from '../elements.ts'
 
-export const FIRE_DEF: ElementDef = {
+export const FIRE_DEF: MatterDef = {
   name: 'Fire',
   action(world, tx, ty, idx, next): void {
     const { tiles, width, height } = world
 
-    // Wake settled elements that react to fire but won't self-activate
+    // Wake settled defs that react to fire but won't self-activate
     world.wakeSettledNeighbors(tx, ty, idx, GUNPOWDER, next)
     world.wakeSettledNeighbors(tx, ty, idx, NAPALM, next)
     world.wakeSettledNeighbors(tx, ty, idx, NITRO, next)

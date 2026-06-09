@@ -1,6 +1,8 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
+import { LAVA_IMMUNE } from '../_Matter-meta'
 import {
+  type MatterDef,
   EMPTY,
   FIRE,
   LAVA,
@@ -14,12 +16,11 @@ import {
   STEAM,
   WATER,
 } from '../_Matter-types.ts'
-import { type ElementDef, LAVA_IMMUNE } from '../elements.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)
 
-export const LAVA_DEF: ElementDef = {
+export const LAVA_DEF: MatterDef = {
   name: 'Lava',
   lavaImmune: true,
   liquid: true,

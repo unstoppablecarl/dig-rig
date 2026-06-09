@@ -1,7 +1,6 @@
-import { ACID, LAVA, OIL, ROCK, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
-import type { ElementDef } from '../elements.ts'
+import { ACID, type MatterDef, LAVA, OIL, ROCK, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
 
-export const ROCK_DEF: ElementDef = {
+export const ROCK_DEF: MatterDef = {
   name: 'Rock',
   lavaImmune: true,
   collidesWhenSettled: true,

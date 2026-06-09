@@ -1,10 +1,9 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { FIRE, NITRO, setSettled } from '../_Matter-types.ts'
-import type { ElementDef } from '../elements.ts'
+import { type MatterDef, FIRE, NITRO, setSettled } from '../_Matter-types.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
-export const NITRO_DEF: ElementDef = {
+export const NITRO_DEF: MatterDef = {
   name: 'Nitro',
   liquid: true,
   action(world, tx, ty, idx, next): void {
