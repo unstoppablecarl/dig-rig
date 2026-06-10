@@ -4,7 +4,7 @@ import type { Position } from '../../../types.ts'
 import { WeaponSingleFireInput } from '../../Input/InputController/WeaponInputControllers/WeaponSingleFireInput.ts'
 import type { FireGroupWeapon } from '../../Input/InputController/WeaponManagerInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
-import { FireMode } from '../_FireMode-types'
+import type { ProjectileEffect } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 export class BasicWeapon extends WeaponSingleFireInput implements FireGroupWeapon {
@@ -14,8 +14,8 @@ export class BasicWeapon extends WeaponSingleFireInput implements FireGroupWeapo
     this.binder.add(scene.events, UPDATE, this.update, this)
   }
 
-  fire(mode: FireMode) {
-    this.scene.projectiles.fireForPlayer(Projectile, this.clampCharge(mode), mode)
+  fire(effect: ProjectileEffect) {
+    this.scene.projectiles.fireForPlayer(Projectile, this.clampCharge(effect), effect)
   }
 
   setEnabled(value: boolean) {

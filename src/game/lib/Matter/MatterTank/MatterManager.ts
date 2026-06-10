@@ -6,6 +6,7 @@ export class MatterManager extends SceneBound {
   public matterTanks = new Map<number, MatterTank>
   public playerMatterTank: MatterTank
 
+  // must start at 1, 0 = no owner
   protected idIncrement = 1
 
   constructor(

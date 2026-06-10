@@ -1,6 +1,6 @@
 import { matterType, MatterType } from '../Matter/_Matter-types.ts'
 import type {
-  ProjectileEffectDef,
+  ProjectileEffect,
   ProjectileEffectResult,
 } from '../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 import type { Tile, Tilemap } from './Tilemap.ts'
@@ -11,7 +11,7 @@ export function applyEffect(
   tileX: number,
   tileY: number,
   tileRadius: number,
-  effect: ProjectileEffectDef,
+  effect: ProjectileEffect,
   tilesToModify = Number.MAX_VALUE,
   innerRadius = 0,
 ): ProjectileEffectResult[] {
@@ -93,7 +93,7 @@ function truncatePreservingCenter<T extends { x: number; y: number }>(
 export function commitTilesList(
   tilemap: Tilemap,
   tiles: Tile[],
-  effect: ProjectileEffectDef,
+  effect: ProjectileEffect,
   out: ProjectileEffectResult[],
 ): ProjectileEffectResult[] {
   out.length = 0

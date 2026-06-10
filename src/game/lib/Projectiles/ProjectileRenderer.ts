@@ -55,7 +55,7 @@ export class ProjectileRenderer extends SceneBound {
 
   attachToProjectile(projectile: BaseProjectile) {
     const scene = projectile.scene
-    const color = FIRE_MODE_COLORS[projectile.mode]
+    const color = FIRE_MODE_COLORS[projectile.effect.mode]
 
     this.setColor(color)
 

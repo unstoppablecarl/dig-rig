@@ -5,7 +5,8 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import { COLLIDES_WHEN_SETTLED } from '../Matter/_Matter-meta'
-import { isSettled, MatterType, matterType, MatterTypeSet } from '../Matter/_Matter-types.ts'
+import { isSettled, MatterType, matterType, MatterTypeSet, setOwner } from '../Matter/_Matter-types.ts'
+import type { MatterTankId } from '../Matter/MatterTank/_MatterTank.types.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
 
@@ -87,12 +88,12 @@ export class Tilemap extends SceneBound {
 
   // ALWAYS confirm the value is actually going to change
   // before calling this
-  public setTile(x: number, y: number, value: MatterType) {
+  public setTile(x: number, y: number, value: MatterType, matterTankId: MatterTankId = (0 as MatterTankId)) {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false
     const id = y * this.width + x
     const prev = this.tiles[id]
     const prevType = matterType(prev)
-    this.tiles[id] = value
+    this.tiles[id] = setOwner(value, matterTankId)
     this.chunkManager.setDirty(x, y, prev, value)
     if (prevType === MatterType.SOLID && value !== MatterType.SOLID) this.matter--
     if (prevType !== MatterType.SOLID && value === MatterType.SOLID) this.matter++

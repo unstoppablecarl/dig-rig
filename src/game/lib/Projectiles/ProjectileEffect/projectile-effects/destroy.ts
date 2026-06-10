@@ -2,11 +2,11 @@ import { EMPTY, MatterType, matterTypeSetExcluding, PERMANENT, SAND, WATER } fro
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import type { Tilemap } from '../../../Tilemap/Tilemap.ts'
 import { addTileHighlights, destroyApplied } from '../_ProjectileEffect-helpers.ts'
-import type { ProjectileEffectDef, ProjectileEffectResult } from '../_ProjectileEffect.types.ts'
+import type { ProjectileEffect, ProjectileEffectResult } from '../_ProjectileEffect.types.ts'
 
 const reactsWithMatterTypes = matterTypeSetExcluding([PERMANENT, EMPTY, SAND, WATER])
-export const DESTROY_EFFECT: ProjectileEffectDef = {
-  chargeMode: FireMode.DESTROY,
+export const DESTROY_EFFECT: ProjectileEffect = {
+  mode: FireMode.DESTROY,
   reactsWithMatterTypes,
   convertMatterType: (t: MatterType) => reactsWithMatterTypes.has(t) ? MatterType.EMPTY : null,
   onTilesCommitted(tm: Tilemap, out: ProjectileEffectResult[]): void {

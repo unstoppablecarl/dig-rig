@@ -1,11 +1,10 @@
+import { isMatterTankFireMode } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
-import { FireMode } from '../Player/_FireMode-types'
 import { applyEffect } from '../Tilemap/TileMutation.ts'
-import type { ProjectileEffectDef, ProjectileEffectResult } from './ProjectileEffect/_ProjectileEffect.types.ts'
-import { EFFECT_BY_FIRE_MODE } from './ProjectileEffect/ProjectileEffect.ts'
+import type { ProjectileEffect, ProjectileEffectResult } from './ProjectileEffect/_ProjectileEffect.types.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
 import { ProjectileRenderer } from './ProjectileRenderer.ts'
 
@@ -18,7 +17,6 @@ export type BaseProjectileConstructor<T extends BaseProjectile> = new (...args: 
 export abstract class BaseProjectile extends SceneBound {
   public tilesToModify: number = -1
   public radius = 0
-  public effect: ProjectileEffectDef
 
   protected vx: number = 0
   protected vy: number = 0
@@ -37,11 +35,10 @@ export abstract class BaseProjectile extends SceneBound {
     public matterTank: MatterTank,
     public x: number,
     public y: number,
-    public mode: FireMode,
+    public effect: ProjectileEffect,
     protected renderer: ProjectileRenderer | null = null,
   ) {
     super(scene)
-    this.effect = EFFECT_BY_FIRE_MODE[mode]
     this.renderer?.attachToProjectile(this)
   }
 
@@ -64,8 +61,8 @@ export abstract class BaseProjectile extends SceneBound {
     this.initialVY = this.vy = vy * velocity
     this.fired = true
 
-    if (this.effect.chargeMode !== null) {
-      this.matterTank.addPendingCharge(this.effect.chargeMode, this.tilesToModify)
+    if (isMatterTankFireMode(this.effect.mode)) {
+      this.matterTank.addPendingCharge(this.effect.mode, this.tilesToModify)
     }
   }
 
@@ -87,8 +84,8 @@ export abstract class BaseProjectile extends SceneBound {
       this._resolveCollectPos(),
       tiles,
     )
-    if (this.effect.chargeMode !== null) {
-      this.matterTank.applyPendingCharge(this.effect.chargeMode, changed)
+    if (isMatterTankFireMode(this.effect.mode)) {
+      this.matterTank.applyPendingCharge(this.effect.mode, changed)
     }
     return tiles
   }
@@ -112,8 +109,8 @@ export abstract class BaseProjectile extends SceneBound {
   }
 
   protected onDestroy() {
-    if (this.effect.chargeMode !== null) {
-      this.matterTank.removePendingCharge(this.effect.chargeMode, this.charge())
+    if (isMatterTankFireMode(this.effect.mode)) {
+      this.matterTank.removePendingCharge(this.effect.mode, this.charge())
     }
     this.manager?.remove(this)
     this.renderer?.destroy()

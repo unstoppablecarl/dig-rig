@@ -7,7 +7,7 @@ import type { Weapon } from '../../Input/InputController/WeaponManagerInput.ts'
 import { EMPTY } from '../../Matter/_Matter-types.ts'
 import { MatterTank } from '../../Matter/MatterTank/MatterTank.ts'
 import type { ProjectileEffectResult } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
-import { ProjectileEffect } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
+import { PROJECTILE_EFFECT } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import type { SweepRecord } from '../../Projectiles/TunnelDestroyProjectile.ts'
 import { TunnelDestroyProjectile } from '../../Projectiles/TunnelDestroyProjectile.ts'
 import type { Tile } from '../../Tilemap/Tilemap.ts'
@@ -78,7 +78,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
       startPos.x,
       startPos.y,
       charge,
-      FireMode.DESTROY,
+      PROJECTILE_EFFECT.DESTROY,
     )
   }
 
@@ -258,7 +258,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   }
 
   private _applyCreate(tiles: Tile[]) {
-    const created = commitTilesList(this.scene.tilemap, tiles, ProjectileEffect.CREATE_SOLID, this._commitOut)
+    const created = commitTilesList(this.scene.tilemap, tiles, PROJECTILE_EFFECT.CREATE_SOLID, this._commitOut)
     if (!created.length) return
     this.matterTank.addPendingCharge(FireMode.CREATE, created.length)
     const source = this.scene.player.matterParticleEmitPosition(this._emitPos)

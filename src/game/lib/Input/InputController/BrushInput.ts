@@ -2,7 +2,7 @@ import { GameObjects, Input, Scenes } from 'phaser'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { MatterType } from '../../Matter/_Matter-types.ts'
 import type { ProjectileEffectResult } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
-import { ProjectileEffect } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
+import { PROJECTILE_EFFECT } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import { applyEffect } from '../../Tilemap/TileMutation.ts'
 import { InputController } from './InputController.ts'
 import POINTER_DOWN = Input.Events.POINTER_DOWN
@@ -95,7 +95,7 @@ export class BrushInput extends InputController {
 
   apply(tileX: number, tileY: number) {
     if (this.matterType === MatterType.SOLID) {
-      const effect = this.isCreating ? ProjectileEffect.CREATE_SOLID : ProjectileEffect.DESTROY
+      const effect = this.isCreating ? PROJECTILE_EFFECT.CREATE_SOLID : PROJECTILE_EFFECT.DESTROY
       applyEffect(this.scene.tilemap, this._effectTiles, tileX, tileY, this.radius, effect)
     } else {
       this.scene.matterBridge.addMatter(this.matterType, tileX, tileY, this.radius)

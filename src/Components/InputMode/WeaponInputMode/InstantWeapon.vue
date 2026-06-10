@@ -1,15 +1,12 @@
 <script setup lang="ts">
 import { INPUT_ACTIONS } from '../../../input.ts'
-import { useWeaponUIState } from '../../../store/weaponUIState.ts'
 import { useInstantWeaponUIState } from '../../../store/weaponUIState/InstantWeaponUIState.ts'
+import WeaponInputCharge from './Partials/WeaponInputCharge.vue'
 
-const weaponState = useWeaponUIState()
 const state = useInstantWeaponUIState()
 
 const prev = INPUT_ACTIONS.PREV_MODE.join(',')
 const next = INPUT_ACTIONS.NEXT_MODE.join(',')
-const sub = INPUT_ACTIONS.CHARGE_DECREASE.join(',')
-const add = INPUT_ACTIONS.CHARGE_INCREASE.join(',')
 
 </script>
 <template>
@@ -22,10 +19,7 @@ const add = INPUT_ACTIONS.CHARGE_INCREASE.join(',')
     <kbd>{{ prev }}</kbd> / <kbd>{{ next }}</kbd> = prev / next
   </span>
 
-  <span class="imu-section">
-    <strong>Charge: </strong> {{ weaponState.charge }}
-    <kbd>Mouse Wheel</kbd> & <kbd>{{ sub }}</kbd> / <kbd>{{ add }}</kbd> = -/+
-  </span>
+  <WeaponInputCharge />
 </template>
 <style lang="scss">
 

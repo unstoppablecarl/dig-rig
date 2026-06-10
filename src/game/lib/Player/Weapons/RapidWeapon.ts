@@ -3,7 +3,7 @@ import type { Position } from '../../../types.ts'
 import { WeaponRapidFireInput } from '../../Input/InputController/WeaponInputControllers/WeaponRapidFireInput.ts'
 import type { FireGroupWeapon } from '../../Input/InputController/WeaponManagerInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
-import { FireMode } from '../_FireMode-types'
+import type { ProjectileEffect } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 
 const RAPID_VELOCITY = 300
 
@@ -30,7 +30,7 @@ export class RapidWeapon extends WeaponRapidFireInput implements FireGroupWeapon
     this.scene.previewProjectileRenderer.setVisible(value)
   }
 
-  fire(mode: FireMode) {
-    this.scene.projectiles.fireForPlayer(Projectile, this.clampCharge(mode), mode, RAPID_VELOCITY)
+  fire(effect: ProjectileEffect) {
+    this.scene.projectiles.fireForPlayer(Projectile, this.clampCharge(effect), effect, RAPID_VELOCITY)
   }
 }

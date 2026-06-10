@@ -3,8 +3,8 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
-import { FireMode } from '../Player/_FireMode-types'
 import type { BaseProjectile, BaseProjectileConstructor, ProjectileSource } from './BaseProjectile.ts'
+import type { ProjectileEffect } from './ProjectileEffect/_ProjectileEffect.types.ts'
 import { ProjectileRenderer } from './ProjectileRenderer.ts'
 
 export class ProjectileManager extends SceneBound {
@@ -23,10 +23,10 @@ export class ProjectileManager extends SceneBound {
     x: number,
     y: number,
     charge: number,
-    mode: FireMode,
+    effect: ProjectileEffect,
     renderer: null | ProjectileRenderer = new ProjectileRenderer(this.scene),
   ): T {
-    const projectile = new Constructor(this.scene, this, source, matterTank, x, y, mode, renderer)
+    const projectile = new Constructor(this.scene, this, source, matterTank, x, y, effect, renderer)
 
     projectile.setTilesToModify(charge)
     this.children.push(projectile)
@@ -38,20 +38,20 @@ export class ProjectileManager extends SceneBound {
   fireForPlayer<T extends BaseProjectile>(
     Constructor: BaseProjectileConstructor<T>,
     charge: number,
-    mode: FireMode,
+    effect: ProjectileEffect,
     velocity?: number,
     pos?: Position,
     angle?: number,
     renderer: null | ProjectileRenderer = new ProjectileRenderer(this.scene),
   ) {
     const player = this.scene.player
-    if (isMatterTankFireMode(mode) && !player.matterTank.hasChargeAvailable(charge, mode)) {
+    if (isMatterTankFireMode(effect.mode) && !player.matterTank.hasChargeAvailable(charge, effect.mode)) {
       return
     }
     const startPos = pos ?? player.getProjectilePosition(0, this._startPos)
     const startAngle = angle ?? player.getProjectileAngle()
 
-    const projectile = this.add(Constructor, player, player.matterTank, startPos.x, startPos.y, charge, mode, renderer)
+    const projectile = this.add(Constructor, player, player.matterTank, startPos.x, startPos.y, charge, effect, renderer)
     projectile.fire(startAngle, velocity)
 
     return projectile

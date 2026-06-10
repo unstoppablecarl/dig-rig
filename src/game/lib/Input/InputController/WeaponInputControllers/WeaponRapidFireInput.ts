@@ -1,6 +1,6 @@
 import { Scenes } from 'phaser'
 import type { GameLevel } from '../../../../scenes/GameLevel.ts'
-import { FireMode } from '../../../Player/_FireMode-types'
+import type { ProjectileEffect } from '../../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 import { InputController } from '../InputController.ts'
 import { WeaponAdjustableChargeMixin } from './mixins/WeaponAdjustableChargeMixin.ts'
 import { WeaponFireGroupCycleMixin } from './mixins/WeaponFireGroupCycleMixin.ts'
@@ -32,27 +32,23 @@ export abstract class WeaponRapidFireInput extends Mix {
 
     const a = this.scene.playerActions
 
-    let mode: FireMode
+    let effect: ProjectileEffect
     if (a.FIRE_SECONDARY.isDown()) {
-      mode = this.scene.weaponUIState.fireGroupSecondary
+      effect = this.scene.weaponUIState.fireGroupSecondaryEffect
     } else if (a.FIRE_PRIMARY.isDown()) {
-      mode = this.scene.weaponUIState.fireGroupPrimary
+      effect = this.scene.weaponUIState.fireGroupPrimaryEffect
     } else {
       this.coolDown = 0
       return
     }
 
     this.coolDown += this.rateOfFireMs
-    this.fire(mode)
+    this.fire(effect)
   }
 
   setEnabled(value: boolean) {
     this.setInputEnabled(value)
   }
 
-  abstract fire(mode: FireMode): void
-
-  protected onDestroy() {
-    super.onDestroy()
-  }
+  abstract fire(effect: ProjectileEffect): void
 }

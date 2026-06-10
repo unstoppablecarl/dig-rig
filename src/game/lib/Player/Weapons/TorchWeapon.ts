@@ -10,8 +10,8 @@ import {
 import { WeaponConstantInput } from '../../Input/InputController/WeaponInputControllers/WeaponConstantInput.ts'
 import type { FireGroupWeapon } from '../../Input/InputController/WeaponManagerInput.ts'
 import { tilesToRadius } from '../../Projectiles/projectile-radius.ts'
+import type { ProjectileEffect } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 import { TorchProjectile } from '../../Projectiles/TorchProjectile.ts'
-import { FireMode } from '../_FireMode-types'
 
 const WeaponAdjustableCharge = WeaponAdjustableChargeMixin(WeaponConstantInput)
 const Mix = WeaponFireGroupCycleMixin(WeaponAdjustableCharge)
@@ -27,13 +27,13 @@ export class TorchWeapon extends Mix implements FireGroupWeapon {
     this.addChargeInput()
   }
 
-  updateFiring(value: boolean, mode: FireMode): void {
+  updateFiring(value: boolean, effect: ProjectileEffect): void {
     if (value && !this.projectile) {
       let charge = Infinity
-      if (isMatterTankFireMode(mode)) {
-        charge = this.scene.player.matterTank.chargeAvailable(mode)
+      if (isMatterTankFireMode(effect.mode)) {
+        charge = this.scene.player.matterTank.chargeAvailable(effect.mode)
       }
-      this.projectile = this.scene.projectiles.fireForPlayer(TorchProjectile, charge, mode, 0) ?? null
+      this.projectile = this.scene.projectiles.fireForPlayer(TorchProjectile, charge, effect, 0) ?? null
     }
 
     if (!value && this.projectile) {

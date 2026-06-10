@@ -4,6 +4,8 @@ import type { ParticleTarget } from '../../types.ts'
 import { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
 import { FireMode } from '../Player/_FireMode-types'
 import { Projectile } from '../Projectiles/Projectile.ts'
+import type { ProjectileEffect } from '../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
+import { PROJECTILE_EFFECT } from '../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import Container = GameObjects.Container
 import GameObject = GameObjects.GameObject
 import Vector2 = PMath.Vector2
@@ -63,8 +65,8 @@ export class Driller extends GameObject implements ParticleTarget {
     this.text.setText(`${current}/${matterMax}`)
   }
 
-  private queue(charge: number, mode: FireMode) {
-    return this.scene.projectiles.add(Projectile, this, this.matterTank, this.x, this.y, charge, mode)
+  private queue(charge: number, effect: ProjectileEffect) {
+    return this.scene.projectiles.add(Projectile, this, this.matterTank, this.x, this.y, charge, effect)
   }
 
   private attemptFire() {
@@ -72,7 +74,7 @@ export class Driller extends GameObject implements ParticleTarget {
 
     if (matterTank.full()) {
       if (matterTank.getPendingCharge(FireMode.CREATE) > 0) return
-      this.queue(this.projectileCharge, FireMode.CREATE)
+      this.queue(this.projectileCharge, PROJECTILE_EFFECT.CREATE_SOLID)
         .fireRaw(0, 1)
 
       return
@@ -80,7 +82,7 @@ export class Driller extends GameObject implements ParticleTarget {
 
     if (matterTank.getPendingCharge(FireMode.DESTROY) > 0) return
     if (matterTank.chargeAvailable(FireMode.DESTROY) >= this.projectileCharge) {
-      this.queue(this.projectileCharge, FireMode.DESTROY)
+      this.queue(this.projectileCharge, PROJECTILE_EFFECT.DESTROY)
         .fireRaw(0, 1)
     }
   }

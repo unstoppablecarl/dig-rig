@@ -1,5 +1,5 @@
 import type { GameLevel } from '../../../../scenes/GameLevel.ts'
-import { FireMode } from '../../../Player/_FireMode-types'
+import type { ProjectileEffect } from '../../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 import { InputController } from '../InputController.ts'
 import { WeaponAdjustableChargeMixin } from './mixins/WeaponAdjustableChargeMixin.ts'
 import { WeaponFireGroupCycleMixin } from './mixins/WeaponFireGroupCycleMixin.ts'
@@ -21,8 +21,8 @@ export abstract class WeaponSingleFireInput extends Mix {
 
     const a = this.scene.playerActions
     this.binder.addInput(() => [
-      a.FIRE_PRIMARY.onDown(() => this.fire(this.scene.weaponUIState.fireGroupPrimary)),
-      a.FIRE_SECONDARY.onDown(() => this.fire(this.scene.weaponUIState.fireGroupSecondary)),
+      a.FIRE_PRIMARY.onDown(() => this.fire(this.scene.weaponUIState.fireGroupPrimaryEffect)),
+      a.FIRE_SECONDARY.onDown(() => this.fire(this.scene.weaponUIState.fireGroupSecondaryEffect)),
     ])
   }
 
@@ -31,5 +31,5 @@ export abstract class WeaponSingleFireInput extends Mix {
     this.scene.previewProjectileRenderer.setVisible(value)
   }
 
-  abstract fire(mode: FireMode): void
+  abstract fire(effect: ProjectileEffect): void
 }

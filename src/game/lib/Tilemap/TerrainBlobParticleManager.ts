@@ -4,7 +4,7 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { FireMode } from '../Player/_FireMode-types'
 import type { ProjectileEffectResult } from '../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
-import { EFFECT_BY_FIRE_MODE } from '../Projectiles/ProjectileEffect/ProjectileEffect.ts'
+import { fireModeToEffect } from '../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import { VFXTerrainParticle } from '../VFXParticles/VFXTerrainParticle.ts'
 import { applyEffect } from './TileMutation.ts'
 
@@ -60,7 +60,7 @@ export class TerrainBlobParticleManager extends SceneBound {
 
     if (result.collision) {
       const { stepX, stepY } = result
-      applyEffect(this.scene.tilemap, this._effectTiles, stepX, stepY, d.radius, EFFECT_BY_FIRE_MODE[d.mode])
+      applyEffect(this.scene.tilemap, this._effectTiles, stepX, stepY, d.radius, fireModeToEffect(d.mode))
       return false
     } else {
       const { dx, dy } = result

@@ -5,7 +5,6 @@ import type { Position } from '../../../types.ts'
 import { WeaponRapidFireInput } from '../../Input/InputController/WeaponInputControllers/WeaponRapidFireInput.ts'
 import type { Weapon } from '../../Input/InputController/WeaponManagerInput.ts'
 import { InstantProjectile } from '../../Projectiles/InstantProjectile.ts'
-import { EFFECT_BY_FIRE_MODE } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import { ProjectileRenderer } from '../../Projectiles/ProjectileRenderer.ts'
 
 export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
@@ -40,12 +39,13 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
   }
 
   fire() {
-    let charge = this.clampCharge(this.getFireMode())
-    this.scene.projectiles.fireForPlayer(InstantProjectile, charge, this.getFireMode(), 0, this.targetPos, 0, null)
+    const effect = this.getEffect()
+    const charge = this.clampCharge(effect)
+    this.scene.projectiles.fireForPlayer(InstantProjectile, charge, effect, 0, this.targetPos, 0, null)
   }
 
-  getFireMode() {
-    return this.scene.instantWeaponUIState.fireMode
+  getEffect() {
+    return this.scene.instantWeaponUIState.fireModeEffect
   }
 
   setEnabled(value: boolean) {
@@ -62,7 +62,7 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     super.update(_time, delta)
     const armPosition = this.scene.player.getProjectilePosition(0, this._playerArmPos)
     const armAngle = this.scene.player.getProjectileAngle()
-    const COLLISION_TYPES = EFFECT_BY_FIRE_MODE[this.getFireMode()].reactsWithMatterTypes
+    const COLLISION_TYPES = this.getEffect().reactsWithMatterTypes
     this.targetPos = this.scene.tilemap.getAngleRayCollision(armPosition.x, armPosition.y, armAngle, COLLISION_TYPES)
 
     this.renderer.setPosition(this.targetPos)
@@ -77,7 +77,5 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     this.renderer.destroy()
     // @ts-expect-error: destroy
     this.renderer = null
-    // @ts-expect-error: destroy
-    this.fireMode = null
   }
 }

@@ -30,7 +30,7 @@ export class Projectile extends BaseProjectile {
     if (!this.fired) return
 
     // if in create mode, and not already collided/expanding yet, and collided with collision map tile
-    if (this.mode === FireMode.CREATE) {
+    if (this.effect.mode === FireMode.CREATE) {
       if (!this.expandTimer) {
         const { stepDx, stepDy, totalSteps } = getCollisionSteps(this.vx, this.vy, dt)
 

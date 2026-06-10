@@ -2,7 +2,7 @@ import { isMatterTankFireMode } from '../../../../../helpers/_helpers.ts'
 import type { AbstractMixinConstructor } from '../../../../../helpers/class-mixins.ts'
 import type { GameLevel } from '../../../../../scenes/GameLevel.ts'
 import { GameEvent } from '../../../../events.ts'
-import type { FireMode } from '../../../../Player/_FireMode-types.ts'
+import type { ProjectileEffect } from '../../../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 import type { InputController } from '../../InputController.ts'
 
 export function WeaponAdjustableChargeMixin<TBase extends AbstractMixinConstructor<InputController>>(Base: TBase) {
@@ -42,10 +42,10 @@ export function WeaponAdjustableChargeMixin<TBase extends AbstractMixinConstruct
       return false
     }
 
-    protected clampCharge(mode: FireMode) {
+    protected clampCharge(effect: ProjectileEffect) {
       const charge = this.getCharge()
-      if (isMatterTankFireMode(mode)) {
-        return this.scene.player.matterTank.clampToChargeAvailable(charge, mode)
+      if (isMatterTankFireMode(effect.mode)) {
+        return this.scene.player.matterTank.clampToChargeAvailable(charge, effect.mode)
       }
       return charge
     }

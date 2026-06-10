@@ -1,11 +1,12 @@
 import { Scenes } from 'phaser'
 import type { GameLevel } from '../../../../scenes/GameLevel.ts'
-import { FireMode } from '../../../Player/_FireMode-types'
+import type { ProjectileEffect } from '../../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
+import { PROJECTILE_EFFECT } from '../../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import { InputController } from '../InputController.ts'
 import UPDATE = Scenes.Events.UPDATE
 
 export abstract class WeaponConstantInput extends InputController {
-  public mode: FireMode = FireMode.DESTROY
+  public effect: ProjectileEffect = PROJECTILE_EFFECT.DESTROY
   private firing = false
 
   constructor(
@@ -18,11 +19,11 @@ export abstract class WeaponConstantInput extends InputController {
     this.binder.addInput(() => [
       a.FIRE_PRIMARY.onDown(() => {
         this.firing = true
-        this.mode = this.scene.weaponUIState.fireGroupPrimary
+        this.effect = this.scene.weaponUIState.fireGroupPrimaryEffect
       }),
       a.FIRE_SECONDARY.onDown(() => {
         this.firing = true
-        this.mode = this.scene.weaponUIState.fireGroupSecondary
+        this.effect = this.scene.weaponUIState.fireGroupSecondaryEffect
       }),
       a.FIRE_PRIMARY.onUp(() => {
         this.firing = false
@@ -41,9 +42,9 @@ export abstract class WeaponConstantInput extends InputController {
     this.firing = false
   }
 
-  abstract updateFiring(value: boolean, mode: FireMode): void
+  abstract updateFiring(value: boolean, effect: ProjectileEffect): void
 
   update(_time: number, _delta: number) {
-    this.updateFiring(this.firing, this.mode)
+    this.updateFiring(this.firing, this.effect)
   }
 }

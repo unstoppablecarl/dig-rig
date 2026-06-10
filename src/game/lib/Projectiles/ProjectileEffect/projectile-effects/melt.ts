@@ -2,10 +2,10 @@ import { MatterType, MatterTypeSet, SAND, SOLID, WATER } from '../../../Matter/_
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import type { Tilemap } from '../../../Tilemap/Tilemap.ts'
 import { addTileHighlights, noVFX } from '../_ProjectileEffect-helpers.ts'
-import type { ProjectileEffectDef, ProjectileEffectResult } from '../_ProjectileEffect.types.ts'
+import type { ProjectileEffect, ProjectileEffectResult } from '../_ProjectileEffect.types.ts'
 
-export const MELT_EFFECT: ProjectileEffectDef = {
-  chargeMode: null,
+export const MELT_EFFECT: ProjectileEffect = {
+  mode: FireMode.MELT,
   reactsWithMatterTypes: new MatterTypeSet(SOLID, SAND),
   convertMatterType(t: MatterType): MatterType | null {
     if (t === SOLID) return SAND
