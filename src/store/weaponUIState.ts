@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, ref } from 'vue'
 import { FIRE_GROUP_COLORS } from '../game/config/colors.ts'
+import { makeArrayCyclerRef } from '../game/helpers/ArrayCycler.ts'
 import type { MatterTank } from '../game/lib/Matter/MatterTank/MatterTank.ts'
 import { FireGroup, FireGroupModes, FireGroupValues, FireMode } from '../game/lib/Player/_FireMode-types.ts'
 import { PlayerWeapon, WEAPONS } from '../game/lib/Player/weapons.ts'
@@ -17,7 +18,6 @@ type SerializedData = {
 
 export const useWeaponUIState = defineStore('weapon-ui-state', () => {
   const id = ref<PlayerWeapon>(PlayerWeapon.BASIC)
-  const fireGroup = ref<FireGroup>(FireGroup.CREATE_DESTROY)
   const charge = ref(20)
 
   const activeMatterTank = rawRef<MatterTank | null>(null)
@@ -25,7 +25,11 @@ export const useWeaponUIState = defineStore('weapon-ui-state', () => {
   const displayName = computed(() => WEAPONS[id.value].displayName)
   const slot = computed(() => WEAPONS[id.value].slot)
 
-  const fireGroupIndex = computed(() => FireGroupValues.indexOf(fireGroup.value))
+  const {
+    prev: prevFireGroup,
+    next: nextFireGroup,
+    value: fireGroup,
+  } = makeArrayCyclerRef(FireGroupValues, FireGroup.CREATE_DESTROY)
 
   const fireGroupPrimary = computed(() => FireGroupModes[fireGroup.value].PRIMARY)
   const fireGroupSecondary = computed(() => FireGroupModes[fireGroup.value].SECONDARY)
@@ -34,26 +38,6 @@ export const useWeaponUIState = defineStore('weapon-ui-state', () => {
   const fireGroupSecondaryName = computed(() => FireMode[fireGroupSecondary.value])
 
   const fireGroupColor = computed(() => FIRE_GROUP_COLORS[fireGroup.value])
-
-  function prevFireGroup() {
-    let index: number
-    if (fireGroupIndex.value === 0) {
-      index = FireGroupValues.length - 1
-    } else {
-      index = fireGroupIndex.value - 1
-    }
-    fireGroup.value = FireGroupValues[index]
-  }
-
-  function nextFireGroup() {
-    let index: number
-    if (fireGroupIndex.value === FireGroupValues.length - 1) {
-      index = 0
-    } else {
-      index = fireGroupIndex.value + 1
-    }
-    fireGroup.value = FireGroupValues[index]
-  }
 
   const state = {
     id,
