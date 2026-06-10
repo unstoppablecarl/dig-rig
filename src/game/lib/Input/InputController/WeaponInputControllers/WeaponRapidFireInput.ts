@@ -4,10 +4,12 @@ import { FireMode } from '../../../Player/_FireMode-types'
 import { InputController } from '../InputController.ts'
 import { WeaponAdjustableChargeMixin } from './mixins/WeaponAdjustableChargeMixin.ts'
 import { WeaponFireGroupCycleMixin } from './mixins/WeaponFireGroupCycleMixin.ts'
+import { WeaponMatterTypeCycleMixin } from './mixins/WeaponMatterTypeCycleMixin.ts'
 import UPDATE = Scenes.Events.UPDATE
 
-const WeaponAdjustableCharge = WeaponAdjustableChargeMixin(InputController)
-const Mix = WeaponFireGroupCycleMixin(WeaponAdjustableCharge)
+const MixA = WeaponAdjustableChargeMixin(InputController)
+const MixB = WeaponMatterTypeCycleMixin(MixA)
+const Mix = WeaponFireGroupCycleMixin(MixB)
 
 export abstract class WeaponRapidFireInput extends Mix {
   protected coolDown = 0
@@ -17,9 +19,10 @@ export abstract class WeaponRapidFireInput extends Mix {
     public scene: GameLevel,
   ) {
     super(scene)
-    this.addEvent(this.scene.events, UPDATE, this.update)
+    this.binderAdd(this.scene.events, UPDATE, this.update)
     this.addChargeInput()
     this.addFireGroupInput()
+    this.addMatterTypeInput()
   }
 
   update(_time: number, delta: number) {

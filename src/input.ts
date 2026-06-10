@@ -15,6 +15,6 @@ export const INPUT_ACTIONS: Record<PlayerAction, Binding> = {
   [PlayerAction.MOVE_DOWN]: [DOWN, 's'],
   [PlayerAction.JUMP]: [UP, SPACE, 'w'],
   [PlayerAction.ZOOM_MODIFIER]: ['SHIFT'],
-  [PlayerAction.PREV_MATTER]: ['q'],
-  [PlayerAction.NEXT_MATTER]: ['e'],
+  [PlayerAction.PREV_MATTER_TYPE]: ['q'],
+  [PlayerAction.NEXT_MATTER_TYPE]: ['e'],
 }

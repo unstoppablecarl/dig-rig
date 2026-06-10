@@ -12,10 +12,10 @@ export abstract class WeaponConstantInput extends InputController {
     public scene: GameLevel,
   ) {
     super(scene)
-    this.addEvent(this.scene.events, UPDATE, this.update)
+    this.binderAdd(this.scene.events, UPDATE, this.update)
 
     const a = this.scene.playerActions
-    this.addInput(() => [
+    this.binder.addInput(() => [
       a.FIRE_PRIMARY.onDown(() => {
         this.firing = true
         this.mode = this.scene.weaponUIState.fireGroupPrimary

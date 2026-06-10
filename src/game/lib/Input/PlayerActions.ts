@@ -15,8 +15,8 @@ export enum PlayerAction {
   MOVE_RIGHT = 'MOVE_RIGHT',
   JUMP = 'JUMP',
   ZOOM_MODIFIER = 'ZOOM_MODIFIER',
-  PREV_MATTER = 'PREV_MATTER',
-  NEXT_MATTER = 'NEXT_MATTER',
+  PREV_MATTER_TYPE = 'PREV_MATTER_TYPE',
+  NEXT_MATTER_TYPE = 'NEXT_MATTER_TYPE',
 }
 
 export const PLAYER_ACTION_DISPLAY_NAME: Record<PlayerAction, string> = {
@@ -31,8 +31,8 @@ export const PLAYER_ACTION_DISPLAY_NAME: Record<PlayerAction, string> = {
   [PlayerAction.CHARGE_DECREASE]: 'Charge: Decrease',
   [PlayerAction.CHARGE_INCREASE]: 'Charge: Increase',
   [PlayerAction.ZOOM_MODIFIER]: 'Zoom',
-  [PlayerAction.PREV_MATTER]: 'Matter: Prev',
-  [PlayerAction.NEXT_MATTER]: 'Matter: Next',
+  [PlayerAction.PREV_MATTER_TYPE]: 'Matter: Prev',
+  [PlayerAction.NEXT_MATTER_TYPE]: 'Matter: Next',
 }
 
 export const POINTER_LEFT = 'Mouse Left' as const

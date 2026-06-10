@@ -38,10 +38,10 @@ export class BrushInput extends InputController {
     super(scene)
     this.graphics = this.scene.add.graphics()
     scene.layers.brush.add(this.graphics)
-    this.addEvent(this.scene.input, POINTER_MOVE, this.pointermove)
-    this.addEvent(this.scene.input, POINTER_DOWN, this.pointerdown)
-    this.addEvent(this.scene.input, POINTER_UP, this.pointerup)
-    this.addEvent(this.scene.events, UPDATE, this.update)
+    this.binderAdd(this.scene.input, POINTER_MOVE, this.pointermove)
+    this.binderAdd(this.scene.input, POINTER_DOWN, this.pointerdown)
+    this.binderAdd(this.scene.input, POINTER_UP, this.pointerup)
+    this.binderAdd(this.scene.events, UPDATE, this.update)
   }
 
   protected onEnable() {

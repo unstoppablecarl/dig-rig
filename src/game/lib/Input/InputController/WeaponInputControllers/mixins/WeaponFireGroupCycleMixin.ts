@@ -6,7 +6,7 @@ export function WeaponFireGroupCycleMixin<TBase extends AbstractMixinConstructor
   abstract class WeaponFireGroupCycle extends Base {
     addFireGroupInput() {
       const a = this.scene.playerActions
-      this.addInput(() => [
+      this.binder.addInput(() => [
         a.PREV_MODE.onDown(() => {
           this.scene.weaponUIState.prevFireGroup()
         }),

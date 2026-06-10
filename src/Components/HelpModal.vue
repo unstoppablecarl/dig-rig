@@ -37,8 +37,8 @@ const PLAYER_ACTION_GROUPS: Record<string, PlayerActionDesc[]> = {
       keys: ['Mouse Wheel'],
       label: 'Charge: Change',
     },
-    desc(PlayerAction.PREV_MATTER),
-    desc(PlayerAction.NEXT_MATTER),
+    desc(PlayerAction.PREV_MATTER_TYPE),
+    desc(PlayerAction.NEXT_MATTER_TYPE),
   ],
   'View': [
     {

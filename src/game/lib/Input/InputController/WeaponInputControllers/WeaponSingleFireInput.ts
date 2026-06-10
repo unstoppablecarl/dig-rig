@@ -3,9 +3,11 @@ import { FireMode } from '../../../Player/_FireMode-types'
 import { InputController } from '../InputController.ts'
 import { WeaponAdjustableChargeMixin } from './mixins/WeaponAdjustableChargeMixin.ts'
 import { WeaponFireGroupCycleMixin } from './mixins/WeaponFireGroupCycleMixin.ts'
+import { WeaponMatterTypeCycleMixin } from './mixins/WeaponMatterTypeCycleMixin.ts'
 
-const WeaponAdjustableCharge = WeaponAdjustableChargeMixin(InputController)
-const Mix = WeaponFireGroupCycleMixin(WeaponAdjustableCharge)
+const MixA = WeaponAdjustableChargeMixin(InputController)
+const MixB = WeaponMatterTypeCycleMixin(MixA)
+const Mix = WeaponFireGroupCycleMixin(MixB)
 
 export abstract class WeaponSingleFireInput extends Mix {
 
@@ -15,8 +17,10 @@ export abstract class WeaponSingleFireInput extends Mix {
     super(scene)
     this.addChargeInput()
     this.addFireGroupInput()
+    this.addMatterTypeInput()
+
     const a = this.scene.playerActions
-    this.addInput(() => [
+    this.binder.addInput(() => [
       a.FIRE_PRIMARY.onDown(() => this.fire(this.scene.weaponUIState.fireGroupPrimary)),
       a.FIRE_SECONDARY.onDown(() => this.fire(this.scene.weaponUIState.fireGroupSecondary)),
     ])

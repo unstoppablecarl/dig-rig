@@ -27,7 +27,7 @@ export class WeaponManagerInput extends InputController {
   constructor(scene: GameLevel) {
     super(scene)
 
-    this.addEvent(this.scene.input.keyboard!, ANY_KEY_DOWN, this.keydown)
+    this.binderAdd(this.scene.input.keyboard!, ANY_KEY_DOWN, this.keydown)
 
     for (const item of Object.values(WEAPONS)) {
       this.weapons.set(item.slot, new item.constructor(scene))
@@ -35,7 +35,7 @@ export class WeaponManagerInput extends InputController {
 
     this._active = this.weapons.get(1) as Weapon
 
-    this.addEvent(this.scene.game.events, GAME_LEVEL_LOADED, () => {
+    this.binderAdd(this.scene.game.events, GAME_LEVEL_LOADED, () => {
       this.setActive(this.scene.weaponUIState.slot)
       if (!this._active) {
         debugger
