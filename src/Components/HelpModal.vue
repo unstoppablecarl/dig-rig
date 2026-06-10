@@ -1,9 +1,53 @@
 <script setup lang="ts">
-import { PLAYER_ACTION_LABELS } from '../game/lib/Input/PlayerActions.ts'
+import { PLAYER_ACTION_DISPLAY_NAME, PlayerAction } from '../game/lib/Input/PlayerActions.ts'
 import { INPUT_ACTIONS } from '../input.ts'
 import { useUIState } from '../store/uiState.ts'
 
 const uiState = useUIState()
+
+type PlayerActionDesc = {
+  keys: (string | number)[],
+  mouseWheelModifier?: boolean,
+  label: string,
+}
+
+function desc(key: PlayerAction): PlayerActionDesc {
+  return {
+    label: PLAYER_ACTION_DISPLAY_NAME[key],
+    keys: INPUT_ACTIONS[key],
+  }
+}
+
+const PLAYER_ACTION_GROUPS: Record<string, PlayerActionDesc[]> = {
+  'Movement': [
+    desc(PlayerAction.MOVE_LEFT),
+    desc(PlayerAction.MOVE_RIGHT),
+    desc(PlayerAction.JUMP),
+  ],
+  'Weapon': [
+    desc(PlayerAction.FIRE_PRIMARY),
+    desc(PlayerAction.FIRE_SECONDARY),
+  ],
+  'Weapon Specific': [
+    desc(PlayerAction.PREV_MODE),
+    desc(PlayerAction.NEXT_MODE),
+    desc(PlayerAction.CHARGE_DECREASE),
+    desc(PlayerAction.CHARGE_INCREASE),
+    {
+      keys: ['Mouse Wheel'],
+      label: 'Charge: Change',
+    },
+    desc(PlayerAction.PREV_MATTER),
+    desc(PlayerAction.NEXT_MATTER),
+  ],
+  'View': [
+    {
+      keys: INPUT_ACTIONS[PlayerAction.ZOOM_MODIFIER],
+      mouseWheelModifier: true,
+      label: 'Zoom',
+    },
+  ],
+}
 
 const KEYCODE_NAMES: Record<number, string> = {
   32: 'Space',
@@ -12,17 +56,12 @@ const KEYCODE_NAMES: Record<number, string> = {
   39: '→',
   40: '↓',
 }
+const aliases: Record<string, string> = { SHIFT: 'Shift' }
 
 function formatKey(key: string | number): string {
   if (typeof key === 'number') return KEYCODE_NAMES[key] ?? `${key}`
-  const aliases: Record<string, string> = { SHIFT: 'Shift' }
   return aliases[key] ?? (key.length === 1 ? key.toUpperCase() : key)
 }
-
-const bindings = Object.entries(INPUT_ACTIONS).map(([action, keys]) => ({
-  label: PLAYER_ACTION_LABELS[action] ?? action,
-  keys: keys as (string | number)[],
-}))
 </script>
 
 <template>
@@ -33,15 +72,22 @@ const bindings = Object.entries(INPUT_ACTIONS).map(([action, keys]) => ({
         <button class="help-close" @click="uiState.helpModal = false">✕</button>
       </div>
       <div class="help-body">
-        <div class="binding-row" v-for="{ label, keys } in bindings" :key="label">
-          <span class="binding-label">{{ label }}</span>
-          <span class="binding-keys">
-            <template v-for="(key, i) in keys" :key="i">
-              <span v-if="i > 0" class="key-sep">/</span>
-              <kbd>{{ formatKey(key) }}</kbd>
-            </template>
-          </span>
-        </div>
+        <template v-for="(items, heading) in PLAYER_ACTION_GROUPS">
+          <div class="binding-heading">{{ heading }}</div>
+          <div class="binding-row" v-for="{ label, keys, mouseWheelModifier } in items" :key="label">
+            <span class="binding-label">{{ label }}</span>
+            <span class="binding-keys">
+              <template v-for="(key, i) in keys" :key="i">
+                <span v-if="i > 0" class="key-sep">/</span>
+                <kbd>{{ formatKey(key) }}</kbd>
+              </template>
+              <template v-if="mouseWheelModifier">
+                <span v-if="mouseWheelModifier" class="modifier"> + </span>
+                <kbd>Mouse Wheel</kbd>
+              </template>
+            </span>
+          </div>
+        </template>
       </div>
     </div>
   </div>
@@ -88,7 +134,6 @@ const bindings = Object.entries(INPUT_ACTIONS).map(([action, keys]) => ({
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
 }
 
 .help-close {
@@ -112,6 +157,15 @@ const bindings = Object.entries(INPUT_ACTIONS).map(([action, keys]) => ({
   padding: 8px 0 12px;
 }
 
+.binding-heading {
+  padding: 12px 8px 6px;
+  margin: 0 10px;
+  font-size: 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  text-transform: uppercase;
+  color: rgba(220, 220, 255, 0.5);
+}
+
 .binding-row {
   display: flex;
   align-items: center;
@@ -126,7 +180,7 @@ const bindings = Object.entries(INPUT_ACTIONS).map(([action, keys]) => ({
 
 .binding-label {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.66);
   white-space: nowrap;
 }
 
@@ -137,10 +191,13 @@ const bindings = Object.entries(INPUT_ACTIONS).map(([action, keys]) => ({
   flex-shrink: 0;
 }
 
+.modifier {
+  padding: 0 3px 5px;
+}
+
 .key-sep {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.2);
   margin: 0 1px;
 }
-
 </style>
