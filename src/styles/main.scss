@@ -46,3 +46,18 @@ body {
   }
 }
 
+kbd {
+  display: inline-block;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 7px;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+

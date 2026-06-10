@@ -55,4 +55,16 @@ function makeActionInput(scene: GameLevel, binding: Binding): ActionInput {
   return new CompositeActionInput(inputs)
 }
 
-
+export const PLAYER_ACTION_LABELS: Record<string, string> = {
+  [PlayerAction.MOVE_LEFT]: 'Move Left',
+  [PlayerAction.MOVE_RIGHT]: 'Move Right',
+  [PlayerAction.MOVE_DOWN]: 'Crouch / Move Down',
+  [PlayerAction.JUMP]: 'Jump',
+  [PlayerAction.FIRE_PRIMARY]: 'Fire (Destroy)',
+  [PlayerAction.FIRE_SECONDARY]: 'Alt Fire (Create)',
+  [PlayerAction.PREV_MODE]: 'Previous Mode',
+  [PlayerAction.NEXT_MODE]: 'Next Mode',
+  [PlayerAction.CHARGE_DECREASE]: 'Decrease Charge',
+  [PlayerAction.CHARGE_INCREASE]: 'Increase Charge',
+  [PlayerAction.ZOOM_MODIFIER]: 'Zoom Modifier',
+}

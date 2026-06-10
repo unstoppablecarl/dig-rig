@@ -10,8 +10,8 @@ import {
 const { LEFT, RIGHT, UP, DOWN, SPACE } = Input.Keyboard.KeyCodes
 
 export const INPUT_ACTIONS: Record<PlayerActionKey, Binding> = {
-  [PlayerAction.CHARGE_DECREASE]: ['q'],
-  [PlayerAction.CHARGE_INCREASE]: ['e'],
+  [PlayerAction.CHARGE_DECREASE]: ['['],
+  [PlayerAction.CHARGE_INCREASE]: [']'],
   [PlayerAction.PREV_MODE]: ['r'],
   [PlayerAction.NEXT_MODE]: ['f'],
   [PlayerAction.FIRE_PRIMARY]: [POINTER_LEFT],
