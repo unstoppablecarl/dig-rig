@@ -6,13 +6,13 @@ import {
   PCheckbox,
   PFolder,
   PGraph,
+  PHeading,
   PMonitor,
   PNumber,
   pollingComputed,
   pollingRef,
   PSelect,
   VPane,
-  PLabel,
 } from 'vue-pane/src/index.ts'
 import { launchLevel } from '../game/launcher.ts'
 import { InputMode } from '../game/lib/Input/_input.types.ts'
@@ -139,7 +139,7 @@ const levelEntries = Object.entries(LEVELS) as [LevelId, LevelEntry][]
         <PFolder title="Player">
           <PNumber label="vx" :poll="player.vx" readonly />
           <PNumber label="vy" :poll="player.vy" readonly />
-          <PLabel title="Collision">Collision</PLabel>
+          <PHeading label="Collision" />
           <PCheckbox label="Left" :poll="player.touchLeft" readonly />
           <PCheckbox label="Right" :poll="player.touchRight" readonly />
           <PCheckbox label="Ground" :poll="player.touchGround" readonly />
