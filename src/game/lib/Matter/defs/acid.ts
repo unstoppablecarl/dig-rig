@@ -2,7 +2,7 @@ import { random } from '../../../helpers/random'
 import { ACID_IMMUNE } from '../_Matter-meta'
 import {
   ACID,
-  EMPTY,
+  EMPTY, getOwner,
   type MatterDef,
   matterType,
   MatterTypeSet,
@@ -40,12 +40,13 @@ export const ACID_DEF: MatterDef = {
         const nt = matterType(tiles[nidx])
         if (ACID_IMMUNE.has(nt)) continue
 
-        world.queueMatterCreditFromTile(tx, ty, idx)
+        const ownerId = getOwner(tiles[idx])
+        world.queueMatterCredit(tx, ty, ownerId)
         tiles[idx] = EMPTY
         world.markDirty(tx, ty)
         world.next.add(idx)
 
-        world.queueMatterCreditFromTile(nx, ny, nidx)
+        world.queueMatterCredit(nx, ny, ownerId)
         tiles[nidx] = EMPTY
         world.markDirty(nx, ny)
         world.next.add(nidx)
