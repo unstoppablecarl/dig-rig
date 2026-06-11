@@ -3,7 +3,7 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
-import type { BaseProjectile, BaseProjectileConstructor, ProjectileSource } from './BaseProjectile.ts'
+import type { BaseProjectile, BaseProjectileConstructor } from './BaseProjectile.ts'
 import type { ProjectileEffect } from './ProjectileEffect/_ProjectileEffect.types.ts'
 import { ProjectileRenderer } from './ProjectileRenderer.ts'
 
@@ -18,7 +18,6 @@ export class ProjectileManager extends SceneBound {
 
   add<T extends BaseProjectile>(
     Constructor: BaseProjectileConstructor<T>,
-    source: ProjectileSource,
     matterTank: MatterTank,
     x: number,
     y: number,
@@ -26,7 +25,7 @@ export class ProjectileManager extends SceneBound {
     effect: ProjectileEffect,
     renderer: null | ProjectileRenderer = new ProjectileRenderer(this.scene),
   ): T {
-    const projectile = new Constructor(this.scene, this, source, matterTank, x, y, effect, renderer)
+    const projectile = new Constructor(this.scene, this, matterTank, x, y, effect, renderer)
 
     projectile.setTilesToModify(charge)
     this.children.push(projectile)
@@ -51,7 +50,7 @@ export class ProjectileManager extends SceneBound {
     const startPos = pos ?? player.getProjectilePosition(0, this._startPos)
     const startAngle = angle ?? player.getProjectileAngle()
 
-    const projectile = this.add(Constructor, player, player.matterTank, startPos.x, startPos.y, charge, effect, renderer)
+    const projectile = this.add(Constructor, player.matterTank, startPos.x, startPos.y, charge, effect, renderer)
     projectile.fire(startAngle, velocity)
 
     return projectile

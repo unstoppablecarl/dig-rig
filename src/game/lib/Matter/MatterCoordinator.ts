@@ -10,7 +10,7 @@ import { MatterSim } from './MatterSim.ts'
 import { MatterCoordinatorOutMsg, type WorkerOutMessage } from './MatterSim.types.ts'
 
 export class MatterCoordinator {
-  constructor(private readonly post: (msg: WorkerOutMessage) => void) {
+  constructor(private readonly post: (msg: WorkerOutMessage, transfer?: Transferable[]) => void) {
   }
 
   private sim!: MatterSim
@@ -38,6 +38,8 @@ export class MatterCoordinator {
   //                execution: any adjacent tile belongs to an inactive round.
   private readonly rounds: number[][] = [[], [], [], []]
   private readonly allSettled: number[] = []
+  private coordinatorTransfers = new Int32Array(256 * 3)
+  private coordinatorTransfersLen = 0
   private readonly promises: Promise<PoolOutDone>[] = []
 
   init(
@@ -93,6 +95,7 @@ export class MatterCoordinator {
       this.pendingResolvers[workerIdx] = null
       return
     }
+
     // SPAWN_PARTICLE and any other matterType-action postMessage calls:
     // pool workers call postMessage() which reaches the coordinator;
     // forward straight to the main thread.
@@ -155,6 +158,7 @@ export class MatterCoordinator {
     }
 
     allSettled.length = 0
+    this.coordinatorTransfersLen = 0
 
     for (const roundIndices of rounds) {
       if (roundIndices.length === 0) continue
@@ -174,11 +178,31 @@ export class MatterCoordinator {
       for (const r of results) {
         for (const idx of r.next) this.activeSet.add(idx)
         for (const idx of r.settled) allSettled.push(idx)
+        if (r.transfers.length > 0) {
+          const needed = this.coordinatorTransfersLen + r.transfers.length
+          if (needed > this.coordinatorTransfers.length) {
+            const bigger = new Int32Array(Math.max(this.coordinatorTransfers.length * 2, needed))
+            bigger.set(this.coordinatorTransfers.subarray(0, this.coordinatorTransfersLen))
+            this.coordinatorTransfers = bigger
+          }
+          this.coordinatorTransfers.set(r.transfers, this.coordinatorTransfersLen)
+          this.coordinatorTransfersLen += r.transfers.length
+        }
       }
     }
 
     if (allSettled.length > 0) {
       this.post({ type: MatterCoordinatorOutMsg.SETTLED, indices: allSettled })
+    }
+    if (this.coordinatorTransfersLen > 0) {
+      const len = this.coordinatorTransfersLen
+      const buf = this.coordinatorTransfers.buffer
+      this.coordinatorTransfers = new Int32Array(Math.max(256 * 3, len))
+      this.coordinatorTransfersLen = 0
+      this.post(
+        { type: MatterCoordinatorOutMsg.TRANSFER_TO_MATTER_TANKS, transfers: new Int32Array(buf, 0, len) },
+        [buf],
+      )
     }
   }
 }

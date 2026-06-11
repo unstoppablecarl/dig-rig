@@ -1,7 +1,9 @@
+import { shuffleArray } from '../../../../helpers/array.ts'
+import type { Position } from '../../../../types.ts'
 import { EMPTY, MatterType, matterTypeSetExcluding, PERMANENT, SAND, WATER } from '../../../Matter/_Matter-types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import type { Tilemap } from '../../../Tilemap/Tilemap.ts'
-import { addTileHighlights, destroyApplied } from '../_ProjectileEffect-helpers.ts'
+import { addTileHighlights } from '../_ProjectileEffect-helpers.ts'
 import type { ProjectileEffect, ProjectileEffectResult } from '../_ProjectileEffect.types.ts'
 
 const reactsWithMatterTypes = matterTypeSetExcluding([PERMANENT, EMPTY, SAND, WATER])
@@ -14,5 +16,15 @@ export const DESTROY_EFFECT: ProjectileEffect = {
     const islands = tm.findNewlyDisconnectedByDestruction(out)
     if (islands.length) tm.onIslandDetected?.(islands)
   },
-  onApplied: destroyApplied,
+  onApplied(
+    tilemap: Tilemap,
+    _emitPos: Position,
+    collectPos: Position,
+    tiles: ProjectileEffectResult[],
+  ): void {
+    const shuffled = shuffleArray(tiles)
+    for (const tile of shuffled) {
+      tilemap.scene.vfxParticleManager.spawnMatter(tile, collectPos, false)
+    }
+  },
 }

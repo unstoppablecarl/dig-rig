@@ -1,14 +1,11 @@
 import { isMatterTankFireMode } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
 import { applyEffect } from '../Tilemap/TileMutation.ts'
 import type { ProjectileEffect, ProjectileEffectResult } from './ProjectileEffect/_ProjectileEffect.types.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
 import { ProjectileRenderer } from './ProjectileRenderer.ts'
-
-export type ProjectileSource = (MatterExchanger | Position) & ParticleTarget
 
 type BaseProjectileArgs = ConstructorParameters<typeof BaseProjectile>;
 
@@ -28,10 +25,12 @@ export abstract class BaseProjectile extends SceneBound {
 
   protected readonly DEFAULT_VELOCITY: number = 100
 
+  private effectTiles: ProjectileEffectResult[] = []
+  protected visitedTiles = new Set<number>()
+
   constructor(
     public scene: GameLevel,
     public manager: ProjectileManager,
-    public source: ProjectileSource,
     public matterTank: MatterTank,
     public x: number,
     public y: number,
@@ -68,40 +67,25 @@ export abstract class BaseProjectile extends SceneBound {
 
   abstract update(dt: number): void
 
-  private _emitPos = { x: 0, y: 0 }
-  private _effectTiles: ProjectileEffectResult[] = []
-
   protected applyTiles(count: number, innerRadius = 0): ProjectileEffectResult[] {
     const tiles = applyEffect(
-      this.scene.tilemap, this._effectTiles, this.x, this.y, this.radius, this.effect, count, innerRadius,
+      this.scene.tilemap,
+      this.effectTiles, this.x, this.y, this.radius, this.effect, this.matterTank.id, count, innerRadius,
+      this.visitedTiles,
     )
     const changed = tiles.length
     if (!changed) return tiles
     this.tilesModified += changed
     this.effect.onApplied(
       this.scene.tilemap,
-      this._resolveEmitPos(),
-      this._resolveCollectPos(),
+      this.matterTank.getEmitPos(),
+      this.matterTank.getCollectPos(),
       tiles,
     )
     if (isMatterTankFireMode(this.effect.mode)) {
       this.matterTank.applyPendingCharge(this.effect.mode, changed)
     }
     return tiles
-  }
-
-  private _resolveEmitPos(): Position {
-    if ('matterParticleEmitPosition' in this.source) {
-      return this.source.matterParticleEmitPosition(this._emitPos)
-    }
-    return this.source
-  }
-
-  private _resolveCollectPos(): Position {
-    if ('matterParticleCollectPosition' in this.source) {
-      return this.source.matterParticleCollectPosition()
-    }
-    return this.source
   }
 
   charge() {

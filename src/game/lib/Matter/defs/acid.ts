@@ -2,8 +2,8 @@ import { random } from '../../../helpers/random'
 import { ACID_IMMUNE } from '../_Matter-meta'
 import {
   ACID,
-  type MatterDef,
   EMPTY,
+  type MatterDef,
   matterType,
   MatterTypeSet,
   SALT_WATER,
@@ -20,38 +20,35 @@ export const ACID_DEF: MatterDef = {
   acidImmune: true,
   action(world, tx, ty, idx, next): void {
     const { tiles, width, height } = world
+    const leftFirst = world.leftFirst
 
     // Dissolve a bordering tile
     if (random() < 10) {
+      const leftNeighbor = [tx - 1, ty, idx - 1]
+      const rightNeighbor = [tx + 1, ty, idx + 1]
+
       const neighbors = [
+        leftFirst ? leftNeighbor : rightNeighbor,
+        leftFirst ? rightNeighbor : leftNeighbor,
         [tx, ty + 1, idx + width],
         [tx, ty - 1, idx - width],
-        [tx - 1, ty, idx - 1],
-        [tx + 1, ty, idx + 1],
       ] as [number, number, number][]
 
       for (const [nx, ny, nidx] of neighbors) {
         if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue
+
         const nt = matterType(tiles[nidx])
         if (ACID_IMMUNE.has(nt)) continue
 
-        if (ny === ty + 1) {
-          // Falling into target — acid moves down, target is destroyed
-          tiles[idx] = EMPTY
-          tiles[nidx] = ACID
-          world.markDirty(tx, ty)
-          world.markDirty(nx, ny)
-          next.add(nidx)
-          world.reactivateAround(tx, ty, next)
-          return
-        } else {
-          // Dissolve sideways/up — target gone, acid stays
-          tiles[nidx] = EMPTY
-          world.markDirty(nx, ny)
-          world.reactivateAround(nx, ny, next)
-          next.add(idx)
-          return
-        }
+        world.queueTransferToMatterTankOwner(tx, ty, idx)
+        tiles[idx] = EMPTY
+        tiles[nidx] = EMPTY
+        world.markDirty(tx, ty)
+        world.markDirty(nx, ny)
+        next.add(nidx)
+        next.add(idx)
+        // world.reactivateAround(tx, ty, next)
+        return
       }
     }
 
@@ -64,27 +61,21 @@ export const ACID_DEF: MatterDef = {
     }
 
     // stickiness
-    const touchingSolid =
-      (ty > 0 && matterType(tiles[idx - width]) === SOLID) ||
-      (ty < height - 1 && matterType(tiles[idx + width]) === SOLID) ||
-      (tx > 0 && matterType(tiles[idx - 1]) === SOLID) ||
-      (tx < width - 1 && matterType(tiles[idx + 1]) === SOLID)
-
-    if (touchingSolid && random() >= 3) {
+    const touchingSolid = world.bordering(tx, ty, idx, SOLID) !== -1
+    if (touchingSolid && random() < 95) {
       next.add(idx)
       return
     }
 
-    const leftFirst = world.leftFirst
     const moved =
-      world.tryMove(idx, tx, ty, tx, ty + 1, ACID, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, ACID, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, ACID, next) ||
+      world.tryMove(idx, tx, ty, tx, ty + 1, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, next) ||
       world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1, next) ||
       world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
 
     if (!moved) {
-      world.tiles[idx] = setSettled(ACID, true)
+      world.tiles[idx] = setSettled(world.tiles[idx], true)
       world.markDirty(tx, ty)
 
       if (!world.surroundedByMask(tx, ty, idx, IS_SETTLED)) {

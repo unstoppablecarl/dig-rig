@@ -1,5 +1,7 @@
 import { clampMaxInt } from '../../../helpers/_helpers.ts'
+import type { Position } from '../../../types.ts'
 import { FireMode, type MatterTankFireMode } from '../../Player/_FireMode-types'
+import type { MatterTankId, MatterTankSource } from './_MatterTank.types.ts'
 import type { MatterManager } from './MatterManager.ts'
 
 export class MatterTank {
@@ -8,7 +10,8 @@ export class MatterTank {
 
   constructor(
     private manager: MatterManager,
-    readonly id: number,
+    private source: MatterTankSource,
+    readonly id: MatterTankId,
     public matterMax = 5000,
     matter = 0,
     tweenFrom = 0,
@@ -35,6 +38,9 @@ export class MatterTank {
     this._matter = clampMaxInt(value, this.matterMax)
   }
 
+  forceAdd(value: number){
+    this.add(value)
+  }
   // Private — only applyPendingCharge may call these.
   // The pending invariants guarantee these never overflow/underflow;
   // if they do, it is a conservation bug
@@ -135,6 +141,22 @@ export class MatterTank {
 
   empty() {
     return this._matter === 0
+  }
+
+  private _emitPos = { x: 0, y: 0 }
+
+   getEmitPos(): Position {
+    if ('matterParticleEmitPosition' in this.source) {
+      return this.source.matterParticleEmitPosition(this._emitPos)
+    }
+    return this.source
+  }
+
+   getCollectPos(): Position {
+    if ('matterParticleCollectPosition' in this.source) {
+      return this.source.matterParticleCollectPosition()
+    }
+    return this.source
   }
 
   destroy() {

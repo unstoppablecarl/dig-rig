@@ -17,9 +17,9 @@ export const CONCRETE_DEF: MatterDef = {
 
     const leftFirst = world.leftFirst
     const moved =
-      world.tryMove(idx, tx, ty, tx, ty + 1, CONCRETE, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, CONCRETE, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, CONCRETE, next)
+      world.tryMove(idx, tx, ty, tx, ty + 1, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, next)
 
     if (!moved) {
       // Slow harden even without adjacent solid

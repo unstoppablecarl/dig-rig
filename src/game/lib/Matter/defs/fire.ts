@@ -1,23 +1,27 @@
 import { random } from '../../../helpers/random'
 import {
-  C4, type MatterDef,
+  C4,
   EMPTY,
   FALLING_WAX,
   FIRE,
   FUSE,
   GUNPOWDER,
+  type MatterDef,
   matterType,
+  MatterTypeSet,
   NAPALM,
   NITRO,
   OIL,
   PLANT,
   SALT_WATER,
-  STEAM,
   THERMITE,
   WATER,
   WAX,
 } from '../_Matter-types.ts'
 
+const KEEP_ALIVE = new MatterTypeSet(PLANT, FUSE, OIL, WAX)
+
+// fire does not represent solid matter so does not follow the preserving matter rule
 export const FIRE_DEF: MatterDef = {
   name: 'Fire',
   action(world, tx, ty, idx, next): void {
@@ -29,14 +33,20 @@ export const FIRE_DEF: MatterDef = {
     world.wakeSettledNeighbors(tx, ty, idx, NITRO, next)
     world.wakeSettledNeighbors(tx, ty, idx, THERMITE, next)
 
+    const existing = tiles[idx]
+
     // Extinguished by water / salt-water
     if (random() < 80) {
       let waterLoc = world.bordering(tx, ty, idx, WATER)
       if (waterLoc === -1) waterLoc = world.bordering(tx, ty, idx, SALT_WATER)
       if (waterLoc !== -1) {
-        tiles[waterLoc] = STEAM
+        // move water to matter tank
+        tiles[waterLoc] = EMPTY
+        world.queueTransferToMatterTankOwner(tx, ty, idx)
+        // fire never had matter
         tiles[idx] = EMPTY
         world.markDirty(tx, ty)
+        world.reactivateAround(tx, ty, next)
         const wx = waterLoc % width
         const wy = waterLoc / width | 0
         world.markDirty(wx, wy)
@@ -49,7 +59,8 @@ export const FIRE_DEF: MatterDef = {
     if (random() < 20) {
       const plantLoc = world.borderingAdjacent(tx, ty, idx, PLANT)
       if (plantLoc !== -1) {
-        tiles[plantLoc] = FIRE
+        world.queueTransferToMatterTankOwner(tx, ty, idx)
+        tiles[plantLoc] = existing
         const px = plantLoc % width
         const py = plantLoc / width | 0
         world.markDirty(px, py)
@@ -63,7 +74,8 @@ export const FIRE_DEF: MatterDef = {
     if (random() < 80) {
       const fuseLoc = world.borderingAdjacent(tx, ty, idx, FUSE)
       if (fuseLoc !== -1) {
-        tiles[fuseLoc] = FIRE
+        world.queueTransferToMatterTankOwner(tx, ty, idx)
+        tiles[fuseLoc] = existing
         const fx = fuseLoc % width
         const fy = fuseLoc / width | 0
         world.markDirty(fx, fy)
@@ -77,7 +89,8 @@ export const FIRE_DEF: MatterDef = {
     if (random() < 30) {
       const oilLoc = world.bordering(tx, ty, idx, OIL)
       if (oilLoc !== -1) {
-        tiles[oilLoc] = FIRE
+        world.queueTransferToMatterTankOwner(tx, ty, idx)
+        tiles[oilLoc] = existing
         const ox = oilLoc % width
         const oy = oilLoc / width | 0
         world.markDirty(ox, oy)
@@ -123,7 +136,7 @@ export const FIRE_DEF: MatterDef = {
           const t = tiles[y * width + x]
           const bt = matterType(t)
           if (bt === FIRE) continue
-          if (bt === PLANT || bt === FUSE || bt === OIL || bt === WAX) {
+          if (KEEP_ALIVE.has(bt)) {
             flameOut = false
             break outer
           }

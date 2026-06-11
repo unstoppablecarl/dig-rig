@@ -1,9 +1,10 @@
-import { matterType, MatterType } from '../Matter/_Matter-types.ts'
+import { matterType } from '../Matter/_Matter-types.ts'
+import type { MatterTankId } from '../Matter/MatterTank/_MatterTank.types.ts'
 import type {
   ProjectileEffect,
   ProjectileEffectResult,
 } from '../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
-import type { Tile, Tilemap } from './Tilemap.ts'
+import type { Tilemap } from './Tilemap.ts'
 
 export function applyEffect(
   tilemap: Tilemap,
@@ -12,21 +13,30 @@ export function applyEffect(
   tileY: number,
   tileRadius: number,
   effect: ProjectileEffect,
+  ownerId?: MatterTankId,
   tilesToModify = Number.MAX_VALUE,
   innerRadius = 0,
+  visited?: Set<number>,
 ): ProjectileEffectResult[] {
   out.length = 0
 
   tilemap.getCircle(tileX, tileY, tileRadius, (x, y) => {
+    if (visited?.has(y * tilemap.width + x)) return
     if (effect.filterTile && !effect.filterTile(tilemap, x, y)) return
     const existing = matterType(tilemap.getTile(x, y))
-    const newValue = effect.convertMatterType(existing)
+    const newValue = effect.convertMatterType(existing, ownerId)
     if (newValue === null) return
+
     out.push({ x, y, newValue })
   }, false, innerRadius)
 
   const changed = commitTiles(tilemap, out, tileX, tileY, tilesToModify)
   if (!changed) return out
+
+  if (visited) {
+    for (const { x, y } of out) visited.add(y * tilemap.width + x)
+  }
+
   effect.onTilesCommitted(tilemap, out)
   return out
 }
@@ -88,21 +98,4 @@ function truncatePreservingCenter<T extends { x: number; y: number }>(
     tiles[b] = tmp
   }
   tiles.length = targetSize
-}
-
-export function commitTilesList(
-  tilemap: Tilemap,
-  tiles: Tile[],
-  effect: ProjectileEffect,
-  out: ProjectileEffectResult[],
-): ProjectileEffectResult[] {
-  out.length = 0
-  if (!tiles.length) return out
-  const newValue = effect.convertMatterType(MatterType.EMPTY)!
-  for (const { x, y } of tiles) {
-    tilemap.setTile(x, y, newValue)
-    out.push({ x, y, newValue })
-  }
-  effect.onTilesCommitted(tilemap, out)
-  return out
 }

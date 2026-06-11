@@ -60,7 +60,7 @@ export const BURNING_THERMITE_DEF: MatterDef = {
     }
 
     // Gravity fall (heavy dense material)
-    const moved = world.tryMove(idx, tx, ty, tx, ty + 1, BURNING_THERMITE, next)
+    const moved = world.tryMove(idx, tx, ty, tx, ty + 1, next)
     if (!moved) next.add(idx)
 
     // Spawn charged particle occasionally

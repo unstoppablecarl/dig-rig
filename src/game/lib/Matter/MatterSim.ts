@@ -3,6 +3,7 @@ import { LIQUID_TYPES, SINKS_THROUGH } from './_Matter-meta'
 import {
   EMPTY,
   FIRE,
+  getOwner,
   isSettled,
   MatterType,
   matterType,
@@ -12,6 +13,7 @@ import {
   WATER,
 } from './_Matter-types.ts'
 import { MATTER_ACTIONS } from './matter.ts'
+import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
 
 const MAX_FLOW = 8
 
@@ -151,25 +153,26 @@ export class MatterSim {
   tryMove(
     fromIdx: number, fromTx: number, fromTy: number,
     toTx: number, toTy: number,
-    tileType: number,
     next: Set<number>,
   ): boolean {
     const { width, height, tiles } = this
     if (toTx < 0 || toTx >= width || toTy < 0 || toTy >= height) return false
     const toIdx = toTy * width + toTx
+    const rawFrom = tiles[fromIdx]
+    const fromType = matterType(rawFrom)
     const rawTo = tiles[toIdx]
     const toType = matterType(rawTo)
 
     // Sand/heavy particles sink through lighter liquids
-    const sinksThrough = SINKS_THROUGH[tileType as MatterType]
+    const sinksThrough = SINKS_THROUGH[fromType]
     const canEnter = toType === EMPTY
       || (sinksThrough !== undefined && sinksThrough.has(toType))
 
     if (!canEnter) return false
 
-    tiles[toIdx] = tileType
-    // Displaced material (liquid or empty) rises back — strip its settled flag
-    tiles[fromIdx] = toType === EMPTY ? EMPTY : (toType as number)
+    // Write full raw value (owner bits intact), settled flag cleared
+    tiles[toIdx] = setSettled(rawFrom, false)
+    tiles[fromIdx] = toType === EMPTY ? EMPTY : setSettled(rawTo, false)
     this.markDirty(fromTx, fromTy)
     this.markDirty(toTx, toTy)
     next.add(toIdx)
@@ -238,7 +241,7 @@ export class MatterSim {
     displacedAs?: number,
   ): boolean {
     const { tiles, width, height } = this
-    const selfType = matterType(tiles[idx])
+    const selfRaw = tiles[idx]
     const leftFirst = this.leftFirst
     let targetIdx = -1
 
@@ -267,7 +270,7 @@ export class MatterSim {
 
     if (targetIdx === -1) return false
 
-    tiles[targetIdx] = selfType
+    tiles[targetIdx] = selfRaw
     tiles[idx] = displacedAs !== undefined ? displacedAs : lighter
 
     const tx2 = targetIdx % width
@@ -309,7 +312,7 @@ export class MatterSim {
       if (fromTy + 1 < height && matterType(tiles[(fromTy + 1) * width + nx]) === EMPTY) break
     }
     if (dist === 0) return false
-    return this.tryMove(fromIdx, fromTx, fromTy, fromTx + dir * dist, fromTy, matterType(tiles[fromIdx]), next)
+    return this.tryMove(fromIdx, fromTx, fromTy, fromTx + dir * dist, fromTy, next)
   }
 
   // ─── Higher-level helpers (mirrors project-sand World API) ────────────────
@@ -348,6 +351,20 @@ export class MatterSim {
     return -1
   }
 
+  borderingAny(tx: number, ty: number, idx: number, mask: MatterTypeSet): number {
+    const { tiles, width, height } = this
+    const down = ty < height - 1 ? idx + width : -1
+    const left = tx > 0 ? idx - 1 : -1
+    const right = tx < width - 1 ? idx + 1 : -1
+    const up = ty > 0 ? idx - width : -1
+
+    if (down !== -1 && mask.has(matterType(tiles[down]))) return down
+    if (left !== -1 && mask.has(matterType(tiles[left]))) return left
+    if (right !== -1 && mask.has(matterType(tiles[right]))) return right
+    if (up !== -1 && mask.has(matterType(tiles[up]))) return up
+    return -1
+  }
+
   /** Return linear index of the first neighbour of `type` (8-directional), or -1. */
   borderingAdjacent(tx: number, ty: number, idx: number, type: MatterType): number {
     const { tiles, width, height } = this
@@ -369,6 +386,28 @@ export class MatterSim {
       if (tx < width - 1 && matterType(tiles[a + 1]) === type) return a + 1
     }
     return -1
+  }
+
+  borderingAdjacentAny(tx: number, ty: number, idx: number, mask: MatterTypeSet): boolean {
+    const { tiles, width, height } = this
+    const atBottom = ty === height - 1
+    const atTop = ty === 0
+
+    if (!atBottom) {
+      const b = idx + width
+      if (mask.has(matterType(tiles[b]))) return true
+      if (tx > 0 && mask.has(matterType(tiles[b - 1]))) return true
+      if (tx < width - 1 && mask.has(matterType(tiles[b + 1]))) return true
+    }
+    if (tx > 0 && mask.has(matterType(tiles[idx - 1]))) return true
+    if (tx < width - 1 && mask.has(matterType(tiles[idx + 1]))) return true
+    if (!atTop) {
+      const a = idx - width
+      if (mask.has(matterType(tiles[a]))) return true
+      if (tx > 0 && mask.has(matterType(tiles[a - 1]))) return true
+      if (tx < width - 1 && mask.has(matterType(tiles[a + 1]))) return true
+    }
+    return false
   }
 
   /** True if all 4 cardinal neighbours match `type`. */
@@ -468,5 +507,38 @@ export class MatterSim {
     tiles[idx] = FIRE
     this.markDirty(tx, ty)
     next.add(idx)
+  }
+
+  private _transferBuf = new Int32Array(256 * 3)
+  private _transferLen = 0
+
+  queueTransferToMatterTank(tx: number, ty: number, ownerId: MatterTankId) {
+    const needed = this._transferLen + 3
+    if (needed > this._transferBuf.length) {
+      const bigger = new Int32Array(this._transferBuf.length * 2)
+      bigger.set(this._transferBuf)
+      this._transferBuf = bigger
+    }
+    this._transferBuf[this._transferLen++] = tx
+    this._transferBuf[this._transferLen++] = ty
+    this._transferBuf[this._transferLen++] = ownerId
+  }
+
+  queueTransferToMatterTankOwner(tx: number, ty: number, idx: number) {
+    const ownerId = getOwner(this.tiles[idx])
+    if (!ownerId) {
+      const label = MatterType[matterType(this.tiles[idx] as MatterType)]
+      throw new Error('no owner found for: ' + label)
+    }
+    this.queueTransferToMatterTank(tx, ty, ownerId)
+  }
+
+  flushTransferToMatterTank(): Int32Array {
+    const len = this._transferLen
+    if (len === 0) return new Int32Array(0)
+    const buf = this._transferBuf.buffer
+    this._transferBuf = new Int32Array(Math.max(256 * 3, len))
+    this._transferLen = 0
+    return new Int32Array(buf, 0, len)
   }
 }

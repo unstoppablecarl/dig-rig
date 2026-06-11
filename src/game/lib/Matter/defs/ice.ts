@@ -1,5 +1,8 @@
 import { random } from '../../../helpers/random'
-import { type MatterDef, FIRE, ICE, LAVA, SALT, SALT_WATER, STEAM, WATER } from '../_Matter-types.ts'
+import { FIRE, ICE, LAVA, type MatterDef, MatterTypeSet, SALT, SALT_WATER, STEAM, WATER } from '../_Matter-types.ts'
+
+const MELT_SLOW = new MatterTypeSet(SALT, SALT_WATER)
+const MELT_FAST = new MatterTypeSet(FIRE, LAVA)
 
 export const ICE_DEF: MatterDef = {
   name: 'Ice',
@@ -27,9 +30,7 @@ export const ICE_DEF: MatterDef = {
 
     // Melt from salt / salt-water
     if (random() < 10) {
-      let loc = world.bordering(tx, ty, idx, SALT)
-      if (loc === -1) loc = world.bordering(tx, ty, idx, SALT_WATER)
-      if (loc !== -1) {
+      if (world.borderingAny(tx, ty, idx, MELT_SLOW) !== -1) {
         world.tiles[idx] = WATER
         world.markDirty(tx, ty)
         next.add(idx)
@@ -39,9 +40,7 @@ export const ICE_DEF: MatterDef = {
 
     // Melt from fire / lava
     if (random() < 50) {
-      let loc = world.bordering(tx, ty, idx, FIRE)
-      if (loc === -1) loc = world.bordering(tx, ty, idx, LAVA)
-      if (loc !== -1) {
+      if (world.borderingAny(tx, ty, idx, MELT_FAST) !== -1) {
         world.tiles[idx] = WATER
         world.markDirty(tx, ty)
         next.add(idx)

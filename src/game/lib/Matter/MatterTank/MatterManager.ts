@@ -1,13 +1,15 @@
+import { DEFAULT_PLAYER_MATTER_TANK_SIZE } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
+import { type MatterTankId, type MatterTankSource, PLAYER_MATTER_TANK_ID } from './_MatterTank.types.ts'
 import { MatterTank } from './MatterTank.ts'
 
 export class MatterManager extends SceneBound {
-  public matterTanks = new Map<number, MatterTank>
+  public matterTanks = new Map<MatterTankId, MatterTank>
   public playerMatterTank: MatterTank
 
-  // must start at 1, 0 = no owner
-  protected idIncrement = 1
+  // must start at 0 = no owner, 1 = player
+  protected idIncrement = 2
 
   constructor(
     public scene: GameLevel,
@@ -16,29 +18,34 @@ export class MatterManager extends SceneBound {
   }
 
   makePlayerMatterTank(
-    matterMax = 5000,
+    player: MatterTankSource,
     matter = 0,
+    matterMax = DEFAULT_PLAYER_MATTER_TANK_SIZE,
     tweenFrom = 0,
   ) {
     this.playerMatterTank = new MatterTank(
       this,
-      0,
+      player,
+      PLAYER_MATTER_TANK_ID,
       matterMax,
       matter,
       tweenFrom,
     )
+    this.matterTanks.set(PLAYER_MATTER_TANK_ID, this.playerMatterTank)
 
     return this.playerMatterTank
   }
 
   makeMatterTank(
+    source: MatterTankSource,
     matterMax: number,
-    matter: number,
+    matter: number = 0,
   ) {
 
-    let id = this.idIncrement++
+    const id = this.idIncrement++ as MatterTankId
     const tank = new MatterTank(
       this,
+      source,
       id,
       matterMax,
       matter,
@@ -61,13 +68,19 @@ export class MatterManager extends SceneBound {
     let sum = 0
 
     for (const tank of this.matterTanks.values()) {
-      sum += tank.matterContained()
+      if (tank !== this.playerMatterTank) {
+        sum += tank.matterContained()
+      }
     }
     return sum
   }
 
   playerMatter() {
     return this.playerMatterTank.matterContained()
+  }
+
+  get(id: MatterTankId) {
+    return this.matterTanks.get(id)
   }
 
   remove(tank: MatterTank) {

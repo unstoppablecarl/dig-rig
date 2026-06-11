@@ -6,6 +6,7 @@ export interface Position {
   y: number,
 }
 
+
 export interface MatterExchanger {
   matterParticleEmitPosition: (out: Position) => Position,
   matterParticleCollectPosition: () => Position,

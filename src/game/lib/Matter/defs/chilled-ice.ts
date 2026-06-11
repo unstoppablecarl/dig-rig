@@ -1,5 +1,7 @@
 import { random } from '../../../helpers/random'
-import { type MatterDef, FIRE, ICE, LAVA, SALT, SALT_WATER, STEAM, WATER } from '../_Matter-types.ts'
+import { FIRE, ICE, LAVA, type MatterDef, MatterTypeSet, SALT, SALT_WATER, STEAM, WATER } from '../_Matter-types.ts'
+
+const FAST_THAW_TARGETS = new MatterTypeSet(SALT, SALT_WATER, LAVA, FIRE, STEAM)
 
 export const CHILLED_ICE_DEF: MatterDef = {
   name: 'Chilled Ice',
@@ -15,13 +17,7 @@ export const CHILLED_ICE_DEF: MatterDef = {
     }
 
     // Fast thaw near heat or salt
-    if (
-      world.bordering(tx, ty, idx, SALT) !== -1 ||
-      world.bordering(tx, ty, idx, SALT_WATER) !== -1 ||
-      world.bordering(tx, ty, idx, LAVA) !== -1 ||
-      world.bordering(tx, ty, idx, FIRE) !== -1 ||
-      world.bordering(tx, ty, idx, STEAM) !== -1
-    ) {
+    if (world.borderingAny(tx, ty, idx, FAST_THAW_TARGETS) !== -1) {
       world.tiles[idx] = ICE
       world.markDirty(tx, ty)
       next.add(idx)

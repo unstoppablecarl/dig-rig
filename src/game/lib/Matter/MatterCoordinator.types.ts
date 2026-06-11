@@ -37,6 +37,7 @@ export type PoolOutDone = {
   type: PoolOutMsg.DONE
   next: number[]
   settled: number[]
+  transfers: Int32Array
 }
 
 export type PoolOutMessage =

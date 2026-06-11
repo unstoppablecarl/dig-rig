@@ -1,4 +1,4 @@
-import { type MatterDef, LAVA, matterType, OIL, SALT, SAND, WATER, WATER_SETTLED } from '../_Matter-types.ts'
+import { LAVA, type MatterDef, matterType, OIL, SALT, SAND, WATER_SETTLED } from '../_Matter-types.ts'
 
 export const WATER_DEF: MatterDef = {
   name: 'Water',
@@ -11,9 +11,9 @@ export const WATER_DEF: MatterDef = {
 
     const leftFirst = world.leftFirst
     const moved =
-      world.tryMove(idx, tx, ty, tx, ty + 1, WATER, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, WATER, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, WATER, next) ||
+      world.tryMove(idx, tx, ty, tx, ty + 1, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, next) ||
       world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1, next) ||
       world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
 
@@ -35,6 +35,7 @@ export const WATER_DEF: MatterDef = {
       const aboveIdx = (ty - 1) * world.width + tx
       const raw = world.tiles[aboveIdx]
       if (matterType(raw) === SAND) {
+        // un settle sand
         world.tiles[aboveIdx] = SAND
         world.markDirty(tx, ty - 1)
         next.add(aboveIdx)

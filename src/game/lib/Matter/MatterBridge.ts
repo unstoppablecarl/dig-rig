@@ -7,6 +7,7 @@ import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
 import { matterType, MatterType } from './_Matter-types.ts'
 import MatterCoordinatorConstructor from './MatterCoordinator.worker.ts?worker'
+import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
 import {
   MatterCoordinatorInMsg,
   MatterCoordinatorOutMsg,
@@ -61,6 +62,17 @@ export class MatterBridge extends SceneBound {
 
       if (e.data.type === MatterCoordinatorOutMsg.SPAWN_PARTICLE) {
         this.particleBridge.spawn(e.data.particleType, e.data.x, e.data.y)
+      }
+
+      if (e.data.type === MatterCoordinatorOutMsg.TRANSFER_TO_MATTER_TANKS) {
+        const { transfers } = e.data
+        for (let i = 0; i < transfers.length; i += 3) {
+          const tank = this.scene.matterManager.get(transfers[i + 2] as MatterTankId)
+          if (tank) {
+            tank.forceAdd(1)
+            this.scene.vfxParticleManager.spawnMatter({ x: transfers[i], y: transfers[i + 1] }, tank.getCollectPos(), false)
+          }
+        }
       }
     }
 

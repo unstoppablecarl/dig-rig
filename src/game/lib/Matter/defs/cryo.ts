@@ -53,9 +53,9 @@ export const CRYO_DEF: MatterDef = {
 
     const leftFirst = world.leftFirst
     const moved =
-      world.tryMove(idx, tx, ty, tx, ty + 1, CRYO, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, CRYO, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, CRYO, next) ||
+      world.tryMove(idx, tx, ty, tx, ty + 1, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, next) ||
       world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1, next) ||
       world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
 

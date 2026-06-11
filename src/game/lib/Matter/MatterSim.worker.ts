@@ -3,7 +3,7 @@ import { type PoolInMessage, PoolInMsg, type PoolOutMessage, PoolOutMsg } from '
 import { MatterSim } from './MatterSim.ts'
 import type { WorkerOutMessage } from './MatterSim.types.ts'
 
-declare function postMessage(msg: PoolOutMessage | WorkerOutMessage): void
+declare function postMessage(msg: PoolOutMessage | WorkerOutMessage, transfer?: Transferable[]): void
 
 declare let self: DedicatedWorkerGlobalScope & {
   onmessage: ((e: MessageEvent<PoolInMessage>) => void) | null
@@ -27,10 +27,10 @@ self.onmessage = (e: MessageEvent<PoolInMessage>) => {
     sim.leftFirst = msg.leftFirst
     sim.justSettled = []
     sim.processSubset(msg.indices, next)
-    postMessage({
-      type: PoolOutMsg.DONE,
-      next: Array.from(next),
-      settled: sim.justSettled,
-    })
+    const transfers = sim.flushTransferToMatterTank()
+    postMessage(
+      { type: PoolOutMsg.DONE, next: Array.from(next), settled: sim.justSettled, transfers },
+      transfers.length > 0 ? [transfers.buffer] : [],
+    )
   }
 }

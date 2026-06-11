@@ -9,6 +9,7 @@ export enum MatterCoordinatorInMsg {
 export enum MatterCoordinatorOutMsg {
   SETTLED,
   SPAWN_PARTICLE,
+  TRANSFER_TO_MATTER_TANKS,
 }
 
 type Init = {
@@ -47,9 +48,15 @@ type SpawnParticle = {
   y: number
 }
 
+type TransferToMatterTanks = {
+  type: MatterCoordinatorOutMsg.TRANSFER_TO_MATTER_TANKS,
+  transfers: Int32Array
+}
+
 export type WorkerOutMessage =
   | Settled
   | SpawnParticle
+  | TransferToMatterTanks
 
 export type TypedMatterCoordinatorWorker = Omit<Worker, 'postMessage' | 'onmessage'> & {
   postMessage(msg: MatterCoordinatorInMessage): void

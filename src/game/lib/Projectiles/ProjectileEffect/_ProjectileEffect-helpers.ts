@@ -1,5 +1,3 @@
-import { shuffleArray } from '../../../helpers/array'
-import type { Position } from '../../../types'
 import { FireMode } from '../../Player/_FireMode-types'
 import { PLAYER_HEIGHT, PLAYER_WIDTH } from '../../Player/Player.ts'
 import type { Tilemap } from '../../Tilemap/Tilemap'
@@ -14,18 +12,6 @@ export function chunkAndIslandCheck(tm: Tilemap, tiles: ProjectileEffectResult[]
   tm.chunkManager.computeAnchored()
   const islands = tm.findIslandTiles(tiles)
   if (islands.length) tm.onIslandDetected?.(islands)
-}
-
-export function destroyApplied(
-  tilemap: Tilemap,
-  _emitPos: Position,
-  collectPos: Position,
-  tiles: ProjectileEffectResult[],
-): void {
-  const shuffled = shuffleArray(tiles)
-  for (const tile of shuffled) {
-    tilemap.scene.vfxParticleManager.spawnMatter(tile, collectPos, false)
-  }
 }
 
 export function noVFX(): void {

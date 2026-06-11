@@ -34,9 +34,9 @@ export const GUNPOWDER_DEF: MatterDef = {
 
     const leftFirst = world.leftFirst
     const moved =
-      world.tryMove(idx, tx, ty, tx, ty + 1, GUNPOWDER, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, GUNPOWDER, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, GUNPOWDER, next)
+      world.tryMove(idx, tx, ty, tx, ty + 1, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, next)
 
     if (!moved) {
       world.tiles[idx] = setSettled(GUNPOWDER, true)

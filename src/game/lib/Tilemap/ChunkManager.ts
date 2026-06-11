@@ -4,6 +4,11 @@ import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { matterType, MatterType, PERMANENT, SOLID } from '../Matter/_Matter-types.ts'
 import { Chunk, type ChunkId } from './Chunk.ts'
 
+function isStructural(raw: number): boolean {
+  const t = matterType(raw)
+  return t === SOLID || t === PERMANENT
+}
+
 export class ChunkManager extends SceneBound {
   private chunks = new Map<ChunkId, Chunk>()
   public readonly width: number
@@ -142,26 +147,22 @@ export class ChunkManager extends SceneBound {
     if (dx === 1) {
       const ax = xEnd - 1, bx = xEnd
       for (let y = y0; y < yEnd; y++) {
-        if (tilemap.getTile(ax, y) === SOLID &&
-          tilemap.getTile(bx, y) === SOLID) return true
+        if (isStructural(tilemap.getTile(ax, y)) && isStructural(tilemap.getTile(bx, y))) return true
       }
     } else if (dx === -1) {
       const ax = x0, bx = x0 - 1
       for (let y = y0; y < yEnd; y++) {
-        if (tilemap.getTile(ax, y) === SOLID &&
-          tilemap.getTile(bx, y) === SOLID) return true
+        if (isStructural(tilemap.getTile(ax, y)) && isStructural(tilemap.getTile(bx, y))) return true
       }
     } else if (dy === 1) {
       const ay = yEnd - 1, by = yEnd
       for (let x = x0; x < xEnd; x++) {
-        if (tilemap.getTile(x, ay) === SOLID &&
-          tilemap.getTile(x, by) === SOLID) return true
+        if (isStructural(tilemap.getTile(x, ay)) && isStructural(tilemap.getTile(x, by))) return true
       }
     } else {
       const ay = y0, by = y0 - 1
       for (let x = x0; x < xEnd; x++) {
-        if (tilemap.getTile(x, ay) === SOLID &&
-          tilemap.getTile(x, by) === SOLID) return true
+        if (isStructural(tilemap.getTile(x, ay)) && isStructural(tilemap.getTile(x, by))) return true
       }
     }
     return false

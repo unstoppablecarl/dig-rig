@@ -1,16 +1,18 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { LAVA_IMMUNE } from '../_Matter-meta'
+import { LAVA_IMMUNE } from '../_Matter-meta.ts'
 import {
-  type MatterDef,
   EMPTY,
   FIRE,
+  getOwner,
   LAVA,
+  type MatterDef,
   matterType,
   MatterTypeSet,
   OIL,
   ROCK,
   SALT_WATER,
+  setOwner,
   setSettled,
   SOLID,
   STEAM,
@@ -20,16 +22,17 @@ import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)
 
+const COOLED = new MatterTypeSet(WATER, SALT_WATER)
 export const LAVA_DEF: MatterDef = {
   name: 'Lava',
   lavaImmune: true,
   liquid: true,
   action(world, tx, ty, idx, next): void {
     const { tiles, width, height } = world
-
+    const existing = tiles[idx]
+    const ownerId = getOwner(existing)
     // Turn to rock when touching water or salt-water
-    let waterLoc = world.bordering(tx, ty, idx, WATER)
-    if (waterLoc === -1) waterLoc = world.bordering(tx, ty, idx, SALT_WATER)
+    let waterLoc = world.borderingAny(tx, ty, idx, COOLED)
     if (waterLoc !== -1) {
       tiles[waterLoc] = STEAM
       tiles[idx] = ROCK
@@ -43,37 +46,39 @@ export const LAVA_DEF: MatterDef = {
     }
 
     // Spawn a lava burst particle and self-destruct when adjacent to oil
-    if (random() < 4 && world.bordering(tx, ty, idx, OIL) !== -1) {
-      if (random() < 35) {
-        postMessage({
-          type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
-          particleType: ParticleType.LAVA_BURST,
-          x: tx,
-          y: ty,
-        })
-        tiles[idx] = EMPTY
-        world.markDirty(tx, ty)
-        world.reactivateAround(tx, ty, next)
-        return
-      }
+    if (random() < 14 && world.bordering(tx, ty, idx, OIL) !== -1) {
+      postMessage({
+        type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
+        particleType: ParticleType.LAVA_BURST,
+        x: tx,
+        y: ty,
+      })
+      tiles[idx] = EMPTY
+      world.markDirty(tx, ty)
+      world.reactivateAround(tx, ty, next)
+      return
     }
 
-    // Slowly melt adjacent SOLID into LAVA (~0.5% chance, matching project-sand WALL→LAVA)
+    // Slowly melt adjacent SOLID (SOLID is lava immune otherwise)
     if (random() < 1 && random() < 50) {
       const meltLoc = world.borderingAdjacent(tx, ty, idx, SOLID)
       if (meltLoc !== -1) {
         tiles[meltLoc] = EMPTY
+        world.queueTransferToMatterTankOwner(tx, ty, idx)
+        tiles[idx] = EMPTY
         const mx = meltLoc % width
         const my = meltLoc / width | 0
         world.markDirty(mx, my)
+        world.markDirty(tx, ty)
+        next.add(idx)
         next.add(meltLoc)
       }
     }
-
-    // Spawn fire in empty space directly above
+    //
+    // // Spawn fire in empty space directly above
     const upIdx = ty > 0 ? idx - width : -1
     if (upIdx !== -1 && random() < 6 && matterType(tiles[upIdx]) === EMPTY) {
-      tiles[upIdx] = FIRE
+      tiles[upIdx] = setOwner(FIRE, ownerId)
       world.markDirty(tx, ty - 1)
       next.add(upIdx)
     }
@@ -90,7 +95,9 @@ export const LAVA_DEF: MatterDef = {
         if (nidx === -1) continue
         const nt = matterType(tiles[nidx])
         if (!LAVA_IMMUNE.has(nt)) {
-          tiles[nidx] = FIRE
+          tiles[nidx] = setOwner(FIRE, ownerId)
+          world.queueTransferToMatterTank(tx, ty, ownerId)
+          tiles[idx] = EMPTY
           world.markDirty(nx, ny)
           next.add(nidx)
         }
@@ -135,14 +142,14 @@ export const LAVA_DEF: MatterDef = {
 
     const leftFirst = world.leftFirst
     const moved =
-      world.tryMove(idx, tx, ty, tx, ty + 1, LAVA, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, LAVA, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, LAVA, next) ||
+      world.tryMove(idx, tx, ty, tx, ty + 1, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, next) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, next) ||
       world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1, next) ||
       world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
 
     if (!moved) {
-      world.tiles[idx] = setSettled(LAVA, true)
+      world.tiles[idx] = setSettled(existing, true)
       world.markDirty(tx, ty)
 
       if (!world.surroundedByMask(tx, ty, idx, IS_SETTLED)) {

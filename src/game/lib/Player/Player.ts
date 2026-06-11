@@ -3,11 +3,17 @@ import { Animations, GameObjects, Math as PMath, Physics, Time } from 'phaser'
 import type { EventData } from 'phaser-matter-collision-plugin/src/collision-types.ts'
 import { CollidingObject } from 'phaser-matter-collision-plugin/src/valid-collision-object.ts'
 import { makePlayerSprite, PlayerSpriteSheetAssets } from '../../../assets/player/player-sprite-sheet-assets.ts'
-import { GRAVITY, PLAYER_JUMP_POWER, PLAYER_MATTER_TANK_SIZE, PLAYER_MOVE_SPEED } from '../../config.ts'
+import {
+  DEFAULT_PLAYER_MATTER_TANK_SIZE,
+  DEFAULT_PLAYER_STARTING_MATTER,
+  GRAVITY,
+  PLAYER_JUMP_POWER,
+  PLAYER_MOVE_SPEED,
+} from '../../config.ts'
 import { clampVelocity, PositionOffset } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
+import type { Position } from '../../types.ts'
 import { MASK_PLAYER, MASK_TERRAIN } from '../Collision/BodyCategories.ts'
 import { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
 import { EventsBinder } from '../Util/EventsBinder.ts'
@@ -48,7 +54,7 @@ enum Facing {
   RIGHT
 }
 
-export class Player extends SceneBound implements MatterExchanger, ParticleTarget {
+export class Player extends SceneBound {
   public sprite: Sprite
   public container: PlayerContainer
   public maxVelocity = 300
@@ -78,13 +84,15 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     public scene: GameLevel,
     x = 0,
     y = 0,
+    startingMatter = DEFAULT_PLAYER_STARTING_MATTER,
+    maxMatter = DEFAULT_PLAYER_MATTER_TANK_SIZE,
   ) {
     super(scene)
 
     this.matterTank = scene.matterManager.makePlayerMatterTank(
-      PLAYER_MATTER_TANK_SIZE,
-      400,
-      500,
+      this,
+      startingMatter,
+      maxMatter,
     )
 
     this.binder = new EventsBinder()

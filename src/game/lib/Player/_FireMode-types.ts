@@ -18,6 +18,7 @@ export type FireGroupValue = {
   PRIMARY: FireMode
   SECONDARY: FireMode
 }
+
 export const FireGroupModes: Record<FireGroup, FireGroupValue> = {
   [FireGroup.CREATE_DESTROY]: {
     PRIMARY: FireMode.DESTROY,

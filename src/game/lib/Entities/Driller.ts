@@ -31,7 +31,7 @@ export class Driller extends GameObject implements ParticleTarget {
     private matterMax = 300,
   ) {
     super(scene, 'Driller')
-    this.matterTank = scene.matterManager.makeMatterTank(this.matterMax, 0)
+    this.matterTank = scene.matterManager.makeMatterTank(this, this.matterMax, 0)
     this.container = scene.add.container()
 
     const sprite = scene.add.sprite(0, 0, 'enemy')
@@ -66,7 +66,7 @@ export class Driller extends GameObject implements ParticleTarget {
   }
 
   private queue(charge: number, effect: ProjectileEffect) {
-    return this.scene.projectiles.add(Projectile, this, this.matterTank, this.x, this.y, charge, effect)
+    return this.scene.projectiles.add(Projectile, this.matterTank, this.x, this.y, charge, effect)
   }
 
   private attemptFire() {

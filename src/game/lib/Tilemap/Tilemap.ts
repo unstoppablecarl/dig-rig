@@ -5,8 +5,15 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import { COLLIDES_WHEN_SETTLED } from '../Matter/_Matter-meta'
-import { isSettled, MatterType, matterType, MatterTypeSet, setOwner } from '../Matter/_Matter-types.ts'
-import type { MatterTankId } from '../Matter/MatterTank/_MatterTank.types.ts'
+import {
+  EMPTY,
+  isSettled,
+  type MatterType,
+  matterType,
+  MatterTypeSet,
+  PERMANENT,
+  SOLID,
+} from '../Matter/_Matter-types.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
 
@@ -88,30 +95,30 @@ export class Tilemap extends SceneBound {
 
   // ALWAYS confirm the value is actually going to change
   // before calling this
-  public setTile(x: number, y: number, value: MatterType, matterTankId: MatterTankId = (0 as MatterTankId)) {
+  public setTile(x: number, y: number, value: MatterType) {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false
     const id = y * this.width + x
     const prev = this.tiles[id]
     const prevType = matterType(prev)
-    this.tiles[id] = setOwner(value, matterTankId)
+    this.tiles[id] = value
     this.chunkManager.setDirty(x, y, prev, value)
-    if (prevType === MatterType.SOLID && value !== MatterType.SOLID) this.matter--
-    if (prevType !== MatterType.SOLID && value === MatterType.SOLID) this.matter++
-    if (value === MatterType.EMPTY) this.onTileEmpty?.(x, y)
+    if (prevType === EMPTY && value !== EMPTY) this.matter++
+    if (prevType !== EMPTY && value === EMPTY) this.matter--
+    if (value === EMPTY) this.onTileEmpty?.(x, y)
     return true
   }
 
   // Returns the raw tile value, which may include SETTLED_FLAG (0x80) in bit 7.
   // Use `value & TYPE_MASK` to get the base MatterType for comparisons.
   public getTile(x: number, y: number): number {
-    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return MatterType.PERMANENT
+    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return PERMANENT
     return this.tiles[y * this.width + x]
   }
 
   public isSolid(x: number, y: number) {
     const raw = this.getTile(Math.floor(x), Math.floor(y))
     const type = matterType(raw)
-    if (type === MatterType.SOLID || type === MatterType.PERMANENT) return true
+    if (type === SOLID || type === PERMANENT) return true
     if (isSettled(raw)) {
       return COLLIDES_WHEN_SETTLED.has(type)
     }
@@ -232,8 +239,8 @@ export class Tilemap extends SceneBound {
         const nidx = ny * this.width + nx
         if (newSet.has(nidx)) continue
         const nTile = this.getTile(nx, ny)
-        if (nTile === MatterType.PERMANENT) return []
-        if (nTile !== MatterType.SOLID) continue
+        if (nTile === PERMANENT) return []
+        if (nTile !== SOLID) continue
         if (this.chunkManager.getChunkByTile(nx, ny)?.anchored) {
           touchesAnchoredSolid = true
         } else {
@@ -264,11 +271,11 @@ export class Tilemap extends SceneBound {
         if (visited.has(nidx)) continue
         visited.add(nidx)
         const nTile = this.getTile(nx, ny)
-        if (nTile === MatterType.PERMANENT) {
+        if (nTile === PERMANENT) {
           anchored = true
           break outer
         }
-        if (nTile === MatterType.SOLID) {
+        if (nTile === SOLID) {
           if (this.chunkManager.getChunkByTile(nx, ny)?.anchored) {
             anchored = true
             break outer
@@ -282,7 +289,7 @@ export class Tilemap extends SceneBound {
   }
 
   // After solid tiles are destroyed, checks adjacent solid for disconnection.
-  // Only MatterType.SOLID forms structural connections — SAND, SAND_SETTLED, and
+  // Only SOLID forms structural connections — SAND, SAND_SETTLED, and
   // WATER are transparent to this BFS (neither a connection nor a blocking wall).
   // No BFS cap: connected terrain always finds PERMANENT in a small number of hops
   // because PERMANENT tiles exist at the world boundary which is never far from
@@ -300,7 +307,7 @@ export class Tilemap extends SceneBound {
         if (sx < 0 || sx >= width || sy < 0 || sy >= height) continue
         const sidx = sy * width + sx
         if (vis[sidx] !== 0) continue
-        if (tiles[sidx] !== MatterType.SOLID) continue
+        if (tiles[sidx] !== SOLID) continue
 
         let head = 0, tail = 0, compLen = 0
         let anchored = false
@@ -323,11 +330,11 @@ export class Tilemap extends SceneBound {
             const nidx = ny * width + nx
             if (vis[nidx] !== 0) continue
             const nt = tiles[nidx]
-            if (nt === MatterType.PERMANENT) {
+            if (nt === PERMANENT) {
               anchored = true
               break bfs
             }
-            if (nt === MatterType.SOLID) {
+            if (nt === SOLID) {
               vis[nidx] = 1
               queue[tail++] = nidx
               comp[compLen++] = nidx
@@ -361,7 +368,7 @@ export class Tilemap extends SceneBound {
       const stepX = x + stepDx * i
       const stepY = y + stepDy * i
 
-      const collision = matterType(this.getTileFromWorld(stepX, stepY)) !== MatterType.EMPTY
+      const collision = matterType(this.getTileFromWorld(stepX, stepY)) !== EMPTY
       if (collision) {
         return {
           collision: true,
@@ -489,9 +496,9 @@ export class Tilemap extends SceneBound {
       for (let x = 0; x < w; x++) {
         const idx = y * w + x
         if (unpackAlpha(permanentData.data[idx] as Color32) > 0) {
-          tilemap.setTile(x, y, MatterType.PERMANENT)
+          tilemap.setTile(x, y, PERMANENT)
         } else if (unpackAlpha(solidData.data[idx] as Color32) > 0) {
-          tilemap.setTile(x, y, MatterType.SOLID)
+          tilemap.setTile(x, y, SOLID)
         }
       }
     }

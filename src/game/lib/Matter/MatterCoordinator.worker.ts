@@ -10,7 +10,7 @@ declare let self: DedicatedWorkerGlobalScope & {
 const poolSize = Math.max(1, (navigator.hardwareConcurrency ?? 4) - 2)
 const poolWorkers: Worker[] = Array.from({ length: poolSize }, () => new MatterSimWorkerConstructor())
 
-const coordinator = new MatterCoordinator(msg => postMessage(msg))
+const coordinator = new MatterCoordinator((msg, transfer) => postMessage(msg, transfer ?? []))
 
 self.onmessage = (e: MessageEvent<MatterCoordinatorInMessage>) => {
   const msg = e.data

@@ -4,14 +4,13 @@ import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import { WeaponConstantInput } from '../../Input/InputController/WeaponInputControllers/WeaponConstantInput.ts'
 import type { Weapon } from '../../Input/InputController/WeaponManagerInput.ts'
-import { EMPTY } from '../../Matter/_Matter-types.ts'
+import { EMPTY, MatterType } from '../../Matter/_Matter-types.ts'
 import { MatterTank } from '../../Matter/MatterTank/MatterTank.ts'
 import type { ProjectileEffectResult } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 import { PROJECTILE_EFFECT } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import type { SweepRecord } from '../../Projectiles/TunnelDestroyProjectile.ts'
 import { TunnelDestroyProjectile } from '../../Projectiles/TunnelDestroyProjectile.ts'
 import type { Tile } from '../../Tilemap/Tilemap.ts'
-import { commitTilesList } from '../../Tilemap/TileMutation.ts'
 import { FireMode } from '../_FireMode-types'
 import UPDATE = Scenes.Events.UPDATE
 
@@ -26,7 +25,7 @@ const MAX_RESTORE_PARTICLES = 40
 
 export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   private projectileDestroy: TunnelDestroyProjectile | null = null
-  readonly matterTank: MatterTank
+  matterTank!: MatterTank
 
   private _restoreVisited = new Set<number>()
   private _restoreResult: Tile[] = []
@@ -35,7 +34,6 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
 
   constructor(scene: GameLevel) {
     super(scene)
-    this.matterTank = new MatterTank(scene.matterManager, TunnelDestroyProjectile.MAX_TILES_TO_MOD * 5)
     // Registered directly so restore runs every frame regardless of active weapon / firing state.
     scene.events.on(UPDATE, this.processRestoreTiles, this)
   }
@@ -57,6 +55,9 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   }
 
   protected onEnable() {
+    if (!this.matterTank) {
+      this.matterTank = this.scene.matterManager.makeMatterTank(this.scene.player, TunnelDestroyProjectile.MAX_TILES_TO_MOD * 5)
+    }
     this.initDestroyProjectile()
     this.scene.weaponUIState.activeMatterTank = this.matterTank
   }
@@ -73,7 +74,6 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
     const startPos = this.scene.player.getProjectilePosition(0, this._startPos)
     this.projectileDestroy = this.scene.projectiles.add(
       TunnelDestroyProjectile,
-      this.scene.player,
       this.matterTank,
       startPos.x,
       startPos.y,
@@ -93,6 +93,14 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
     const available = this.matterTank.chargeAvailable(FireMode.CREATE)
 
     if (!queue.length && available <= 0) return
+
+    // The destroy projectile is offset ~18px from the player body via the arm
+    // transform, so the player-center TILE_SAFE_RADIUS guard doesn't fully cover
+    // its circle. Track the actual destroy position so we never restore tiles
+    // that are still inside the active destroy zone.
+    const dpx = dp.active ? dp.x : NaN
+    const dpy = dp.active ? dp.y : NaN
+    const dpR2 = dp.radius * dp.radius
 
     const visited = this._restoreVisited
     visited.clear()
@@ -116,7 +124,22 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
       const dy = record.cy - py
       const allSafe = dx * dx + dy * dy > (record.radius + TILE_SAFE_RADIUS) ** 2
 
-      const obstructed = this._processRecord(record, result, visited, available, px, py, allSafe)
+      // Guard against partial annular fills. remaining[] is sorted inner-to-outer
+      // (commitTiles sorts by dist from destroy center). If the innermost tile is
+      // still inside a deferred zone, hold the whole record — filling the outer ring
+      // first would create isolated solid islands with an empty center.
+      if (!allSafe && record.remaining.length > 0) {
+        const ft = record.remaining[0]
+        const ftdx = ft.x - px, ftdy = ft.y - py
+        const ftddx = ft.x - dpx, ftddy = ft.y - dpy
+        if ((ftdx * ftdx + ftdy * ftdy <= TILE_SAFE_RSQ) ||
+            (ftddx * ftddx + ftddy * ftddy <= dpR2)) {
+          queue[writeIdx++] = record
+          continue
+        }
+      }
+
+      const obstructed = this._processRecord(record, result, visited, available, px, py, allSafe, dpx, dpy, dpR2)
 
       // Flood-fill fallback for tiles whose exact position was obstructed (solid).
       // Phase 1: adjacent-to-solid tiles only. Phase 2: any empty tile.
@@ -137,6 +160,8 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
                 const fdx = x - px, fdy = y - py
                 if (fdx * fdx + fdy * fdy <= TILE_SAFE_RSQ) return false
               }
+              const ddx = x - dpx, ddy = y - dpy
+              if (ddx * ddx + ddy * ddy <= dpR2) return false
               visited.add(key)
               result.push({ x, y })
               return result.length >= targetLen
@@ -156,9 +181,10 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
     }
     queue.length = writeIdx
 
-    // Global fallback: if matter remains after all sweep records are exhausted,
-    // search outward from the player. Phase 1: adjacent-to-solid only. Phase 2: any empty.
-    if (!outOfMatter && result.length < available) {
+    // Global fallback: only when the sweep queue is truly empty. If records are
+    // still pending (deferred because the player hasn't moved far enough), don't
+    // place tiles — they'll be restored from the queue as the player moves away.
+    if (!outOfMatter && result.length < available && queue.length === 0) {
       const cx = Math.round(px)
       const cy = Math.round(py)
       const scanGlobal = (adjOnly: boolean) => {
@@ -171,6 +197,8 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
             if (visited.has(key)) return false
             const fdx = x - px, fdy = y - py
             if (fdx * fdx + fdy * fdy <= TILE_SAFE_RSQ) return false
+            const ddx = x - dpx, ddy = y - dpy
+            if (ddx * ddx + ddy * ddy <= dpR2) return false
             visited.add(key)
             result.push({ x, y })
             return result.length >= available
@@ -188,7 +216,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   }
 
   // Compacts record.remaining in-place:
-  //   - tiles too close to player → kept for next frame
+  //   - tiles too close to player OR inside active destroy circle → kept for next frame
   //   - tiles at the matter cap → kept for next frame
   //   - tiles at empty positions → added to result (consumed)
   //   - tiles at solid positions → counted as obstructed (consumed, fall through to flood fill)
@@ -201,6 +229,9 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
     px: number,
     py: number,
     allSafe: boolean,
+    dpx: number,
+    dpy: number,
+    dpR2: number,
   ): number {
     const { tilemap } = this.scene
     const { width } = tilemap
@@ -221,9 +252,19 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
         const tdx = tile.x - px
         const tdy = tile.y - py
         if (tdx * tdx + tdy * tdy <= TILE_SAFE_RSQ) {
-          remaining[writeIdx++] = tile  // too close — defer to next frame
+          remaining[writeIdx++] = tile  // too close to player — defer to next frame
           continue
         }
+      }
+
+      // Defer tiles still inside the active destroy circle. The destroy projectile
+      // sits ~18px from the player body center (arm offset), so the player-center
+      // TILE_SAFE_RADIUS guard alone doesn't cover the full destroy zone.
+      const ddx = tile.x - dpx
+      const ddy = tile.y - dpy
+      if (ddx * ddx + ddy * ddy <= dpR2) {
+        remaining[writeIdx++] = tile  // inside destroy zone — defer to next frame
+        continue
       }
 
       if (result.length >= available) {
@@ -258,7 +299,18 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   }
 
   private _applyCreate(tiles: Tile[]) {
-    const created = commitTilesList(this.scene.tilemap, tiles, PROJECTILE_EFFECT.CREATE_SOLID, this._commitOut)
+    this._commitOut.length = 0
+    if (!tiles.length) return this._commitOut
+    const created = this._commitOut
+    const tilemap = this.scene.tilemap
+
+    const newValue = PROJECTILE_EFFECT.CREATE_SOLID.convertMatterType(MatterType.EMPTY)!
+    for (const { x, y } of tiles) {
+      tilemap.setTile(x, y, newValue)
+      created.push({ x, y, newValue })
+    }
+    PROJECTILE_EFFECT.CREATE_SOLID.onTilesCommitted(tilemap, created)
+
     if (!created.length) return
     this.matterTank.addPendingCharge(FireMode.CREATE, created.length)
     const source = this.scene.player.matterParticleEmitPosition(this._emitPos)

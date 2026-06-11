@@ -4,6 +4,7 @@
 //   tile & SETTLED_FLAG !== 0    → is this tile settled?
 //   tile & ~SETTLED_FLAG         → strip settled, get raw tile back
 import type { MatterAction } from './matter.ts'
+import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
 
 export const SETTLED_FLAG = 0x100
 
@@ -32,13 +33,13 @@ export function isSettled(value: number): boolean {
 }
 
 // setOwner — writes `owner` into bits 9–24, leaving type and settled bits intact.
-export function setOwner(value: number, owner: number): number {
+export function setOwner(value: number, owner: MatterTankId): number {
   return (value & ~OWNER_MASK) | ((owner & 0xFFFF) << OWNER_SHIFT)
 }
 
 // getOwner — extracts the owner ID from bits 9–24 (0 = unowned/world).
-export function getOwner(value: number): number {
-  return (value >>> OWNER_SHIFT) & 0xFFFF
+export function getOwner(value: number): MatterTankId {
+  return ((value >>> OWNER_SHIFT) & 0xFFFF) as MatterTankId
 }
 
 // clearOwner — sets the owner field to 0 (NONE), leaving type and settled bits intact.
