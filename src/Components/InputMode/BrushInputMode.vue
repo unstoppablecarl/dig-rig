@@ -8,16 +8,18 @@ const state = useBrushUIState()
   <div class="imu">
     <div class="imu-header">
       <span class="imu-label">Brush</span>
-      <strong>{{ MatterType[state.matterType] }}</strong>
     </div>
     <span class="imu-section">
       Radius: {{ state.radius }} <kbd>Mouse Wheel</kbd> = resize
     </span>
     <span class="imu-section">
-      <kbd>LMB</kbd> = paint
+      <kbd>LMB</kbd> = paint {{ MatterType[state.primaryMatterType] }}
     </span>
     <span class="imu-section">
-      <kbd>Shift+LMB</kbd> / <kbd>RMB</kbd> = erase
+      <kbd>RMB</kbd> = paint {{ MatterType[state.secondaryMatterType] }}
+    </span>
+    <span class="imu-section">
+      <kbd>Shift+LMB</kbd> = erase
     </span>
   </div>
 </template>

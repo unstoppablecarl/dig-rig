@@ -5,7 +5,7 @@ import type { ProjectileEffectResult } from './_ProjectileEffect.types.ts'
 
 export function addTileHighlights(tm: Tilemap, tiles: ProjectileEffectResult[], mode: FireMode): void {
   const startTime = tm.scene.time.now
-  for (const { x, y } of tiles) tm.scene.tilemapRenderer.addEffect(x, y, mode, startTime)
+  for (const { x, y } of tiles) tm.scene.tilemapRenderer.addFireModeEffect(x, y, mode, startTime)
 }
 
 export function chunkAndIslandCheck(tm: Tilemap, tiles: ProjectileEffectResult[]): void {

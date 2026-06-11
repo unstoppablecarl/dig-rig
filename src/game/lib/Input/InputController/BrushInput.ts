@@ -5,9 +5,7 @@ import type { ProjectileEffectResult } from '../../Projectiles/ProjectileEffect/
 import { PROJECTILE_EFFECT } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import { applyEffect } from '../../Tilemap/TileMutation.ts'
 import { InputController } from './InputController.ts'
-import POINTER_DOWN = Input.Events.POINTER_DOWN
 import POINTER_MOVE = Input.Events.POINTER_MOVE
-import POINTER_UP = Input.Events.POINTER_UP
 import Pointer = Input.Pointer
 import UPDATE = Scenes.Events.UPDATE
 
@@ -15,18 +13,25 @@ export class BrushInput extends InputController {
   public graphics: GameObjects.Graphics
   private mouseX = 0
   private mouseY = 0
-  private isDrawing = false
-  private isCreating = false
   private brushDirty = true
   private _effectTiles: ProjectileEffectResult[] = []
 
-  get matterType(): MatterType {
-    return this.scene?.brushUIState?.matterType ?? MatterType.SOLID
+  get primaryMatterType(): MatterType {
+    return this.scene?.brushUIState?.primaryMatterType ?? MatterType.SOLID
   }
 
-  set matterType(value: MatterType) {
+  set primaryMatterType(value: MatterType) {
     if (this.destroyed) return
-    this.scene.brushUIState.matterType = value
+    this.scene.brushUIState.primaryMatterType = value
+  }
+
+  get secondaryMatterType(): MatterType {
+    return this.scene?.brushUIState?.secondaryMatterType ?? MatterType.SOLID
+  }
+
+  set secondaryMatterType(value: MatterType) {
+    if (this.destroyed) return
+    this.scene.brushUIState.secondaryMatterType = value
   }
 
   constructor(
@@ -39,9 +44,19 @@ export class BrushInput extends InputController {
     this.graphics = this.scene.add.graphics()
     scene.layers.brush.add(this.graphics)
     this.binderAdd(this.scene.input, POINTER_MOVE, this.pointermove)
-    this.binderAdd(this.scene.input, POINTER_DOWN, this.pointerdown)
-    this.binderAdd(this.scene.input, POINTER_UP, this.pointerup)
     this.binderAdd(this.scene.events, UPDATE, this.update)
+
+    const a = this.scene.playerActions
+    this.binder.addInput(() => [
+      a.BRUSH_PRIMARY.onDown((e) => {
+        const p = e as Pointer
+        this.brushPrimaryDown(p)
+      }),
+      a.BRUSH_SECONDARY.onDown((e) => {
+        const p = e as Pointer
+        this.brushSecondaryDown(p)
+      }),
+    ])
   }
 
   protected onEnable() {
@@ -52,25 +67,31 @@ export class BrushInput extends InputController {
     this.graphics.setActive(false).setVisible(false)
   }
 
-  pointermove(pointer: Pointer) {
-    this.mouseX = pointer.worldX
-    this.mouseY = pointer.worldY
-    this.brushDirty = true
-
-    if (this.isDrawing) {
-      this.apply(this.mouseX, this.mouseY)
+  protected brushPrimaryDown(p: Pointer) {
+    const a = this.scene.playerActions
+    const destroying = a.BRUSH_ERASE_MODIFIER.isDown()
+    if (destroying) {
+      this.brushDestroy(p.worldX, p.worldY)
+    } else {
+      this.brushCreate(p.worldX, p.worldY, this.primaryMatterType)
     }
   }
 
-  pointerdown(pointer: Pointer) {
-    this.isDrawing = true
-    const destroying = (pointer.leftButtonDown() && pointer.event.shiftKey) || pointer.rightButtonDown()
-    this.isCreating = !destroying
-    this.apply(pointer.worldX, pointer.worldY)
+  protected brushSecondaryDown(p: Pointer) {
+    this.brushCreate(p.worldX, p.worldY, this.secondaryMatterType)
   }
 
-  pointerup() {
-    this.isDrawing = false
+  pointermove(p: Pointer) {
+    this.mouseX = p.worldX
+    this.mouseY = p.worldY
+    this.brushDirty = true
+
+    const a = this.scene.playerActions
+    if (a.BRUSH_PRIMARY.isDown()) {
+      this.brushPrimaryDown(p)
+    } else if (a.BRUSH_SECONDARY.isDown()) {
+      this.brushSecondaryDown(p)
+    }
   }
 
   onMouseWheel(deltaY: number) {
@@ -89,17 +110,16 @@ export class BrushInput extends InputController {
     if (!this.brushDirty) return
     this.brushDirty = false
     this.graphics.clear()
-    this.graphics.lineStyle(2, 0xffff00, 1)
+    this.graphics.lineStyle(1, 0xffff00, 1)
     this.graphics.strokeCircle(this.mouseX, this.mouseY, this.radius)
   }
 
-  apply(tileX: number, tileY: number) {
-    if (this.matterType === MatterType.SOLID) {
-      const effect = this.isCreating ? PROJECTILE_EFFECT.CREATE_SOLID : PROJECTILE_EFFECT.DESTROY
-      applyEffect(this.scene.tilemap, this._effectTiles, tileX, tileY, this.radius, effect)
-    } else {
-      this.scene.matterBridge.addMatter(this.matterType, tileX, tileY, this.radius)
-    }
+  brushCreate(tx: number, ty: number, type: MatterType) {
+    this.scene.matterBridge.addMatter(type, tx, ty, this.radius)
+  }
+
+  brushDestroy(tx: number, ty: number) {
+    applyEffect(this.scene.tilemap, this._effectTiles, tx, ty, this.radius, PROJECTILE_EFFECT.DESTROY)
   }
 
   protected onDestroy() {

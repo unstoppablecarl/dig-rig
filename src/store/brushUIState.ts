@@ -7,21 +7,26 @@ export type BrushUIState = ReturnType<typeof useBrushUIState>
 
 type SerializedData = {
   radius: number
-  matterType: MatterType
+  primaryMatterType: MatterType
+  secondaryMatterType: MatterType
+
 }
 
 export const useBrushUIState = defineStore('brush-ui-state', () => {
   const radius = ref(20)
-  const matterType = ref<MatterType>(MatterType.SOLID)
+  const primaryMatterType = ref<MatterType>(MatterType.SOLID)
+  const secondaryMatterType = ref<MatterType>(MatterType.FIRE)
 
   const state = {
     radius,
-    matterType,
+    primaryMatterType,
+    secondaryMatterType,
   }
 
   const defaults: SerializedData = {
     radius: radius.value,
-    matterType: matterType.value,
+    primaryMatterType: primaryMatterType.value,
+    secondaryMatterType: secondaryMatterType.value,
   }
 
   const {
@@ -38,7 +43,8 @@ export const useBrushUIState = defineStore('brush-ui-state', () => {
     $serializeState,
     $restoreState,
     radius,
-    matterType,
+    primaryMatterType,
+    secondaryMatterType,
   }
 }, {
   persist: true,

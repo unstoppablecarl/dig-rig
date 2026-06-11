@@ -18,6 +18,9 @@ export enum PlayerAction {
   ZOOM_MODIFIER = 'ZOOM_MODIFIER',
   PREV_MATTER_TYPE = 'PREV_MATTER_TYPE',
   NEXT_MATTER_TYPE = 'NEXT_MATTER_TYPE',
+  BRUSH_PRIMARY = 'BRUSH_PRIMARY',
+  BRUSH_SECONDARY = 'BRUSH_SECONDARY',
+  BRUSH_ERASE_MODIFIER = 'BRUSH_ERASE_MODIFIER',
 }
 
 export const PLAYER_ACTION_DISPLAY_NAME: Record<PlayerAction, string> = {
@@ -34,6 +37,9 @@ export const PLAYER_ACTION_DISPLAY_NAME: Record<PlayerAction, string> = {
   [PlayerAction.ZOOM_MODIFIER]: 'Zoom',
   [PlayerAction.PREV_MATTER_TYPE]: 'Matter: Prev',
   [PlayerAction.NEXT_MATTER_TYPE]: 'Matter: Next',
+  [PlayerAction.BRUSH_PRIMARY]: 'Paint: Primary',
+  [PlayerAction.BRUSH_SECONDARY]: 'Paint: Secondary',
+  [PlayerAction.BRUSH_ERASE_MODIFIER]: 'Paint: Erase',
 }
 
 export const POINTER_LEFT = 'Mouse Left' as const

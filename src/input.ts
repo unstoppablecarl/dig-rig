@@ -23,6 +23,9 @@ export const INPUT_ACTIONS: Record<PlayerAction, Binding> = {
   [PlayerAction.ZOOM_MODIFIER]: ['SHIFT'],
   [PlayerAction.PREV_MATTER_TYPE]: ['q'],
   [PlayerAction.NEXT_MATTER_TYPE]: ['e'],
+  [PlayerAction.BRUSH_PRIMARY]: [POINTER_LEFT],
+  [PlayerAction.BRUSH_SECONDARY]: [POINTER_RIGHT],
+  [PlayerAction.BRUSH_ERASE_MODIFIER]: ['SHIFT'],
 }
 
 // prevent input when refreshing the page

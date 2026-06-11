@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Game } from 'phaser'
-import { computed, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 import {
   PButton,
   PCheckbox,
@@ -16,10 +17,10 @@ import {
 } from 'vue-pane/src/index.ts'
 import { launchLevel } from '../game/launcher.ts'
 import { InputMode } from '../game/lib/Input/_input.types.ts'
-import { MatterType } from '../game/lib/Matter/_Matter-types.ts'
 import { MATTER_NAMES } from '../game/lib/Matter/matter.ts'
 import type { GameLevel } from '../game/scenes/GameLevel.ts'
 import { type LevelEntry, type LevelId, LEVELS } from '../game/scenes/Levels'
+import { useBrushUIState } from '../store/brushUIState.ts'
 import { useUIState } from '../store/uiState.ts'
 
 const { game, level } = defineProps<{
@@ -89,10 +90,13 @@ const brushOptions = [...MATTER_NAMES.entries()].map(([key, value]) => ({
   value: key as string | number,
   label: value,
 }))
-const brushMatterType = ref<string | number>(level.inputManager.brushInput.matterType)
-watch(brushMatterType, (val) => {
-  level.inputManager.brushInput.matterType = Number(val) as MatterType
-})
+
+const brushUI = useBrushUIState()
+
+const {
+  primaryMatterType: brushPrimaryMatterType,
+  secondaryMatterType: brushSecondaryMatterType,
+} = storeToRefs(brushUI)
 
 function clearStorage() {
   localStorage.clear()
@@ -156,7 +160,8 @@ const levelEntries = Object.entries(LEVELS) as [LevelId, LevelEntry][]
       </PFolder>
       <PFolder title="Brush">
         <PButton :label="brushLabel" @click="toggleBrush" />
-        <PSelect label="Mode" :options="brushOptions" v-model="brushMatterType" />
+        <PSelect label="Primary" :options="brushOptions" v-model="brushPrimaryMatterType" />
+        <PSelect label="Secondary" :options="brushOptions" v-model="brushSecondaryMatterType" />
       </PFolder>
       <PFolder title="Controls">
         <PButton label="Clear Local Storage + Refresh" @click="clearStorage" />
