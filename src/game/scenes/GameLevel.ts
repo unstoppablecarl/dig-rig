@@ -1,7 +1,7 @@
 import { GameObjects, Geom, Input, Scene, Textures } from 'phaser'
 import { loadPixelSpriteSheets } from '../../assets/asset-loader.ts'
 import { PLAYER_SPRITE_SHEET_ASSETS } from '../../assets/player/player-sprite-sheet-assets.ts'
-import { INPUT_ACTIONS } from '../../input.ts'
+import { INPUT_ACTIONS, KEY_EVENT_GUARD } from '../../input.ts'
 import { type BrushUIState, useBrushUIState } from '../../store/brushUIState.ts'
 import { type UIState, useUIState } from '../../store/uiState.ts'
 import { useWeaponUIState, type WeaponUIState } from '../../store/weaponUIState.ts'
@@ -222,7 +222,7 @@ export abstract class GameLevel extends Scene {
     this.matterBridge = new MatterBridge(this)
     this.terrainChunkBodyManager = new TerrainChunkBodyManager(this)
     this.projectiles = new ProjectileManager(this)
-    this.playerActions = makePlayerActions(this, INPUT_ACTIONS)
+    this.playerActions = makePlayerActions(this, INPUT_ACTIONS, KEY_EVENT_GUARD)
     this.playerWeaponManager = new WeaponManagerInput(this)
     this.vfxParticleManager = new VFXParticleManager(this)
     this.inputManager = new InputManager(this)

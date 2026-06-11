@@ -1,7 +1,7 @@
-import type { ActionInput } from '../PlayerActions.ts'
+import type { ActionInput, KeyEvent, KeyEventGuard } from '../PlayerActions.ts'
 
 export class CompositeActionInput implements ActionInput {
-  constructor(private readonly inputs: ActionInput[]) {
+  constructor(private readonly inputs: ActionInput[], private guard?: KeyEventGuard) {
   }
 
   isDown(): boolean {
@@ -12,32 +12,34 @@ export class CompositeActionInput implements ActionInput {
     return this.inputs.every(i => i.isUp())
   }
 
-  onDown(cb: () => void): () => void {
+  onDown(cb: KeyEvent): () => void {
     let downCount = 0
-    const unsubs = this.inputs.flatMap(input => [
-      input.onDown(() => {
-        if (downCount++ === 0) cb()
+    const unsub = this.inputs.flatMap(input => [
+      input.onDown((e) => {
+        if (!this.guard?.(e)) return
+        if (downCount++ === 0) cb(e)
       }),
       input.onUp(() => {
         downCount = Math.max(0, downCount - 1)
       }),
     ])
-    return () => unsubs.forEach(u => u())
+    return () => unsub.forEach(u => u())
   }
 
-  onUp(cb: () => void): () => void {
+  onUp(cb: KeyEvent): () => void {
     let downCount = 0
-    const unsubs = this.inputs.flatMap(input => [
-      input.onDown(() => {
+    const unsub = this.inputs.flatMap(input => [
+      input.onDown((e) => {
+        if (!this.guard?.(e)) return
         downCount++
       }),
-      input.onUp(() => {
+      input.onUp((e) => {
         if (--downCount <= 0) {
           downCount = 0
-          cb()
+          cb(e)
         }
       }),
     ])
-    return () => unsubs.forEach(u => u())
+    return () => unsub.forEach(u => u())
   }
 }

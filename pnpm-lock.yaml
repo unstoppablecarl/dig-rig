@@ -36,8 +36,8 @@ importers:
         specifier: ^3.5.35
         version: 3.5.35(typescript@6.0.3)
       vue-pane:
-        specifier: ^0.10.0
-        version: 0.10.0(vue@3.5.35(typescript@6.0.3))
+        specifier: ^0.11.0
+        version: 0.11.0(vue@3.5.35(typescript@6.0.3))
     devDependencies:
       '@tweakpane/core':
         specifier: ^2.0.5
@@ -745,8 +745,8 @@ packages:
       '@vue/composition-api':
         optional: true
 
-  vue-pane@0.10.0:
-    resolution: {integrity: sha512-6NUIjq3i9QC0hk6QllKUx3PHMJGumytEDhI5pzd9HTXpHb/eWF9fGwVs4Em9ZIiv9UK6QjNZHTp0NwKg+fx7CQ==}
+  vue-pane@0.11.0:
+    resolution: {integrity: sha512-0vDybG/UtiSIG9Z++FNd7w0hjpmC3uFSk+HPXPHGuWhKKJHxh64LlHV+eZ2fZ7CbuLG/ZCA6g3fxBjgc10u/qA==}
     peerDependencies:
       vue: ^3.5.0
 
@@ -1326,7 +1326,7 @@ snapshots:
     dependencies:
       vue: 3.5.35(typescript@6.0.3)
 
-  vue-pane@0.10.0(vue@3.5.35(typescript@6.0.3)):
+  vue-pane@0.11.0(vue@3.5.35(typescript@6.0.3)):
     dependencies:
       '@floating-ui/vue': 1.1.11(vue@3.5.35(typescript@6.0.3))
       vue: 3.5.35(typescript@6.0.3)

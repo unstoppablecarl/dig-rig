@@ -1,6 +1,9 @@
 import { Input } from 'phaser'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import type { ActionInput } from '../PlayerActions.ts'
+import type { ActionInput, KeyEvent } from '../PlayerActions.ts'
+import Key = Phaser.Input.Keyboard.Key
+import UP = Input.Keyboard.Events.UP
+import DOWN = Input.Keyboard.Events.DOWN
 
 export class KeyActionInput implements ActionInput {
   private readonly keys: Input.Keyboard.Key[]
@@ -17,17 +20,20 @@ export class KeyActionInput implements ActionInput {
     return this.keys.every(k => k.isUp)
   }
 
-  onDown(cb: () => void): () => void {
-    for (const key of this.keys) key.on('down', cb)
+  onDown(cb: KeyEvent): () => void {
+    const handler = (_k: Key, e: KeyboardEvent) => cb(e)
+
+    for (const key of this.keys) key.on(DOWN, handler)
     return () => {
-      for (const key of this.keys) key.off('down', cb)
+      for (const key of this.keys) key.off(DOWN, handler)
     }
   }
 
-  onUp(cb: () => void): () => void {
-    for (const key of this.keys) key.on('up', cb)
+  onUp(cb: KeyEvent): () => void {
+    const handler = (_k: Key, e: KeyboardEvent) => cb(e)
+    for (const key of this.keys) key.on(UP, handler)
     return () => {
-      for (const key of this.keys) key.off('up', cb)
+      for (const key of this.keys) key.off(UP, handler)
     }
   }
 }

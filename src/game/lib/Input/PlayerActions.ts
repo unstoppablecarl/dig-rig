@@ -41,8 +41,8 @@ export const POINTER_RIGHT = 'Mouse Right' as const
 export type PointerBinding = typeof POINTER_LEFT | typeof POINTER_RIGHT
 
 export type Binding = (string | number | PointerBinding)[]
-
 export type KeyEvent = (e: KeyboardEvent | Input.Pointer) => void
+export type KeyEventGuard = (e: KeyboardEvent | Input.Pointer) => boolean
 
 export interface ActionInput {
   isDown(): boolean
@@ -53,23 +53,29 @@ export interface ActionInput {
 
 export type PlayerActions = Record<PlayerAction, ActionInput>
 
-export function makePlayerActions(scene: GameLevel, bindings: Record<PlayerAction, Binding>): PlayerActions {
+export function makePlayerActions(scene: GameLevel, bindings: Record<PlayerAction, Binding>, guard?: KeyEventGuard): PlayerActions {
   return Object.fromEntries(Object.keys(PlayerAction).map(key => {
-    return [key as PlayerAction, makeActionInput(scene, bindings[key as PlayerAction])]
+    return [key as PlayerAction, makeActionInput(scene, bindings[key as PlayerAction], guard)]
   })) as PlayerActions
 }
 
-function makeActionInput(scene: GameLevel, binding: Binding): ActionInput {
+export function makeActionInput(scene: GameLevel, binding: Binding, guard?: KeyEventGuard): ActionInput {
   const keys: (string | number)[] = []
   const inputs: ActionInput[] = []
 
   for (const item of binding) {
-    if (item === POINTER_LEFT) inputs.push(new PointerActionInput(scene, 'LEFT'))
-    else if (item === POINTER_RIGHT) inputs.push(new PointerActionInput(scene, 'RIGHT'))
-    else keys.push(item)
+    if (item === POINTER_LEFT) {
+      inputs.push(new PointerActionInput(scene, 'LEFT'))
+    } else if (item === POINTER_RIGHT) {
+      inputs.push(new PointerActionInput(scene, 'RIGHT'))
+    } else {
+      keys.push(item)
+    }
   }
 
-  if (keys.length) inputs.push(new KeyActionInput(scene, keys))
-  if (inputs.length === 1) return inputs[0]
-  return new CompositeActionInput(inputs)
+  if (keys.length) {
+    inputs.push(new KeyActionInput(scene, keys))
+  }
+
+  return new CompositeActionInput(inputs, guard)
 }
