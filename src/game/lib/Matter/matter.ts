@@ -69,7 +69,7 @@ import { WATER_DEF } from './defs/water.ts'
 import { WAX_DEF } from './defs/wax.ts'
 import type { MatterSim } from './MatterSim.ts'
 
-export type MatterAction = (world: MatterSim, x: number, y: number, idx: number, next: Set<number>) => void
+export type MatterAction = (world: MatterSim, x: number, y: number, idx: number) => void
 
 const noop = () => {
 }

@@ -1,3 +1,4 @@
+import type { MatterTankId } from '../Matter/MatterTank/_MatterTank.types.ts'
 import { ParticleType } from './_particle-types.ts'
 
 export class Particle {
@@ -15,6 +16,7 @@ export class Particle {
   active: boolean = false
   next: Particle | null = null
   prev: Particle | null = null
+  ownerId: MatterTankId
 
   // Generic extra fields used by specific particle types
   data: Record<string, number> = {}

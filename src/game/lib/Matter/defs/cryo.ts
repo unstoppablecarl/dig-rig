@@ -2,10 +2,11 @@ import { random } from '../../../helpers/random'
 import {
   CHILLED_ICE,
   CRYO,
-  type MatterDef,
   EMPTY,
+  getFirstOwnerId,
   ICE,
   LAVA,
+  type MatterDef,
   OIL,
   ROCK,
   SALT_WATER,
@@ -16,17 +17,20 @@ import {
 export const CRYO_DEF: MatterDef = {
   name: 'Cryo',
   acidImmune: true,
-  action(world, tx, ty, idx, next): void {
+  action(world, tx, ty, idx): void {
+    const { tiles, width } = world
     // Lava contact: cryo evaporates, lava solidifies
     const lavaLoc = world.bordering(tx, ty, idx, LAVA)
     if (lavaLoc !== -1) {
-      world.tiles[idx] = EMPTY
-      world.tiles[lavaLoc] = ROCK
+      const ownerId = getFirstOwnerId(tiles[idx], tiles[lavaLoc])
+      world.queueMatterCredit(tx, ty, ownerId)
+      tiles[idx] = EMPTY
+      tiles[lavaLoc] = ROCK
       world.markDirty(tx, ty)
-      const lx = lavaLoc % world.width
-      const ly = lavaLoc / world.width | 0
+      const lx = lavaLoc % width
+      const ly = lavaLoc / width | 0
       world.markDirty(lx, ly)
-      world.reactivateAround(tx, ty, next)
+      world.reactivateAround(tx, ty)
       return
     }
 
@@ -34,53 +38,47 @@ export const CRYO_DEF: MatterDef = {
     if (random() < 50) {
       const iceLoc = world.bordering(tx, ty, idx, ICE)
       if (iceLoc !== -1) {
-        world.tiles[iceLoc] = CHILLED_ICE
-        const ix = iceLoc % world.width
-        const iy = iceLoc / world.width | 0
+        tiles[iceLoc] = CHILLED_ICE
+        const ix = iceLoc % width
+        const iy = iceLoc / width | 0
         world.markDirty(ix, iy)
-        next.add(iceLoc)
+        world.next.add(iceLoc)
       }
     }
 
     // Density sink: cryo is denser than water/salt-water/oil — displaced water freezes
-    if (world.doDensityLiquid(tx, ty, idx, next, WATER, 80, 40, CHILLED_ICE)) return
-    if (world.doDensityLiquid(tx, ty, idx, next, SALT_WATER, 80, 40, CHILLED_ICE)) return
-    if (world.doDensityLiquid(tx, ty, idx, next, OIL, 80, 40)) return
+    if (world.doDensityLiquid(tx, ty, idx, WATER, 80, 40, CHILLED_ICE)) return
+    if (world.doDensityLiquid(tx, ty, idx, SALT_WATER, 80, 40, CHILLED_ICE)) return
+    if (world.doDensityLiquid(tx, ty, idx, OIL, 80, 40)) return
     if (world.hasDensityBelow(tx, ty, WATER) || world.hasDensityBelow(tx, ty, SALT_WATER) || world.hasDensityBelow(tx, ty, OIL)) {
-      next.add(idx)
+      world.next.add(idx)
       return
     }
 
-    const leftFirst = world.leftFirst
-    const moved =
-      world.tryMove(idx, tx, ty, tx, ty + 1, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
+    const moved = world.tryLiquidFlow(tx, ty, idx)
 
     if (!moved) {
       // Freeze an adjacent water cell when immobile
       const waterLoc = world.borderingAdjacent(tx, ty, idx, WATER)
       if (waterLoc !== -1) {
-        world.tiles[waterLoc] = CHILLED_ICE
-        const wx = waterLoc % world.width
-        const wy = waterLoc / world.width | 0
+        tiles[waterLoc] = CHILLED_ICE
+        const wx = waterLoc % width
+        const wy = waterLoc / width | 0
         world.markDirty(wx, wy)
-        next.add(waterLoc)
-        next.add(idx)
+        world.next.add(waterLoc)
+        world.next.add(idx)
         return
       }
 
       // Slowly self-freeze when fully immobile and no water to interact with
       if (random() < 1 && random() < 50) {
-        world.tiles[idx] = CHILLED_ICE
+        tiles[idx] = CHILLED_ICE
         world.markDirty(tx, ty)
-        world.reactivateAround(tx, ty, next)
+        world.reactivateAround(tx, ty)
         return
       }
 
-      world.tiles[idx] = setSettled(CRYO, true)
+      tiles[idx] = setSettled(CRYO, true)
       world.markDirty(tx, ty)
     }
   },

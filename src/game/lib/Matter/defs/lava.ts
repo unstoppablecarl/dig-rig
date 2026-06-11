@@ -27,7 +27,7 @@ export const LAVA_DEF: MatterDef = {
   name: 'Lava',
   lavaImmune: true,
   liquid: true,
-  action(world, tx, ty, idx, next): void {
+  action(world, tx, ty, idx): void {
     const { tiles, width, height } = world
     const existing = tiles[idx]
     const ownerId = getOwner(existing)
@@ -40,8 +40,8 @@ export const LAVA_DEF: MatterDef = {
       const wx = waterLoc % width
       const wy = waterLoc / width | 0
       world.markDirty(wx, wy)
-      next.add(waterLoc)
-      next.add(idx)
+      world.next.add(waterLoc)
+      world.next.add(idx)
       return
     }
 
@@ -55,7 +55,7 @@ export const LAVA_DEF: MatterDef = {
       })
       tiles[idx] = EMPTY
       world.markDirty(tx, ty)
-      world.reactivateAround(tx, ty, next)
+      world.reactivateAround(tx, ty)
       return
     }
 
@@ -64,14 +64,14 @@ export const LAVA_DEF: MatterDef = {
       const meltLoc = world.borderingAdjacent(tx, ty, idx, SOLID)
       if (meltLoc !== -1) {
         tiles[meltLoc] = EMPTY
-        world.queueTransferToMatterTankOwner(tx, ty, idx)
+        world.queueMatterCreditFromTile(tx, ty, idx)
         tiles[idx] = EMPTY
         const mx = meltLoc % width
         const my = meltLoc / width | 0
         world.markDirty(mx, my)
         world.markDirty(tx, ty)
-        next.add(idx)
-        next.add(meltLoc)
+        world.next.add(idx)
+        world.next.add(meltLoc)
       }
     }
     //
@@ -80,7 +80,7 @@ export const LAVA_DEF: MatterDef = {
     if (upIdx !== -1 && random() < 6 && matterType(tiles[upIdx]) === EMPTY) {
       tiles[upIdx] = setOwner(FIRE, ownerId)
       world.markDirty(tx, ty - 1)
-      next.add(upIdx)
+      world.next.add(upIdx)
     }
 
     // Burn adjacent non-immune tiles (4-directional, SOLID is lava-immune so skipped)
@@ -96,10 +96,10 @@ export const LAVA_DEF: MatterDef = {
         const nt = matterType(tiles[nidx])
         if (!LAVA_IMMUNE.has(nt)) {
           tiles[nidx] = setOwner(FIRE, ownerId)
-          world.queueTransferToMatterTank(tx, ty, ownerId)
+          world.queueMatterCredit(tx, ty, ownerId)
           tiles[idx] = EMPTY
           world.markDirty(nx, ny)
-          next.add(nidx)
+          world.next.add(nidx)
         }
       }
     }
@@ -111,15 +111,15 @@ export const LAVA_DEF: MatterDef = {
       if (belowType === FIRE) {
         tiles[downIdx] = EMPTY
         world.markDirty(tx, ty + 1)
-        world.reactivateAround(tx, ty + 1, next)
+        world.reactivateAround(tx, ty + 1)
       } else if (belowType === STEAM && random() < 95) {
         // Lava sinks through steam — swap positions
         tiles[downIdx] = LAVA
         tiles[idx] = STEAM
         world.markDirty(tx, ty)
         world.markDirty(tx, ty + 1)
-        next.add(downIdx)
-        next.add(idx)
+        world.next.add(downIdx)
+        world.next.add(idx)
         return
       }
     }
@@ -131,29 +131,22 @@ export const LAVA_DEF: MatterDef = {
       if (leftIdx !== -1 && matterType(tiles[leftIdx]) === FIRE) {
         tiles[leftIdx] = EMPTY
         world.markDirty(tx - 1, ty)
-        world.reactivateAround(tx - 1, ty, next)
+        world.reactivateAround(tx - 1, ty)
       }
       if (rightIdx !== -1 && matterType(tiles[rightIdx]) === FIRE) {
         tiles[rightIdx] = EMPTY
         world.markDirty(tx + 1, ty)
-        world.reactivateAround(tx + 1, ty, next)
+        world.reactivateAround(tx + 1, ty)
       }
     }
 
-    const leftFirst = world.leftFirst
-    const moved =
-      world.tryMove(idx, tx, ty, tx, ty + 1, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
-
+    const moved = world.tryLiquidFlow(tx, ty, idx)
     if (!moved) {
       world.tiles[idx] = setSettled(existing, true)
       world.markDirty(tx, ty)
 
-      if (!world.surroundedByMask(tx, ty, idx, IS_SETTLED)) {
-        next.add(idx)
+      if (!world.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
+        world.next.add(idx)
       }
     }
   },

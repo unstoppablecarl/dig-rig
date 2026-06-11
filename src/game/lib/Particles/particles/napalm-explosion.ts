@@ -1,5 +1,5 @@
 import { FIRE_COLOR } from '../../../config/colors.ts'
-import { FIRE } from '../../Matter/_Matter-types.ts'
+import { FIRE, setOwner } from '../../Matter/_Matter-types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
 export const NAPALM_EXPLOSION: ParticleDef = {
@@ -13,7 +13,7 @@ export const NAPALM_EXPLOSION: ParticleDef = {
   },
   action(p, renderer, pool, world) {
     renderer.drawCircleFromParticle(p, p.size, p.color)
-    world.writeTileCircle(p.x, p.y, p.size / 2, FIRE)
+    world.writeTileCircle(p.x, p.y, p.size / 2, setOwner(FIRE, p.ownerId))
     p.x += p.xVelocity
     p.y += p.yVelocity
     p.size *= 1 + Math.random() * 0.1

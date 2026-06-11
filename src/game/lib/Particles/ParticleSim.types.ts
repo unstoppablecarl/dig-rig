@@ -1,3 +1,4 @@
+import type { MatterTankId } from '../Matter/MatterTank/_MatterTank.types.ts'
 import type { ParticleType } from './_particle-types.ts'
 
 export enum ParticleWorkerInMsg {
@@ -9,18 +10,30 @@ export enum ParticleWorkerOutMsg {
   ACTIVATIONS,
 }
 
-export type ParticleWorkerInMessage =
-  | {
+type InitMessage = {
   type: ParticleWorkerInMsg.INIT
   tilesSab: SharedArrayBuffer
   pixelSab: SharedArrayBuffer
   width: number
   height: number
 }
-  | { type: ParticleWorkerInMsg.SPAWN; particleType: ParticleType; x: number; y: number }
+type SpawnMessage = {
+  type: ParticleWorkerInMsg.SPAWN
+  particleType: ParticleType
+  x: number
+  y: number
+  ownerId: MatterTankId
+}
+export type ParticleWorkerInMessage =
+  | InitMessage
+  | SpawnMessage
 
+type ActivationsMessage = {
+  type: ParticleWorkerOutMsg.ACTIVATIONS
+  indices: number[]
+}
 export type ParticleWorkerOutMessage =
-  | { type: ParticleWorkerOutMsg.ACTIVATIONS; indices: number[] }
+  | ActivationsMessage
 
 export type TypedParticleWorker = Omit<Worker, 'postMessage' | 'onmessage'> & {
   postMessage(msg: ParticleWorkerInMessage): void

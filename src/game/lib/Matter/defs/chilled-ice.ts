@@ -7,12 +7,12 @@ export const CHILLED_ICE_DEF: MatterDef = {
   name: 'Chilled Ice',
   passive: true,
   acidImmune: true,
-  action(world, tx, ty, idx, next): void {
+  action(world, tx, ty, idx): void {
     // Thaw to regular ice
     if (random() < 6) {
       world.tiles[idx] = ICE
       world.markDirty(tx, ty)
-      next.add(idx)
+      world.next.add(idx)
       return
     }
 
@@ -20,11 +20,11 @@ export const CHILLED_ICE_DEF: MatterDef = {
     if (world.borderingAny(tx, ty, idx, FAST_THAW_TARGETS) !== -1) {
       world.tiles[idx] = ICE
       world.markDirty(tx, ty)
-      next.add(idx)
+      world.next.add(idx)
       return
     }
 
     // Freeze adjacent water
-    world.doGrow(tx, ty, idx, next, WATER, 50)
+    world.doGrow(tx, ty, idx, WATER, 50)
   },
 }

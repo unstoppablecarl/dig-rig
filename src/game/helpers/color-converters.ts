@@ -1,6 +1,8 @@
-// lighten/darken
+import { Display } from 'phaser'
 import type { RGBShaderColor } from '../types.ts'
+import Color = Display.Color
 
+// lighten/darken
 export function shiftColorValue(color: number, amount: number): number {
   let r = (color >> 16) & 0xFF
   let g = (color >> 8) & 0xFF
@@ -25,4 +27,18 @@ export function rgbToVec3(colorString: string): RGBShaderColor {
   const g = parseInt(matches[1], 10) / 255
   const b = parseInt(matches[2], 10) / 255
   return [r, g, b]
+}
+
+export function rgbToColor(colorString: string): Color {
+  const regex = /[\d.]+/g
+  const matches = colorString.match(regex)
+
+  if (!matches) {
+    throw new Error(`Invalid rgb color string "${colorString}"`)
+  }
+
+  const r = parseInt(matches[0], 10)
+  const g = parseInt(matches[1], 10)
+  const b = parseInt(matches[2], 10)
+  return new Color(r, g, b, 255)
 }

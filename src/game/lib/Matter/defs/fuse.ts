@@ -1,14 +1,19 @@
-import { type MatterDef, FIRE } from '../_Matter-types.ts'
+import { FIRE, getFirstOwnerId, type MatterDef, setOwner } from '../_Matter-types.ts'
 
 export const FUSE_DEF: MatterDef = {
   name: 'Fuse',
   passive: true,
-  action(world, tx, ty, idx, next): void {
+  action(world, tx, ty, idx): void {
+    const { tiles } = world
     // Ignite when touching fire — convert self to fire and propagate
-    if (world.bordering(tx, ty, idx, FIRE) !== -1) {
-      world.tiles[idx] = FIRE
+    const nidx = world.bordering(tx, ty, idx, FIRE)
+    if (nidx !== -1) {
+      // fuse owner or fallback to fire owner
+      const ownerId = getFirstOwnerId(tiles[idx], tiles[nidx])
+
+      tiles[idx] = setOwner(FIRE, ownerId)
       world.markDirty(tx, ty)
-      next.add(idx)
+      world.next.add(idx)
     }
   },
 }

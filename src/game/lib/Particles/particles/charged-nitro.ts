@@ -1,10 +1,11 @@
 import { FIRE_COLOR } from '../../../config/colors.ts'
-import { FIRE, PERMANENT, SOLID } from '../../Matter/_Matter-types.ts'
+import { FIRE, PERMANENT, setOwner, SOLID } from '../../Matter/_Matter-types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
 export const CHARGED_NITRO: ParticleDef = {
   particlesToSpawn: 1,
-  init(p, x, y, world) {
+  init(p, world) {
+    const { x, y } = p
     p.color = FIRE_COLOR
     p.size = 4
     p.xVelocity = 0
@@ -30,7 +31,7 @@ export const CHARGED_NITRO: ParticleDef = {
     // Write FIRE tiles along the bolt column from initY down to the current tip
     const colX = Math.round(x2)
     for (let cy = Math.round(y2); cy <= Math.round(p.data.initY); cy++) {
-      world.setTileType(colX, cy, FIRE)
+      world.setTileType(colX, cy, setOwner(FIRE, p.ownerId))
     }
     p.y = y2
     if (p.y <= p.data.minY) pool.release(p)

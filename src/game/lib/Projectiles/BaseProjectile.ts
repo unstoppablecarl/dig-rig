@@ -23,7 +23,7 @@ export abstract class BaseProjectile extends SceneBound {
   protected initialVY: number
   protected lifespanPercent = 0
 
-  protected readonly DEFAULT_VELOCITY: number = 100
+  protected readonly DEFAULT_VELOCITY: number = 300
 
   private effectTiles: ProjectileEffectResult[] = []
   protected visitedTiles = new Set<number>()

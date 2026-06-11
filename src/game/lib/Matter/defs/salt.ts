@@ -1,11 +1,11 @@
 import { random } from '../../../helpers/random'
-import { type MatterDef, SALT, SALT_WATER, setSettled, WATER } from '../_Matter-types.ts'
+import { type MatterDef, SALT_WATER, WATER } from '../_Matter-types.ts'
 
 export const SALT_DEF: MatterDef = {
   name: 'Salt',
   collidesWhenSettled: true,
   sinksThrough: [WATER, SALT_WATER],
-  action(world, tx, ty, idx, next): void {
+  action(world, tx, ty, idx): void {
     // Dissolve in water → salt water
     if (random() < 25) {
       const waterLoc = world.bordering(tx, ty, idx, WATER)
@@ -16,21 +16,12 @@ export const SALT_DEF: MatterDef = {
         const wx = waterLoc % world.width
         const wy = waterLoc / world.width | 0
         world.markDirty(wx, wy)
-        next.add(idx)
-        next.add(waterLoc)
+        world.next.add(idx)
+        world.next.add(waterLoc)
         return
       }
     }
 
-    const leftFirst = world.leftFirst
-    const moved =
-      world.tryMove(idx, tx, ty, tx, ty + 1, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, next)
-
-    if (!moved) {
-      world.tiles[idx] = setSettled(SALT, true)
-      world.markDirty(tx, ty)
-    }
+    world.doPowderFall(tx, ty, idx)
   },
 }

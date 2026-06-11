@@ -1,24 +1,22 @@
 import { random } from '../../../helpers/random'
-import { type MatterDef, FIRE, OIL, setSettled } from '../_Matter-types.ts'
+import { FIRE, getFirstOwnerId, type MatterDef, OIL, setSettled } from '../_Matter-types.ts'
 
 export const OIL_DEF: MatterDef = {
   name: 'Oil',
   liquid: true,
-  action(world, tx, ty, idx, next): void {
-    // Catch fire
-    if (random() < 30 && world.bordering(tx, ty, idx, FIRE) !== -1) {
-      world.doBorderBurn(tx, ty, idx, next)
-      return
+  action(world, tx, ty, idx): void {
+    if (random() < 30) {
+      const nidx = world.bordering(tx, ty, idx, FIRE)
+      if (nidx !== -1) {
+        const tiles = world.tiles
+
+        // oil owner or fallback to fire owner
+        const ownerId = getFirstOwnerId(tiles[idx], tiles[nidx])
+        world.doBorderBurn(tx, ty, idx, ownerId)
+      }
     }
 
-    const leftFirst = world.leftFirst
-    const moved =
-      world.tryMove(idx, tx, ty, tx, ty + 1, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
-
+    const moved = world.tryLiquidFlow(tx, ty, idx)
     if (!moved) {
       world.tiles[idx] = setSettled(OIL, true)
       world.markDirty(tx, ty)

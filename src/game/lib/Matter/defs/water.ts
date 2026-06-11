@@ -5,25 +5,18 @@ export const WATER_DEF: MatterDef = {
   lavaImmune: true,
   acidImmune: true,
   liquid: true,
-  action(world, tx, ty, idx, next): void {
-    world.wakeSettledNeighbors(tx, ty, idx, LAVA, next)
-    world.wakeSettledNeighbors(tx, ty, idx, SALT, next)
+  action(world, tx, ty, idx): void {
+    world.wakeSettledNeighbors(tx, ty, idx, LAVA)
+    world.wakeSettledNeighbors(tx, ty, idx, SALT)
 
-    const leftFirst = world.leftFirst
-    const moved =
-      world.tryMove(idx, tx, ty, tx, ty + 1, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
-
+    const moved = world.tryLiquidFlow(tx, ty, idx)
     if (moved) return
 
     // Water is denser than oil — sink through it
-    if (world.doDensityLiquid(tx, ty, idx, next, OIL, 25, 50)) return
+    if (world.doDensityLiquid(tx, ty, idx, OIL, 25, 50)) return
     // Probability roll may have missed — stay active so we retry next frame
     if (world.hasDensityBelow(tx, ty, OIL)) {
-      next.add(idx)
+      world.next.add(idx)
       return
     }
 
@@ -38,7 +31,7 @@ export const WATER_DEF: MatterDef = {
         // un settle sand
         world.tiles[aboveIdx] = SAND
         world.markDirty(tx, ty - 1)
-        next.add(aboveIdx)
+        world.next.add(aboveIdx)
       }
     }
   },

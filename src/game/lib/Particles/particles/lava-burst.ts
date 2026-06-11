@@ -9,7 +9,7 @@ import {
   MatterType,
   PERMANENT,
   ROCK,
-  SALT_WATER,
+  SALT_WATER, setOwner,
   SOLID,
   WATER,
 } from '../../Matter/_Matter-types.ts'
@@ -17,7 +17,8 @@ import { type ParticleDef } from '../_particle-types.ts'
 
 export const LAVA_BURST: ParticleDef = {
   particlesToSpawn: 5,
-  init(p, _x, y) {
+  init(p) {
+
     p.color = LAVA_COLOR
     // Bias angle away from straight-up to avoid overly vertical trajectories
     let angle = QUARTER_PI + Math.random() * HALF_PI
@@ -25,7 +26,7 @@ export const LAVA_BURST: ParticleDef = {
       angle += EIGHTEENTH_PI * (angle > HALF_PI ? 1 : -1)
     p.xVelocity = (1 + Math.random() * 3) * Math.cos(angle)
     p.yVelocity = (-4 * Math.random() - 3) * Math.sin(angle)
-    p.data.initY = y
+    p.data.initY = p.y
     p.data.initYVelocity = p.yVelocity
     p.data.yAcceleration = 0.06
     p.size = 4 + Math.random() * 3
@@ -38,7 +39,7 @@ export const LAVA_BURST: ParticleDef = {
       + (p.data.yAcceleration * p.actionIterations * p.actionIterations) / 2
     renderer.drawThickLine(p.x, p.y, x2, y2, p.size, p.color)
     // Trail leaves fire in the world
-    world.destroyTile(Math.round(x2), Math.round(y2), FIRE)
+    world.destroyTile(Math.round(x2), Math.round(y2), setOwner(FIRE, p.ownerId))
     p.x = x2
     p.y = y2
 
@@ -75,7 +76,7 @@ export const LAVA_BURST: ParticleDef = {
       }
       if (splatColor !== -1) {
         renderer.drawCircleFromParticle(p, p.size / 2, splatColor)
-        if (splatTile !== null) world.writeTileCircle(p.x, p.y, p.size / 2, splatTile)
+        if (splatTile !== null) world.writeTileCircle(p.x, p.y, p.size / 2, setOwner(splatTile, p.ownerId))
         pool.release(p)
         return
       }

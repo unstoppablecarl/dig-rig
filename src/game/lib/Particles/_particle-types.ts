@@ -18,8 +18,6 @@ export type ParticleDef = {
   particlesToSpawn: number,
   init: (
     p: Particle,
-    spawnX: number,
-    spawnY: number,
     ctx: ParticleSim,
   ) => void
   action: (

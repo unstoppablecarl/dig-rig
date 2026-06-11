@@ -1,5 +1,6 @@
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { type MatterTankId, NO_MATTER_TANK_ID } from '../Matter/MatterTank/_MatterTank.types.ts'
 import { ParticleType } from './_particle-types.ts'
 import { ParticleWorkerInMsg, ParticleWorkerOutMsg, type TypedParticleWorker } from './ParticleSim.types.ts'
 import ParticleWorkerConstructor from './ParticleSim.worker.ts?worker'
@@ -36,8 +37,8 @@ export class ParticleBridge extends SceneBound<GameLevel> {
     }
   }
 
-  spawn(type: ParticleType, x: number, y: number) {
-    this.worker.postMessage({ type: ParticleWorkerInMsg.SPAWN, particleType: type, x, y })
+  spawn(type: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID) {
+    this.worker.postMessage({ type: ParticleWorkerInMsg.SPAWN, particleType: type, x, y, ownerId })
   }
 
   update() {

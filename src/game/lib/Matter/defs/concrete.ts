@@ -5,7 +5,7 @@ export const CONCRETE_DEF: MatterDef = {
   name: 'Concrete',
   collidesWhenSettled: true,
   sinksThrough: [WATER, SALT_WATER],
-  action(world, tx, ty, idx, next): void {
+  action(world, tx, ty, idx): void {
     // Harden into SOLID near existing SOLID
     if (random() < 10 && random() < 10) {
       if (world.borderingAdjacent(tx, ty, idx, SOLID) !== -1) {
@@ -17,9 +17,9 @@ export const CONCRETE_DEF: MatterDef = {
 
     const leftFirst = world.leftFirst
     const moved =
-      world.tryMove(idx, tx, ty, tx, ty + 1, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, next)
+      world.tryMove(idx, tx, ty, tx, ty + 1) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1) ||
+      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1)
 
     if (!moved) {
       // Slow harden even without adjacent solid

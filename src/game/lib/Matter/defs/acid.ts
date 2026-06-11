@@ -18,7 +18,7 @@ export const ACID_DEF: MatterDef = {
   name: 'Acid',
   liquid: true,
   acidImmune: true,
-  action(world, tx, ty, idx, next): void {
+  action(world, tx, ty, idx): void {
     const { tiles, width, height } = world
     const leftFirst = world.leftFirst
 
@@ -40,46 +40,41 @@ export const ACID_DEF: MatterDef = {
         const nt = matterType(tiles[nidx])
         if (ACID_IMMUNE.has(nt)) continue
 
-        world.queueTransferToMatterTankOwner(tx, ty, idx)
+        world.queueMatterCreditFromTile(tx, ty, idx)
         tiles[idx] = EMPTY
-        tiles[nidx] = EMPTY
         world.markDirty(tx, ty)
+        world.next.add(idx)
+
+        world.queueMatterCreditFromTile(nx, ny, nidx)
+        tiles[nidx] = EMPTY
         world.markDirty(nx, ny)
-        next.add(nidx)
-        next.add(idx)
-        // world.reactivateAround(tx, ty, next)
+        world.next.add(nidx)
         return
       }
     }
 
     // Acid is denser than water and salt-water — sink through them
-    if (world.doDensityLiquid(tx, ty, idx, next, WATER, 25, 30)) return
-    if (world.doDensityLiquid(tx, ty, idx, next, SALT_WATER, 25, 30)) return
+    if (world.doDensityLiquid(tx, ty, idx, WATER, 25, 30)) return
+    if (world.doDensityLiquid(tx, ty, idx, SALT_WATER, 25, 30)) return
     if (world.hasDensityBelow(tx, ty, WATER) || world.hasDensityBelow(tx, ty, SALT_WATER)) {
-      next.add(idx)
+      world.next.add(idx)
       return
     }
 
     // stickiness
     const touchingSolid = world.bordering(tx, ty, idx, SOLID) !== -1
     if (touchingSolid && random() < 95) {
-      next.add(idx)
+      world.next.add(idx)
       return
     }
 
-    const moved =
-      world.tryMove(idx, tx, ty, tx, ty + 1, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1, next) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1, next) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1, next)
-
+    const moved = world.tryLiquidFlow(tx, ty, idx)
     if (!moved) {
       world.tiles[idx] = setSettled(world.tiles[idx], true)
       world.markDirty(tx, ty)
 
-      if (!world.surroundedByMask(tx, ty, idx, IS_SETTLED)) {
-        next.add(idx)
+      if (!world.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
+        world.next.add(idx)
       }
     }
   },

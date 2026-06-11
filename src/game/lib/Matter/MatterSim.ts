@@ -8,9 +8,8 @@ import {
   MatterType,
   matterType,
   MatterTypeSet,
-  SAND,
+  setOwner,
   setSettled,
-  WATER,
 } from './_Matter-types.ts'
 import { MATTER_ACTIONS } from './matter.ts'
 import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
@@ -29,6 +28,7 @@ export class MatterSim {
   frame = 0
   leftFirst = false
   justSettled: number[] = []
+  next = new Set<number>()
 
   init(
     tilesBuffer: SharedArrayBuffer,
@@ -52,31 +52,26 @@ export class MatterSim {
       const raw = this.tiles[idx]
       const t = matterType(raw)
 
-      if (t === SAND) {
-        this.tiles[idx] = SAND
-        target.add(idx)
-      } else if (t === WATER) {
-        this.tiles[idx] = WATER
-        target.add(idx)
-      } else if (
-        t !== EMPTY &&
-        t !== MatterType.SOLID &&
-        t !== MatterType.PERMANENT &&
-        t !== MatterType.WAX &&
-        t !== MatterType.FUSE &&
-        t !== MatterType.ICE &&
-        t !== MatterType.CHILLED_ICE &&
-        t !== MatterType.PLANT
-      ) {
-        this.tiles[idx] = setSettled(raw, false)
-        target.add(idx)
-      }
+      if (
+        t === EMPTY ||
+        t === MatterType.SOLID ||
+        t === MatterType.PERMANENT ||
+        t === MatterType.WAX ||
+        t === MatterType.FUSE ||
+        t === MatterType.ICE ||
+        t === MatterType.CHILLED_ICE ||
+        t === MatterType.PLANT
+      ) continue
+
+      this.tiles[idx] = setSettled(raw, false)
+      this.markDirty(idx % this.width, idx / this.width | 0)
+      target.add(idx)
     }
   }
 
   // Runs matterType actions for the given tile indices. Pool workers call this
   // once per round with their assigned subset of the active set.
-  processSubset(indices: number[], next: Set<number>) {
+  processSubset(indices: number[]) {
     const phase = this.frame % 2
     for (const idx of indices) {
       const tx = idx % this.width
@@ -85,13 +80,13 @@ export class MatterSim {
       // Per-cell checkerboard: defer wrong-phase cells to next step to prevent
       // double-processing when an matterType moves into a neighbour's position.
       if ((tx + ty) % 2 !== phase) {
-        next.add(idx)
+        this.next.add(idx)
         continue
       }
 
       const raw = this.tiles[idx]
       const tile = matterType(raw)
-      MATTER_ACTIONS[tile]?.(this, tx, ty, idx, next)
+      MATTER_ACTIONS[tile]?.(this, tx, ty, idx)
     }
   }
 
@@ -100,8 +95,8 @@ export class MatterSim {
   }
 
   // Re-activate settled material that could flow into (tx, ty) now that it is empty.
-  // dest is `next` (inside step) or this.activeSet (from message handlers).
-  reactivateAround(tx: number, ty: number, dest: Set<number>) {
+  // When called outside a step (from message handlers), pass an explicit dest set.
+  reactivateAround(tx: number, ty: number, dest: Set<number> = this.next) {
     const { tiles, width } = this
 
     // Wake any settled tile in the 3-wide strip directly above
@@ -117,20 +112,6 @@ export class MatterSim {
           this.markDirty(ax, aboveY)
           dest.add(idx)
         }
-      }
-    }
-
-    // Wake settled liquids above (diagonal + straight) that could fall into this cell
-    const aboveChecks: [number, number][] = [
-      [tx, ty - 1], [tx - 1, ty - 1], [tx + 1, ty - 1],
-    ]
-    for (const [ax, ay] of aboveChecks) {
-      if (ax < 0 || ax >= width || ay < 0) continue
-      const idx = ay * width + ax
-      const raw = tiles[idx]
-      if (isSettled(raw) && LIQUID_TYPES.has(matterType(raw))) {
-        tiles[idx] = setSettled(raw, false)
-        dest.add(idx)
       }
     }
 
@@ -153,7 +134,6 @@ export class MatterSim {
   tryMove(
     fromIdx: number, fromTx: number, fromTy: number,
     toTx: number, toTy: number,
-    next: Set<number>,
   ): boolean {
     const { width, height, tiles } = this
     if (toTx < 0 || toTx >= width || toTy < 0 || toTy >= height) return false
@@ -175,13 +155,13 @@ export class MatterSim {
     tiles[fromIdx] = toType === EMPTY ? EMPTY : setSettled(rawTo, false)
     this.markDirty(fromTx, fromTy)
     this.markDirty(toTx, toTy)
-    next.add(toIdx)
+    this.next.add(toIdx)
 
     if (toType !== EMPTY) {
       // Displaced liquid now at fromIdx needs to re-flow
-      next.add(fromIdx)
+      this.next.add(fromIdx)
     } else {
-      this.reactivateAround(fromTx, fromTy, next)
+      this.reactivateAround(fromTx, fromTy)
     }
 
     return true
@@ -190,34 +170,26 @@ export class MatterSim {
   // Moves matterType upward — used by gases and steam.
   tryRise(
     fromIdx: number, fromTx: number, fromTy: number,
-    next: Set<number>,
   ): boolean {
     const { width, tiles } = this
-    if (fromTy === 0) {
-      // Hit top — matterType disappears
-      tiles[fromIdx] = EMPTY
-      this.markDirty(fromTx, fromTy)
-      return true
-    }
-
     const leftFirst = this.leftFirst
     const dirs = leftFirst ? [-1, 0, 1] : [1, 0, -1]
 
     for (const dx of dirs) {
       const tx = fromTx + dx
       const ty = fromTy - 1
-      if (tx < 0 || tx >= width) continue
+      if (tx < 0 || tx >= width || ty < 0) continue
       const toIdx = ty * width + tx
       const rawTo = tiles[toIdx]
       const toType = matterType(rawTo)
       if (toType !== EMPTY) continue
 
-      tiles[toIdx] = matterType(tiles[fromIdx])
+      tiles[toIdx] = tiles[fromIdx]
       tiles[fromIdx] = EMPTY
       this.markDirty(fromTx, fromTy)
       this.markDirty(tx, ty)
-      next.add(toIdx)
-      this.reactivateAround(fromTx, fromTy, next)
+      this.next.add(toIdx)
+      this.reactivateAround(fromTx, fromTy)
       return true
     }
     return false
@@ -234,7 +206,7 @@ export class MatterSim {
    *                     (used by cryo to freeze displaced water into CHILLED_ICE)
    */
   doDensityLiquid(
-    tx: number, ty: number, idx: number, next: Set<number>,
+    tx: number, ty: number, idx: number,
     lighter: MatterType,
     sinkChance: number,
     equalizeChance: number,
@@ -277,11 +249,11 @@ export class MatterSim {
     const ty2 = (targetIdx / width) | 0
     this.markDirty(tx, ty)
     this.markDirty(tx2, ty2)
-    next.add(targetIdx)
+    this.next.add(targetIdx)
 
-    if (displacedAs === undefined) next.add(idx)
+    if (displacedAs === undefined) this.next.add(idx)
     // Wake any settled defs above idx that could now sink through the displaced lighter liquid
-    this.reactivateAround(tx, ty, next)
+    this.reactivateAround(tx, ty)
 
     return true
   }
@@ -300,7 +272,6 @@ export class MatterSim {
   tryFlowHorizontal(
     fromIdx: number, fromTx: number, fromTy: number,
     dir: -1 | 1,
-    next: Set<number>,
   ): boolean {
     const { tiles, width, height } = this
     let dist = 0
@@ -312,13 +283,13 @@ export class MatterSim {
       if (fromTy + 1 < height && matterType(tiles[(fromTy + 1) * width + nx]) === EMPTY) break
     }
     if (dist === 0) return false
-    return this.tryMove(fromIdx, fromTx, fromTy, fromTx + dir * dist, fromTy, next)
+    return this.tryMove(fromIdx, fromTx, fromTy, fromTx + dir * dist, fromTy)
   }
 
   // ─── Higher-level helpers (mirrors project-sand World API) ────────────────
 
   /** Clear SETTLED_FLAG on all 4-directional neighbours whose base type matches `type`. */
-  wakeSettledNeighbors(tx: number, ty: number, idx: number, type: MatterType, dest: Set<number>) {
+  wakeSettledNeighbors(tx: number, ty: number, idx: number, type: MatterType) {
     const { tiles, width, height } = this
     for (const nidx of [
       ty > 0 ? idx - width : -1,
@@ -331,7 +302,7 @@ export class MatterSim {
       if (matterType(raw) === type && isSettled(raw)) {
         tiles[nidx] = setSettled(raw, false)
         this.markDirty(nidx % width, nidx / width | 0)
-        dest.add(nidx)
+        this.next.add(nidx)
       }
     }
   }
@@ -421,7 +392,7 @@ export class MatterSim {
   }
 
   /** True if all 4 cardinal neighbours are in the MatterTypeSet. */
-  surroundedByMask(tx: number, ty: number, idx: number, mask: MatterTypeSet): boolean {
+  surroundedByAny(tx: number, ty: number, idx: number, mask: MatterTypeSet): boolean {
     const { tiles, width, height } = this
     if (ty < height - 1 && !mask.has(matterType(tiles[idx + width]))) return false
     if (ty > 0 && !mask.has(matterType(tiles[idx - width]))) return false
@@ -454,26 +425,10 @@ export class MatterSim {
   }
 
   /**
-   * Transform self when touching `touchType`. `chance` is 0–99.
-   * Returns true if the transform occurred.
-   */
-  doTransform(
-    tx: number, ty: number, idx: number, next: Set<number>,
-    touchType: MatterType, intoType: MatterType, chance: number,
-  ): boolean {
-    if (random() >= chance) return false
-    if (this.bordering(tx, ty, idx, touchType) === -1) return false
-    this.tiles[idx] = intoType
-    this.markDirty(tx, ty)
-    next.add(idx)
-    return true
-  }
-
-  /**
    * Spread self into an adjacent tile of `intoType`. `chance` is 0–99.
    */
   doGrow(
-    tx: number, ty: number, idx: number, next: Set<number>,
+    tx: number, ty: number, idx: number,
     intoType: MatterType, chance: number,
   ): boolean {
     if (random() >= chance) return false
@@ -483,36 +438,45 @@ export class MatterSim {
     const lx = loc % this.width
     const ly = loc / this.width | 0
     this.markDirty(lx, ly)
-    next.add(loc)
+    this.next.add(loc)
     return true
   }
 
   /**
    * Set all 4 cardinal neighbours to FIRE and self to FIRE.
    */
-  doBorderBurn(tx: number, ty: number, idx: number, next: Set<number>) {
+  doBorderBurn(tx: number, ty: number, idx: number, ownerId: MatterTankId) {
     const { tiles, width, height } = this
-    const neighbors: [number, number, number][] = [
-      [tx, ty - 1, idx - width],
-      [tx, ty + 1, idx + width],
-      [tx - 1, ty, idx - 1],
-      [tx + 1, ty, idx + 1],
-    ]
-    for (const [nx, ny, nidx] of neighbors) {
-      if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue
-      tiles[nidx] = FIRE
-      this.markDirty(nx, ny)
-      next.add(nidx)
+    const ownerFire = setOwner(FIRE, ownerId)
+    if (ty > 0) {
+      tiles[idx - width] = ownerFire
+      this.markDirty(tx, ty - 1)
+      this.next.add(idx - width)
     }
-    tiles[idx] = FIRE
+    if (ty < height - 1) {
+      tiles[idx + width] = ownerFire
+      this.markDirty(tx, ty + 1)
+      this.next.add(idx + width)
+    }
+    if (tx > 0) {
+      tiles[idx - 1] = ownerFire
+      this.markDirty(tx - 1, ty)
+      this.next.add(idx - 1)
+    }
+    if (tx < width - 1) {
+      tiles[idx + 1] = ownerFire
+      this.markDirty(tx + 1, ty)
+      this.next.add(idx + 1)
+    }
+    tiles[idx] = ownerFire
     this.markDirty(tx, ty)
-    next.add(idx)
+    this.next.add(idx)
   }
 
   private _transferBuf = new Int32Array(256 * 3)
   private _transferLen = 0
 
-  queueTransferToMatterTank(tx: number, ty: number, ownerId: MatterTankId) {
+  queueMatterCredit(tx: number, ty: number, ownerId: MatterTankId) {
     const needed = this._transferLen + 3
     if (needed > this._transferBuf.length) {
       const bigger = new Int32Array(this._transferBuf.length * 2)
@@ -524,13 +488,13 @@ export class MatterSim {
     this._transferBuf[this._transferLen++] = ownerId
   }
 
-  queueTransferToMatterTankOwner(tx: number, ty: number, idx: number) {
+  queueMatterCreditFromTile(tx: number, ty: number, idx: number) {
     const ownerId = getOwner(this.tiles[idx])
     if (!ownerId) {
       const label = MatterType[matterType(this.tiles[idx] as MatterType)]
       throw new Error('no owner found for: ' + label)
     }
-    this.queueTransferToMatterTank(tx, ty, ownerId)
+    this.queueMatterCredit(tx, ty, ownerId)
   }
 
   flushTransferToMatterTank(): Int32Array {
@@ -540,5 +504,31 @@ export class MatterSim {
     this._transferBuf = new Int32Array(Math.max(256 * 3, len))
     this._transferLen = 0
     return new Int32Array(buf, 0, len)
+  }
+
+  doPowderFall(tx: number, ty: number, idx: number) {
+    const leftFirst = this.leftFirst
+
+    const moved =
+      this.tryMove(idx, tx, ty, tx, ty + 1) ||
+      this.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1) ||
+      this.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1)
+
+    if (!moved) {
+      this.tiles[idx] = setSettled(this.tiles[idx], true)
+      this.markDirty(tx, ty)
+    }
+
+    return moved
+  }
+
+  tryLiquidFlow(tx: number, ty: number, idx: number) {
+    const leftFirst = this.leftFirst
+
+    return this.tryMove(idx, tx, ty, tx, ty + 1) ||
+      this.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1) ||
+      this.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1) ||
+      this.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1) ||
+      this.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1)
   }
 }

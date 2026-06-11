@@ -1,3 +1,4 @@
+import { type MatterTankId, NO_MATTER_TANK_ID } from '../Matter/MatterTank/_MatterTank.types.ts'
 import type { ParticleType } from './_particle-types.ts'
 import { Particle } from './Particle.ts'
 
@@ -20,7 +21,7 @@ export class ParticlePool {
     }
   }
 
-  acquire(type: ParticleType, x: number, y: number): Particle | null {
+  acquire(type: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID): Particle | null {
     if (!this.inactiveHead) return null
 
     const p = this.inactiveHead
@@ -32,6 +33,7 @@ export class ParticlePool {
     p.x = x
     p.y = y
     p.active = true
+    p.ownerId = ownerId
 
     // Prepend to active list
     p.next = this.activeHead

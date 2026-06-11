@@ -25,6 +25,6 @@ self.onmessage = (e: MessageEvent<ParticleWorkerInMessage>) => {
   }
 
   if (msg.type === ParticleWorkerInMsg.SPAWN) {
-    world.spawn(msg.particleType, msg.x, msg.y)
+    world.spawn(msg.particleType, msg.x, msg.y, msg.ownerId)
   }
 }

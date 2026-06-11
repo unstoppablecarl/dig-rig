@@ -8,7 +8,7 @@ export const ICE_DEF: MatterDef = {
   name: 'Ice',
   passive: true,
   acidImmune: true,
-  action(world, tx, ty, idx, next): void {
+  action(world, tx, ty, idx): void {
     // Surrounded by ice — fully stable
     if (world.surroundedBy(tx, ty, idx, ICE)) return
 
@@ -16,7 +16,7 @@ export const ICE_DEF: MatterDef = {
     if (random() < 1 && world.bordering(tx, ty, idx, WATER) !== -1) {
       world.tiles[idx] = WATER
       world.markDirty(tx, ty)
-      next.add(idx)
+      world.next.add(idx)
       return
     }
 
@@ -24,7 +24,7 @@ export const ICE_DEF: MatterDef = {
     if (random() < 70 && world.bordering(tx, ty, idx, STEAM) !== -1) {
       world.tiles[idx] = WATER
       world.markDirty(tx, ty)
-      next.add(idx)
+      world.next.add(idx)
       return
     }
 
@@ -33,7 +33,7 @@ export const ICE_DEF: MatterDef = {
       if (world.borderingAny(tx, ty, idx, MELT_SLOW) !== -1) {
         world.tiles[idx] = WATER
         world.markDirty(tx, ty)
-        next.add(idx)
+        world.next.add(idx)
         return
       }
     }
@@ -43,7 +43,7 @@ export const ICE_DEF: MatterDef = {
       if (world.borderingAny(tx, ty, idx, MELT_FAST) !== -1) {
         world.tiles[idx] = WATER
         world.markDirty(tx, ty)
-        next.add(idx)
+        world.next.add(idx)
         return
       }
     }

@@ -10,7 +10,6 @@ declare let self: DedicatedWorkerGlobalScope & {
 }
 
 const sim = new MatterSim()
-const next = new Set<number>()
 
 self.onmessage = (e: MessageEvent<PoolInMessage>) => {
   const msg = e.data
@@ -22,14 +21,14 @@ self.onmessage = (e: MessageEvent<PoolInMessage>) => {
   }
 
   if (msg.type === PoolInMsg.PROCESS) {
-    next.clear()
+    sim.next.clear()
     sim.frame = msg.frame
     sim.leftFirst = msg.leftFirst
     sim.justSettled = []
-    sim.processSubset(msg.indices, next)
+    sim.processSubset(msg.indices)
     const transfers = sim.flushTransferToMatterTank()
     postMessage(
-      { type: PoolOutMsg.DONE, next: Array.from(next), settled: sim.justSettled, transfers },
+      { type: PoolOutMsg.DONE, next: Array.from(sim.next), settled: sim.justSettled, transfers },
       transfers.length > 0 ? [transfers.buffer] : [],
     )
   }

@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 import { matterType, MatterType } from '../Matter/_Matter-types.ts'
+import { type MatterTankId, NO_MATTER_TANK_ID } from '../Matter/MatterTank/_MatterTank.types.ts'
 import type { ParticleType } from './_particle-types.ts'
 import type { Particle } from './Particle.ts'
 import { ParticlePixelRenderer } from './ParticlePixelRenderer.ts'
@@ -53,13 +54,13 @@ export class ParticleSim {
 
   }
 
-  spawn(type: ParticleType, x: number, y: number) {
+  spawn(type: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID) {
     const def = PARTICLE_DEFS[type]
     if (!def || !this.pool) return
     for (let i = 0; i < def.particlesToSpawn; i++) {
-      const p = this.pool.acquire(type, x, y)
+      const p = this.pool.acquire(type, x, y, ownerId)
       if (!p) break
-      def.init(p, x, y, this)
+      def.init(p, this)
     }
   }
 
