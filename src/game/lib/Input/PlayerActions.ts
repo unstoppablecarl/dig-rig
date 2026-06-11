@@ -1,3 +1,4 @@
+import { Input } from 'phaser'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { CompositeActionInput } from './PlayerActions/CompositeActionInput.ts'
 import { KeyActionInput } from './PlayerActions/KeyActionInput.ts'
@@ -41,11 +42,13 @@ export type PointerBinding = typeof POINTER_LEFT | typeof POINTER_RIGHT
 
 export type Binding = (string | number | PointerBinding)[]
 
+export type KeyEvent = (e: KeyboardEvent | Input.Pointer) => void
+
 export interface ActionInput {
   isDown(): boolean
   isUp(): boolean
-  onDown(cb: () => void): () => void
-  onUp(cb: () => void): () => void
+  onDown(cb: KeyEvent): () => void
+  onUp(cb: KeyEvent): () => void
 }
 
 export type PlayerActions = Record<PlayerAction, ActionInput>

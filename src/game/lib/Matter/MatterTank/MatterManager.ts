@@ -56,15 +56,15 @@ export class MatterManager extends SceneBound {
     return tank
   }
 
-  universeMatter() {
-    return this.playerMatter() + this.terrainMatter() + this.enemiesMatter()
+  universeMatter(): number {
+    return this.allTankMatter() + this.terrainMatter()
   }
 
-  terrainMatter() {
+  terrainMatter(): number {
     return this.scene.tilemap.totalMatter()
   }
 
-  enemiesMatter() {
+  nonPlayerTankMatter(): number {
     let sum = 0
 
     for (const tank of this.matterTanks.values()) {
@@ -75,8 +75,16 @@ export class MatterManager extends SceneBound {
     return sum
   }
 
-  playerMatter() {
+  playerMatter(): number {
     return this.playerMatterTank.matterContained()
+  }
+
+  allTankMatter(): number {
+    let sum = 0
+    for (const tank of this.matterTanks.values()) {
+      sum += tank.matterContained()
+    }
+    return sum
   }
 
   get(id: MatterTankId) {

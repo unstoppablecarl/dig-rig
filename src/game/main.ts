@@ -46,12 +46,10 @@ const config: GameConfig = {
   ],
 }
 
-const startGame = (parent: string, onLevelLoaded: (scene: GameLevel) => void) => {
+const startGame = (parent: string, onLevelLoaded: (game: Game, scene: GameLevel) => void) => {
   const game = new Game({ ...config, parent })
   setGame(game)
-  game.events.on(GAME_LEVEL_LOADED, (scene: GameLevel) => {
-    onLevelLoaded(scene)
-  })
+  game.events.on(GAME_LEVEL_LOADED, onLevelLoaded)
 
   game.scene.start(LevelSelect.ID)
   return game

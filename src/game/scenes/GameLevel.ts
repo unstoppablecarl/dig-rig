@@ -190,7 +190,7 @@ export abstract class GameLevel extends Scene {
 
     this.createUI()
 
-    this.game.events.emit(GAME_LEVEL_LOADED, this)
+    this.game.events.emit(GAME_LEVEL_LOADED, this.game, this)
   }
 
   private createUI() {

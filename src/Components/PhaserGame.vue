@@ -1,32 +1,25 @@
 <script setup lang="ts">
-import { Game, type Scene } from 'phaser'
-import { onMounted, onUnmounted, shallowRef } from 'vue'
+import { Game } from 'phaser'
+import { onMounted, onUnmounted } from 'vue'
 import startGame from '../game/main'
 import { GameLevel } from '../game/scenes/GameLevel.ts'
 
-const gameLevelScene = shallowRef<Scene>()
-const game = shallowRef<Game>()
-
 const emit = defineEmits<{
-  'game-level-loaded': [level: GameLevel]
+  'game-level-loaded': [game: Game, level: GameLevel]
 }>()
 
+let phaserGame: Game | null = null
+
 onMounted(() => {
-  game.value = startGame('game-container', (current: GameLevel) => {
-    emit('game-level-loaded', current)
-    gameLevelScene.value = current
+  phaserGame = startGame('game-container', (game, current) => {
+    emit('game-level-loaded', game, current)
   })
 })
 
 onUnmounted(() => {
-  if (game.value) {
-    game.value.destroy(true)
-    // @ts-expect-error: destroy
-    game.value = null
-  }
+  phaserGame?.destroy(true)
+  phaserGame = null
 })
-
-defineExpose({ gameLevelScene, game })
 </script>
 <template>
   <div id="game-container"></div>
