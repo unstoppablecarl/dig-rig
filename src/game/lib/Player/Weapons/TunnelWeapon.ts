@@ -1,4 +1,5 @@
 import { Scenes } from 'phaser'
+import { DISPLAY_TUNNEL_WEAPON_MATTER_TANK_DEBUG } from '../../../config.ts'
 import { shuffleArray } from '../../../helpers/array.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
@@ -59,12 +60,16 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
       this.matterTank = this.scene.matterManager.makeMatterTank(this.scene.player, TunnelDestroyProjectile.MAX_TILES_TO_MOD * 5)
     }
     this.initDestroyProjectile()
-    this.scene.weaponUIState.activeMatterTank = this.matterTank
+    if (DISPLAY_TUNNEL_WEAPON_MATTER_TANK_DEBUG) {
+      this.scene.weaponUIState.activeMatterTank = this.matterTank
+    }
   }
 
   protected onDisable() {
     super.onDisable()
-    this.scene.weaponUIState.activeMatterTank = this.scene.player.matterTank
+    if (DISPLAY_TUNNEL_WEAPON_MATTER_TANK_DEBUG) {
+      this.scene.weaponUIState.activeMatterTank = this.scene.player.matterTank
+    }
   }
 
   private initDestroyProjectile() {
@@ -133,7 +138,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
         const ftdx = ft.x - px, ftdy = ft.y - py
         const ftddx = ft.x - dpx, ftddy = ft.y - dpy
         if ((ftdx * ftdx + ftdy * ftdy <= TILE_SAFE_RSQ) ||
-            (ftddx * ftddx + ftddy * ftddy <= dpR2)) {
+          (ftddx * ftddx + ftddy * ftddy <= dpR2)) {
           queue[writeIdx++] = record
           continue
         }
