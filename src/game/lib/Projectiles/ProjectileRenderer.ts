@@ -113,7 +113,7 @@ export class ProjectileRenderer extends SceneBound {
     this.container.y = pos.y
   }
 
-  private draw() {
+  public draw() {
     if (this.destroyed) return
     const w = 1
     const radius = this._radius
@@ -165,6 +165,7 @@ export function makePreviewProjectileRenderer(scene: GameLevel) {
   renderer.circleGlow2Visible = false
   renderer.circleGlow1Alpha = 0.2
   renderer.circleAlpha = 0.3
-
+  renderer.setVisible(false)
+  renderer.draw()
   return renderer
 }
