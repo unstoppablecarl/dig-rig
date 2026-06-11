@@ -37,7 +37,7 @@ export const GUNPOWDER_DEF: MatterDef = {
             const neighborType = matterType(neighborRaw)
             if (burn) {
               if (neighborType !== PERMANENT) {
-                world.queueMatterCreditFromTile(nx, ny, nidx)
+                world.queueMatterCredit(nx, ny, ownerId)
                 tiles[nidx] = newFire
                 world.markDirty(nx, ny)
                 world.next.add(nidx)
