@@ -10,6 +10,7 @@ export class ParticleBridge extends SceneBound<GameLevel> {
   private readonly pixelSab: SharedArrayBuffer
   private readonly sabView: Uint8ClampedArray
   private readonly localBuf: Uint8Array
+  private readonly dirtyFlag: Int32Array
 
   onActivations?: (indices: number[]) => void
 
@@ -21,11 +22,16 @@ export class ParticleBridge extends SceneBound<GameLevel> {
     this.sabView = new Uint8ClampedArray(this.pixelSab)
     this.localBuf = new Uint8Array(width * height * 4)
 
+    // used as shareable boolean value
+    const dirtySab = new SharedArrayBuffer(4)
+    this.dirtyFlag = new Int32Array(dirtySab)
+
     this.worker = new ParticleWorkerConstructor() as TypedParticleWorker
     this.worker.postMessage({
       type: ParticleWorkerInMsg.INIT,
       tilesSab: scene.tilemap.tilesBuffer,
       pixelSab: this.pixelSab,
+      dirtySab,
       width,
       height,
     })
@@ -42,6 +48,10 @@ export class ParticleBridge extends SceneBound<GameLevel> {
   }
 
   update() {
+    // if clean return early;
+    // dirty, set to clean and continue.
+    const wasDirty = Atomics.compareExchange(this.dirtyFlag, 0, 1, 0) === 0
+    if (wasDirty) return
     this.localBuf.set(this.sabView)
     this.scene.tilemapRenderer.updateParticlePixels(this.localBuf)
   }

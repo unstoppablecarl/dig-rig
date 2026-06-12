@@ -18,6 +18,7 @@ self.onmessage = (e: MessageEvent<ParticleWorkerInMessage>) => {
     world.init(
       new Uint32Array(msg.tilesSab),
       msg.pixelSab,
+      msg.dirtySab,
       msg.width,
       msg.height,
     )

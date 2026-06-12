@@ -14,6 +14,8 @@ type InitMessage = {
   type: ParticleWorkerInMsg.INIT
   tilesSab: SharedArrayBuffer
   pixelSab: SharedArrayBuffer
+  // boolean state
+  dirtySab: SharedArrayBuffer
   width: number
   height: number
 }

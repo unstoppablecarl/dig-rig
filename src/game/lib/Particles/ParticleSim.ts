@@ -15,10 +15,13 @@ export class ParticleSim {
   renderer: ParticlePixelRenderer
   pool: ParticlePool
   pendingActivations: number[] = []
+  private dirtyFlag: Int32Array
+  private loopRunning = false
 
   init(
     tiles: Uint32Array,
     pixelSab: SharedArrayBuffer,
+    dirtySab: SharedArrayBuffer,
     width: number,
     height: number,
   ) {
@@ -27,9 +30,19 @@ export class ParticleSim {
     this.height = height
     this.renderer = new ParticlePixelRenderer(width, height, new Uint8ClampedArray(pixelSab))
     this.pool = new ParticlePool()
+    this.dirtyFlag = new Int32Array(dirtySab)
+  }
+
+  private startLoop() {
+    if (this.loopRunning) return
+    this.loopRunning = true
     const loop = () => {
       this.step()
-      setTimeout(loop, 16)
+      if (this.pool.isEmpty) {
+        this.loopRunning = false
+      } else {
+        setTimeout(loop, 16)
+      }
     }
     setTimeout(loop, 16)
   }
@@ -48,10 +61,12 @@ export class ParticleSim {
       p.actionIterations++
     })
 
+    // always set dirty at end of step
+    Atomics.store(this.dirtyFlag, 0, 1)
+
     if (this.pendingActivations.length) {
       postMessage({ type: ParticleWorkerOutMsg.ACTIVATIONS, indices: this.pendingActivations.slice() })
     }
-
   }
 
   spawn(type: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID) {
@@ -62,6 +77,7 @@ export class ParticleSim {
       if (!p) break
       def.init(p, this)
     }
+    this.startLoop()
   }
 
   getTileType(x: number, y: number): MatterType {

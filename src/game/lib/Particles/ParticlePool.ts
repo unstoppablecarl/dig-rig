@@ -69,6 +69,10 @@ export class ParticlePool {
     }
   }
 
+  get isEmpty(): boolean {
+    return this.activeHead === null
+  }
+
   get activeCount(): number {
     let count = 0
     let p = this.activeHead
