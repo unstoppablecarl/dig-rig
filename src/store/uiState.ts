@@ -48,7 +48,7 @@ export const useUIState = defineStore('ui-state', () => {
     return watch(
       inputMode,
       cb,
-      { flush: 'sync' },
+      { immediate: true, flush: 'sync' },
     )
   }
 
@@ -65,7 +65,7 @@ export const useUIState = defineStore('ui-state', () => {
     currentLevelDisplayName,
 
     // functions
-    watchInputMode
+    watchInputMode,
   }
 }, {
   persist: true,

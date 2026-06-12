@@ -46,7 +46,6 @@ export class InputManager extends SceneBound {
 
     scene.input.on(GAMEOBJECT_POINTER_WHEEL, this.handleMouseWheel, this)
 
-    this.setMode(scene.uiState.inputMode)
     this.stopWatcher = scene.uiState.watchInputMode((mode) => this.setMode(mode))
 
     // prevent default browser actions
