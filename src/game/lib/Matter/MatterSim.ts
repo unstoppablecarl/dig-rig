@@ -197,7 +197,7 @@ export class MatterSim {
 
   /**
    * Liquid density displacement — current matterType sinks into lighter liquid below or beside it,
-   * and the lighter liquid rises to fill the gap. Mirrors project-sand doDensityLiquid.
+   * and the lighter liquid rises to fill the gap.
    *
    * `lighter`         — matterType type that the current matterType is denser than
    * `sinkChance`      — 0-99: probability to try below-adjacent first
@@ -252,7 +252,7 @@ export class MatterSim {
     this.next.add(targetIdx)
 
     if (displacedAs === undefined) this.next.add(idx)
-    // Wake any settled defs above idx that could now sink through the displaced lighter liquid
+    // Wake any settled tiles above idx that could now sink through the displaced lighter liquid
     this.reactivateAround(tx, ty)
 
     return true
