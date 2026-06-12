@@ -12,6 +12,9 @@ export class ParticleBridge extends SceneBound<GameLevel> {
   private readonly localBuf: Uint8Array
   private readonly dirtyFlag: Int32Array
 
+  private spawnBuf = new Int32Array(64 * 4)
+  private spawnBufLen = 0
+
   onActivations?: (indices: number[]) => void
 
   constructor(scene: GameLevel) {
@@ -47,7 +50,28 @@ export class ParticleBridge extends SceneBound<GameLevel> {
     this.worker.postMessage({ type: ParticleWorkerInMsg.SPAWN, particleType: type, x, y, ownerId })
   }
 
+  queueSpawn(type: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID) {
+    const needed = this.spawnBufLen + 4
+    if (needed > this.spawnBuf.length) {
+      const bigger = new Int32Array(this.spawnBuf.length * 2)
+      bigger.set(this.spawnBuf)
+      this.spawnBuf = bigger
+    }
+    this.spawnBuf[this.spawnBufLen++] = type
+    this.spawnBuf[this.spawnBufLen++] = x
+    this.spawnBuf[this.spawnBufLen++] = y
+    this.spawnBuf[this.spawnBufLen++] = ownerId
+  }
+
   update() {
+    if (this.spawnBufLen > 0) {
+      const len = this.spawnBufLen
+      const buf = this.spawnBuf.buffer
+      this.spawnBuf = new Int32Array(Math.max(64 * 4, len))
+      this.spawnBufLen = 0
+      this.worker.postMessage({ type: ParticleWorkerInMsg.SPAWN_BATCH, data: new Int32Array(buf, 0, len) }, [buf])
+    }
+
     // if clean return early;
     // dirty, set to clean and continue.
     const wasDirty = Atomics.compareExchange(this.dirtyFlag, 0, 1, 0) === 0

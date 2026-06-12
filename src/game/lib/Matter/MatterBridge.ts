@@ -1,4 +1,4 @@
-import { CHUNK_SIZE } from '../../config.ts'
+import { CHUNK_SIZE, VFX_PARTICLE_CHUNK_SIZE } from '../../config.ts'
 import { SETTLE_TRANSITION_COLORS } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
@@ -63,19 +63,31 @@ export class MatterBridge extends SceneBound {
       }
 
       if (e.data.type === MatterCoordinatorOutMsg.SPAWN_PARTICLE) {
-        this.particleBridge.spawn(e.data.particleType, e.data.x, e.data.y)
+        this.particleBridge.queueSpawn(e.data.particleType, e.data.x, e.data.y)
       }
 
       if (e.data.type === MatterCoordinatorOutMsg.TRANSFER_TO_MATTER_TANKS) {
         const { transfers } = e.data
+        // Track which tile chunks have already spawned a VFX particle this batch.
+        // Key packs (tankId << 22) | (cy << 11) | cx, valid for maps up to 4096 tiles wide.
+        const spawnedChunks = new Set<number>()
         for (let i = 0; i < transfers.length; i += 3) {
-          const tank = this.scene.matterManager.get(transfers[i + 2] as MatterTankId)
-          if (tank) {
-            tank.forceAdd(1)
-            this.scene.vfxParticleManager.spawnMatter({
-              x: transfers[i],
-              y: transfers[i + 1],
-            }, tank.getCollectPos(), false)
+          const tx = transfers[i]
+          const ty = transfers[i + 1]
+          const tankId = transfers[i + 2] as MatterTankId
+          const tank = this.scene.matterManager.get(tankId)
+          if (!tank) continue
+          tank.forceAdd(1)
+          const cx = Math.floor(tx / VFX_PARTICLE_CHUNK_SIZE)
+          const cy = Math.floor(ty / VFX_PARTICLE_CHUNK_SIZE)
+          const key = (tankId << 22) | (cy << 11) | cx
+          if (!spawnedChunks.has(key)) {
+            spawnedChunks.add(key)
+            this.scene.vfxParticleManager.spawnMatter(
+              { x: (cx + 0.5) * VFX_PARTICLE_CHUNK_SIZE, y: (cy + 0.5) * VFX_PARTICLE_CHUNK_SIZE },
+              tank.getCollectPos(),
+              false,
+            )
           }
         }
       }

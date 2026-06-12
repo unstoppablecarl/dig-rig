@@ -1,6 +1,5 @@
 import { Scenes } from 'phaser'
 import { DISPLAY_TUNNEL_WEAPON_MATTER_TANK_DEBUG } from '../../../config.ts'
-import { shuffleArray } from '../../../helpers/array.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import { WeaponConstantInput } from '../../Input/InputController/WeaponInputControllers/WeaponConstantInput.ts'
@@ -21,8 +20,6 @@ import UPDATE = Scenes.Events.UPDATE
 // CREATE effect's filterTile.
 const TILE_SAFE_RADIUS = 25
 const TILE_SAFE_RSQ = TILE_SAFE_RADIUS * TILE_SAFE_RADIUS
-
-const MAX_RESTORE_PARTICLES = 40
 
 export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   private projectileDestroy: TunnelDestroyProjectile | null = null
@@ -319,11 +316,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
     if (!created.length) return
     this.matterTank.addPendingCharge(FireMode.CREATE, created.length)
     const source = this.scene.player.matterParticleEmitPosition(this._emitPos)
-    shuffleArray(created)
-    const n = Math.min(created.length, MAX_RESTORE_PARTICLES)
-    for (let i = 0; i < n; i++) {
-      this.scene.vfxParticleManager.spawnMatter(source, created[i], true)
-    }
+    this.scene.vfxParticleManager.spawnMatterToTiles(source, created)
     this.matterTank.applyPendingCharge(FireMode.CREATE, created.length)
   }
 

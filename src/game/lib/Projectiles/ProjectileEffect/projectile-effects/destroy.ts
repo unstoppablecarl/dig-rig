@@ -1,4 +1,3 @@
-import { shuffleArray } from '../../../../helpers/array.ts'
 import type { Position } from '../../../../types.ts'
 import { EMPTY, MatterType, matterTypeSetExcluding, PERMANENT, SAND, WATER } from '../../../Matter/_Matter-types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
@@ -22,9 +21,6 @@ export const DESTROY_EFFECT: ProjectileEffect = {
     collectPos: Position,
     tiles: ProjectileEffectResult[],
   ): void {
-    const shuffled = shuffleArray(tiles)
-    for (const tile of shuffled) {
-      tilemap.scene.vfxParticleManager.spawnMatter(tile, collectPos, false)
-    }
+    tilemap.scene.vfxParticleManager.spawnMatterFromTiles(tiles, collectPos)
   },
 }

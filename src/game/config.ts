@@ -5,6 +5,7 @@ export const PLAYER_JUMP_POWER = -7
 export const PLAYER_MOVE_SPEED = 3.5
 
 export const MAX_MATTER_PARTICLES = 1500
+export const VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE = 2
 
 export const DEFAULT_PLAYER_STARTING_MATTER = 400
 

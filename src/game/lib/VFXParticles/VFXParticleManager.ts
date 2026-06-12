@@ -1,5 +1,5 @@
 import { BlendModes, Display, GameObjects } from 'phaser'
-import { DRAW_PARTICLE_DEBUG, MAX_MATTER_PARTICLES } from '../../config.ts'
+import { DRAW_PARTICLE_DEBUG, MAX_MATTER_PARTICLES, VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE } from '../../config.ts'
 import { CREATE_COLOR, DESTROY_COLOR } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
@@ -54,6 +54,34 @@ export class VFXParticleManager extends SceneBound {
     staticTarget: boolean,
   ) {
     this.spawn(source, target, staticTarget, DESTROY_COLOR, CREATE_COLOR)
+  }
+
+  // One particle per chunk: source is fixed, targets are tile positions.
+  spawnMatterToTiles(source: Position, tiles: ReadonlyArray<Position>) {
+    if (MAX_MATTER_PARTICLES <= 0) return
+    const seen = new Set<number>()
+    for (const tile of tiles) {
+      const cx = Math.floor(tile.x / VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE)
+      const cy = Math.floor(tile.y / VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE)
+      const key = (cy << 11) | cx
+      if (seen.has(key)) continue
+      seen.add(key)
+      this.spawn(source, { x: (cx + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE, y: (cy + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE }, true, DESTROY_COLOR, CREATE_COLOR)
+    }
+  }
+
+  // One particle per chunk: sources are tile positions, target is fixed.
+  spawnMatterFromTiles(tiles: ReadonlyArray<Position>, target: Position) {
+    if (MAX_MATTER_PARTICLES <= 0) return
+    const seen = new Set<number>()
+    for (const tile of tiles) {
+      const cx = Math.floor(tile.x / VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE)
+      const cy = Math.floor(tile.y / VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE)
+      const key = (cy << 11) | cx
+      if (seen.has(key)) continue
+      seen.add(key)
+      this.spawn({ x: (cx + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE, y: (cy + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE }, target, false, DESTROY_COLOR, CREATE_COLOR)
+    }
   }
 
   spawn(

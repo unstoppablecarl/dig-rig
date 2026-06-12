@@ -1,4 +1,3 @@
-import { shuffleArray } from '../../../../helpers/array.ts'
 import type { Position } from '../../../../types.ts'
 import { PASSIVE_MATER_TYPES } from '../../../Matter/_Matter-meta.ts'
 import { MatterType, MatterTypeSet, setOwner } from '../../../Matter/_Matter-types.ts'
@@ -14,10 +13,7 @@ function createApplied(
   _collectPos: Position,
   tiles: ProjectileEffectResult[],
 ): void {
-  const shuffled = shuffleArray(tiles)
-  for (const tile of shuffled) {
-    tilemap.scene.vfxParticleManager.spawnMatter(emitPos, tile, true)
-  }
+  tilemap.scene.vfxParticleManager.spawnMatterToTiles(emitPos, tiles)
 }
 
 const solidCreateTilesCommitted: ProjectileEffect['onTilesCommitted'] = (tm: Tilemap, tiles: ProjectileEffectResult[]): void => {

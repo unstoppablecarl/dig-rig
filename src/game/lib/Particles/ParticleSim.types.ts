@@ -4,6 +4,7 @@ import type { ParticleType } from './_particle-types.ts'
 export enum ParticleWorkerInMsg {
   INIT,
   SPAWN,
+  SPAWN_BATCH,
 }
 
 export enum ParticleWorkerOutMsg {
@@ -26,9 +27,16 @@ type SpawnMessage = {
   y: number
   ownerId: MatterTankId
 }
+// Packed as [particleType, x, y, ownerId, ...] with 4 ints per entry
+type SpawnBatchMessage = {
+  type: ParticleWorkerInMsg.SPAWN_BATCH
+  data: Int32Array
+}
+
 export type ParticleWorkerInMessage =
   | InitMessage
   | SpawnMessage
+  | SpawnBatchMessage
 
 type ActivationsMessage = {
   type: ParticleWorkerOutMsg.ACTIVATIONS
@@ -38,6 +46,6 @@ export type ParticleWorkerOutMessage =
   | ActivationsMessage
 
 export type TypedParticleWorker = Omit<Worker, 'postMessage' | 'onmessage'> & {
-  postMessage(msg: ParticleWorkerInMessage): void
+  postMessage(msg: ParticleWorkerInMessage, transfer?: Transferable[]): void
   onmessage: ((e: MessageEvent<ParticleWorkerOutMessage>) => void) | null
 }
