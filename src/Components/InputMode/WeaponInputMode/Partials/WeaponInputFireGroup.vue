@@ -3,6 +3,9 @@ import { INPUT_ACTIONS } from '../../../../input.ts'
 import { useWeaponUIState } from '../../../../store/weaponUIState.ts'
 
 const state = useWeaponUIState()
+const primary = INPUT_ACTIONS.FIRE_PRIMARY.join(',')
+const secondary = INPUT_ACTIONS.FIRE_SECONDARY.join(',')
+
 const prev = INPUT_ACTIONS.PREV_MODE.join(',')
 const next = INPUT_ACTIONS.NEXT_MODE.join(',')
 </script>
@@ -14,10 +17,10 @@ const next = INPUT_ACTIONS.NEXT_MODE.join(',')
 
   <span class="imu-section">
     <span>
-      <kbd>LMB</kbd> = {{ state.fireGroupPrimaryName }}
+      <kbd>{{ primary }}</kbd> = {{ state.fireGroupPrimaryName }}
     </span>
     <span>
-      <kbd>RMB</kbd> = {{ state.fireGroupSecondaryName }}
+      <kbd>{{ secondary }}</kbd> = {{ state.fireGroupSecondaryName }}
     </span>
   </span>
 </template>

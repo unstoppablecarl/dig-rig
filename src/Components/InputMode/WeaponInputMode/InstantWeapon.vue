@@ -4,6 +4,7 @@ import { useInstantWeaponUIState } from '../../../store/weaponUIState/InstantWea
 import WeaponInputCharge from './Partials/WeaponInputCharge.vue'
 
 const state = useInstantWeaponUIState()
+const primary = INPUT_ACTIONS.FIRE_PRIMARY.join(',')
 
 const prev = INPUT_ACTIONS.PREV_MODE.join(',')
 const next = INPUT_ACTIONS.NEXT_MODE.join(',')
@@ -11,7 +12,7 @@ const next = INPUT_ACTIONS.NEXT_MODE.join(',')
 </script>
 <template>
   <span class="imu-section">
-    <kbd>LMB</kbd> = charge {{ state.fireModeDisplayName }}
+    <kbd>{{ primary }}</kbd> = charge {{ state.fireModeDisplayName }}
   </span>
 
   <span class="imu-section">

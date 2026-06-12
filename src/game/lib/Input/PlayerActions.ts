@@ -42,8 +42,8 @@ export const PLAYER_ACTION_DISPLAY_NAME: Record<PlayerAction, string> = {
   [PlayerAction.BRUSH_ERASE_MODIFIER]: 'Paint: Erase',
 }
 
-export const POINTER_LEFT = 'Mouse Left' as const
-export const POINTER_RIGHT = 'Mouse Right' as const
+export const POINTER_LEFT = 'LMB' as const
+export const POINTER_RIGHT = 'RMB' as const
 export type PointerBinding = typeof POINTER_LEFT | typeof POINTER_RIGHT
 
 export type Binding = (string | number | PointerBinding)[]
