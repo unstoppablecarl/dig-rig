@@ -1,18 +1,18 @@
 import { CHUNK_SIZE } from '../../config.ts'
+import { SETTLE_TRANSITION_COLORS } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { ParticleBridge } from '../Particles/ParticleBridge.ts'
-import { FireMode } from '../Player/_FireMode-types.ts'
 import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
 import { matterType, MatterType } from './_Matter-types.ts'
 import MatterCoordinatorConstructor from './MatterCoordinator.worker.ts?worker'
-import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
 import {
   MatterCoordinatorInMsg,
   MatterCoordinatorOutMsg,
   type TypedMatterCoordinatorWorker,
 } from './MatterSim.types.ts'
+import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
 
 export class MatterBridge extends SceneBound {
   private readonly worker: TypedMatterCoordinatorWorker
@@ -53,9 +53,11 @@ export class MatterBridge extends SceneBound {
         const { tilemapRenderer } = this.scene
         const now = this.scene.time.now
         for (const idx of e.data.indices) {
+          const color = SETTLE_TRANSITION_COLORS[matterType(tilemap.tiles[idx])]
+          if (!color) continue
           const tx = idx % tilemap.width
           const ty = idx / tilemap.width | 0
-          tilemapRenderer.addEffect(tx, ty, FireMode.SOLIDIFY, now)
+          tilemapRenderer.addColorEffect(tx, ty, color, now)
         }
         return
       }
@@ -70,7 +72,10 @@ export class MatterBridge extends SceneBound {
           const tank = this.scene.matterManager.get(transfers[i + 2] as MatterTankId)
           if (tank) {
             tank.forceAdd(1)
-            this.scene.vfxParticleManager.spawnMatter({ x: transfers[i], y: transfers[i + 1] }, tank.getCollectPos(), false)
+            this.scene.vfxParticleManager.spawnMatter({
+              x: transfers[i],
+              y: transfers[i + 1],
+            }, tank.getCollectPos(), false)
           }
         }
       }
@@ -160,7 +165,7 @@ export class MatterBridge extends SceneBound {
     const y1 = Math.min(y0 + CHUNK_SIZE, tilemap.height)
     for (let y = y0; y < y1; y++) {
       for (let x = x0; x < x1; x++) {
-        if (tilemap.isSolid(x, y)) count++
+        if (tilemap.isCollidable(x, y)) count++
       }
     }
     chunk.solidTileCount = count

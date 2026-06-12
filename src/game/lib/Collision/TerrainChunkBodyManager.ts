@@ -211,12 +211,12 @@ export class TerrainChunkBodyManager extends SceneBound {
     for (let ty = minTY; ty < maxTY; ty++) {
       for (let tx = minTX; tx < maxTX; tx++) {
         if (visited[idx(tx, ty)]) continue
-        if (!tilemap.isSolid(tx, ty)) continue
+        if (!tilemap.isCollidable(tx, ty)) continue
 
         let width = 1
         while (
           tx + width < maxTX &&
-          tilemap.isSolid(tx + width, ty) &&
+          tilemap.isCollidable(tx + width, ty) &&
           !visited[idx(tx + width, ty)]
           ) width++
 
@@ -225,7 +225,7 @@ export class TerrainChunkBodyManager extends SceneBound {
         while (canExpand && ty + height < maxTY) {
           for (let dx = 0; dx < width; dx++) {
             if (
-              !tilemap.isSolid(tx + dx, ty + height) ||
+              !tilemap.isCollidable(tx + dx, ty + height) ||
               visited[idx(tx + dx, ty + height)]
             ) {
               canExpand = false

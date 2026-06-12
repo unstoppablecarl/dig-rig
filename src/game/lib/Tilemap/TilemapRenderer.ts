@@ -1,4 +1,6 @@
 import { GameObjects } from 'phaser'
+import type { RGBColor } from '../../../types/_types.ts'
+import { FIRE_MODE_COLORS_RGB } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { MatterType } from '../Matter/_Matter-types.ts'
@@ -417,8 +419,13 @@ export class TilemapRenderer extends SceneBound {
     gl.bindTexture(gl.TEXTURE_2D, null)
   }
 
-  addEffect(tx: number, ty: number, mode: FireMode, startTime?: number) {
-    this.effectSystem.addEffect(tx, ty, mode, startTime)
+  addFireModeEffect(tx: number, ty: number, mode: FireMode, startTime?: number) {
+    const color = FIRE_MODE_COLORS_RGB[mode]
+    this.effectSystem.addEffect(tx, ty, color, startTime)
+  }
+
+  addColorEffect(tx: number, ty: number, color: RGBColor, startTime?: number) {
+    this.effectSystem.addEffect(tx, ty, color, startTime)
   }
 
   render() {

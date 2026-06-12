@@ -115,7 +115,7 @@ export class Tilemap extends SceneBound {
     return this.tiles[y * this.width + x]
   }
 
-  public isSolid(x: number, y: number) {
+  public isCollidable(x: number, y: number) {
     const raw = this.getTile(Math.floor(x), Math.floor(y))
     const type = matterType(raw)
     if (type === SOLID || type === PERMANENT) return true

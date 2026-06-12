@@ -192,7 +192,13 @@ export class MatterCoordinator {
     }
 
     if (allSettled.length > 0) {
-      this.post({ type: MatterCoordinatorOutMsg.SETTLED, indices: allSettled })
+      // A tile can settle in an early round and be re-activated by a later round
+      // in the same step. Tiles that ended up back in the active set are not settled
+      // for vfx purposes.
+      const toFlash = allSettled.filter(idx => !this.activeSet.has(idx))
+      if (toFlash.length > 0) {
+        this.post({ type: MatterCoordinatorOutMsg.SETTLED, indices: toFlash })
+      }
     }
     if (this.coordinatorTransfersLen > 0) {
       const len = this.coordinatorTransfersLen

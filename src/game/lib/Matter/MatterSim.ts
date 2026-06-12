@@ -515,8 +515,32 @@ export class MatterSim {
       this.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1)
 
     if (!moved) {
-      this.tiles[idx] = setSettled(this.tiles[idx], true)
-      this.markDirty(tx, ty)
+      const ty1 = ty + 1
+      if (ty1 >= this.height) {
+        // Map boundary — unconditionally settled.
+        this.tiles[idx] = setSettled(this.tiles[idx], true)
+        this.markDirty(tx, ty)
+        this.justSettled.push(idx)
+      } else {
+        // Only commit to settled if all three fall positions are blocked by stable
+        // material (solid/settled). If any is occupied by unsettled (falling) sand,
+        // stay active — the blocker will move soon and free this tile.
+        const { tiles, width } = this
+        const row = ty1 * width
+        const dL = tx > 0 ? tx - 1 : tx
+        const dR = tx < width - 1 ? tx + 1 : tx
+        if (
+          isSettled(tiles[row + tx]) &&
+          isSettled(tiles[row + dL]) &&
+          isSettled(tiles[row + dR])
+        ) {
+          this.tiles[idx] = setSettled(this.tiles[idx], true)
+          this.markDirty(tx, ty)
+          this.justSettled.push(idx)
+        } else {
+          this.next.add(idx)
+        }
+      }
     }
 
     return moved

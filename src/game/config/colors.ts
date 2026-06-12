@@ -1,6 +1,7 @@
 import { Display } from 'phaser'
 import type { RGBColor } from '../../types/_types.ts'
-import { rgbToColor } from '../helpers/color-converters.ts'
+import { rgbToColor, rgbToRGB } from '../helpers/color-converters.ts'
+import { MatterType } from '../lib/Matter/_Matter-types.ts'
 import { FireGroup, FireMode } from '../lib/Player/_FireMode-types'
 import Interpolate = Display.Color.Interpolate
 import ValueToColor = Display.Color.ValueToColor
@@ -42,3 +43,12 @@ export const FIRE_MODE_COLORS_RGB = Object.fromEntries(
 export const FIRE_COLOR = 0xff0000
 export const LAVA_COLOR = 0xF55A0F
 export const ROCK_COLOR = 0x442808
+
+export const SETTLE_TRANSITION_COLORS: Partial<Record<MatterType, RGBColor>> = {
+  [MatterType.SAND]: rgbToRGB(`rgba(139, 90, 43)`),
+  [MatterType.ROCK]: rgbToRGB(`rgba(80, 60, 40)`),
+  [MatterType.SALT]: rgbToRGB(`rgba(200, 190, 170)`),
+  [MatterType.THERMITE]: rgbToRGB(`rgba(160, 70, 15)`),
+  [MatterType.GUNPOWDER]: rgbToRGB(`rgba(60, 55, 50)`),
+  [MatterType.NITRO]: rgbToRGB(`rgba(90, 160, 30)`),
+}
