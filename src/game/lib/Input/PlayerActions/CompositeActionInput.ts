@@ -20,7 +20,7 @@ export class CompositeActionInput implements ActionInput {
     let downCount = 0
     const unsub = this.inputs.flatMap(input => [
       input.onDown((e) => {
-        if (!this.guard?.(e)) return
+        if (this.guard && !this.guard?.(e)) return
         if (downCount++ === 0) cb(e)
       }),
       input.onUp(() => {
@@ -34,7 +34,7 @@ export class CompositeActionInput implements ActionInput {
     let downCount = 0
     const unsub = this.inputs.flatMap(input => [
       input.onDown((e) => {
-        if (!this.guard?.(e)) return
+        if (this.guard && !this.guard?.(e)) return
         downCount++
       }),
       input.onUp((e) => {

@@ -1,10 +1,12 @@
 import { Input } from 'phaser'
 import { BROWSER_DISABLED_KEYS } from '../../../input.ts'
+import { ENABLE_BRUSH_MODE_DEBUG } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { InputMode } from './_input.types.ts'
 import { BrushInput } from './InputController/BrushInput.ts'
 import type { InputController } from './InputController/InputController.ts'
+import { SetInputModeInput } from './InputController/SetInputModeInput.ts'
 import { ZoomInput } from './InputController/ZoomInput.ts'
 import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
 import Pointer = Phaser.Input.Pointer
@@ -12,7 +14,6 @@ import Pointer = Phaser.Input.Pointer
 export class InputManager extends SceneBound {
   private modeControllers: Record<InputMode, InputController[]>
   private mode: InputMode
-  brushInput: BrushInput
 
   constructor(
     public scene: GameLevel,
@@ -20,18 +21,24 @@ export class InputManager extends SceneBound {
     super(scene)
 
     const zoomInput = new ZoomInput(scene)
-    const brushInput = this.brushInput = new BrushInput(scene)
+    const brushInput = new BrushInput(scene)
     const playerWeaponManager = scene.playerWeaponManager
+
+    const brushModeToggle = ENABLE_BRUSH_MODE_DEBUG
+      ? [new SetInputModeInput(scene, InputMode.BRUSH)]
+      : []
 
     this.modeControllers = {
       // order matters for mouse wheel bindings
       [InputMode.WEAPON]: [
         zoomInput,
         playerWeaponManager,
+        ...brushModeToggle,
       ],
       [InputMode.BRUSH]: [
         zoomInput,
         brushInput,
+        ...brushModeToggle,
       ],
     }
 

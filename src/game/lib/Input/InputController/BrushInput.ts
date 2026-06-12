@@ -51,6 +51,7 @@ export class BrushInput extends InputController {
       a.BRUSH_PRIMARY.onDown((e) => {
         const p = e as Pointer
         this.brushPrimaryDown(p)
+        this._repeatTimer?.destroy()
         this._repeatTimer = this.scene.time.addEvent({
           delay: 100,
           loop: true,
@@ -73,6 +74,8 @@ export class BrushInput extends InputController {
   }
 
   protected onDisable() {
+    this._repeatTimer?.destroy()   // add this
+    this._repeatTimer = null       // add this
     this.graphics?.setActive(false).setVisible(false)
   }
 
