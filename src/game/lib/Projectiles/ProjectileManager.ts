@@ -5,15 +5,18 @@ import type { Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
 import type { BaseProjectile, BaseProjectileConstructor } from './BaseProjectile.ts'
 import type { ProjectileEffect } from './ProjectileEffect/_ProjectileEffect.types.ts'
-import { ProjectileRenderer } from './ProjectileRenderer.ts'
+import type { ProjectileRenderer } from './ProjectileRenderer.ts'
+import { ProjectileRendererPool } from './ProjectileRendererPool.ts'
 
 export class ProjectileManager extends SceneBound {
   public children: BaseProjectile[] = []
+  private rendererPool: ProjectileRendererPool
 
   constructor(
     public scene: GameLevel,
   ) {
     super(scene)
+    this.rendererPool = new ProjectileRendererPool(scene)
   }
 
   add<T extends BaseProjectile>(
@@ -23,7 +26,7 @@ export class ProjectileManager extends SceneBound {
     y: number,
     charge: number,
     effect: ProjectileEffect,
-    renderer: null | ProjectileRenderer = new ProjectileRenderer(this.scene),
+    renderer: null | ProjectileRenderer = this.rendererPool.acquire(),
   ): T {
     const projectile = new Constructor(this.scene, this, matterTank, x, y, effect, renderer)
 
@@ -41,7 +44,7 @@ export class ProjectileManager extends SceneBound {
     velocity?: number,
     pos?: Position,
     angle?: number,
-    renderer: null | ProjectileRenderer = new ProjectileRenderer(this.scene),
+    renderer: null | ProjectileRenderer = this.rendererPool.acquire(),
   ) {
     const player = this.scene.player
     if (isMatterTankFireMode(effect.mode) && !player.matterTank.hasChargeAvailable(charge, effect.mode)) {
@@ -73,6 +76,7 @@ export class ProjectileManager extends SceneBound {
   }
 
   protected onDestroy() {
+    this.rendererPool.destroy()
     // @ts-expect-error: destroy
     this.children = null
   }
