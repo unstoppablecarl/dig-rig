@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { InputMode } from '../game/lib/Input/_input.types.ts'
 import { type LevelId, LEVELS } from '../game/scenes/Levels'
 
@@ -44,6 +44,14 @@ export const useUIState = defineStore('ui-state', () => {
     defaults,
   )
 
+  function watchInputMode(cb: (mode: InputMode) => void) {
+    return watch(
+      inputMode,
+      cb,
+      { flush: 'sync' },
+    )
+  }
+
   return {
     $reset,
     $serializeState,
@@ -55,6 +63,9 @@ export const useUIState = defineStore('ui-state', () => {
 
     // readonly
     currentLevelDisplayName,
+
+    // functions
+    watchInputMode
   }
 }, {
   persist: true,

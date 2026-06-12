@@ -1,4 +1,5 @@
 import { Input } from 'phaser'
+import { type WatchStopHandle } from 'vue'
 import { BROWSER_DISABLED_KEYS } from '../../../input.ts'
 import { ENABLE_BRUSH_MODE_DEBUG } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
@@ -14,6 +15,7 @@ import Pointer = Phaser.Input.Pointer
 export class InputManager extends SceneBound {
   private modeControllers: Record<InputMode, InputController[]>
   private mode: InputMode
+  private readonly stopWatcher: WatchStopHandle
 
   constructor(
     public scene: GameLevel,
@@ -45,6 +47,7 @@ export class InputManager extends SceneBound {
     scene.input.on(GAMEOBJECT_POINTER_WHEEL, this.handleMouseWheel, this)
 
     this.setMode(scene.uiState.inputMode)
+    this.stopWatcher = scene.uiState.watchInputMode((mode) => this.setMode(mode))
 
     // prevent default browser actions
     scene.input.keyboard!.addCapture(BROWSER_DISABLED_KEYS)
@@ -74,6 +77,7 @@ export class InputManager extends SceneBound {
   }
 
   protected onDestroy() {
+    this.stopWatcher()
     const all = new Set([...Object.values(this.modeControllers).flat()])
     this.scene.input.off(GAMEOBJECT_POINTER_WHEEL, this.handleMouseWheel, this)
     for (const c of all) c.destroy()
