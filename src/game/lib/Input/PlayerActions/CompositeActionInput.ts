@@ -8,6 +8,10 @@ export class CompositeActionInput implements ActionInput {
     return this.inputs.some(i => i.isDown())
   }
 
+  isDownForEvent(e: MouseEvent): boolean {
+    return this.inputs.some(i => i.isDownForEvent?.(e) ?? false)
+  }
+
   isUp(): boolean {
     return this.inputs.every(i => i.isUp())
   }

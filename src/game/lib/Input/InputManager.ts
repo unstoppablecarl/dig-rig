@@ -1,4 +1,5 @@
 import { Input } from 'phaser'
+import { BROWSER_DISABLED_KEYS } from '../../../input.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { InputMode } from './_input.types.ts'
@@ -6,10 +7,10 @@ import { BrushInput } from './InputController/BrushInput.ts'
 import type { InputController } from './InputController/InputController.ts'
 import { ZoomInput } from './InputController/ZoomInput.ts'
 import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
+import Pointer = Phaser.Input.Pointer
 
 export class InputManager extends SceneBound {
   private modeControllers: Record<InputMode, InputController[]>
-  private readonly zoomInput: ZoomInput
   private mode: InputMode
   brushInput: BrushInput
 
@@ -18,15 +19,18 @@ export class InputManager extends SceneBound {
   ) {
     super(scene)
 
-    this.zoomInput = new ZoomInput(scene)
+    const zoomInput = new ZoomInput(scene)
     const brushInput = this.brushInput = new BrushInput(scene)
     const playerWeaponManager = scene.playerWeaponManager
 
     this.modeControllers = {
+      // order matters for mouse wheel bindings
       [InputMode.WEAPON]: [
+        zoomInput,
         playerWeaponManager,
       ],
       [InputMode.BRUSH]: [
+        zoomInput,
         brushInput,
       ],
     }
@@ -35,23 +39,16 @@ export class InputManager extends SceneBound {
 
     this.setMode(scene.uiState.inputMode)
 
-    // prevent default browser actions for arrow keys and space
-    scene.input.keyboard!.addCapture([
-      Input.Keyboard.KeyCodes.UP,
-      Input.Keyboard.KeyCodes.DOWN,
-      Input.Keyboard.KeyCodes.LEFT,
-      Input.Keyboard.KeyCodes.RIGHT,
-      Input.Keyboard.KeyCodes.SPACE,
-    ])
+    // prevent default browser actions
+    scene.input.keyboard!.addCapture(BROWSER_DISABLED_KEYS)
   }
 
-  private handleMouseWheel(_ptr: any, _objs: any, _dx: number, deltaY: number) {
+  private handleMouseWheel(pointer: Pointer, _objs: any, _dx: number, deltaY: number) {
     if (!this.modeControllers) return
-    // valid zoom wheel input
-    if (this.zoomInput.onMouseWheel(deltaY)) return
+    const event = pointer.event as WheelEvent
     // find first valid wheel input
     for (const c of this.modeControllers[this.mode]) {
-      if (c.onMouseWheel?.(deltaY)) break
+      if (c.onMouseWheel?.(deltaY, event, pointer)) break
     }
   }
 
@@ -70,7 +67,7 @@ export class InputManager extends SceneBound {
   }
 
   protected onDestroy() {
-    const all = new Set([this.zoomInput, ...Object.values(this.modeControllers).flat()])
+    const all = new Set([...Object.values(this.modeControllers).flat()])
     this.scene.input.off(GAMEOBJECT_POINTER_WHEEL, this.handleMouseWheel, this)
     for (const c of all) c.destroy()
     // @ts-expect-error: destroy

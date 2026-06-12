@@ -42,7 +42,7 @@ const PLAYER_ACTION_GROUPS: Record<string, PlayerActionDesc[]> = {
   ],
   'View': [
     {
-      keys: INPUT_ACTIONS[PlayerAction.ZOOM_MODIFIER],
+      keys: INPUT_ACTIONS[PlayerAction.ZOOM_MOUSE_WHEEL_MODIFIER],
       mouseWheelModifier: true,
       label: 'Zoom',
     },

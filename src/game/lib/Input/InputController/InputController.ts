@@ -2,6 +2,7 @@ import { Events } from 'phaser'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { EventsBinder } from '../../Util/EventsBinder.ts'
+import Pointer = Phaser.Input.Pointer
 
 export abstract class InputController extends SceneBound<GameLevel> {
   private _enabled = false
@@ -36,7 +37,7 @@ export abstract class InputController extends SceneBound<GameLevel> {
 
   protected onDisable?(): void
 
-  onMouseWheel?(deltaY: number): boolean
+  onMouseWheel?(deltaY: number, e: WheelEvent, pointer: Pointer): boolean
 
   protected onDestroy() {
     this.setInputEnabled(false)

@@ -5,12 +5,13 @@ import { FireGroup } from '../../Player/_FireMode-types'
 import { SLOT_TO_WEAPON, WEAPONS, type WeaponSlot } from '../../Player/weapons.ts'
 import { InputController } from './InputController.ts'
 import ANY_KEY_DOWN = Input.Keyboard.Events.ANY_KEY_DOWN
+import Pointer = Phaser.Input.Pointer
 
 export interface Weapon {
   setEnabled(value: boolean): void
   enabled: boolean
   destroy(): void
-  onMouseWheel?(deltaY: number): boolean
+  onMouseWheel?: InputController['onMouseWheel']
   uiStatusControls?(): string
   getCharge(): number
 }
@@ -51,8 +52,8 @@ export class WeaponManagerInput extends InputController {
     this._active.setEnabled(false)
   }
 
-  onMouseWheel(deltaY: number): boolean {
-    return this._active.onMouseWheel?.(deltaY) ?? false
+  onMouseWheel(deltaY: number, e: WheelEvent, pointer: Pointer): boolean {
+    return this._active.onMouseWheel?.(deltaY, e, pointer) ?? false
   }
 
   keydown(event: KeyboardEvent) {

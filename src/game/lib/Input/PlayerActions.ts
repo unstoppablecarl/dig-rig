@@ -15,12 +15,13 @@ export enum PlayerAction {
   MOVE_LEFT = 'MOVE_LEFT',
   MOVE_RIGHT = 'MOVE_RIGHT',
   JUMP = 'JUMP',
-  ZOOM_MODIFIER = 'ZOOM_MODIFIER',
+  ZOOM_MOUSE_WHEEL_MODIFIER = 'ZOOM_MOUSE_WHEEL_MODIFIER',
   PREV_MATTER_TYPE = 'PREV_MATTER_TYPE',
   NEXT_MATTER_TYPE = 'NEXT_MATTER_TYPE',
   BRUSH_PRIMARY = 'BRUSH_PRIMARY',
   BRUSH_SECONDARY = 'BRUSH_SECONDARY',
   BRUSH_ERASE_MODIFIER = 'BRUSH_ERASE_MODIFIER',
+  BRUSH_MODE_TOGGLE = 'BRUSH_MODE_TOGGLE',
 }
 
 export const PLAYER_ACTION_DISPLAY_NAME: Record<PlayerAction, string> = {
@@ -34,12 +35,13 @@ export const PLAYER_ACTION_DISPLAY_NAME: Record<PlayerAction, string> = {
   [PlayerAction.NEXT_MODE]: 'Mode: Next',
   [PlayerAction.CHARGE_DECREASE]: 'Charge: Decrease',
   [PlayerAction.CHARGE_INCREASE]: 'Charge: Increase',
-  [PlayerAction.ZOOM_MODIFIER]: 'Zoom',
+  [PlayerAction.ZOOM_MOUSE_WHEEL_MODIFIER]: 'Zoom',
   [PlayerAction.PREV_MATTER_TYPE]: 'Matter: Prev',
   [PlayerAction.NEXT_MATTER_TYPE]: 'Matter: Next',
   [PlayerAction.BRUSH_PRIMARY]: 'Paint: Primary',
   [PlayerAction.BRUSH_SECONDARY]: 'Paint: Secondary',
   [PlayerAction.BRUSH_ERASE_MODIFIER]: 'Paint: Erase',
+  [PlayerAction.BRUSH_MODE_TOGGLE]: 'Paint: Toggle',
 }
 
 export const POINTER_LEFT = 'LMB' as const
@@ -53,6 +55,7 @@ export type KeyEventGuard = (e: KeyboardEvent | Input.Pointer) => boolean
 export interface ActionInput {
   isDown(): boolean
   isUp(): boolean
+  isDownForEvent?(e: MouseEvent): boolean
   onDown(cb: KeyEvent): () => void
   onUp(cb: KeyEvent): () => void
 }
