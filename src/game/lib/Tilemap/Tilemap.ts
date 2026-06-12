@@ -291,11 +291,15 @@ export class Tilemap extends SceneBound {
   // After solid tiles are destroyed, checks adjacent solid for disconnection.
   // Only SOLID forms structural connections — SAND, SAND_SETTLED, and
   // WATER are transparent to this BFS (neither a connection nor a blocking wall).
-  // No BFS cap: connected terrain always finds PERMANENT in a small number of hops
-  // because PERMANENT tiles exist at the world boundary which is never far from
-  // any solid tile.  Genuine islands exhaust their component and are detected
-  // regardless of size.
+  //
+  // Two-level optimization (mirrors findIslandTiles):
+  //   1. computeAnchored() rebuilds chunk-level anchor flags from the post-destruction state.
+  //   2. Any SOLID seed whose chunk is still anchored is trivially connected — skip tile BFS.
+  //      Safe because hasSolidBorder propagates anchoring across every structural tile pair at
+  //      chunk borders, so an unanchored-chunk BFS can never reach an anchored-chunk tile.
   public findNewlyDisconnectedByDestruction(destroyedTiles: Tile[]): Tile[] {
+    this.chunkManager.computeAnchored()
+
     const { width, height, tiles, _bfsVisited: vis, _bfsQueue: queue, _bfsComp: comp } = this
     vis.fill(0)
 
@@ -308,6 +312,13 @@ export class Tilemap extends SceneBound {
         const sidx = sy * width + sx
         if (vis[sidx] !== 0) continue
         if (tiles[sidx] !== SOLID) continue
+
+        // Chunk-level pre-filter: seed is in an anchored chunk → component is still
+        // connected to PERMANENT, no tile BFS needed.
+        if (this.chunkManager.getChunkByTile(sx, sy)?.anchored) {
+          vis[sidx] = 2
+          continue
+        }
 
         let head = 0, tail = 0, compLen = 0
         let anchored = false
