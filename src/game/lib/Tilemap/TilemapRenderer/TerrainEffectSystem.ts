@@ -1,14 +1,13 @@
-import { FIRE_MODE_COLORS_RGB } from '../../../config/colors.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { FireMode } from '../../Player/_FireMode-types'
+import type { RGBColor } from '../../../../types/_types.ts'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
 
 // RGB = fire mode color, A = intensity fading 1→0 over EFFECT_DURATION_MS.
 // texSubImage2D with Uint8Array bypasses premultiplied-alpha (UNPACK_PREMULTIPLY_ALPHA_WEBGL
 // defaults false), and texture2D in GLSL returns raw stored values, so A is safe to use.
-const EFFECT_DURATION_MS = 1500
+const EFFECT_DURATION_MS = 800
 
 type EffectEntry = {
   startTime: number
@@ -42,8 +41,7 @@ export class TerrainEffectSystem extends SceneBound {
     this.effectUploadBuf = new Uint8Array(width * height * 4)
   }
 
-  addEffect(tx: number, ty: number, value: FireMode, startTime: number = this.scene.time.now) {
-    const { r, g, b } = FIRE_MODE_COLORS_RGB[value]
+  addEffect(tx: number, ty: number, { r, g, b }: RGBColor, startTime: number = this.scene.time.now) {
     const idx = ty * this.scene.tilemap.width + tx
     this.effectMap.set(idx, { startTime, tx, ty, r, g, b })
   }
