@@ -1,4 +1,5 @@
 import { GameObjects, Input, Scenes } from 'phaser'
+import { BRUSH_OUTLINE_COLOR } from '../../../config/colors.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { MatterType } from '../../Matter/_Matter-types.ts'
 import type { ProjectileEffectResult } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
@@ -7,14 +8,15 @@ import { applyEffect } from '../../Tilemap/TileMutation.ts'
 import { InputController } from './InputController.ts'
 import POINTER_MOVE = Input.Events.POINTER_MOVE
 import Pointer = Input.Pointer
-import UPDATE = Scenes.Events.UPDATE
+import Vector2 = Phaser.Math.Vector2
+import POST_UPDATE = Scenes.Events.POST_UPDATE
 
 export class BrushInput extends InputController {
-  public graphics: GameObjects.Graphics
-  private mouseX = 0
-  private mouseY = 0
-  private brushDirty = true
+  public graphics: GameObjects.Graphics | null = null
   private _effectTiles: ProjectileEffectResult[] = []
+  private _drawnRadius = -1
+  private _drawnZoom = -1
+  private _repeatTimer: Phaser.Time.TimerEvent | null = null
 
   get primaryMatterType(): MatterType {
     return this.scene?.brushUIState?.primaryMatterType ?? MatterType.SOLID
@@ -41,16 +43,23 @@ export class BrushInput extends InputController {
     private maxRadius = 30,
   ) {
     super(scene)
-    this.graphics = this.scene.add.graphics()
-    scene.layers.brush.add(this.graphics)
     this.binderAdd(this.scene.input, POINTER_MOVE, this.pointermove)
-    this.binderAdd(this.scene.events, UPDATE, this.update)
+    this.binderAdd(this.scene.events, POST_UPDATE, this.update)
 
     const a = this.scene.playerActions
     this.binder.addInput(() => [
       a.BRUSH_PRIMARY.onDown((e) => {
         const p = e as Pointer
         this.brushPrimaryDown(p)
+        this._repeatTimer = this.scene.time.addEvent({
+          delay: 100,
+          loop: true,
+          callback: () => this.brushPrimaryDown(this.scene.input.activePointer),
+        })
+      }),
+      a.BRUSH_PRIMARY.onUp(() => {
+        this._repeatTimer?.destroy()
+        this._repeatTimer = null
       }),
       a.BRUSH_SECONDARY.onDown((e) => {
         const p = e as Pointer
@@ -60,32 +69,32 @@ export class BrushInput extends InputController {
   }
 
   protected onEnable() {
-    this.graphics.setActive(true).setVisible(true)
+    this.graphics?.setActive(true).setVisible(true)
   }
 
   protected onDisable() {
-    this.graphics.setActive(false).setVisible(false)
+    this.graphics?.setActive(false).setVisible(false)
   }
 
+  _worldPoint = new Vector2()
+
   protected brushPrimaryDown(p: Pointer) {
+    const { x, y } = this.scene.cameras.main.getWorldPoint(p.x, p.y, this._worldPoint)
     const a = this.scene.playerActions
     const destroying = a.BRUSH_ERASE_MODIFIER.isDown()
     if (destroying) {
-      this.brushDestroy(p.worldX, p.worldY)
+      this.brushDestroy(x, y)
     } else {
-      this.brushCreate(p.worldX, p.worldY, this.primaryMatterType)
+      this.brushCreate(x, y, this.primaryMatterType)
     }
   }
 
   protected brushSecondaryDown(p: Pointer) {
-    this.brushCreate(p.worldX, p.worldY, this.secondaryMatterType)
+    const { x, y } = this.scene.cameras.main.getWorldPoint(p.x, p.y, this._worldPoint)
+    this.brushCreate(x, y, this.secondaryMatterType)
   }
 
   pointermove(p: Pointer) {
-    this.mouseX = p.worldX
-    this.mouseY = p.worldY
-    this.brushDirty = true
-
     const a = this.scene.playerActions
     if (a.BRUSH_PRIMARY.isDown()) {
       this.brushPrimaryDown(p)
@@ -100,18 +109,25 @@ export class BrushInput extends InputController {
     } else {
       this.radius = Math.min(this.maxRadius, this.radius + 1)
     }
-    this.brushDirty = true
     this.scene.brushUIState.radius = this.radius
 
     return true
   }
 
   update() {
-    if (!this.brushDirty) return
-    this.brushDirty = false
-    this.graphics.clear()
-    this.graphics.lineStyle(1, 0xffff00, 1)
-    this.graphics.strokeCircle(this.mouseX, this.mouseY, this.radius)
+    if (!this.graphics) {
+      this.graphics = this.scene.ui.add.graphics()
+    }
+    const p = this.scene.input.activePointer
+    const zoom = this.scene.cameras.main.zoom
+    this.graphics.setPosition(p.x, p.y)
+    if (this.radius !== this._drawnRadius || zoom !== this._drawnZoom) {
+      this._drawnRadius = this.radius
+      this._drawnZoom = zoom
+      this.graphics.clear()
+      this.graphics.lineStyle(1, BRUSH_OUTLINE_COLOR.color, 1)
+      this.graphics.strokeCircle(0, 0, this.radius * zoom)
+    }
   }
 
   brushCreate(tx: number, ty: number, type: MatterType) {
@@ -124,7 +140,9 @@ export class BrushInput extends InputController {
 
   protected onDestroy() {
     super.onDestroy()
-    // @ts-expect-error: destroy
+    this._repeatTimer?.destroy()
+    this._repeatTimer = null
+    this.graphics?.destroy()
     this.graphics = null
   }
 }

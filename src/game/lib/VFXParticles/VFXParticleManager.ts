@@ -1,6 +1,6 @@
 import { BlendModes, Display, GameObjects } from 'phaser'
 import { DRAW_PARTICLE_DEBUG, MAX_MATTER_PARTICLES } from '../../config.ts'
-import { CREATE_COLOR_RGB, DESTROY_COLOR_RGB } from '../../config/colors.ts'
+import { CREATE_COLOR, DESTROY_COLOR } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
@@ -53,7 +53,7 @@ export class VFXParticleManager extends SceneBound {
     target: Position,
     staticTarget: boolean,
   ) {
-    this.spawn(source, target, staticTarget, DESTROY_COLOR_RGB, CREATE_COLOR_RGB)
+    this.spawn(source, target, staticTarget, DESTROY_COLOR, CREATE_COLOR)
   }
 
   spawn(

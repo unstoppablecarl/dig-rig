@@ -1,6 +1,6 @@
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import type { RGBColor } from '../../../../types/_types.ts'
+import Color = Phaser.Display.Color
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
 
@@ -13,9 +13,9 @@ type EffectEntry = {
   startTime: number
   tx: number
   ty: number
-  r: number
-  g: number
-  b: number
+  red: number
+  green: number
+  blue: number
 }
 
 export class TerrainEffectSystem extends SceneBound {
@@ -41,9 +41,9 @@ export class TerrainEffectSystem extends SceneBound {
     this.effectUploadBuf = new Uint8Array(width * height * 4)
   }
 
-  addEffect(tx: number, ty: number, { r, g, b }: RGBColor, startTime: number = this.scene.time.now) {
+  addEffect(tx: number, ty: number, { red, green, blue }: Color, startTime: number = this.scene.time.now) {
     const idx = ty * this.scene.tilemap.width + tx
-    this.effectMap.set(idx, { startTime, tx, ty, r, g, b })
+    this.effectMap.set(idx, { startTime, tx, ty, red, green, blue })
   }
 
   update() {
@@ -54,7 +54,7 @@ export class TerrainEffectSystem extends SceneBound {
     const bytes = this.effectBuf
     let minX = width, maxX = 0, minY = height, maxY = 0
 
-    for (const [key, { startTime, tx, ty, r, g, b }] of this.effectMap) {
+    for (const [key, { startTime, tx, ty, red, green, blue }] of this.effectMap) {
       const elapsed = now - startTime
       const byteIdx = (ty * width + tx) * 4
 
@@ -62,9 +62,9 @@ export class TerrainEffectSystem extends SceneBound {
         bytes[byteIdx + 3] = 0
         this.effectMap.delete(key)
       } else {
-        bytes[byteIdx] = r
-        bytes[byteIdx + 1] = g
-        bytes[byteIdx + 2] = b
+        bytes[byteIdx] = red
+        bytes[byteIdx + 1] = green
+        bytes[byteIdx + 2] = blue
         bytes[byteIdx + 3] = Math.floor((1 - elapsed / EFFECT_DURATION_MS) * 255)
       }
 

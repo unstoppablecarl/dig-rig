@@ -76,22 +76,22 @@ export class MatterMeter extends SceneBound {
 
     this.destroyCharge = scene.add.rectangle(chargeR.x + 1, chargeR.y, chargeR.w, chargeR.h)
       .setOrigin(0.5, 1)
-      .setFillStyle(DESTROY_COLOR, CHARGE_ALPHA)
+      .setFillStyle(DESTROY_COLOR.color, CHARGE_ALPHA)
       .setDepth(100)
 
     this.createCharge = scene.add.rectangle(chargeR.x + 1, chargeR.y, chargeR.w, chargeR.h)
       .setOrigin(0.5, 0)
-      .setFillStyle(CREATE_COLOR, CHARGE_ALPHA)
+      .setFillStyle(CREATE_COLOR.color, CHARGE_ALPHA)
       .setDepth(100)
 
     this.destroyPending = scene.add.rectangle(chargeR.x + 1, chargeR.y, 30, chargeR.h)
       .setOrigin(0.5, 1)
-      .setFillStyle(DESTROY_COLOR, PENDING_ALPHA)
+      .setFillStyle(DESTROY_COLOR.color, PENDING_ALPHA)
       .setDepth(100)
 
     this.createPending = scene.add.rectangle(chargeR.x + 1, chargeR.y, 30, chargeR.h)
       .setOrigin(0.5, 0)
-      .setFillStyle(CREATE_COLOR, PENDING_ALPHA)
+      .setFillStyle(CREATE_COLOR.color, PENDING_ALPHA)
       .setDepth(100)
 
     this.text = scene.add.dom(border.x, border.getBounds().bottom + TEXT_BG_HEIGHT * 0.5)

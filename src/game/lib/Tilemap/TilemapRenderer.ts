@@ -1,6 +1,5 @@
 import { GameObjects } from 'phaser'
-import type { RGBColor } from '../../../types/_types.ts'
-import { FIRE_MODE_COLORS_RGB } from '../../config/colors.ts'
+import { FIRE_MODE_COLORS } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { MatterType } from '../Matter/_Matter-types.ts'
@@ -9,6 +8,7 @@ import { TerrainChunkRenderer } from './TilemapRenderer/TerrainChunkRenderer.ts'
 import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'
 import { TILEMAP_RENDERER_DEFAULTS, type TilemapRendererConfig } from './TilemapRendererConfig'
 import Shader = GameObjects.Shader
+import Color = Phaser.Display.Color
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
 import CanvasTexture = Phaser.Textures.CanvasTexture
@@ -420,11 +420,11 @@ export class TilemapRenderer extends SceneBound {
   }
 
   addFireModeEffect(tx: number, ty: number, mode: FireMode, startTime?: number) {
-    const color = FIRE_MODE_COLORS_RGB[mode]
+    const color = FIRE_MODE_COLORS[mode]
     this.effectSystem.addEffect(tx, ty, color, startTime)
   }
 
-  addColorEffect(tx: number, ty: number, color: RGBColor, startTime?: number) {
+  addColorEffect(tx: number, ty: number, color: Color, startTime?: number) {
     this.effectSystem.addEffect(tx, ty, color, startTime)
   }
 

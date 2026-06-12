@@ -80,7 +80,7 @@ export class TerrainBlobParticleManager extends SceneBound {
 
       const gridX = Math.round(particle.x)
       const gridY = Math.round(particle.y)
-      const color = FIRE_MODE_COLORS[particle.mode]
+      const color = FIRE_MODE_COLORS[particle.mode].color
 
       const lifespanPercent = particle.lifetimePercent()
 
