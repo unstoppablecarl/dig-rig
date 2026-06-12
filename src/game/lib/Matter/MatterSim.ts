@@ -1,9 +1,10 @@
 import { random } from '../../helpers/random'
-import { LIQUID_TYPES, SINKS_THROUGH } from './_Matter-meta'
+import { isStructural, LIQUID_TYPES, SINKS_THROUGH } from './_Matter-meta'
 import {
   EMPTY,
   FIRE,
   getOwner,
+  isAnchored,
   isSettled,
   MatterType,
   matterType,
@@ -60,7 +61,9 @@ export class MatterSim {
         t === MatterType.FUSE ||
         t === MatterType.ICE ||
         t === MatterType.CHILLED_ICE ||
-        t === MatterType.PLANT
+        t === MatterType.PLANT ||
+        isAnchored(raw) ||
+        isStructural(raw)
       ) continue
 
       this.tiles[idx] = setSettled(raw, false)
@@ -507,6 +510,8 @@ export class MatterSim {
   }
 
   doPowderFall(tx: number, ty: number, idx: number) {
+    if (isAnchored(this.tiles[idx])) return
+
     const leftFirst = this.leftFirst
 
     const moved =
@@ -547,6 +552,8 @@ export class MatterSim {
   }
 
   tryLiquidFlow(tx: number, ty: number, idx: number) {
+    if (isAnchored(this.tiles[idx])) return
+
     const leftFirst = this.leftFirst
 
     return this.tryMove(idx, tx, ty, tx, ty + 1) ||

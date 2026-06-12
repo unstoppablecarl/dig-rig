@@ -7,6 +7,7 @@ import type { Position } from '../../types.ts'
 import { COLLIDES_WHEN_SETTLED } from '../Matter/_Matter-meta'
 import {
   EMPTY,
+  isAnchored,
   isSettled,
   type MatterType,
   matterType,
@@ -14,6 +15,7 @@ import {
   PERMANENT,
   SOLID,
 } from '../Matter/_Matter.types.ts'
+import { isStructural } from '../Matter/_Matter-meta'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
 
@@ -239,8 +241,8 @@ export class Tilemap extends SceneBound {
         const nidx = ny * this.width + nx
         if (newSet.has(nidx)) continue
         const nTile = this.getTile(nx, ny)
-        if (nTile === PERMANENT) return []
-        if (nTile !== SOLID) continue
+        if (matterType(nTile) === PERMANENT || isAnchored(nTile)) return []
+        if (!isStructural(nTile)) continue
         if (this.chunkManager.getChunkByTile(nx, ny)?.anchored) {
           touchesAnchoredSolid = true
         } else {
@@ -271,11 +273,11 @@ export class Tilemap extends SceneBound {
         if (visited.has(nidx)) continue
         visited.add(nidx)
         const nTile = this.getTile(nx, ny)
-        if (nTile === PERMANENT) {
+        if (matterType(nTile) === PERMANENT || isAnchored(nTile)) {
           anchored = true
           break outer
         }
-        if (nTile === SOLID) {
+        if (isStructural(nTile)) {
           if (this.chunkManager.getChunkByTile(nx, ny)?.anchored) {
             anchored = true
             break outer
@@ -288,18 +290,16 @@ export class Tilemap extends SceneBound {
     return anchored ? [] : newTiles
   }
 
-  // After solid tiles are destroyed, checks adjacent solid for disconnection.
-  // Only SOLID forms structural connections — SAND, SAND_SETTLED, and
-  // WATER are transparent to this BFS (neither a connection nor a blocking wall).
+  // After structural tiles are destroyed, checks adjacent structural tiles for disconnection.
+  // Structural types are those with alwaysStructural in their MatterDef or STRUCTURAL_FLAG set.
+  // Non-structural matter (sand, liquids, gases) is transparent to this BFS.
   //
-  // Two-level optimization (mirrors findIslandTiles):
-  //   1. computeAnchored() rebuilds chunk-level anchor flags from the post-destruction state.
-  //   2. Any SOLID seed whose chunk is still anchored is trivially connected — skip tile BFS.
-  //      Safe because hasSolidBorder propagates anchoring across every structural tile pair at
-  //      chunk borders, so an unanchored-chunk BFS can never reach an anchored-chunk tile.
+  // No chunk-level seed pre-filter: chunk anchoring cannot distinguish between multiple
+  // disconnected structural components within the same chunk. A chunk can be anchored
+  // because one SOLID region touches a border while a separate floating SOLID island also
+  // lives in the same chunk. The tile-level BFS reaching PERMANENT is the only correct
+  // termination. isAnchored() tiles are the fast-path skip (they are PERMANENT-equivalent).
   public findNewlyDisconnectedByDestruction(destroyedTiles: Tile[]): Tile[] {
-    this.chunkManager.computeAnchored()
-
     const { width, height, tiles, _bfsVisited: vis, _bfsQueue: queue, _bfsComp: comp } = this
     vis.fill(0)
 
@@ -311,14 +311,22 @@ export class Tilemap extends SceneBound {
         if (sx < 0 || sx >= width || sy < 0 || sy >= height) continue
         const sidx = sy * width + sx
         if (vis[sidx] !== 0) continue
-        if (tiles[sidx] !== SOLID) continue
+        if (!isStructural(tiles[sidx])) continue
+        // Anchored tiles are PERMANENT-equivalent — always connected, skip.
+        if (isAnchored(tiles[sidx])) { vis[sidx] = 2; continue }
 
-        // Chunk-level pre-filter: seed is in an anchored chunk → component is still
-        // connected to PERMANENT, no tile BFS needed.
-        if (this.chunkManager.getChunkByTile(sx, sy)?.anchored) {
-          vis[sidx] = 2
-          continue
+        // Single-step pre-check: if the seed itself is on the world edge or directly
+        // touches PERMANENT/anchored, skip the full BFS setup.
+        let seedAnchored = sx === 0 || sx === width - 1 || sy === 0 || sy === height - 1
+        if (!seedAnchored) {
+          for (let dp = 0; dp < 4; dp++) {
+            const px = sx + BFS_DX[dp], py = sy + BFS_DY[dp]
+            if (px < 0 || px >= width || py < 0 || py >= height) { seedAnchored = true; break }
+            const pt = tiles[py * width + px]
+            if (matterType(pt) === PERMANENT || isAnchored(pt)) { seedAnchored = true; break }
+          }
         }
+        if (seedAnchored) { vis[sidx] = 2; continue }
 
         let head = 0, tail = 0, compLen = 0
         let anchored = false
@@ -341,11 +349,11 @@ export class Tilemap extends SceneBound {
             const nidx = ny * width + nx
             if (vis[nidx] !== 0) continue
             const nt = tiles[nidx]
-            if (nt === PERMANENT) {
+            if (matterType(nt) === PERMANENT || isAnchored(nt)) {
               anchored = true
               break bfs
             }
-            if (nt === SOLID) {
+            if (isStructural(nt)) {
               vis[nidx] = 1
               queue[tail++] = nidx
               comp[compLen++] = nidx

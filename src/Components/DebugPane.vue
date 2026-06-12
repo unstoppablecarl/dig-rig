@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import type { Game } from 'phaser'
-import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
 import {
   PButton,
   PCheckbox,
@@ -12,23 +10,19 @@ import {
   PNumber,
   pollingComputed,
   pollingRef,
-  PSelect,
   VPane,
 } from 'vue-pane/src/index.ts'
 import { launchLevel } from '../game/launcher.ts'
-import { InputMode } from '../game/lib/Input/_input.types.ts'
 import { MATTER_NAMES } from '../game/lib/Matter/matter.ts'
 import type { GameLevel } from '../game/scenes/GameLevel.ts'
 import { type LevelEntry, type LevelId, LEVELS } from '../game/scenes/Levels'
-import { useBrushUIState } from '../store/brushUIState.ts'
-import { useUIState } from '../store/uiState.ts'
+import BrushPane from './DebugPane/BrushPane.vue'
 
 const { game, level } = defineProps<{
   game: Game
   level: GameLevel
 }>()
 
-const uiStore = useUIState()
 // Wrap in object so Vue template doesn't auto-unwrap the PollingRef to its value
 const metrics = {
   fps: pollingRef(game.loop, 'actualFps', 100),
@@ -74,29 +68,6 @@ const player = {
   touchRight: pollingComputed(() => level?.player?.isTouching?.right, 100),
   touchGround: pollingComputed(() => level?.player?.isTouching?.ground, 100),
 }
-
-const isBrushMode = computed(() => uiStore.inputMode === InputMode.BRUSH)
-const brushLabel = computed(() => isBrushMode.value ? 'Disable Brush' : 'Enable Brush')
-
-function toggleBrush() {
-  if (level.inputManager.inputMode === InputMode.BRUSH) {
-    level.inputManager.setMode(InputMode.WEAPON)
-  } else {
-    level.inputManager.setMode(InputMode.BRUSH)
-  }
-}
-
-const brushOptions = [...MATTER_NAMES.entries()].map(([key, value]) => ({
-  value: key as string | number,
-  label: value,
-}))
-
-const brushUI = useBrushUIState()
-
-const {
-  primaryMatterType: brushPrimaryMatterType,
-  secondaryMatterType: brushSecondaryMatterType,
-} = storeToRefs(brushUI)
 
 function clearStorage() {
   localStorage.clear()
@@ -158,11 +129,7 @@ const levelEntries = Object.entries(LEVELS) as [LevelId, LevelEntry][]
           @click="level.matterBridge.addMatter(key, level.player.x, level.player.y - 100)"
         />
       </PFolder>
-      <PFolder title="Brush">
-        <PButton :label="brushLabel" @click="toggleBrush" />
-        <PSelect label="Primary" :options="brushOptions" v-model="brushPrimaryMatterType" />
-        <PSelect label="Secondary" :options="brushOptions" v-model="brushSecondaryMatterType" />
-      </PFolder>
+      <BrushPane :level="level" />
       <PFolder title="Controls">
         <PButton label="Clear Local Storage + Refresh" @click="clearStorage" />
       </PFolder>

@@ -5,6 +5,8 @@ import {
   LIQUID_TYPES,
   PASSIVE_MATER_TYPES,
   SINKS_THROUGH,
+  STRUCTURAL_COLLAPSE_TO,
+  ALWAYS_STRUCTURAL,
 } from './_Matter-meta'
 import {
   ACID,
@@ -86,6 +88,8 @@ function add(id: MatterType, {
   collidesWhenSettled = false,
   liquid = false,
   sinksThrough,
+  alwaysStructural,
+  structuralCollapseType,
 }: MatterDef) {
   MATTER_ACTIONS[id] = action
   MATTER_NAMES.set(id, name)
@@ -96,6 +100,10 @@ function add(id: MatterType, {
   if (liquid) LIQUID_TYPES.add(id)
   if (collidesWhenSettled) COLLIDES_WHEN_SETTLED.add(id)
   if (sinksThrough) SINKS_THROUGH[id] = new MatterTypeSet(...sinksThrough)
+  if (alwaysStructural) {
+    ALWAYS_STRUCTURAL.add(id)
+  }
+  if (structuralCollapseType !== undefined) STRUCTURAL_COLLAPSE_TO[id] = structuralCollapseType
 }
 
 add(EMPTY, EMPTY_DEF)

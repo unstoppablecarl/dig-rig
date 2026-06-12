@@ -1,17 +1,23 @@
-import TimerEvent = Phaser.Time.TimerEvent
+import type { Scene } from 'phaser'
 
-export class RestartableTimerEvent extends TimerEvent {
-  constructor(config: Phaser.Types.Time.TimerEventConfig) {
-    super(config)
-    this.paused = true
-  }
+export type RestartableTimerEvent = ReturnType<typeof makeRestartableTimerEvent>
 
-  stop() {
-    this.paused = true
-  }
+export function makeRestartableTimerEvent(scene: Scene, config: Phaser.Types.Time.TimerEventConfig) {
+  const event = scene.time.addEvent({ ...config, paused: true })
 
-  start() {
-    this.elapsed = 0
-    this.paused = false
+  return {
+    start() {
+      if (!event.paused) return
+      event.elapsed = 0
+      event.paused = false
+    },
+
+    stop() {
+      event.paused = true
+    },
+
+    destroy() {
+      event.destroy()
+    },
   }
 }

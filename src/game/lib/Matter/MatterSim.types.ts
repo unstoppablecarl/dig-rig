@@ -1,4 +1,5 @@
 import type { ParticleType } from '../Particles/_particle-types.ts'
+import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
 
 export enum MatterCoordinatorInMsg {
   INIT,
@@ -46,6 +47,7 @@ type SpawnParticle = {
   particleType: ParticleType
   x: number
   y: number
+  ownerId?: MatterTankId
 }
 
 type TransferToMatterTanks = {

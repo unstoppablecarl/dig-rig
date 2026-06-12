@@ -55,6 +55,33 @@ export function clearOwner(value: number): number {
   return value & ~OWNER_MASK
 }
 
+// ANCHORED_FLAG — bit 25. Marks a tile as an immovable anchor regardless of type;
+// treated as equivalent to PERMANENT for structural-connectivity purposes.
+// Must be set/cleared explicitly — not maintained automatically by the simulation.
+export const ANCHORED_FLAG = 0x2000000
+
+export function setAnchored(value: number, anchored: boolean): number {
+  return anchored ? (value | ANCHORED_FLAG) : (value & ~ANCHORED_FLAG)
+}
+
+export function isAnchored(value: number): boolean {
+  return (value & ANCHORED_FLAG) !== 0
+}
+
+// STRUCTURAL_FLAG — bit 26. Per-tile opt-in structural marker.
+// Types listed in ConditionallyStructuralType can have this set to participate in
+// island detection without being always-structural. TypeScript enforces valid types
+// at call sites via the setStructural signature; no runtime registry is needed.
+export const STRUCTURAL_FLAG = 0x4000000
+
+export function setStructuralFlag(target: number, value: boolean): number {
+  return value ? (target | STRUCTURAL_FLAG) : (target & ~STRUCTURAL_FLAG)
+}
+
+export function isStructuralFlag(value: number): boolean {
+  return (value & STRUCTURAL_FLAG) !== 0
+}
+
 // extracts MatterType
 export function matterType(value: number): MatterType {
   return (value & TYPE_MASK) as MatterType
@@ -122,12 +149,6 @@ export enum MatterType {
   GUNPOWDER = 28,
 }
 
-// Settled-state constants (type | SETTLED_FLAG); not in enum so they don't
-// appear in MatterTypeValues and don't pollute the mask texture lookup table.
-export const SAND_SETTLED = MatterType.SAND | SETTLED_FLAG  // 0x83
-export const WATER_SETTLED = MatterType.WATER | SETTLED_FLAG  // 0x85
-
-// Short-hand re-exports (matches project-sand naming used across matterType files)
 export const EMPTY = MatterType.EMPTY
 export const SOLID = MatterType.SOLID
 export const PERMANENT = MatterType.PERMANENT
@@ -178,4 +199,9 @@ export type MatterDef = {
   liquid?: boolean
   collidesWhenSettled?: boolean
   sinksThrough?: MatterType[]
+  // type always participates in island detection (e.g. SOLID, WAX).
+  alwaysStructural?: boolean
+  // what the tile converts to when it is in a structural state and its island collapses.
+  // stays the same type if not set
+  structuralCollapseType?: MatterType
 }

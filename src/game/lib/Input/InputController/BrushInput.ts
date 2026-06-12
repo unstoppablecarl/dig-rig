@@ -5,7 +5,7 @@ import { MatterType } from '../../Matter/_Matter.types.ts'
 import type { ProjectileEffectResult } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 import { PROJECTILE_EFFECT } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import { applyEffect } from '../../Tilemap/TileMutation.ts'
-import { RestartableTimerEvent } from '../../Util/RestartableTimerEvent.ts'
+import { makeRestartableTimerEvent, RestartableTimerEvent } from '../../Util/RestartableTimerEvent.ts'
 import { InputController } from './InputController.ts'
 import POINTER_MOVE = Input.Events.POINTER_MOVE
 import Pointer = Input.Pointer
@@ -20,24 +20,6 @@ export class BrushInput extends InputController {
   private _primaryTimer: RestartableTimerEvent
   private _secondaryTimer: RestartableTimerEvent
 
-  get primaryMatterType(): MatterType {
-    return this.scene?.brushUIState?.primaryMatterType ?? MatterType.SOLID
-  }
-
-  set primaryMatterType(value: MatterType) {
-    if (this.destroyed) return
-    this.scene.brushUIState.primaryMatterType = value
-  }
-
-  get secondaryMatterType(): MatterType {
-    return this.scene?.brushUIState?.secondaryMatterType ?? MatterType.SOLID
-  }
-
-  set secondaryMatterType(value: MatterType) {
-    if (this.destroyed) return
-    this.scene.brushUIState.secondaryMatterType = value
-  }
-
   constructor(
     public scene: GameLevel,
   ) {
@@ -45,19 +27,19 @@ export class BrushInput extends InputController {
     this.binderAdd(this.scene.input, POINTER_MOVE, this.pointermove)
     this.binderAdd(this.scene.events, POST_UPDATE, this.update)
 
-    this._primaryTimer = new RestartableTimerEvent({
+    this._primaryTimer = makeRestartableTimerEvent(this.scene, {
       delay: 100,
       loop: true,
-      callback: () => this.brushPrimaryDown(this.scene.input.activePointer),
+      callback: () => {
+        this.brushPrimaryDown(this.scene.input.activePointer)
+      },
     })
-    this.scene.time.addEvent(this._primaryTimer)
 
-    this._secondaryTimer = new RestartableTimerEvent({
+    this._secondaryTimer = makeRestartableTimerEvent(this.scene, {
       delay: 100,
       loop: true,
       callback: () => this.brushSecondaryDown(this.scene.input.activePointer),
     })
-    this.scene.time.addEvent(this._secondaryTimer)
 
     const a = this.scene.playerActions
     this.binder.addInput(() => [
@@ -107,13 +89,13 @@ export class BrushInput extends InputController {
     if (destroying) {
       this.brushDestroy(x, y)
     } else {
-      this.brushCreate(x, y, this.primaryMatterType)
+      this.brushCreate(x, y, this.scene.brushUIState.primaryMatterValue)
     }
   }
 
   protected brushSecondaryDown(p: Pointer) {
     const { x, y } = this.scene.cameras.main.getWorldPoint(p.x, p.y, this._worldPoint)
-    this.brushCreate(x, y, this.secondaryMatterType)
+    this.brushCreate(x, y, this.scene.brushUIState.secondaryMatterValue)
   }
 
   pointermove(p: Pointer) {

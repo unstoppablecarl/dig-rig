@@ -5,14 +5,15 @@ import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { ParticleBridge } from '../Particles/ParticleBridge.ts'
 import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
-import { matterType, MatterType } from './_Matter.types.ts'
+import { isStructural, STRUCTURAL_COLLAPSE_TO } from './_Matter-meta'
+import { isStructuralFlag, matterType, MatterType, setStructuralFlag } from './_Matter.types.ts'
 import MatterCoordinatorConstructor from './MatterCoordinator.worker.ts?worker'
 import {
   MatterCoordinatorInMsg,
   MatterCoordinatorOutMsg,
   type TypedMatterCoordinatorWorker,
 } from './MatterSim.types.ts'
-import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
+import { type MatterTankId } from './MatterTank/_MatterTank.types.ts'
 
 export class MatterBridge extends SceneBound {
   private readonly worker: TypedMatterCoordinatorWorker
@@ -63,7 +64,7 @@ export class MatterBridge extends SceneBound {
       }
 
       if (e.data.type === MatterCoordinatorOutMsg.SPAWN_PARTICLE) {
-        this.particleBridge.queueSpawn(e.data.particleType, e.data.x, e.data.y)
+        this.particleBridge.queueSpawn(e.data.particleType, e.data.x, e.data.y, e.data.ownerId)
       }
 
       if (e.data.type === MatterCoordinatorOutMsg.TRANSFER_TO_MATTER_TANKS) {
@@ -102,7 +103,18 @@ export class MatterBridge extends SceneBound {
 
     tilemap.onIslandDetected = (islands) => {
       for (const { x, y } of islands) {
-        tilemap.setTile(x, y, MatterType.SAND)
+        const raw = tilemap.getTile(x, y)
+        const t = matterType(raw)
+        const collapseType = STRUCTURAL_COLLAPSE_TO[t]
+        if (collapseType !== undefined) {
+          tilemap.setTile(x, y, collapseType)
+        } else if (isStructuralFlag(raw)) {
+          // No type conversion — clear the per-tile structural flag so the tile
+          // resumes normal simulation (e.g. structural GUNPOWDER falls again).
+          const cleared = setStructuralFlag(raw, false)
+          tilemap.tiles[y * tilemap.width + x] = cleared
+          tilemap.chunkManager.setDirty(x, y, raw, cleared)
+        }
       }
       this.activateTiles(islands)
     }
@@ -125,6 +137,7 @@ export class MatterBridge extends SceneBound {
     tx = Math.floor(tx)
     ty = Math.floor(ty)
     const indices: number[] = []
+    const placed: Tile[] = []
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
         if (dx * dx + dy * dy > radius * radius) continue
@@ -133,10 +146,15 @@ export class MatterBridge extends SceneBound {
         if (matterType(tilemap.getTile(x, y)) !== MatterType.EMPTY) continue
         tilemap.setTile(x, y, value)
         indices.push(y * tilemap.width + x)
+        placed.push({ x, y })
       }
     }
-    if (indices.length) {
-      this.worker.postMessage({ type: MatterCoordinatorInMsg.ACTIVATE, indices })
+    if (!indices.length) return
+    this.worker.postMessage({ type: MatterCoordinatorInMsg.ACTIVATE, indices })
+    if (isStructural(value)) {
+      tilemap.chunkManager.computeAnchored()
+      const islands = tilemap.findIslandTiles(placed)
+      if (islands.length) tilemap.onIslandDetected?.(islands)
     }
   }
 

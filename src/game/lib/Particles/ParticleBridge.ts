@@ -46,11 +46,7 @@ export class ParticleBridge extends SceneBound<GameLevel> {
     }
   }
 
-  spawn(type: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID) {
-    this.worker.postMessage({ type: ParticleWorkerInMsg.SPAWN, particleType: type, x, y, ownerId })
-  }
-
-  queueSpawn(type: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID) {
+  queueSpawn(type: ParticleType, x: number, y: number, ownerId?: MatterTankId) {
     const needed = this.spawnBufLen + 4
     if (needed > this.spawnBuf.length) {
       const bigger = new Int32Array(this.spawnBuf.length * 2)
@@ -60,7 +56,7 @@ export class ParticleBridge extends SceneBound<GameLevel> {
     this.spawnBuf[this.spawnBufLen++] = type
     this.spawnBuf[this.spawnBufLen++] = x
     this.spawnBuf[this.spawnBufLen++] = y
-    this.spawnBuf[this.spawnBufLen++] = ownerId
+    this.spawnBuf[this.spawnBufLen++] = ownerId ?? NO_MATTER_TANK_ID
   }
 
   update() {
