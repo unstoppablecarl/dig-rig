@@ -58,14 +58,14 @@ export class ProjectileRenderer extends SceneBound {
     if (watchColorTarget) {
       this.unWatchColor = watch(watchColorTarget, (value) => {
         this.setColor(value)
-      }, { immediate: true })
+      }, { immediate: true, flush: 'sync' })
     }
 
     if (watchChargeTarget) {
       this.unWatchCharge = watch(watchChargeTarget, (value) => {
         const radius = tilesToRadius(value)
         this.setRadius(radius)
-      }, { immediate: true })
+      }, { immediate: true, flush: 'sync' })
     }
   }
 
