@@ -1,4 +1,4 @@
-import { CHUNK_SIZE, VFX_PARTICLE_CHUNK_SIZE } from '../../config.ts'
+import { CHUNK_SIZE, VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE } from '../../config.ts'
 import { SETTLE_TRANSITION_COLORS } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
@@ -78,13 +78,16 @@ export class MatterBridge extends SceneBound {
           const tank = this.scene.matterManager.get(tankId)
           if (!tank) continue
           tank.forceAdd(1)
-          const cx = Math.floor(tx / VFX_PARTICLE_CHUNK_SIZE)
-          const cy = Math.floor(ty / VFX_PARTICLE_CHUNK_SIZE)
+          const cx = Math.floor(tx / VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE)
+          const cy = Math.floor(ty / VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE)
           const key = (tankId << 22) | (cy << 11) | cx
           if (!spawnedChunks.has(key)) {
             spawnedChunks.add(key)
             this.scene.vfxParticleManager.spawnMatter(
-              { x: (cx + 0.5) * VFX_PARTICLE_CHUNK_SIZE, y: (cy + 0.5) * VFX_PARTICLE_CHUNK_SIZE },
+              {
+                x: (cx + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE,
+                y: (cy + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE,
+              },
               tank.getCollectPos(),
               false,
             )
