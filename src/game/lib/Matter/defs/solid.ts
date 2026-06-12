@@ -1,4 +1,4 @@
-import type { MatterDef } from '../_Matter-types.ts'
+import type { MatterDef } from '../_Matter.types.ts'
 
 export const SOLID_DEF: MatterDef = {
   name: 'Solid',

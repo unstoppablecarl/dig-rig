@@ -1,4 +1,4 @@
-import { FIRE, getFirstOwnerId, type MatterDef, setOwner } from '../_Matter-types.ts'
+import { FIRE, getFirstOwnerId, type MatterDef, setOwner } from '../_Matter.types.ts'
 
 export const FUSE_DEF: MatterDef = {
   name: 'Fuse',

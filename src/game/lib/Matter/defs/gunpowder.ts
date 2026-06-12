@@ -9,7 +9,7 @@ import {
   PERMANENT,
   setOwner,
   setSettled,
-} from '../_Matter-types.ts'
+} from '../_Matter.types.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 export const GUNPOWDER_DEF: MatterDef = {

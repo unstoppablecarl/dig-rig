@@ -13,7 +13,7 @@ import {
   MatterTypeSet,
   PERMANENT,
   SOLID,
-} from '../Matter/_Matter-types.ts'
+} from '../Matter/_Matter.types.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
 

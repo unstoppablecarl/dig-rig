@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MatterType } from '../../game/lib/Matter/_Matter-types.ts'
+import { MatterType } from '../../game/lib/Matter/_Matter.types.ts'
 import { useBrushUIState } from '../../store/brushUIState.ts'
 
 const state = useBrushUIState()

@@ -1,4 +1,4 @@
-import { type MatterType, MatterTypeSet } from './_Matter-types'
+import { type MatterType, MatterTypeSet } from './_Matter.types'
 
 export const PASSIVE_MATER_TYPES = new MatterTypeSet()
 export const LAVA_IMMUNE = new MatterTypeSet()

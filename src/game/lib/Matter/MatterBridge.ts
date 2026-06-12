@@ -5,7 +5,7 @@ import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { ParticleBridge } from '../Particles/ParticleBridge.ts'
 import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
-import { matterType, MatterType } from './_Matter-types.ts'
+import { matterType, MatterType } from './_Matter.types.ts'
 import MatterCoordinatorConstructor from './MatterCoordinator.worker.ts?worker'
 import {
   MatterCoordinatorInMsg,

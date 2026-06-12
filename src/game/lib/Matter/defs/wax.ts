@@ -1,4 +1,4 @@
-import { type MatterDef, FALLING_WAX, FIRE } from '../_Matter-types.ts'
+import { type MatterDef, FALLING_WAX, FIRE } from '../_Matter.types.ts'
 
 export const WAX_DEF: MatterDef = {
   name: 'Wax',

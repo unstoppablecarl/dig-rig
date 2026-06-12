@@ -1,5 +1,5 @@
 import { random } from '../../../helpers/random'
-import { FIRE, getFirstOwnerId, type MatterDef, OIL, setSettled } from '../_Matter-types.ts'
+import { FIRE, getFirstOwnerId, type MatterDef, OIL, setSettled } from '../_Matter.types.ts'
 
 export const OIL_DEF: MatterDef = {
   name: 'Oil',

@@ -10,7 +10,7 @@ import {
   MatterTypeSet,
   setOwner,
   setSettled,
-} from './_Matter-types.ts'
+} from './_Matter.types.ts'
 import { MATTER_ACTIONS } from './matter.ts'
 import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
 

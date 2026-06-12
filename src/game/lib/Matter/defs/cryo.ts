@@ -12,7 +12,7 @@ import {
   SALT_WATER,
   setSettled,
   WATER,
-} from '../_Matter-types.ts'
+} from '../_Matter.types.ts'
 
 export const CRYO_DEF: MatterDef = {
   name: 'Cryo',

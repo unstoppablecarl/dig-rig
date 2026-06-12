@@ -15,7 +15,7 @@ import {
   SOLID,
   THERMITE,
   WATER,
-} from '../_Matter-types.ts'
+} from '../_Matter.types.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 const NOT_FIRE_SPREADABLE = new MatterTypeSet(THERMITE, BURNING_THERMITE, LAVA, SOLID)

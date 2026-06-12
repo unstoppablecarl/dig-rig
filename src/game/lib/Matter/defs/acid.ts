@@ -10,7 +10,7 @@ import {
   setSettled,
   SOLID,
   WATER,
-} from '../_Matter-types.ts'
+} from '../_Matter.types.ts'
 
 const IS_SETTLED = new MatterTypeSet(ACID, EMPTY)
 

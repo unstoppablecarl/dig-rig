@@ -1,6 +1,6 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { FIRE, getFirstOwnerId, type MatterDef, NAPALM, setOwner, setSettled } from '../_Matter-types.ts'
+import { FIRE, getFirstOwnerId, type MatterDef, NAPALM, setOwner, setSettled } from '../_Matter.types.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 export const NAPALM_DEF: MatterDef = {

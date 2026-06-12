@@ -38,7 +38,7 @@ import {
   THERMITE,
   WATER,
   WAX,
-} from './_Matter-types.ts'
+} from './_Matter.types.ts'
 import { ACID_DEF } from './defs/acid.ts'
 import { BURNING_THERMITE_DEF } from './defs/burning-thermite.ts'
 import { C4_DEF } from './defs/c4.ts'

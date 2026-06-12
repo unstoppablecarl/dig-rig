@@ -1,4 +1,4 @@
-import { ACID, LAVA, type MatterDef, OIL, SALT_WATER, WATER } from '../_Matter-types.ts'
+import { ACID, LAVA, type MatterDef, OIL, SALT_WATER, WATER } from '../_Matter.types.ts'
 
 export const ROCK_DEF: MatterDef = {
   name: 'Rock',

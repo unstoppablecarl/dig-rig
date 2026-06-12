@@ -1,5 +1,5 @@
 import { random } from '../../../helpers/random'
-import { type MatterDef, matterType, STEAM, WATER } from '../_Matter-types.ts'
+import { type MatterDef, matterType, STEAM, WATER } from '../_Matter.types.ts'
 
 export const STEAM_DEF: MatterDef = {
   name: 'Steam',

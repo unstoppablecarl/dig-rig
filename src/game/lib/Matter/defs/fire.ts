@@ -17,7 +17,7 @@ import {
   THERMITE,
   WATER,
   WAX,
-} from '../_Matter-types.ts'
+} from '../_Matter.types.ts'
 
 const KEEP_ALIVE = new MatterTypeSet(PLANT, FUSE, OIL, WAX)
 const WATER_OR_SALT_WATER = new MatterTypeSet(WATER, SALT_WATER)

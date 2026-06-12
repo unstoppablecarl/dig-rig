@@ -1,6 +1,6 @@
 import { Display } from 'phaser'
 import { rgbToColor } from '../helpers/color-converters.ts'
-import { MatterType } from '../lib/Matter/_Matter-types.ts'
+import { MatterType } from '../lib/Matter/_Matter.types.ts'
 import { FireGroup, FireMode } from '../lib/Player/_FireMode-types'
 import Interpolate = Display.Color.Interpolate
 import Color = Phaser.Display.Color

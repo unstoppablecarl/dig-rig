@@ -1,5 +1,5 @@
 import type { AbstractMixinConstructor } from '../../../../../helpers/class-mixins.ts'
-import type { MatterType } from '../../../../Matter/_Matter-types.ts'
+import type { MatterType } from '../../../../Matter/_Matter.types.ts'
 import type { InputController } from '../../InputController.ts'
 
 export function WeaponMatterTypeCycleMixin<TBase extends AbstractMixinConstructor<InputController>>(Base: TBase) {

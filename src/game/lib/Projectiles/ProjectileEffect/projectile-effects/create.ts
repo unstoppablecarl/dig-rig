@@ -1,6 +1,6 @@
 import type { Position } from '../../../../types.ts'
 import { PASSIVE_MATER_TYPES } from '../../../Matter/_Matter-meta.ts'
-import { MatterType, MatterTypeSet, setOwner } from '../../../Matter/_Matter-types.ts'
+import { MatterType, MatterTypeSet, setOwner } from '../../../Matter/_Matter.types.ts'
 import { NO_MATTER_TANK_ID } from '../../../Matter/MatterTank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import type { Tilemap } from '../../../Tilemap/Tilemap.ts'

@@ -1,7 +1,7 @@
 import { GameObjects, Input, Math, Scenes } from 'phaser'
 import { BRUSH_OUTLINE_COLOR } from '../../../config/colors.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { MatterType } from '../../Matter/_Matter-types.ts'
+import { MatterType } from '../../Matter/_Matter.types.ts'
 import type { ProjectileEffectResult } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 import { PROJECTILE_EFFECT } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import { applyEffect } from '../../Tilemap/TileMutation.ts'

@@ -17,7 +17,7 @@ import {
   SOLID,
   STEAM,
   WATER,
-} from '../_Matter-types.ts'
+} from '../_Matter.types.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)

@@ -8,7 +8,7 @@ import {
   setSettled,
   THERMITE,
   WATER,
-} from '../_Matter-types.ts'
+} from '../_Matter.types.ts'
 
 export const THERMITE_DEF: MatterDef = {
   name: 'Thermite',

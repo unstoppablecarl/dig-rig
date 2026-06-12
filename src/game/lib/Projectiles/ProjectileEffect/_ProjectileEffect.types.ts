@@ -1,5 +1,5 @@
 import type { Position } from '../../../types.ts'
-import { MatterType, MatterTypeSet } from '../../Matter/_Matter-types.ts'
+import { MatterType, MatterTypeSet } from '../../Matter/_Matter.types.ts'
 import type { MatterTankId } from '../../Matter/MatterTank/_MatterTank.types.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
 import type { Tile, Tilemap } from '../../Tilemap/Tilemap.ts'

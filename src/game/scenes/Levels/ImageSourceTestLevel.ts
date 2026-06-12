@@ -1,4 +1,4 @@
-import { PERMANENT } from '../../lib/Matter/_Matter-types.ts'
+import { PERMANENT } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { textureToPixelData } from '../../lib/Textures/texture-util.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'

@@ -1,4 +1,4 @@
-import { FIRE, getFirstOwnerId, type MatterDef, setOwner, WAX } from '../_Matter-types.ts'
+import { FIRE, getFirstOwnerId, type MatterDef, setOwner, WAX } from '../_Matter.types.ts'
 
 export const FALLING_WAX_DEF: MatterDef = {
   name: 'Falling Wax',

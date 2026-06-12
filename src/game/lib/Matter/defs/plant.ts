@@ -1,5 +1,5 @@
 import { random } from '../../../helpers/random'
-import { type MatterDef, EMPTY, SALT, WATER } from '../_Matter-types.ts'
+import { type MatterDef, EMPTY, SALT, WATER } from '../_Matter.types.ts'
 
 export const PLANT_DEF: MatterDef = {
   name: 'Plant',

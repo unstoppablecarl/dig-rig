@@ -1,5 +1,5 @@
 import { Driller } from '../../lib/Entities/Driller.ts'
-import { PERMANENT, SOLID } from '../../lib/Matter/_Matter-types.ts'
+import { PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { ScaleLevelTexture } from '../../lib/Textures/ScaleLevelTexture.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'

@@ -1,5 +1,5 @@
 import { random } from '../../../helpers/random'
-import { FIRE, ICE, LAVA, type MatterDef, MatterTypeSet, SALT, SALT_WATER, STEAM, WATER } from '../_Matter-types.ts'
+import { FIRE, ICE, LAVA, type MatterDef, MatterTypeSet, SALT, SALT_WATER, STEAM, WATER } from '../_Matter.types.ts'
 
 const MELT_SLOW = new MatterTypeSet(SALT, SALT_WATER)
 const MELT_FAST = new MatterTypeSet(FIRE, LAVA)

@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { matterType, MatterType } from '../Matter/_Matter-types.ts'
+import { matterType, MatterType } from '../Matter/_Matter.types.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../Matter/MatterTank/_MatterTank.types.ts'
 import type { ParticleType } from './_particle-types.ts'
 import type { Particle } from './Particle.ts'

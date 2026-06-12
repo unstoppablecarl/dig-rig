@@ -1,7 +1,7 @@
 import { CHUNK_SIZE } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { MatterTypeValues, SETTLED_FLAG, TILE_STATE_MASK } from '../../Matter/_Matter-types.ts'
+import { MatterTypeValues, SETTLED_FLAG, TILE_STATE_MASK } from '../../Matter/_Matter.types.ts'
 import type { Chunk } from '../Chunk.ts'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper

@@ -1,4 +1,4 @@
-import { matterType } from '../Matter/_Matter-types.ts'
+import { matterType } from '../Matter/_Matter.types.ts'
 import type { MatterTankId } from '../Matter/MatterTank/_MatterTank.types.ts'
 import type {
   ProjectileEffect,

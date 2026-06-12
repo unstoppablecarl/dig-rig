@@ -12,7 +12,7 @@ import {
   SALT_WATER, setOwner,
   SOLID,
   WATER,
-} from '../../Matter/_Matter-types.ts'
+} from '../../Matter/_Matter.types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
 export const LAVA_BURST: ParticleDef = {

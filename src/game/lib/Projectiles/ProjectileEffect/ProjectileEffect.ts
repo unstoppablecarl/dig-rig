@@ -1,4 +1,4 @@
-import { MatterType } from '../../Matter/_Matter-types.ts'
+import { MatterType } from '../../Matter/_Matter.types.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
 import type { ProjectileEffect } from './_ProjectileEffect.types.ts'
 import { makeCreateEffect } from './projectile-effects/create.ts'

@@ -1,6 +1,6 @@
 import { Math as PMath, Time } from 'phaser'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
-import { MatterType } from '../Matter/_Matter-types.ts'
+import { MatterType } from '../Matter/_Matter.types.ts'
 import { FireMode } from '../Player/_FireMode-types'
 import { BaseProjectile } from './BaseProjectile.ts'
 import { tilesToRadius } from './projectile-radius'

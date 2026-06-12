@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, ref, watch } from 'vue'
-import { MatterType } from '../game/lib/Matter/_Matter-types.ts'
+import { MatterType } from '../game/lib/Matter/_Matter.types.ts'
 
 export type BrushUIState = ReturnType<typeof useBrushUIState>
 

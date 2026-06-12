@@ -170,12 +170,12 @@ export function matterTypeSetExcluding(exclude: MatterType[]): MatterTypeSet {
 }
 
 export type MatterDef = {
-  name: string,
-  action?: MatterAction,
-  passive?: boolean,
-  lavaImmune?: boolean,
-  acidImmune?: boolean,
-  liquid?: boolean,
-  collidesWhenSettled?: boolean,
-  sinksThrough?: MatterType[],
+  name: string
+  action?: MatterAction
+  passive?: boolean
+  lavaImmune?: boolean
+  acidImmune?: boolean
+  liquid?: boolean
+  collidesWhenSettled?: boolean
+  sinksThrough?: MatterType[]
 }

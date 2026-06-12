@@ -1,4 +1,4 @@
-import { PERMANENT, SOLID } from '../../lib/Matter/_Matter-types.ts'
+import { PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
 import type { TilemapRendererConfig } from '../../lib/Tilemap/TilemapRendererConfig'

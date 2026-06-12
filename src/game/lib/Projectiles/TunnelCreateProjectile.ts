@@ -1,5 +1,5 @@
 import { Time } from 'phaser'
-import { EMPTY } from '../Matter/_Matter-types.ts'
+import { EMPTY } from '../Matter/_Matter.types.ts'
 
 import { FireMode } from '../Player/_FireMode-types'
 import type { Tile } from '../Tilemap/Tilemap.ts'

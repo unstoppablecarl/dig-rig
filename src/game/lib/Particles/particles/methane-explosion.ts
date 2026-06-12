@@ -1,5 +1,5 @@
 import { FIRE_COLOR } from '../../../config/colors.ts'
-import { FIRE, setOwner } from '../../Matter/_Matter-types.ts'
+import { FIRE, setOwner } from '../../Matter/_Matter.types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
 export const METHANE_EXPLOSION: ParticleDef = {

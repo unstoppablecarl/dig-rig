@@ -1,7 +1,7 @@
 import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { matterType, MatterType, PERMANENT, SOLID } from '../Matter/_Matter-types.ts'
+import { matterType, MatterType, PERMANENT, SOLID } from '../Matter/_Matter.types.ts'
 import { Chunk, type ChunkId } from './Chunk.ts'
 
 function isStructural(raw: number): boolean {
