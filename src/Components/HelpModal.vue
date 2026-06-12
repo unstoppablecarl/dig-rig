@@ -164,6 +164,10 @@ function formatKey(key: string | number): string {
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   text-transform: uppercase;
   color: rgba(220, 220, 255, 0.5);
+
+  &:first-child {
+    padding-top: 6px;
+  }
 }
 
 .binding-row {
