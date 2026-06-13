@@ -15,7 +15,7 @@ export const GLOW_ENABLED = true
 
 // debug
 export const DRAW_TERRAIN_SETTLED_DEBUG = false
-export const DRAW_ANCHORED_DEBUG = true
+export const DRAW_ANCHORED_DEBUG = false
 export const DRAW_PARTICLE_DEBUG = false
 export const DRAW_WORLD_BORDER_DEBUG = false
 export const DISPLAY_TUNNEL_WEAPON_MATTER_TANK_DEBUG = false
