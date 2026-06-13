@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, storeToRefs } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, ref } from 'vue'
 import { ALWAYS_STRUCTURAL, setStructural } from '../game/lib/Matter/_Matter-meta.ts'
@@ -8,8 +8,6 @@ import { PLAYER_MATTER_TANK_ID } from '../game/lib/Matter/MatterTank/_MatterTank
 export type BrushUIState = ReturnType<typeof useBrushUIState>
 
 type SerializedData = {
-  radius: number
-
   primaryMatterType: MatterType
   primaryStructuralFlag: boolean
   primaryAnchoredFlag: boolean
@@ -23,7 +21,8 @@ const BRUSH_RADIUS_MIN = 10
 const BRUSH_RADIUS_MAX = 30
 
 export const useBrushUIState = defineStore('brush-ui-state', () => {
-  const _radius = ref(10)
+
+  const { radius: _radius } = storeToRefs(usePrivateBrushRadius())
 
   const radius = computed({
     get: () => _radius.value,
@@ -49,8 +48,6 @@ export const useBrushUIState = defineStore('brush-ui-state', () => {
   } = makeMatterPaint()
 
   const state = {
-    radius,
-
     primaryMatterType,
     primaryStructuralFlag,
     primaryAnchoredFlag,
@@ -63,8 +60,6 @@ export const useBrushUIState = defineStore('brush-ui-state', () => {
   }
 
   const defaults: SerializedData = {
-    radius: radius.value,
-
     primaryMatterType: primaryMatterType.value,
     primaryStructuralFlag: primaryStructuralFlag.value,
     primaryAnchoredFlag: primaryAnchoredFlag.value,
@@ -134,3 +129,26 @@ function makeMatterPaint() {
     matterValue,
   }
 }
+
+const usePrivateBrushRadius = defineStore('brush-radius', () => {
+    const radius = ref(10)
+
+    const {
+      $reset,
+      $serializeState,
+      $restoreState,
+    } = makeSimplePersistMapper(
+      { radius },
+      { radius: radius.value },
+    )
+
+    return {
+      $reset,
+      $serializeState,
+      $restoreState,
+      radius,
+    }
+  },
+  {
+    persist: true,
+  })
