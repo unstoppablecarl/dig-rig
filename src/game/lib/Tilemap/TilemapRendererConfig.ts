@@ -58,7 +58,7 @@ export const TILEMAP_RENDERER_DEFAULTS = {
   cryoAlpha: 0.80,
 
   acidColor: rgbToVec3(`rgb(107, 240, 41)`),
-  acidAlpha: 0.90,
+  acidAlpha: 0.8,
 
   fireColor: rgbToVec3(`rgb(255, 0, 0)`),
   lavaColor: rgbToVec3(`rgb(245, 89, 15)`),
