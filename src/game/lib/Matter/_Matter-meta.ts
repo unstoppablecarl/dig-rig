@@ -1,4 +1,13 @@
-import { EMPTY, isStructuralFlag, MatterType, matterType, MatterTypeSet, setStructuralFlag } from './_Matter.types'
+import {
+  EMPTY, isSettled,
+  isStructuralFlag,
+  MatterType,
+  matterType,
+  MatterTypeSet,
+  PERMANENT,
+  setStructuralFlag,
+  SOLID,
+} from './_Matter.types'
 
 export const PASSIVE_MATER_TYPES = new MatterTypeSet()
 export const LAVA_IMMUNE = new MatterTypeSet()
@@ -26,4 +35,10 @@ export function setStructural(target: number, value: boolean): number {
     }
   }
   return setStructuralFlag(target, value)
+}
+
+// always counts as settled
+export function isSolid(value: number) {
+  const type = matterType(value)
+  return type === SOLID || type === PERMANENT || isSettled(value)
 }

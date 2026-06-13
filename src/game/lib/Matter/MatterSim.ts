@@ -1,5 +1,5 @@
 import { random } from '../../helpers/random'
-import { isStructural, LIQUID_TYPES, SINKS_THROUGH } from './_Matter-meta'
+import { isSolid, isStructural, LIQUID_TYPES, SINKS_THROUGH } from './_Matter-meta'
 import {
   EMPTY,
   FIRE,
@@ -535,9 +535,9 @@ export class MatterSim {
         const dL = tx > 0 ? tx - 1 : tx
         const dR = tx < width - 1 ? tx + 1 : tx
         if (
-          isSettled(tiles[row + tx]) &&
-          isSettled(tiles[row + dL]) &&
-          isSettled(tiles[row + dR])
+          isSolid(tiles[row + tx]) &&
+          isSolid(tiles[row + dL]) &&
+          isSolid(tiles[row + dR])
         ) {
           this.tiles[idx] = setSettled(this.tiles[idx], true)
           this.markDirty(tx, ty)
