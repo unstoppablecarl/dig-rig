@@ -1,4 +1,4 @@
-import { DRAW_TERRAIN_SETTLED_DEBUG, GLOW_ENABLED } from '../../config'
+import { DRAW_ANCHORED_DEBUG, DRAW_TERRAIN_SETTLED_DEBUG, GLOW_ENABLED } from '../../config'
 import { PERMANENT_COLOR_RGB } from '../../config/colors.ts'
 import { rgbToVec3 } from '../../helpers/color-converters'
 import Color = Phaser.Display.Color
@@ -78,4 +78,8 @@ export const TILEMAP_RENDERER_DEFAULTS = {
   drawDebugSettledColor: rgbToVec3(`rgb(255, 0, 150)`),
   drawDebugSettledAlpha: 0.5,
   drawDebugSettled: DRAW_TERRAIN_SETTLED_DEBUG,
+
+  drawDebugAnchoredColor: rgbToVec3(`rgb(0, 200, 0)`),
+  drawDebugAnchoredAlpha: 0.5,
+  drawDebugAnchored: DRAW_ANCHORED_DEBUG,
 }

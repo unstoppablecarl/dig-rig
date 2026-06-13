@@ -13,7 +13,12 @@ import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
-function buildFragShader(glowRadius: number, glowEnabled: boolean, debugSettled: boolean): string {
+function buildFragShader(
+  glowRadius: number,
+  glowEnabled: boolean,
+  debugSettled: boolean,
+  debugAnchored: boolean,
+): string {
   const GR = glowRadius
   const GR_LOOP = glowRadius * 2 + 1
   const GR1 = glowRadius + 1  // intensity numerator at d=1
@@ -28,6 +33,7 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean, debugSettled:
 
       #define GLOW_ENABLED ${glowEnabled ? 1 : 0}
       #define DEBUG_SETTLED ${debugSettled ? 1 : 0}
+      #define DEBUG_ANCHORED ${debugAnchored ? 1 : 0}
 
       uniform sampler2D uTerrain;
       uniform sampler2D uMask;
@@ -83,6 +89,8 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean, debugSettled:
       uniform vec3 uGunpowderColor;
       uniform vec3 uDrawDebugSettledColor;
       uniform float uDrawDebugSettledAlpha;
+      uniform vec3 uDrawDebugAnchoredColor;
+      uniform float uDrawDebugAnchoredAlpha;
 
       uniform float uTime;
 
@@ -130,10 +138,11 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean, debugSettled:
           // Tile-space UV: each unit = one tile. Use this for noise so frequency
           // is expressed in tiles rather than normalised [0,1] UV space.
           vec2 tileUV = outTexCoord / uInvTilemapSize;
-          // uMask R = MatterType (0–255), G = SETTLED (0 or 255).
-          vec2 mask    = texture2D(uMask, outTexCoord).rg;
+          // uMask R = MatterType (0–255), G = SETTLED (0 or 255), B = ANCHORED (0 or 255).
+          vec3 mask    = texture2D(uMask, outTexCoord).rgb;
           int tileType = int(mask.r * 255.0 + 0.5);
-          bool settled = mask.g > 0.5;
+          bool settled  = mask.g > 0.5;
+          bool anchored = mask.b > 0.5;
 
           // Glow: find the minimum Manhattan distance from this tile to the
           // nearest EMPTY or WATER neighbour within glowRadius.
@@ -165,6 +174,9 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean, debugSettled:
           #endif
 
           vec4 color;
+          // solidGlow: true for powder/structural types that should receive the
+          // standard outline + inner-glow treatment after per-type coloring.
+          bool solidGlow = false;
 
           if (tileType == ${MatterType.PERMANENT}) {
               color = texture2D(uTerrain, outTexCoord);
@@ -186,19 +198,18 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean, debugSettled:
               if (settled) {
                   color = texture2D(uTerrain, outTexCoord);
                   color.rgb = mix(color.rgb, uSandSettledColor, uSandSettledColorAlpha);
-                  if (outline > 0.5) {
-                      color.rgb = mix(color.rgb, uSandSettledOutlineColor, 0.5);
-                  } else if (glow > 0.01) {
-                      color.rgb = mix(color.rgb, uGlowColor, glow * uInnerGlowStrength * 0.4);
-                  }
               } else {
                   color = vec4(uSandColor, 1.0);
+              }
+              if (outline > 0.5) {
+                  color.rgb = mix(color.rgb, uSandSettledOutlineColor, 0.5);
+              } else if (glow > 0.01) {
+                  color.rgb = mix(color.rgb, uGlowColor, glow * uInnerGlowStrength * 0.4);
               }
           }
           else if (tileType == ${MatterType.WATER}) {
               color = vec4(uWaterColor * uWaterAlpha, uWaterAlpha);
           }
-          // ── New element types ────────────────────────────────────────────────
           else if (tileType == ${MatterType.FIRE}) {
               color = vec4(uFireColor, 1.0);
           }
@@ -211,6 +222,7 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean, debugSettled:
           }
           else if (tileType == ${MatterType.ROCK}) {
               color = vec4(uRockColor, 1.0);
+              solidGlow = true;
           }
           else if (tileType == ${MatterType.STEAM}) {
               color = vec4(uSteamColor, uSteamAlpha);
@@ -220,21 +232,26 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean, debugSettled:
           }
           else if (tileType == ${MatterType.SALT}) {
               color = vec4(uSaltColor, 1.0);
+              solidGlow = true;
           }
           else if (tileType == ${MatterType.SALT_WATER}) {
               color = vec4(uSaltWaterColor, uSaltWaterAlpha);
           }
           else if (tileType == ${MatterType.CONCRETE}) {
               color = vec4(uConcreteColor, 1.0);
+              solidGlow = true;
           }
           else if (tileType == ${MatterType.PLANT}) {
               color = vec4(uPlantColor, 1.0);
+              solidGlow = true;
           }
           else if (tileType == ${MatterType.FUSE}) {
               color = vec4(uFuseColor, 1.0);
+              solidGlow = true;
           }
           else if (tileType == ${MatterType.WAX}) {
               color = vec4(uWaxColor, 1.0);
+              solidGlow = true;
           }
           else if (tileType == ${MatterType.FALLING_WAX}) {
               color = vec4(uFallingWaxColor, uFallingWaxAlpha);
@@ -247,12 +264,15 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean, debugSettled:
           }
           else if (tileType == ${MatterType.C4}) {
               color = vec4(uC4Color, 1.0);
+              solidGlow = true;
           }
           else if (tileType == ${MatterType.ICE}) {
               color = vec4(uIceColor, uIceAlpha);
+              solidGlow = true;
           }
           else if (tileType == ${MatterType.CHILLED_ICE}) {
               color = vec4(uChilledIceColor, uChilledIceAlpha);
+              solidGlow = true;
           }
           else if (tileType == ${MatterType.CRYO}) {
               color = vec4(uCryoColor, uCryoAlpha);
@@ -263,6 +283,7 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean, debugSettled:
           }
           else if (tileType == ${MatterType.THERMITE}) {
               color = vec4(uThermiteColor, 1.0);
+              solidGlow = true;
           }
           else if (tileType == ${MatterType.BURNING_THERMITE}) {
               float br = noise(tileUV * 0.25 + vec2(t * 5.0, t * 3.1)) * 0.2;
@@ -270,13 +291,23 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean, debugSettled:
           }
           else if (tileType == ${MatterType.GUNPOWDER}) {
               color = vec4(uGunpowderColor, 1.0);
+              solidGlow = true;
           }
-          // EMPTY (0) — fully transparent; unknown type — debug magenta
           else if (tileType == ${MatterType.EMPTY}) {
               color = vec4(0.0, 0.0, 0.0, 0.0);
           }
+          //unknown type — debug magenta
           else {
               color = vec4(1.0, 0.0, 1.0, 1.0);
+          }
+
+          if (solidGlow) {
+              if (outline > 0.5) {
+                  color.rgb = blendOverlay(color.rgb, uOutlineColor, uOutlineOpacity);
+                  color.rgb = mix(color.rgb, uOutlineColor, 0.45);
+              } else if (glow > 0.01) {
+                  color.rgb = mix(color.rgb * uGlowColor, color.rgb, 1.0 - glow * uInnerGlowStrength);
+              }
           }
 
           // uEffect carries timed fire-mode colors. RGB = fire mode color, A = intensity (1→0).
@@ -297,6 +328,12 @@ function buildFragShader(glowRadius: number, glowEnabled: boolean, debugSettled:
           bool isStatic = tileType == ${MatterType.SOLID} || tileType == ${MatterType.PERMANENT};
           if ((settled || isStatic) && tileType != ${MatterType.EMPTY}) {
               color.rgb = mix(color.rgb, uDrawDebugSettledColor, uDrawDebugSettledAlpha);
+          }
+          #endif
+
+          #if DEBUG_ANCHORED
+          if (anchored && tileType != ${MatterType.EMPTY}) {
+              color.rgb = mix(color.rgb, uDrawDebugAnchoredColor, uDrawDebugAnchoredAlpha);
           }
           #endif
 
@@ -336,7 +373,7 @@ export class TilemapRenderer extends SceneBound {
     const shader: Shader = scene.add.shader(
       {
         name: 'TerrainShader',
-        fragmentSource: buildFragShader(cfg.glowRadius, cfg.glowEnabled, cfg.drawDebugSettled),
+        fragmentSource: buildFragShader(cfg.glowRadius, cfg.glowEnabled, cfg.drawDebugSettled, cfg.drawDebugAnchored),
         setupUniforms: (setUniform: (name: string, value: any) => void) => {
           setUniform('uTerrain', 0)
           setUniform('uMask', 1)
@@ -389,6 +426,8 @@ export class TilemapRenderer extends SceneBound {
           setUniform('uGunpowderColor', cfg.gunpowderColor)
           setUniform('uDrawDebugSettledColor', cfg.drawDebugSettledColor)
           setUniform('uDrawDebugSettledAlpha', cfg.drawDebugSettledAlpha)
+          setUniform('uDrawDebugAnchoredColor', cfg.drawDebugAnchoredColor)
+          setUniform('uDrawDebugAnchoredAlpha', cfg.drawDebugAnchoredAlpha)
           setUniform('uTime', scene.time.now)
           setUniform('uInvTilemapSize', [1.0 / width, 1.0 / height])
         },
