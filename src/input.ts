@@ -7,7 +7,7 @@ import {
   POINTER_RIGHT,
 } from './game/lib/Input/PlayerActions.ts'
 
-const { LEFT, RIGHT, UP, DOWN, SPACE } = Input.Keyboard.KeyCodes
+const { LEFT, RIGHT, UP, DOWN, SPACE, OPEN_BRACKET, CLOSED_BRACKET } = Input.Keyboard.KeyCodes
 
 export const INPUT_ACTIONS: Record<PlayerAction, Binding> = {
   [PlayerAction.MOVE_LEFT]: [LEFT, 'a'],
@@ -19,8 +19,8 @@ export const INPUT_ACTIONS: Record<PlayerAction, Binding> = {
 
   [PlayerAction.FIRE_PRIMARY]: [POINTER_LEFT],
   [PlayerAction.FIRE_SECONDARY]: [POINTER_RIGHT],
-  [PlayerAction.CHARGE_DECREASE]: ['['],
-  [PlayerAction.CHARGE_INCREASE]: [']'],
+  [PlayerAction.CHARGE_DECREASE]: [OPEN_BRACKET],
+  [PlayerAction.CHARGE_INCREASE]: [CLOSED_BRACKET],
   [PlayerAction.PREV_MODE]: ['r'],
   [PlayerAction.NEXT_MODE]: ['f'],
   [PlayerAction.PREV_MATTER_TYPE]: ['q'],

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { PLAYER_ACTION_DISPLAY_NAME, PlayerAction } from '../game/lib/Input/PlayerActions.ts'
+import { PLAYER_ACTION_DISPLAY_NAME, PlayerAction, type Binding, bindingLabels } from '../game/lib/Input/PlayerActions.ts'
 import { INPUT_ACTIONS } from '../input.ts'
 import { useUIState } from '../store/uiState.ts'
 
 const uiState = useUIState()
 
 type PlayerActionDesc = {
-  keys: (string | number)[],
+  keys: Binding,
   mouseWheelModifier?: boolean,
   label: string,
 }
@@ -49,19 +49,6 @@ const PLAYER_ACTION_GROUPS: Record<string, PlayerActionDesc[]> = {
   ],
 }
 
-const KEYCODE_NAMES: Record<number, string> = {
-  32: 'Space',
-  37: '←',
-  38: '↑',
-  39: '→',
-  40: '↓',
-}
-const aliases: Record<string, string> = { SHIFT: 'Shift' }
-
-function formatKey(key: string | number): string {
-  if (typeof key === 'number') return KEYCODE_NAMES[key] ?? `${key}`
-  return aliases[key] ?? (key.length === 1 ? key.toUpperCase() : key)
-}
 </script>
 
 <template>
@@ -77,9 +64,9 @@ function formatKey(key: string | number): string {
           <div class="binding-row" v-for="{ label, keys, mouseWheelModifier } in items" :key="label">
             <span class="binding-label">{{ label }}</span>
             <span class="binding-keys">
-              <template v-for="(key, i) in keys" :key="i">
+              <template v-for="(key, i) in bindingLabels(keys)" :key="i">
                 <span v-if="i > 0" class="key-sep">/</span>
-                <kbd>{{ formatKey(key) }}</kbd>
+                <kbd>{{ key }}</kbd>
               </template>
               <template v-if="mouseWheelModifier">
                 <span v-if="mouseWheelModifier" class="modifier"> + </span>

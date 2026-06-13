@@ -1,26 +1,30 @@
 <script setup lang="ts">
+import { bindingLabels } from '../../../../game/lib/Input/PlayerActions.ts'
 import { INPUT_ACTIONS } from '../../../../input.ts'
 import { useWeaponUIState } from '../../../../store/weaponUIState.ts'
+import KbdArray from './KbdArray.vue'
 
 const state = useWeaponUIState()
-const primary = INPUT_ACTIONS.FIRE_PRIMARY.join(',')
-const secondary = INPUT_ACTIONS.FIRE_SECONDARY.join(',')
+const primary = bindingLabels(INPUT_ACTIONS.FIRE_PRIMARY)
+const secondary = bindingLabels(INPUT_ACTIONS.FIRE_SECONDARY)
 
-const prev = INPUT_ACTIONS.PREV_MODE.join(',')
-const next = INPUT_ACTIONS.NEXT_MODE.join(',')
+const prev = bindingLabels(INPUT_ACTIONS.PREV_MODE)
+const next = bindingLabels(INPUT_ACTIONS.NEXT_MODE)
 </script>
 <template>
   <span class="imu-section">
-    <kbd>{{ prev }}</kbd> /
-    <kbd>{{ next }}</kbd> = Change Fire Group
+    <KbdArray :values="prev" /> /
+    <KbdArray :values="next" /> = Change Fire Group
   </span>
 
   <span class="imu-section">
     <span>
-      <kbd>{{ primary }}</kbd> = {{ state.fireGroupPrimaryName }}
+      <KbdArray :values="primary" />
+      = {{ state.fireGroupPrimaryName }}
     </span>
     <span>
-      <kbd>{{ secondary }}</kbd> = {{ state.fireGroupSecondaryName }}
+      <KbdArray :values="secondary" />
+      = {{ state.fireGroupSecondaryName }}
     </span>
   </span>
 </template>

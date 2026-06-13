@@ -49,6 +49,34 @@ export const POINTER_RIGHT = 'RMB' as const
 export type PointerBinding = typeof POINTER_LEFT | typeof POINTER_RIGHT
 
 export type Binding = (string | number | PointerBinding)[]
+
+const KEYCODE_LABELS: Partial<Record<number, string>> = {
+  [Input.Keyboard.KeyCodes.LEFT]: '←',
+  [Input.Keyboard.KeyCodes.RIGHT]: '→',
+  [Input.Keyboard.KeyCodes.UP]: '↑',
+  [Input.Keyboard.KeyCodes.DOWN]: '↓',
+  [Input.Keyboard.KeyCodes.SPACE]: 'Space',
+  [Input.Keyboard.KeyCodes.OPEN_BRACKET]: '[',
+  [Input.Keyboard.KeyCodes.CLOSED_BRACKET]: ']',
+}
+
+const STRING_KEY_LABELS: Record<string, string> = {
+  SHIFT: 'Shift',
+  CTRL: 'Ctrl',
+  CONTROL: 'Ctrl',
+  ALT: 'Alt',
+  META: 'Meta',
+}
+
+function keyLabel(item: string | number): string {
+  if (typeof item === 'number') return KEYCODE_LABELS[item] ?? `KeyCode(${item})`
+  return STRING_KEY_LABELS[item.toUpperCase()] ?? item.toUpperCase()
+}
+
+export function bindingLabels(binding: Binding): string[] {
+  return binding.map(keyLabel)
+}
+
 export type KeyEvent = (e: KeyboardEvent | Input.Pointer) => void
 export type KeyEventGuard = (e: KeyboardEvent | Input.Pointer) => boolean
 
