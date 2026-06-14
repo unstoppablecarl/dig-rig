@@ -1,11 +1,11 @@
-import { FIRE_COLOR } from '../../../config/colors.ts'
+import { PARTICLE_FIRE_COLOR } from '../../../config/colors.ts'
 import { FIRE, setOwner } from '../../Matter/_Matter.types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
 export const NAPALM_EXPLOSION: ParticleDef = {
   particlesToSpawn: 6,
   init(p) {
-    p.color = FIRE_COLOR
+    p.color = PARTICLE_FIRE_COLOR
     p.size = Math.random() * 8 + 6
     p.xVelocity = Math.random() * 8 - 4
     p.yVelocity = -(Math.random() * 4 + 4)

@@ -1,11 +1,11 @@
-import { FIRE_COLOR } from '../../../config/colors.ts'
+import { PARTICLE_FIRE_COLOR } from '../../../config/colors.ts'
 import { FIRE, setOwner } from '../../Matter/_Matter.types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
 export const C4_EXPLOSION: ParticleDef = {
   particlesToSpawn: 8,
   init(p) {
-    p.color = FIRE_COLOR
+    p.color = PARTICLE_FIRE_COLOR
     const r = Math.random() * 10000
     if (r < 9000) p.size = Math.random() * 10 + 3
     else if (r < 9500) p.size = Math.random() * 32 + 3

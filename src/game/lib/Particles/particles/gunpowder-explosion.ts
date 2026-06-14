@@ -1,4 +1,4 @@
-import { FIRE_COLOR } from '../../../config/colors.ts'
+import { PARTICLE_FIRE_COLOR } from '../../../config/colors.ts'
 import { TWO_PI } from '../../../helpers/_helpers.ts'
 import { FIRE, setOwner } from '../../Matter/_Matter.types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
@@ -6,7 +6,7 @@ import { type ParticleDef } from '../_particle-types.ts'
 export const GUNPOWDER_EXPLOSION: ParticleDef = {
   particlesToSpawn: 12,
   init(p) {
-    p.color = FIRE_COLOR
+    p.color = PARTICLE_FIRE_COLOR
     const velocity = 5 + Math.random() * 10
     const angle = Math.random() * TWO_PI
     p.setVelocity(velocity, angle)

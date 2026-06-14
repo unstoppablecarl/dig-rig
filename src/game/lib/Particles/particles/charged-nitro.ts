@@ -1,4 +1,4 @@
-import { FIRE_COLOR } from '../../../config/colors.ts'
+import { PARTICLE_FIRE_COLOR } from '../../../config/colors.ts'
 import { FIRE, PERMANENT, setOwner, SOLID } from '../../Matter/_Matter.types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
@@ -6,7 +6,7 @@ export const CHARGED_NITRO: ParticleDef = {
   particlesToSpawn: 1,
   init(p, world) {
     const { x, y } = p
-    p.color = FIRE_COLOR
+    p.color = PARTICLE_FIRE_COLOR
     p.size = 4
     p.xVelocity = 0
     p.yVelocity = -100

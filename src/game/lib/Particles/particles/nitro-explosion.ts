@@ -1,4 +1,4 @@
-import { FIRE_COLOR } from '../../../config/colors.ts'
+import { PARTICLE_FIRE_COLOR } from '../../../config/colors.ts'
 import { TWO_PI } from '../../../helpers/_helpers.ts'
 import { FIRE, setOwner } from '../../Matter/_Matter.types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
@@ -6,7 +6,7 @@ import { type ParticleDef } from '../_particle-types.ts'
 export const NITRO_EXPLOSION: ParticleDef = {
   particlesToSpawn: 20,
   init(p) {
-    p.color = FIRE_COLOR
+    p.color = PARTICLE_FIRE_COLOR
     const velocity = 8 + Math.random() * 14
     p.setVelocity(velocity, Math.random() * TWO_PI)
     p.size = 3 + Math.random() * 9

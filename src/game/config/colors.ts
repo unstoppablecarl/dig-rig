@@ -27,7 +27,7 @@ export const FIRE_GROUP_COLORS: Record<FireGroup, number> = {
 }
 
 // 0xRRGGBB color constants matching the GLSL matterType colors
-export const FIRE_COLOR = 0xff0000
+export const PARTICLE_FIRE_COLOR = 0xff0000
 export const LAVA_COLOR = 0xF55A0F
 export const ROCK_COLOR = 0x442808
 
