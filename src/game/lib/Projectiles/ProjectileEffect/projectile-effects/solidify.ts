@@ -1,4 +1,5 @@
-import { MatterType, MatterTypeSet, SAND, SOLID, WATER } from '../../../Matter/_Matter.types'
+import { MatterType, SAND, SOLID, WATER } from '../../../Matter/_Matter.types'
+import { MatterTypeSet } from '../../../Matter/data/MatterTypeSet'
 import { FireMode } from '../../../Player/_FireMode-types'
 import type { Tilemap } from '../../../Tilemap/Tilemap'
 import { addTileHighlights, chunkAndIslandCheck, noVFX } from '../_ProjectileEffect-helpers.ts'

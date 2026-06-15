@@ -1,9 +1,10 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { FIRE, getFirstOwnerId, type MatterDef } from '../_Matter.types.ts'
+import { FIRE, getFirstOwnerId, type MatterDef, NITRO } from '../_Matter.types.ts'
+import { registerMatterType } from '../matter.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
-export const NITRO_DEF: MatterDef = {
+export const NITRO_DEF = {
   name: 'Nitro',
   liquid: true,
   action(world, tx, ty, idx): void {
@@ -29,4 +30,12 @@ export const NITRO_DEF: MatterDef = {
 
     world.doPowderFall(tx, ty, idx)
   },
+} satisfies MatterDef
+
+registerMatterType(NITRO, NITRO_DEF)
+
+declare module '../matter.ts' {
+  export interface MatterMetaRegistry {
+    [NITRO]: typeof NITRO_DEF;
+  }
 }

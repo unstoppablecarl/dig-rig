@@ -8,7 +8,6 @@ import {
   GUNPOWDER,
   type MatterDef,
   matterType,
-  MatterTypeSet,
   NAPALM,
   NITRO,
   OIL,
@@ -18,12 +17,14 @@ import {
   WATER,
   WAX,
 } from '../_Matter.types.ts'
+import { MatterTypeSet } from '../data/MatterTypeSet'
+import { registerMatterType } from '../matter.ts'
 
 const KEEP_ALIVE = new MatterTypeSet(PLANT, FUSE, OIL, WAX)
 const WATER_OR_SALT_WATER = new MatterTypeSet(WATER, SALT_WATER)
 
 // fire does not represent solid matter so does not follow the preserving matter rule
-export const FIRE_DEF: MatterDef = {
+export const FIRE_DEF = {
   name: 'Fire',
   action(world, tx, ty, idx): void {
     const { tiles, width, height } = world
@@ -158,4 +159,12 @@ export const FIRE_DEF: MatterDef = {
 
     world.next.add(idx)
   },
+} satisfies MatterDef
+
+registerMatterType(FIRE, FIRE_DEF)
+
+declare module '../matter.ts' {
+  export interface MatterMetaRegistry {
+    [FIRE]: typeof FIRE_DEF;
+  }
 }

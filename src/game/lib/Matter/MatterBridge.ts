@@ -4,8 +4,8 @@ import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { ParticleBridge } from '../Particles/ParticleBridge.ts'
 import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
-import { isStructural, STRUCTURAL_COLLAPSE_TO } from './_Matter-meta'
 import { isStructuralFlag, matterType, MatterType, setStructuralFlag } from './_Matter.types.ts'
+import { isStructural, STRUCTURAL_COLLAPSE_TO } from './matter.ts'
 import MatterCoordinatorConstructor from './MatterCoordinator.worker.ts?worker'
 import {
   MatterCoordinatorInMsg,

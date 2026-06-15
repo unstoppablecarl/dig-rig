@@ -162,6 +162,23 @@ export function makeTilemapFragShader(
           }
           return color;
       }
+      
+      vec4 liquid(float t, vec3 colorA, vec3 colorB, float alpha){
+          const float speed = 1.0;
+          const float scale = 100.0;
+          vec2 p = outTexCoord * scale;
+          p.x += t * speed * 0.15;
+
+          float wt = t * speed;
+          float w1 = sin(p.x + wt * 0.5) * cos(p.y - wt * 0.4);
+          float w2 = sin((p.x + p.y) * 1.618 - wt * 0.8) * cos((p.x - p.y) * 2.236 + wt * 0.6);
+          float w3 = sin(p.x * 3.141 + wt * 1.2) * cos(p.y * 2.718 - wt * 1.1);
+
+          float totalWave = w1 + (w2 * 0.5) + (w3 * 0.25);
+          float blend = (totalWave / 1.75) * 0.5 + 0.5;
+
+          return vec4(mix(colorA, colorB, blend), alpha);
+      }
 
       void main() {
           // Normalise time to seconds in a small range to avoid mediump precision loss
@@ -286,17 +303,6 @@ export function makeTilemapFragShader(
                   color.rgb = mix(color.rgb, glowColor, glow * innerGlowStrength * 0.4);
               }
           }
-          else if (tileType == ${C4}) {
-              const vec3 c4Color = ${v3(m[C4].color)};
-              const vec3 c4SettledColor = ${v3(m[C4].settledColor)};
-              const vec3 c4SettledOutlineColor = ${v3(m[C4].settledOutlineColor)};
-              color = vec4(settled ? c4SettledColor : c4Color, 1.0);
-              if (outline > 0.5) {
-                  color.rgb = mix(color.rgb, c4SettledOutlineColor, 0.5);
-              } else if (glow > 0.01) {
-                  color.rgb = mix(color.rgb, glowColor, glow * innerGlowStrength * 0.4);
-              }
-          }
           else if (tileType == ${ICE}) {
               const vec3 iceColor = ${v3(m[ICE].color)};
               const vec3 iceSettledColor = ${v3(m[ICE].settledColor)};
@@ -322,16 +328,13 @@ export function makeTilemapFragShader(
                   color.rgb = mix(color.rgb, glowColor, glow * innerGlowStrength * 0.4);
               }
           }
-          else if (tileType == ${CRYO}) {
-              color = vec4(${v3(m[CRYO].color)}, ${fl(m[CRYO].alpha)});
-          }
-          else if (tileType == ${FUSE}) {
-              const vec3 fuseColor = ${v3(m[FUSE].color)};
-              const vec3 fuseSettledColor = ${v3(m[FUSE].settledColor)};
-              const vec3 fuseSettledOutlineColor = ${v3(m[FUSE].settledOutlineColor)};
-              color = vec4(settled ? fuseSettledColor : fuseColor, 1.0);
+          else if (tileType == ${CONCRETE}) {
+              const vec3 concreteColor = ${v3(m[CONCRETE].color)};
+              const vec3 concreteSettledColor = ${v3(m[CONCRETE].settledColor)};
+              const vec3 concreteSettledOutlineColor = ${v3(m[CONCRETE].settledOutlineColor)};
+              color = vec4(settled ? concreteSettledColor : concreteColor, 1.0);
               if (outline > 0.5) {
-                  color.rgb = mix(color.rgb, fuseSettledOutlineColor, 0.5);
+                  color.rgb = mix(color.rgb, concreteSettledOutlineColor, 0.5);
               } else if (glow > 0.01) {
                   color.rgb = mix(color.rgb, glowColor, glow * innerGlowStrength * 0.4);
               }
@@ -347,24 +350,13 @@ export function makeTilemapFragShader(
                   color.rgb = mix(color.rgb, glowColor, glow * innerGlowStrength * 0.4);
               }
           }
-          else if (tileType == ${CONCRETE}) {
-              const vec3 concreteColor = ${v3(m[CONCRETE].color)};
-              const vec3 concreteSettledColor = ${v3(m[CONCRETE].settledColor)};
-              const vec3 concreteSettledOutlineColor = ${v3(m[CONCRETE].settledOutlineColor)};
-              color = vec4(settled ? concreteSettledColor : concreteColor, 1.0);
+          else if (tileType == ${FUSE}) {
+              const vec3 fuseColor = ${v3(m[FUSE].color)};
+              const vec3 fuseSettledColor = ${v3(m[FUSE].settledColor)};
+              const vec3 fuseSettledOutlineColor = ${v3(m[FUSE].settledOutlineColor)};
+              color = vec4(settled ? fuseSettledColor : fuseColor, 1.0);
               if (outline > 0.5) {
-                  color.rgb = mix(color.rgb, concreteSettledOutlineColor, 0.5);
-              } else if (glow > 0.01) {
-                  color.rgb = mix(color.rgb, glowColor, glow * innerGlowStrength * 0.4);
-              }
-          }
-          else if (tileType == ${THERMITE}) {
-              const vec3 thermiteColor = ${v3(m[THERMITE].color)};
-              const vec3 thermiteSettledColor = ${v3(m[THERMITE].settledColor)};
-              const vec3 thermiteSettledOutlineColor = ${v3(m[THERMITE].settledOutlineColor)};
-              color = vec4(settled ? thermiteSettledColor : thermiteColor, 1.0);
-              if (outline > 0.5) {
-                  color.rgb = mix(color.rgb, thermiteSettledOutlineColor, 0.5);
+                  color.rgb = mix(color.rgb, fuseSettledOutlineColor, 0.5);
               } else if (glow > 0.01) {
                   color.rgb = mix(color.rgb, glowColor, glow * innerGlowStrength * 0.4);
               }
@@ -386,47 +378,60 @@ export function makeTilemapFragShader(
 
               color = vec4(nitroColor, nitroAlpha);
           }
+          else if (tileType == ${C4}) {
+              const vec3 c4Color = ${v3(m[C4].color)};
+              const vec3 c4SettledColor = ${v3(m[C4].settledColor)};
+              const vec3 c4SettledOutlineColor = ${v3(m[C4].settledOutlineColor)};
+              color = vec4(settled ? c4SettledColor : c4Color, 1.0);
+              if (outline > 0.5) {
+                  color.rgb = mix(color.rgb, c4SettledOutlineColor, 0.5);
+              } else if (glow > 0.01) {
+                  color.rgb = mix(color.rgb, glowColor, glow * innerGlowStrength * 0.4);
+              }
+          }
+          else if (tileType == ${THERMITE}) {
+              const vec3 thermiteColor = ${v3(m[THERMITE].color)};
+              const vec3 thermiteSettledColor = ${v3(m[THERMITE].settledColor)};
+              const vec3 thermiteSettledOutlineColor = ${v3(m[THERMITE].settledOutlineColor)};
+              color = vec4(settled ? thermiteSettledColor : thermiteColor, 1.0);
+              if (outline > 0.5) {
+                  color.rgb = mix(color.rgb, thermiteSettledOutlineColor, 0.5);
+              } else if (glow > 0.01) {
+                  color.rgb = mix(color.rgb, glowColor, glow * innerGlowStrength * 0.4);
+              }
+          }
           // liquids
           else if (tileType == ${WATER}) {
               const vec3 colorA = ${v3(m[WATER].colorA)};
               const vec3 colorB = ${v3(m[WATER].colorB)};
               const float alpha = ${fl(m[WATER].alpha)};
 
-              const float speed = 1.0;
-              const float scale = 100.0;
-              vec2 p = outTexCoord * scale;
-              p.x += t * speed * 0.15;
-
-              float wt = t * speed;
-              float w1 = sin(p.x + wt * 0.5) * cos(p.y - wt * 0.4);
-              float w2 = sin((p.x + p.y) * 1.618 - wt * 0.8) * cos((p.x - p.y) * 2.236 + wt * 0.6);
-              float w3 = sin(p.x * 3.141 + wt * 1.2) * cos(p.y * 2.718 - wt * 1.1);
-
-              float totalWave = w1 + (w2 * 0.5) + (w3 * 0.25);
-              float blend = (totalWave / 1.75) * 0.5 + 0.5;
-
-              color = vec4(mix(colorA, colorB, blend), alpha);
-
-//              float pulse = sin(w2 * 0.4) * 0.5 + 0.5;
-//              color = mix(color, color * 0.3, pulse);
+              color = liquid(t, colorA, colorB, alpha);
+          }
+          else if (tileType == ${SALT_WATER}) {
+              color = vec4(${v3(m[SALT_WATER].color)}, ${fl(m[SALT_WATER].alpha)});
           }
           else if (tileType == ${OIL}) {
-              color = vec4(${v3(m[OIL].color)}, ${fl(m[OIL].alpha)});
+              const vec3 oilColor = ${v3(m[OIL].color)};
+              const float oilAlpha = ${fl(m[OIL].alpha)};
+              
+              color = vec4(oilColor, oilAlpha);
           }
           else if (tileType == ${LAVA}) {
               float glow2 = noise(tileUV * 0.12 + vec2(t * 1.8, t * 1.1)) * 0.25;
               color = vec4(${v3(m[LAVA].color)} + vec3(glow2, glow2, 0.0), 1.0);
           }
           else if (tileType == ${NAPALM}) {
-              color = vec4(${v3(m[NAPALM].color)}, ${fl(m[NAPALM].alpha)});
+              const vec3 napalmColor = ${v3(m[NAPALM].color)};
+              const float napalmAlpha = ${fl(m[NAPALM].alpha)};
+
+              color = vec4(napalmColor, napalmAlpha);
           }
           else if (tileType == ${ACID}) {
               float pulse = noise(tileUV * 0.2 + vec2(t * 2.5, t * 1.4)) * 0.35;
               color = vec4((${v3(m[ACID].color)} * ${fl(m[ACID].alpha)}) + vec3(pulse, 0.0, 0.0), ${fl(m[ACID].alpha)});
           }
-          else if (tileType == ${SALT_WATER}) {
-              color = vec4(${v3(m[SALT_WATER].color)}, ${fl(m[SALT_WATER].alpha)});
-          }
+          
           // gases
           else if (tileType == ${STEAM}) {
               color = vec4(${v3(m[STEAM].color)}, ${fl(m[STEAM].alpha)});
@@ -437,6 +442,9 @@ export function makeTilemapFragShader(
           // other
           else if (tileType == ${FIRE}) {
               color = vec4(${v3(m[FIRE].color)}, 1.0);
+          }
+          else if (tileType == ${CRYO}) {
+              color = vec4(${v3(m[CRYO].color)}, ${fl(m[CRYO].alpha)});
           }
           else if (tileType == ${PLANT}) {
               const vec3 plantColor = ${v3(m[PLANT].color)};

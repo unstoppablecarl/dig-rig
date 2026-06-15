@@ -9,6 +9,7 @@ import { Boot } from './scenes/Boot.ts'
 import type { GameLevel } from './scenes/GameLevel.ts'
 import { LevelSelect } from './scenes/LevelSelect.ts'
 import GameConfig = Phaser.Types.Core.GameConfig
+import './lib/Matter/_Matter.glob.ts';
 
 const config: GameConfig = {
   type: WEBGL,

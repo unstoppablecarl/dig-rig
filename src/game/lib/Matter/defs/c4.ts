@@ -1,9 +1,10 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { FIRE, getFirstOwnerId, type MatterDef } from '../_Matter.types.ts'
+import { FIRE, getFirstOwnerId, type MatterDef, C4 } from '../_Matter.types.ts'
+import { registerMatterType } from '../matter.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
-export const C4_DEF: MatterDef = {
+export const C4_DEF= {
   name: 'C4',
   passive: true,
   action(world, tx, ty, idx): void {
@@ -26,4 +27,12 @@ export const C4_DEF: MatterDef = {
       }
     }
   },
+} satisfies MatterDef
+
+registerMatterType(C4, C4_DEF)
+
+declare module '../matter.ts' {
+  export interface MatterMetaRegistry {
+    [C4]: typeof C4_DEF;
+  }
 }

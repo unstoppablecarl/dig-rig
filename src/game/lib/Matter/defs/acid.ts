@@ -1,20 +1,21 @@
 import { random } from '../../../helpers/random'
-import { ACID_IMMUNE } from '../_Matter-meta'
 import {
   ACID,
-  EMPTY, getOwner,
+  EMPTY,
+  getOwner,
   type MatterDef,
   matterType,
-  MatterTypeSet,
   SALT_WATER,
   setSettled,
   SOLID,
   WATER,
 } from '../_Matter.types.ts'
+import { MatterTypeSet } from '../data/MatterTypeSet'
+import { ACID_IMMUNE, registerMatterType } from '../matter.ts'
 
 const IS_SETTLED = new MatterTypeSet(ACID, EMPTY)
 
-export const ACID_DEF: MatterDef = {
+export const ACID_DEF = {
   name: 'Acid',
   liquid: true,
   acidImmune: true,
@@ -79,4 +80,12 @@ export const ACID_DEF: MatterDef = {
       }
     }
   },
+} satisfies MatterDef
+
+registerMatterType(ACID, ACID_DEF)
+
+declare module '../matter.ts' {
+  export interface MatterMetaRegistry {
+    [ACID]: typeof ACID_DEF;
+  }
 }

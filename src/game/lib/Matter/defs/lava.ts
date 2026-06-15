@@ -1,6 +1,5 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { LAVA_IMMUNE } from '../_Matter-meta.ts'
 import {
   EMPTY,
   FIRE,
@@ -8,7 +7,6 @@ import {
   LAVA,
   type MatterDef,
   matterType,
-  MatterTypeSet,
   OIL,
   ROCK,
   SALT_WATER,
@@ -18,12 +16,14 @@ import {
   STEAM,
   WATER,
 } from '../_Matter.types.ts'
+import { MatterTypeSet } from '../data/MatterTypeSet'
+import { LAVA_IMMUNE, registerMatterType } from '../matter.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)
 
 const COOLED = new MatterTypeSet(WATER, SALT_WATER)
-export const LAVA_DEF: MatterDef = {
+export const LAVA_DEF = {
   name: 'Lava',
   lavaImmune: true,
   liquid: true,
@@ -150,4 +150,12 @@ export const LAVA_DEF: MatterDef = {
       }
     }
   },
+} satisfies MatterDef
+
+registerMatterType(LAVA, LAVA_DEF)
+
+declare module '../matter.ts' {
+  export interface MatterMetaRegistry {
+    [LAVA]: typeof LAVA_DEF;
+  }
 }

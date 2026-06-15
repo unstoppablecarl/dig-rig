@@ -1,6 +1,7 @@
-import { FIRE, getFirstOwnerId, type MatterDef, setOwner, WAX } from '../_Matter.types.ts'
+import { FALLING_WAX, FIRE, getFirstOwnerId, type MatterDef, setOwner, WAX } from '../_Matter.types.ts'
+import { registerMatterType } from '../matter.ts'
 
-export const FALLING_WAX_DEF: MatterDef = {
+export const FALLING_WAX_DEF = {
   name: 'Falling Wax',
   action(world, tx, ty, idx): void {
     const moved = world.tryMove(idx, tx, ty, tx, ty + 1)
@@ -20,4 +21,12 @@ export const FALLING_WAX_DEF: MatterDef = {
       world.markDirty(tx, ty)
     }
   },
+} satisfies MatterDef
+
+registerMatterType(FALLING_WAX, FALLING_WAX_DEF)
+
+declare module '../matter.ts' {
+  export interface MatterMetaRegistry {
+    [FALLING_WAX]: typeof FALLING_WAX_DEF;
+  }
 }

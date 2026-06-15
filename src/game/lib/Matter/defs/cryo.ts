@@ -13,8 +13,9 @@ import {
   setSettled,
   WATER,
 } from '../_Matter.types.ts'
+import { registerMatterType } from '../matter.ts'
 
-export const CRYO_DEF: MatterDef = {
+export const CRYO_DEF = {
   name: 'Cryo',
   acidImmune: true,
   action(world, tx, ty, idx): void {
@@ -82,4 +83,14 @@ export const CRYO_DEF: MatterDef = {
       world.markDirty(tx, ty)
     }
   },
+} satisfies MatterDef
+
+registerMatterType(CRYO, CRYO_DEF)
+
+declare module '../matter.ts' {
+  export interface MatterMetaRegistry {
+    [CRYO]: typeof CRYO_DEF;
+  }
 }
+
+

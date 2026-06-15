@@ -1,85 +1,106 @@
 import {
-  ACID_IMMUNE,
-  COLLIDES_WHEN_SETTLED,
-  LAVA_IMMUNE,
-  LIQUID_TYPES,
-  PASSIVE_MATER_TYPES,
-  SINKS_THROUGH,
-  STRUCTURAL_COLLAPSE_TO,
-  ALWAYS_STRUCTURAL,
-} from './_Matter-meta'
-import {
-  ACID,
-  BURNING_THERMITE,
-  C4,
-  CHILLED_ICE,
-  CONCRETE,
-  CRYO,
-  type MatterDef,
   EMPTY,
-  FALLING_WAX,
-  FIRE,
-  FUSE,
-  GUNPOWDER,
-  ICE,
-  LAVA,
-  type MatterType,
-  MatterTypeSet,
-  METHANE,
-  NAPALM,
-  NITRO,
-  OIL,
+  isSettled,
+  isStructuralFlag,
+  MatterType,
+  matterType,
   PERMANENT,
-  PLANT,
-  ROCK,
-  SALT,
-  SALT_WATER,
-  SAND,
+  setStructuralFlag,
   SOLID,
-  STEAM,
-  THERMITE,
-  WATER,
-  WAX,
 } from './_Matter.types.ts'
-import { ACID_DEF } from './defs/acid.ts'
-import { BURNING_THERMITE_DEF } from './defs/burning-thermite.ts'
-import { C4_DEF } from './defs/c4.ts'
-import { CHILLED_ICE_DEF } from './defs/chilled-ice.ts'
-import { CONCRETE_DEF } from './defs/concrete.ts'
-import { CRYO_DEF } from './defs/cryo.ts'
-import { EMPTY_DEF } from './defs/empty.ts'
-import { FALLING_WAX_DEF } from './defs/falling-wax.ts'
-import { FIRE_DEF } from './defs/fire.ts'
-import { FUSE_DEF } from './defs/fuse.ts'
-import { GUNPOWDER_DEF } from './defs/gunpowder.ts'
-import { ICE_DEF } from './defs/ice.ts'
-import { LAVA_DEF } from './defs/lava.ts'
-import { METHANE_DEF } from './defs/methane.ts'
-import { NAPALM_DEF } from './defs/napalm.ts'
-import { NITRO_DEF } from './defs/nitro.ts'
-import { OIL_DEF } from './defs/oil.ts'
-import { PERMANENT_DEF } from './defs/permanent.ts'
-import { PLANT_DEF } from './defs/plant.ts'
-import { ROCK_DEF } from './defs/rock.ts'
-import { SALT_WATER_DEF } from './defs/salt-water.ts'
-import { SALT_DEF } from './defs/salt.ts'
-import { SAND_DEF } from './defs/sand.ts'
-import { SOLID_DEF } from './defs/solid.ts'
-import { STEAM_DEF } from './defs/steam.ts'
-import { THERMITE_DEF } from './defs/thermite.ts'
-import { WATER_DEF } from './defs/water.ts'
-import { WAX_DEF } from './defs/wax.ts'
+import { MatterTypeSet } from './data/MatterTypeSet'
 import type { MatterSim } from './MatterSim.ts'
 
 export type MatterAction = (world: MatterSim, x: number, y: number, idx: number) => void
 
-const noop = () => {
+export type MatterDef = {
+  name: string
+  action?: MatterAction
+  passive?: boolean
+  lavaImmune?: boolean
+  acidImmune?: boolean
+  liquid?: boolean
+  settles?: boolean,
+  collidesWhenSettled?: boolean
+  sinksThrough?: MatterType[]
+  // type always participates in island detection (e.g. SOLID, WAX).
+  alwaysStructural?: boolean
+  // what the tile converts to when it is in a structural state and its island collapses.
+  // stays the same type if not set
+  structuralCollapseType?: MatterType
+}
+
+export interface MatterMetaRegistry {
 }
 
 export const MATTER_ACTIONS: MatterAction[] = []
 export const MATTER_NAMES = new Map<MatterType, string>()
+export const SETTLING_TYPES = new MatterTypeSet()
+export type SettlingTypes = {
+  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { settles: true } ? K : never;
+}[keyof MatterMetaRegistry];
 
-function add(id: MatterType, {
+export const PASSIVE_MATER_TYPES = new MatterTypeSet()
+export type PassivMatterTypes = {
+  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { passive: true } ? K : never
+}[keyof MatterMetaRegistry]
+
+export const LAVA_IMMUNE = new MatterTypeSet()
+export type LavaImmune = {
+  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { lavaImmune: true } ? K : never
+}[keyof MatterMetaRegistry]
+
+export const ACID_IMMUNE = new MatterTypeSet()
+export type AcidImmune = {
+  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { acidImmune: true } ? K : never
+}[keyof MatterMetaRegistry]
+
+export const COLLIDES_WHEN_SETTLED = new MatterTypeSet()
+export type CollidesWhenSettled = {
+  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { collidesWhenSettled: true } ? K : never
+}[keyof MatterMetaRegistry]
+
+export const LIQUID_TYPES = new MatterTypeSet()
+export type LiquidTypes = {
+  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { liquid: true } ? K : never
+}[keyof MatterMetaRegistry]
+
+// Types that are always structural (structural: true in MatterDef).
+export const ALWAYS_STRUCTURAL = new MatterTypeSet()
+export type MatterAlwaysStructuralTypes = {
+  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { alwaysStructural: true } ? K : never
+}[keyof MatterMetaRegistry]
+
+// Maps structural types to the type they convert to on island collapse (undefined = keep same type).
+export const STRUCTURAL_COLLAPSE_TO: Partial<Record<MatterType, MatterType>> = {}
+// True if this raw tile value participates in structural island detection:
+// either its type is always-structural, or it has STRUCTURAL_FLAG set (per-tile opt-in).
+export function isStructural(raw: number): boolean {
+  return ALWAYS_STRUCTURAL.has(matterType(raw)) || isStructuralFlag(raw)
+}
+
+export const SINKS_THROUGH: Partial<Record<MatterType, MatterTypeSet>> = {}
+
+export function setStructural(target: number, value: boolean): number {
+  if (import.meta.env.DEV) {
+    const type = matterType(target)
+    if (type === EMPTY || ALWAYS_STRUCTURAL.has(type)) {
+      throw new Error(`Cannot set ${MatterType[type]} structural flag it is immutable.`)
+    }
+  }
+  return setStructuralFlag(target, value)
+}
+
+// always counts as settled
+export function isSolid(value: number) {
+  const type = matterType(value)
+  return type === SOLID || type === PERMANENT || isSettled(value)
+}
+
+const noop = () => {
+}
+
+export function registerMatterType(id: MatterType, {
   name,
   action = noop,
   passive = false,
@@ -100,37 +121,6 @@ function add(id: MatterType, {
   if (liquid) LIQUID_TYPES.add(id)
   if (collidesWhenSettled) COLLIDES_WHEN_SETTLED.add(id)
   if (sinksThrough) SINKS_THROUGH[id] = new MatterTypeSet(...sinksThrough)
-  if (alwaysStructural) {
-    ALWAYS_STRUCTURAL.add(id)
-  }
+  if (alwaysStructural) ALWAYS_STRUCTURAL.add(id)
   if (structuralCollapseType !== undefined) STRUCTURAL_COLLAPSE_TO[id] = structuralCollapseType
 }
-
-add(EMPTY, EMPTY_DEF)
-add(SOLID, SOLID_DEF)
-add(PERMANENT, PERMANENT_DEF)
-add(SAND, SAND_DEF)
-add(WATER, WATER_DEF)
-add(FIRE, FIRE_DEF)
-add(OIL, OIL_DEF)
-add(LAVA, LAVA_DEF)
-add(ROCK, ROCK_DEF)
-add(STEAM, STEAM_DEF)
-add(METHANE, METHANE_DEF)
-add(SALT, SALT_DEF)
-add(SALT_WATER, SALT_WATER_DEF)
-add(CONCRETE, CONCRETE_DEF)
-add(PLANT, PLANT_DEF)
-add(FUSE, FUSE_DEF)
-add(WAX, WAX_DEF)
-add(FALLING_WAX, FALLING_WAX_DEF)
-add(NITRO, NITRO_DEF)
-add(NAPALM, NAPALM_DEF)
-add(C4, C4_DEF)
-add(ICE, ICE_DEF)
-add(CHILLED_ICE, CHILLED_ICE_DEF)
-add(CRYO, CRYO_DEF)
-add(ACID, ACID_DEF)
-add(THERMITE, THERMITE_DEF)
-add(BURNING_THERMITE, BURNING_THERMITE_DEF)
-add(GUNPOWDER, GUNPOWDER_DEF)

@@ -66,7 +66,14 @@ export type PartialMatterRenderConfig = {
 }
 
 export const MATTER_RENDER_CONFIG_DEFAULTS = {
-  [SOLID]: matterConfig({
+  [PERMANENT]: solidMatterConfig({
+    color: rgbToColor(`rgb(0, 255, 255)`),
+    blendMode: BlendMode.OVERLAY,
+    blendModeStrength: 0.8,
+    outlineColor: rgbToColor(`rgb(255, 200, 200)`),
+    outlineOpacity: 0.75,
+  }),
+  [SOLID]: solidMatterConfig({
     // no color used
     color: rgbToColor(`rgb(0, 0, 0)`),
     outlineColor: rgbToColor(`rgb(255, 200, 200)`),
@@ -74,111 +81,107 @@ export const MATTER_RENDER_CONFIG_DEFAULTS = {
     outlineBlendModeStrength: 0.75,
     outlineBlendMode: BlendMode.OVERLAY,
   }),
-  [PERMANENT]: matterConfig({
-    color: rgbToColor(`rgb(0, 255, 255)`),
-    blendMode: BlendMode.OVERLAY,
-    blendModeStrength: 0.8,
-    outlineColor: rgbToColor(`rgb(255, 200, 200)`),
-    outlineOpacity: 0.75,
-  }),
-  [SAND]: matterConfig({
+  [SAND]: solidMatterConfig({
     color: rgbToColor(`rgb(195 168 117)`),
     settledColorHighlight: rgbToColor(`rgb(170 138 64)`),
     settledColor: rgbToColor(`rgb(119 90 29)`),
     settledOutlineColor: rgbToColor(`rgb(221 200 97)`),
     settledOutlineBlendMode: BlendMode.OVERLAY,
   }),
-  [ICE]: matterConfig({
-    color: rgbToColor(`rgb(161, 232, 255)`),
-    alpha: 0.85,
-    settledColor: rgbToColor(`rgb(125, 200, 235)`),
-    settledOutlineColor: rgbToColor(`rgb(195, 248, 255)`),
-  }),
-  [ROCK]: matterConfig({
+  [ROCK]: solidMatterConfig({
     color: rgbToColor(`rgb(103, 64, 27)`),
     settledColor: rgbToColor(`rgb(69, 41, 8)`),
     rockSettledColorHighlight: rgbToColor(`rgb(143 93 36)`),
     settledOutlineColor: rgbToColor(`rgb(138 123 73)`),
     settledTransitionColor: rgbToColor(`rgb(80, 60, 40)`),
   }),
-  [SALT]: matterConfig({
+  [SALT]: solidMatterConfig({
     color: rgbToColor(`rgb(252, 252, 252)`),
     settledColor: rgbToColor(`rgb(215, 215, 210)`),
     settledOutlineColor: rgbToColor(`rgb(255, 255, 255)`),
     settledTransitionColor: rgbToColor(`rgb(200, 190, 170)`),
   }),
-  [THERMITE]: matterConfig({
-    color: rgbToColor(`rgb(194, 140, 69)`),
-    settledColor: rgbToColor(`rgb(158, 108, 45)`),
-    settledOutlineColor: rgbToColor(`rgb(222, 170, 100)`),
-    settledTransitionColor: rgbToColor(`rgb(160, 70, 15)`),
+  [ICE]: solidMatterConfig({
+    color: rgbToColor(`rgb(161, 232, 255)`),
+    alpha: 0.85,
+    settledColor: rgbToColor(`rgb(125, 200, 235)`),
+    settledOutlineColor: rgbToColor(`rgb(195, 248, 255)`),
   }),
-  [GUNPOWDER]: matterConfig({
-    color: rgbToColor(`rgb(171, 171, 140)`),
-    settledColor: rgbToColor(`rgb(130, 130, 105)`),
-    settledOutlineColor: rgbToColor(`rgb(200, 200, 165)`),
-    settledTransitionColor: rgbToColor(`rgb(60, 55, 50)`),
-  }),
-  [NITRO]: matterConfig({
-    color: rgbToColor(`rgb(0, 150, 26)`),
-    alpha: 0.90,
-    settledTransitionColor: rgbToColor(`rgb(90, 160, 30)`),
-  }),
-  [WATER]: matterConfig({
-    // no color used
-    color: rgbToColor(`rgb(51, 140, 235)`),
-    alpha: 0.60,
-    colorA:  rgbToColor(`rgb(7 89 177)`),
-    colorB:  rgbToColor(`rgb(13, 166, 191)`),
-  }),
-  [OIL]: matterConfig({ color: rgbToColor(`rgb(92, 46, 10)`), alpha: 0.95 }),
-  [STEAM]: matterConfig({ color: rgbToColor(`rgb(194, 214, 235)`), alpha: 0.55 }),
-  [METHANE]: matterConfig({ color: rgbToColor(`rgb(140, 140, 140)`), alpha: 0.70 }),
-  [SALT_WATER]: matterConfig({ color: rgbToColor(`rgb(128, 176, 255)`), alpha: 0.70 }),
-  [FALLING_WAX]: matterConfig({ color: rgbToColor(`rgb(240, 224, 209)`), alpha: 0.85 }),
-  [NAPALM]: matterConfig({ color: rgbToColor(`rgb(219, 128, 69)`), alpha: 0.95 }),
-  [CHILLED_ICE]: matterConfig({
+  [CHILLED_ICE]: solidMatterConfig({
     color: rgbToColor(`rgb(20, 153, 219)`),
     alpha: 0.9,
     settledColor: rgbToColor(`rgb(13, 115, 175)`),
     settledOutlineColor: rgbToColor(`rgb(55, 185, 245)`),
   }),
-  [CRYO]: matterConfig({ color: rgbToColor(`rgb(0, 214, 255)`), alpha: 0.8 }),
-  [ACID]: matterConfig({ color: rgbToColor(`rgb(107, 240, 41)`), alpha: 0.8 }),
-  [FIRE]: matterConfig({ color: rgbToColor(`rgb(255, 0, 0)`) }),
-  [LAVA]: matterConfig({ color: rgbToColor(`rgb(245, 89, 15)`) }),
-  [CONCRETE]: matterConfig({
+  [CONCRETE]: solidMatterConfig({
     color: rgbToColor(`rgb(181, 181, 181)`),
     settledColor: rgbToColor(`rgb(145, 145, 145)`),
     settledOutlineColor: rgbToColor(`rgb(205, 205, 205)`),
   }),
-  [PLANT]: matterConfig({
-    color: rgbToColor(`rgb(13, 179, 26)`),
-    settledColor: rgbToColor(`rgb(9, 130, 19)`),
-    settledOutlineColor: rgbToColor(`rgb(35, 200, 50)`),
-  }),
-  [FUSE]: matterConfig({
-    color: rgbToColor(`rgb(219, 176, 199)`),
-    settledColor: rgbToColor(`rgb(180, 140, 162)`),
-    settledOutlineColor: rgbToColor(`rgb(245, 205, 225)`),
-  }),
-  [WAX]: matterConfig({
+  [WAX]: solidMatterConfig({
     color: rgbToColor(`rgb(240, 224, 212)`),
     settledColor: rgbToColor(`rgb(210, 190, 175)`),
     settledOutlineColor: rgbToColor(`rgb(255, 245, 235)`),
   }),
-  [C4]: matterConfig({
+  [FUSE]: solidMatterConfig({
+    color: rgbToColor(`rgb(219, 176, 199)`),
+    settledColor: rgbToColor(`rgb(180, 140, 162)`),
+    settledOutlineColor: rgbToColor(`rgb(245, 205, 225)`),
+  }),
+  [GUNPOWDER]: solidMatterConfig({
+    color: rgbToColor(`rgb(171, 171, 140)`),
+    settledColor: rgbToColor(`rgb(130, 130, 105)`),
+    settledOutlineColor: rgbToColor(`rgb(200, 200, 165)`),
+    settledTransitionColor: rgbToColor(`rgb(60, 55, 50)`),
+  }),
+  [NITRO]: solidMatterConfig({
+    color: rgbToColor(`rgb(0, 150, 26)`),
+    alpha: 0.90,
+    settledTransitionColor: rgbToColor(`rgb(90, 160, 30)`),
+  }),
+  [C4]: solidMatterConfig({
     color: rgbToColor(`rgb(240, 230, 150)`),
     settledColor: rgbToColor(`rgb(205, 192, 115)`),
     settledOutlineColor: rgbToColor(`rgb(255, 252, 185)`),
   }),
-  [BURNING_THERMITE]: matterConfig({
-    color: rgbToColor(`rgb(255, 130, 130)`)
+  [THERMITE]: solidMatterConfig({
+    color: rgbToColor(`rgb(194, 140, 69)`),
+    settledColor: rgbToColor(`rgb(158, 108, 45)`),
+    settledOutlineColor: rgbToColor(`rgb(222, 170, 100)`),
+    settledTransitionColor: rgbToColor(`rgb(160, 70, 15)`),
+  }),
+  // liquid
+  [WATER]: {
+    alpha: 0.60,
+    colorA: rgbToColor(`rgb(3 72 147)`),
+    colorB: rgbToColor(`rgb(13, 166, 191)`),
+  },
+  [SALT_WATER]: solidMatterConfig({ color: rgbToColor(`rgb(128, 176, 255)`), alpha: 0.70 }),
+  [OIL]: solidMatterConfig({ color: rgbToColor(`rgb(92, 46, 10)`), alpha: 0.95 }),
+  [LAVA]: solidMatterConfig({
+    color: rgbToColor(`rgb(245, 89, 15)`),
+  }),
+  [NAPALM]: solidMatterConfig({ color: rgbToColor(`rgb(219, 128, 69)`), alpha: 0.95 }),
+  [ACID]: solidMatterConfig({ color: rgbToColor(`rgb(107, 240, 41)`), alpha: 0.8 }),
+  // gas
+  [STEAM]: solidMatterConfig({ color: rgbToColor(`rgb(194, 214, 235)`), alpha: 0.55 }),
+  [METHANE]: solidMatterConfig({ color: rgbToColor(`rgb(140, 140, 140)`), alpha: 0.70 }),
+  // other
+  [FIRE]: solidMatterConfig({ color: rgbToColor(`rgb(255, 0, 0)`) }),
+  [CRYO]: solidMatterConfig({ color: rgbToColor(`rgb(0, 214, 255)`), alpha: 0.8 }),
+  [PLANT]: solidMatterConfig({
+    color: rgbToColor(`rgb(13, 179, 26)`),
+    settledColor: rgbToColor(`rgb(9, 130, 19)`),
+    settledOutlineColor: rgbToColor(`rgb(35, 200, 50)`),
+  }),
+  [FALLING_WAX]: solidMatterConfig({ color: rgbToColor(`rgb(240, 224, 209)`), alpha: 0.85 }),
+  [BURNING_THERMITE]: solidMatterConfig({
+    color: rgbToColor(`rgb(255, 130, 130)`),
   }),
   [EMPTY]: {},
 } as const satisfies Record<MatterType, any>
 
-export function matterConfig<T extends { color: Color, settledTransitionColor?: Color }>(value: T): T & {
+export function solidMatterConfig<T extends { color: Color, settledTransitionColor?: Color }>(value: T): T & {
   settledTransitionColor: Color
 } {
   return {

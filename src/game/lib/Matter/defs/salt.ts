@@ -1,7 +1,8 @@
 import { random } from '../../../helpers/random'
-import { type MatterDef, SALT_WATER, WATER } from '../_Matter.types.ts'
+import { type MatterDef, SALT, SALT_WATER, WATER } from '../_Matter.types.ts'
+import { registerMatterType } from '../matter.ts'
 
-export const SALT_DEF: MatterDef = {
+export const SALT_DEF = {
   name: 'Salt',
   collidesWhenSettled: true,
   sinksThrough: [WATER, SALT_WATER],
@@ -24,4 +25,12 @@ export const SALT_DEF: MatterDef = {
 
     world.doPowderFall(tx, ty, idx)
   },
+} satisfies MatterDef
+
+registerMatterType(SALT, SALT_DEF)
+
+declare module '../matter.ts' {
+  export interface MatterMetaRegistry {
+    [SALT]: typeof SALT_DEF;
+  }
 }

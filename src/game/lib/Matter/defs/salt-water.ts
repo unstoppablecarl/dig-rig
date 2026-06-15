@@ -1,6 +1,7 @@
-import { type MatterDef, LAVA, OIL, SALT, SALT_WATER, setSettled, WATER } from '../_Matter.types.ts'
+import { LAVA, type MatterDef, OIL, SALT, SALT_WATER, setSettled, WATER } from '../_Matter.types.ts'
+import { registerMatterType } from '../matter.ts'
 
-export const SALT_WATER_DEF: MatterDef = {
+export const SALT_WATER_DEF = {
   name: 'Salt Water',
   lavaImmune: true,
   acidImmune: true,
@@ -23,4 +24,12 @@ export const SALT_WATER_DEF: MatterDef = {
     world.tiles[idx] = setSettled(SALT_WATER, true)
     world.markDirty(tx, ty)
   },
+} satisfies MatterDef
+
+registerMatterType(SALT_WATER, SALT_WATER_DEF)
+
+declare module '../matter.ts' {
+  export interface MatterMetaRegistry {
+    [SALT_WATER]: typeof SALT_WATER_DEF;
+  }
 }

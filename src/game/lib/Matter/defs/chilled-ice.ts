@@ -1,12 +1,24 @@
 import { random } from '../../../helpers/random'
-import { FIRE, ICE, LAVA, type MatterDef, MatterTypeSet, SALT, SALT_WATER, STEAM, WATER } from '../_Matter.types.ts'
+import {
+  FIRE,
+  ICE,
+  LAVA,
+  type MatterDef,
+  MatterType,
+  SALT,
+  SALT_WATER,
+  STEAM,
+  WATER,
+} from '../_Matter.types.ts'
+import { MatterTypeSet } from '../data/MatterTypeSet'
+import { registerMatterType } from '../matter.ts'
 
 const FAST_THAW_TARGETS = new MatterTypeSet(SALT, SALT_WATER, LAVA, FIRE, STEAM)
 
-export const CHILLED_ICE_DEF: MatterDef = {
+export const CHILLED_ICE_DEF = {
   name: 'Chilled Ice',
-  passive: true,
-  acidImmune: true,
+  passive: true as const,
+  acidImmune: true as const,
   action(world, tx, ty, idx): void {
     // Thaw to regular ice
     if (random() < 6) {
@@ -27,4 +39,12 @@ export const CHILLED_ICE_DEF: MatterDef = {
     // Freeze adjacent water
     world.doGrow(tx, ty, idx, WATER, 50)
   },
+} satisfies MatterDef
+
+registerMatterType(MatterType.CHILLED_ICE, CHILLED_ICE_DEF)
+
+declare module '../matter.ts' {
+  export interface MatterMetaRegistry {
+    [MatterType.CHILLED_ICE]: typeof CHILLED_ICE_DEF;
+  }
 }

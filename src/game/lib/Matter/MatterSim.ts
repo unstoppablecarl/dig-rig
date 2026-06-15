@@ -1,5 +1,4 @@
 import { random } from '../../helpers/random'
-import { isSolid, isStructural, LIQUID_TYPES, SINKS_THROUGH } from './_Matter-meta'
 import {
   EMPTY,
   FIRE,
@@ -8,11 +7,11 @@ import {
   isSettled,
   MatterType,
   matterType,
-  MatterTypeSet,
   setOwner,
   setSettled,
 } from './_Matter.types.ts'
-import { MATTER_ACTIONS } from './matter.ts'
+import { MatterTypeSet } from './data/MatterTypeSet'
+import { isSolid, isStructural, LIQUID_TYPES, MATTER_ACTIONS, SINKS_THROUGH } from './matter.ts'
 import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
 
 const MAX_FLOW = 8
@@ -89,7 +88,12 @@ export class MatterSim {
 
       const raw = this.tiles[idx]
       const tile = matterType(raw)
-      MATTER_ACTIONS[tile]?.(this, tx, ty, idx)
+      if (import.meta.env.DEV) {
+        if (!MATTER_ACTIONS[tile]) {
+          throw new Error('matter actions not registered — import _Matter.glob.ts before creating a MatterSim')
+        }
+      }
+      MATTER_ACTIONS[tile](this, tx, ty, idx)
     }
   }
 

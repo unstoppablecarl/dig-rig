@@ -1,8 +1,8 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, ref } from 'vue'
-import { ALWAYS_STRUCTURAL, setStructural } from '../game/lib/Matter/_Matter-meta.ts'
 import { EMPTY, MatterType, setAnchored, setOwner } from '../game/lib/Matter/_Matter.types.ts'
+import { ALWAYS_STRUCTURAL, setStructural } from '../game/lib/Matter/matter.ts'
 import { PLAYER_MATTER_TANK_ID } from '../game/lib/Matter/MatterTank/_MatterTank.types.ts'
 
 export type BrushUIState = ReturnType<typeof useBrushUIState>

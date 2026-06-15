@@ -1,5 +1,6 @@
 import type { Position } from '../../../../types.ts'
-import { EMPTY, MatterType, matterTypeSetExcluding, PERMANENT, SAND, WATER } from '../../../Matter/_Matter.types.ts'
+import { EMPTY, MatterType, PERMANENT, SAND, WATER } from '../../../Matter/_Matter.types.ts'
+import { matterTypeSetExcluding } from '../../../Matter/data/MatterTypeSet'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import type { Tilemap } from '../../../Tilemap/Tilemap.ts'
 import { addTileHighlights } from '../_ProjectileEffect-helpers.ts'

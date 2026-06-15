@@ -1,9 +1,10 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { FIRE, getFirstOwnerId, type MatterDef } from '../_Matter.types.ts'
+import { FIRE, getFirstOwnerId, type MatterDef, METHANE } from '../_Matter.types.ts'
+import { registerMatterType } from '../matter.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
-export const METHANE_DEF: MatterDef = {
+export const METHANE_DEF = {
   name: 'Methane',
   action(world, tx, ty, idx): void {
     // Explode near fire
@@ -40,4 +41,13 @@ export const METHANE_DEF: MatterDef = {
 
     world.next.add(idx)
   },
+} satisfies MatterDef
+
+registerMatterType(METHANE, METHANE_DEF)
+
+declare module '../matter.ts' {
+  export interface MatterMetaRegistry {
+    [METHANE]: typeof METHANE_DEF;
+  }
 }
+

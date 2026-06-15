@@ -1,9 +1,10 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import { FIRE, getFirstOwnerId, type MatterDef, NAPALM, setOwner, setSettled } from '../_Matter.types.ts'
+import { registerMatterType } from '../matter.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
-export const NAPALM_DEF: MatterDef = {
+export const NAPALM_DEF = {
   name: 'Napalm',
   action(world, tx, ty, idx): void {
     if (random() < 25) {
@@ -34,4 +35,13 @@ export const NAPALM_DEF: MatterDef = {
       world.markDirty(tx, ty)
     }
   },
+} satisfies MatterDef
+
+registerMatterType(NAPALM, NAPALM_DEF)
+
+declare module '../matter.ts' {
+  export interface MatterMetaRegistry {
+    [NAPALM]: typeof NAPALM_DEF;
+  }
 }
+

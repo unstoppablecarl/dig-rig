@@ -9,8 +9,9 @@ import {
   THERMITE,
   WATER,
 } from '../_Matter.types.ts'
+import { registerMatterType } from '../matter.ts'
 
-export const THERMITE_DEF: MatterDef = {
+export const THERMITE_DEF = {
   name: 'Thermite',
   collidesWhenSettled: true,
   sinksThrough: [WATER, SALT_WATER, OIL],
@@ -30,4 +31,12 @@ export const THERMITE_DEF: MatterDef = {
     }
     world.doPowderFall(tx, ty, idx)
   },
+} satisfies MatterDef
+
+registerMatterType(THERMITE, THERMITE_DEF)
+
+declare module '../matter.ts' {
+  export interface MatterMetaRegistry {
+    [THERMITE]: typeof THERMITE_DEF;
+  }
 }

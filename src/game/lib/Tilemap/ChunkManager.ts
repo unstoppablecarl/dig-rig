@@ -2,7 +2,8 @@ import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { isAnchored, matterType, MatterType, PERMANENT } from '../Matter/_Matter.types.ts'
-import { ALWAYS_STRUCTURAL } from '../Matter/_Matter-meta'
+
+import { ALWAYS_STRUCTURAL } from '../Matter/matter.ts'
 import { Chunk, type ChunkId } from './Chunk.ts'
 
 // Chunk anchoring only tracks always-structural types (SOLID, WAX) and ANCHORED tiles —
