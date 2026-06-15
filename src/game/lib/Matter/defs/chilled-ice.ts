@@ -1,15 +1,5 @@
 import { random } from '../../../helpers/random'
-import {
-  FIRE,
-  ICE,
-  LAVA,
-  type MatterDef,
-  MatterType,
-  SALT,
-  SALT_WATER,
-  STEAM,
-  WATER,
-} from '../_Matter.types.ts'
+import { FIRE, ICE, LAVA, type MatterDef, MatterType, SALT, SALT_WATER, STEAM, WATER } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
 
 const FAST_THAW_TARGETS = new MatterTypeSet(SALT, SALT_WATER, LAVA, FIRE, STEAM)

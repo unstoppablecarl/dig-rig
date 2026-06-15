@@ -67,18 +67,18 @@ const noop = () => {
 }
 
 function registerMatterType({
-                     id,
-                     name,
-                     action = noop,
-                     passive = false,
-                     lavaImmune = false,
-                     acidImmune = false,
-                     collidesWhenSettled = false,
-                     liquid = false,
-                     sinksThrough,
-                     alwaysStructural,
-                     structuralCollapseType,
-                   }: MatterDef) {
+                              id,
+                              name,
+                              action = noop,
+                              passive = false,
+                              lavaImmune = false,
+                              acidImmune = false,
+                              collidesWhenSettled = false,
+                              liquid = false,
+                              sinksThrough,
+                              alwaysStructural,
+                              structuralCollapseType,
+                            }: MatterDef) {
 
   MATTER_ACTIONS[id] = action
   MATTER_NAMES.set(id, name)

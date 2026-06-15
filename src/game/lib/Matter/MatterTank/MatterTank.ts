@@ -38,9 +38,10 @@ export class MatterTank {
     this._matter = clampMaxInt(value, this.matterMax)
   }
 
-  forceAdd(value: number){
+  forceAdd(value: number) {
     this.add(value)
   }
+
   // Private — only applyPendingCharge may call these.
   // The pending invariants guarantee these never overflow/underflow;
   // if they do, it is a conservation bug
@@ -145,14 +146,14 @@ export class MatterTank {
 
   private _emitPos = { x: 0, y: 0 }
 
-   getEmitPos(): Position {
+  getEmitPos(): Position {
     if ('matterParticleEmitPosition' in this.source) {
       return this.source.matterParticleEmitPosition(this._emitPos)
     }
     return this.source
   }
 
-   getCollectPos(): Position {
+  getCollectPos(): Position {
     if ('matterParticleCollectPosition' in this.source) {
       return this.source.matterParticleCollectPosition()
     }

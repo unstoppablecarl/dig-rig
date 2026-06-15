@@ -61,7 +61,7 @@ export class MatterManager extends SceneBound {
   }
 
   terrainMatter(): number {
-    if(this.destroyed) return 0
+    if (this.destroyed) return 0
     return this.scene.tilemap.totalMatter()
   }
 
@@ -81,7 +81,7 @@ export class MatterManager extends SceneBound {
   }
 
   allTankMatter(): number {
-    if(this.destroyed) return 0
+    if (this.destroyed) return 0
     let sum = 0
     for (const tank of this.matterTanks.values()) {
       sum += tank.matterContained()
