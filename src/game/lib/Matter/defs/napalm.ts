@@ -7,6 +7,7 @@ export const NAPALM_DEF = {
   id: NAPALM,
   name: 'Napalm',
   liquid: true as const,
+  hasOwnerId: true as const,
   action(sim, tx, ty, idx): void {
     if (random() < 25) {
       const nidx = sim.bordering(tx, ty, idx, FIRE)

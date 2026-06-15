@@ -2,7 +2,7 @@ import type { Position } from '../../../../types.ts'
 import { MatterType, setOwner } from '../../../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../../../Matter/data/MatterTypeSet'
 
-import { PASSIVE_MATER_TYPES } from '../../../Matter/matter.ts'
+import { OWNED_MATTER_TYPES, PASSIVE_MATER_TYPES } from '../../../Matter/matter.ts'
 import { NO_MATTER_TANK_ID } from '../../../Matter/MatterTank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import type { Tilemap } from '../../../Tilemap/Tilemap.ts'
@@ -28,7 +28,7 @@ const liquidCreateTilesCommitted: ProjectileEffect['onTilesCommitted'] = (tm: Ti
   tm.scene.matterBridge.activateTiles(tiles)
 }
 
-export function makeCreateEffect(type: MatterType, stampOwnerId: boolean = false): ProjectileEffect {
+export function makeCreateEffect(type: MatterType): ProjectileEffect {
   const passive = PASSIVE_MATER_TYPES.has(type)
 
   const convertWithOwnerId: ProjectileEffect['convertMatterType'] = (t: MatterType, ownerId) => {
@@ -43,7 +43,7 @@ export function makeCreateEffect(type: MatterType, stampOwnerId: boolean = false
     mode: FireMode.CREATE,
     filterTile: filterPlayerAABB,
     reactsWithMatterTypes: new MatterTypeSet(type),
-    convertMatterType: stampOwnerId ? convertWithOwnerId : convert,
+    convertMatterType: OWNED_MATTER_TYPES.has(type) ? convertWithOwnerId : convert,
     onTilesCommitted: passive ? solidCreateTilesCommitted : liquidCreateTilesCommitted,
     onApplied: passive ? createApplied : noVFX,
   }

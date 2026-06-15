@@ -15,6 +15,7 @@ import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 export const GUNPOWDER_DEF = {
   id: GUNPOWDER,
   name: 'Gunpowder',
+  hasOwnerId: true as const,
   action(sim, tx, ty, idx): void {
 
     if (random() < 95) {

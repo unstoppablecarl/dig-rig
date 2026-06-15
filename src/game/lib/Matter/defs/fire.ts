@@ -26,6 +26,7 @@ const WATER_OR_SALT_WATER = new MatterTypeSet(WATER, SALT_WATER)
 export const FIRE_DEF = {
   id: FIRE,
   name: 'Fire',
+  hasOwnerId: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width, height } = sim
 

@@ -4,7 +4,7 @@ import { EMPTY, type MatterDef, PLANT, SALT, WATER } from '../_Matter.types.ts'
 export const PLANT_DEF = {
   id: PLANT,
   name: 'Plant',
-  passive: true,
+  passive: true as const,
   action(sim, tx, ty, idx): void {
     // Grow into adjacent water
     sim.doGrow(tx, ty, idx, WATER, 50)

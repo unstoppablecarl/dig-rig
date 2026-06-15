@@ -51,12 +51,10 @@ export const useBrushUIState = defineStore('brush-ui-state', () => {
     primaryMatterType,
     primaryStructuralFlag,
     primaryAnchoredFlag,
-    primaryMatterValue,
 
     secondaryMatterType,
     secondaryStructuralFlag,
     secondaryAnchoredFlag,
-    secondaryMatterValue,
   }
 
   const defaults: SerializedData = {

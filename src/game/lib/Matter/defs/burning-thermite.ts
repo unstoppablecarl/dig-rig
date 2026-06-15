@@ -24,6 +24,7 @@ export const BURNING_THERMITE_DEF = {
   id: BURNING_THERMITE,
   name: 'Burning Thermite',
   sinksThrough: [WATER, SALT_WATER, OIL],
+  hasOwnerId: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width, height, leftFirst } = sim
 

@@ -6,6 +6,7 @@ import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 export const METHANE_DEF = {
   id: METHANE,
   name: 'Methane',
+  hasOwnerId: true as const,
   action(sim, tx, ty, idx): void {
     // Explode near fire
     if (random() < 25) {

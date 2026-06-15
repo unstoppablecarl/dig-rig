@@ -63,6 +63,12 @@ export function isStructural(raw: number): boolean {
 }
 
 export const SINKS_THROUGH: Partial<Record<MatterType, MatterTypeSet>> = {}
+
+export const OWNED_MATTER_TYPES = new MatterTypeSet()
+export type OwnedMatterTypes = {
+  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { hasOwnerId: true } ? K : never
+}[keyof MatterMetaRegistry]
+
 const noop = () => {
 }
 
@@ -75,6 +81,7 @@ function registerMatterType({
                               acidImmune = false,
                               collidesWhenSettled = false,
                               liquid = false,
+                              hasOwnerId = false,
                               sinksThrough,
                               alwaysStructural,
                               structuralCollapseType,
@@ -82,7 +89,6 @@ function registerMatterType({
 
   MATTER_ACTIONS[id] = action
   MATTER_NAMES.set(id, name)
-
   if (passive) PASSIVE_MATER_TYPES.add(id)
   if (lavaImmune) LAVA_IMMUNE.add(id)
   if (acidImmune) ACID_IMMUNE.add(id)
@@ -91,6 +97,7 @@ function registerMatterType({
   if (sinksThrough) SINKS_THROUGH[id] = new MatterTypeSet(...sinksThrough)
   if (alwaysStructural) ALWAYS_STRUCTURAL.add(id)
   if (structuralCollapseType !== undefined) STRUCTURAL_COLLAPSE_TO[id] = structuralCollapseType
+  if (hasOwnerId) OWNED_MATTER_TYPES.add(id)
 }
 
 const defs = import.meta.glob('./defs/*.ts', { eager: true }) as Record<string, { default: MatterDef }>

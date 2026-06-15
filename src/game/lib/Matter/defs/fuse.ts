@@ -3,7 +3,8 @@ import { FIRE, FUSE, getFirstOwnerId, type MatterDef, setOwner } from '../_Matte
 export const FUSE_DEF = {
   id: FUSE,
   name: 'Fuse',
-  passive: true,
+  passive: true as const,
+  hasOwnerId: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles } = sim
     // Ignite when touching fire — convert self to fire and propagate

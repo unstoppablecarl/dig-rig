@@ -11,9 +11,6 @@ export const ICE_DEF = {
   passive: true as const,
   acidImmune: true as const,
   action(sim, tx, ty, idx): void {
-    sim.doPowderFall(tx, ty, idx)
-
-    return
     // Surrounded by ice — fully stable
     if (sim.surroundedBy(tx, ty, idx, ICE)) return
 

@@ -2,9 +2,11 @@ import { random } from '../../../helpers/random'
 import {
   BURNING_THERMITE,
   FIRE,
+  getFirstOwnerId,
   type MatterDef,
   OIL,
   SALT_WATER,
+  setOwner,
   setSettled,
   THERMITE,
   WATER,
@@ -15,6 +17,7 @@ export const THERMITE_DEF = {
   name: 'Thermite',
   collidesWhenSettled: true as const,
   sinksThrough: [WATER, SALT_WATER, OIL],
+  hasOwnerId: true as const,
   action(sim, tx, ty, idx): void {
     if (sim.surroundedByAdjacent(tx, ty, idx, THERMITE)) {
       sim.tiles[idx] = setSettled(THERMITE, true)
@@ -23,11 +26,19 @@ export const THERMITE_DEF = {
     }
 
     // Ignite near fire
-    if (random() < 50 && sim.borderingAdjacent(tx, ty, idx, FIRE) !== -1) {
-      sim.tiles[idx] = BURNING_THERMITE
-      sim.markDirty(tx, ty)
-      sim.next.add(idx)
-      return
+    if (random() < 50) {
+      const { tiles } = sim
+      const fireIdx = sim.borderingAdjacent(tx, ty, idx, FIRE)
+      if (fireIdx !== -1) {
+        const existingRaw = tiles[idx]
+        const fireRaw = tiles[fireIdx]
+        const ownerId = getFirstOwnerId(existingRaw, fireRaw)
+
+        sim.tiles[idx] = setOwner(BURNING_THERMITE, ownerId)
+        sim.markDirty(tx, ty)
+        sim.next.add(idx)
+        return
+      }
     }
     sim.doPowderFall(tx, ty, idx)
   },

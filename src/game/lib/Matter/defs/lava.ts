@@ -27,6 +27,7 @@ export const LAVA_DEF = {
   name: 'Lava',
   lavaImmune: true as const,
   liquid: true as const,
+  hasOwnerId: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width, height } = sim
     const existing = tiles[idx]

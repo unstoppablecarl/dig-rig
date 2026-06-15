@@ -165,6 +165,7 @@ export type MatterDef = {
   acidImmune?: boolean
   liquid?: boolean
   settles?: boolean,
+  hasOwnerId?: boolean,
   collidesWhenSettled?: boolean
   sinksThrough?: MatterType[]
   // type always participates in island detection (e.g. SOLID, WAX).

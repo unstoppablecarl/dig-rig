@@ -6,7 +6,8 @@ import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 export const C4_DEF = {
   id: C4,
   name: 'C4',
-  passive: true,
+  passive: true as const,
+  hasOwnerId: true as const,
   action(sim, tx, ty, idx): void {
     if (random() < 60) {
       const tiles = sim.tiles
