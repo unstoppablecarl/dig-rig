@@ -1,7 +1,7 @@
 import { LAVA, type MatterDef, OIL, SALT, SALT_WATER, setSettled, WATER } from '../_Matter.types.ts'
-import { registerMatterType } from '../matter.ts'
 
 export const SALT_WATER_DEF = {
+  id: SALT_WATER,
   name: 'Salt Water',
   lavaImmune: true,
   acidImmune: true,
@@ -26,7 +26,7 @@ export const SALT_WATER_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(SALT_WATER, SALT_WATER_DEF)
+export default SALT_WATER_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

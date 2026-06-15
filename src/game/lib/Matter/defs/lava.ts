@@ -17,13 +17,13 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { LAVA_IMMUNE, registerMatterType } from '../matter.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)
 
 const COOLED = new MatterTypeSet(WATER, SALT_WATER)
 export const LAVA_DEF = {
+  id: LAVA,
   name: 'Lava',
   lavaImmune: true,
   liquid: true,
@@ -94,7 +94,7 @@ export const LAVA_DEF = {
       for (const [nx, ny, nidx] of burnCandidates) {
         if (nidx === -1) continue
         const nt = matterType(tiles[nidx])
-        if (!LAVA_IMMUNE.has(nt)) {
+        if (!world.LAVA_IMMUNE.has(nt)) {
           tiles[nidx] = setOwner(FIRE, ownerId)
           world.queueMatterCredit(tx, ty, ownerId)
           tiles[idx] = EMPTY
@@ -152,7 +152,7 @@ export const LAVA_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(LAVA, LAVA_DEF)
+export default LAVA_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

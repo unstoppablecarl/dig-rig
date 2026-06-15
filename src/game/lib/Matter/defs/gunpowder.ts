@@ -10,10 +10,10 @@ import {
   setOwner,
   setSettled,
 } from '../_Matter.types.ts'
-import { registerMatterType } from '../matter.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 export const GUNPOWDER_DEF = {
+  id: GUNPOWDER,
   name: 'Gunpowder',
   action(world, tx, ty, idx): void {
 
@@ -67,7 +67,7 @@ export const GUNPOWDER_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(GUNPOWDER, GUNPOWDER_DEF)
+export default GUNPOWDER_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

@@ -17,11 +17,11 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { registerMatterType } from '../matter.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 const NOT_FIRE_SPREADABLE = new MatterTypeSet(THERMITE, BURNING_THERMITE, LAVA, SOLID)
 export const BURNING_THERMITE_DEF = {
+  id: BURNING_THERMITE,
   name: 'Burning Thermite',
   sinksThrough: [WATER, SALT_WATER, OIL],
   action(world, tx, ty, idx): void {
@@ -99,7 +99,7 @@ export const BURNING_THERMITE_DEF = {
   },
 }  satisfies MatterDef
 
-registerMatterType(BURNING_THERMITE, BURNING_THERMITE_DEF)
+export default BURNING_THERMITE_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

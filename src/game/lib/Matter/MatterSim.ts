@@ -11,7 +11,15 @@ import {
   setSettled,
 } from './_Matter.types.ts'
 import { MatterTypeSet } from './data/MatterTypeSet'
-import { isSolid, isStructural, LIQUID_TYPES, MATTER_ACTIONS, SINKS_THROUGH } from './matter.ts'
+import {
+  ACID_IMMUNE,
+  isSolid,
+  isStructural,
+  LAVA_IMMUNE,
+  LIQUID_TYPES,
+  MATTER_ACTIONS,
+  SINKS_THROUGH,
+} from './matter.ts'
 import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
 
 const MAX_FLOW = 8
@@ -23,6 +31,9 @@ export class MatterSim {
   height = 0
   chunkSize = 0
   chunksWidth = 0
+
+  readonly LAVA_IMMUNE = LAVA_IMMUNE
+  readonly ACID_IMMUNE = ACID_IMMUNE
 
   // Set externally by coordinator/pool before processSubset
   frame = 0
@@ -90,7 +101,7 @@ export class MatterSim {
       const tile = matterType(raw)
       if (import.meta.env.DEV) {
         if (!MATTER_ACTIONS[tile]) {
-          throw new Error('matter actions not registered — import _Matter.glob.ts before creating a MatterSim')
+          throw new Error(`MatterSim: no action registered for type ${tile} — ensure matter.ts is imported before MatterSim is used`)
         }
       }
       MATTER_ACTIONS[tile](this, tx, ty, idx)

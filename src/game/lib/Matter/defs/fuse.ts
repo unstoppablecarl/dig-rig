@@ -1,7 +1,7 @@
 import { FIRE, FUSE, getFirstOwnerId, type MatterDef, setOwner } from '../_Matter.types.ts'
-import { registerMatterType } from '../matter.ts'
 
 export const FUSE_DEF = {
+  id: FUSE,
   name: 'Fuse',
   passive: true,
   action(world, tx, ty, idx): void {
@@ -19,7 +19,7 @@ export const FUSE_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(FUSE, FUSE_DEF)
+export default FUSE_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

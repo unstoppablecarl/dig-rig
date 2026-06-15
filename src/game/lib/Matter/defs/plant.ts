@@ -1,8 +1,8 @@
 import { random } from '../../../helpers/random'
 import { EMPTY, type MatterDef, PLANT, SALT, WATER } from '../_Matter.types.ts'
-import { registerMatterType } from '../matter.ts'
 
 export const PLANT_DEF = {
+  id: PLANT,
   name: 'Plant',
   passive: true,
   action(world, tx, ty, idx): void {
@@ -20,7 +20,7 @@ export const PLANT_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(PLANT, PLANT_DEF)
+export default PLANT_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

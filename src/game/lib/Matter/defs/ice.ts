@@ -1,12 +1,12 @@
 import { random } from '../../../helpers/random'
 import { FIRE, ICE, LAVA, type MatterDef, SALT, SALT_WATER, STEAM, WATER } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { registerMatterType } from '../matter.ts'
 
 const MELT_SLOW = new MatterTypeSet(SALT, SALT_WATER)
 const MELT_FAST = new MatterTypeSet(FIRE, LAVA)
 
 export const ICE_DEF = {
+  id: ICE,
   name: 'Ice',
   passive: true,
   acidImmune: true,
@@ -52,7 +52,7 @@ export const ICE_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(ICE, ICE_DEF)
+export default ICE_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

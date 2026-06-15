@@ -3,6 +3,7 @@
 //   tile = SAND | SETTLED_FLAG   → settled sand (0x103)
 //   tile & SETTLED_FLAG !== 0    → is this tile settled?
 //   tile & ~SETTLED_FLAG         → strip settled, get raw tile back
+
 import type { MatterAction } from './matter.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from './MatterTank/_MatterTank.types.ts'
 
@@ -156,6 +157,7 @@ export const MatterTypeKeyValues = Object.fromEntries(
 )
 
 export type MatterDef = {
+  id: MatterType
   name: string
   action?: MatterAction
   passive?: boolean

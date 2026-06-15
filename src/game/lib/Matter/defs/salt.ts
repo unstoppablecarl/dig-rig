@@ -1,8 +1,8 @@
 import { random } from '../../../helpers/random'
 import { type MatterDef, SALT, SALT_WATER, WATER } from '../_Matter.types.ts'
-import { registerMatterType } from '../matter.ts'
 
 export const SALT_DEF = {
+  id: SALT,
   name: 'Salt',
   collidesWhenSettled: true,
   sinksThrough: [WATER, SALT_WATER],
@@ -27,7 +27,7 @@ export const SALT_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(SALT, SALT_DEF)
+export default SALT_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

@@ -1,8 +1,8 @@
 import { random } from '../../../helpers/random'
 import { FIRE, getFirstOwnerId, type MatterDef, OIL, setSettled } from '../_Matter.types.ts'
-import { registerMatterType } from '../matter.ts'
 
 export const OIL_DEF = {
+  id: OIL,
   name: 'Oil',
   liquid: true,
   action(world, tx, ty, idx): void {
@@ -25,7 +25,7 @@ export const OIL_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(OIL, OIL_DEF)
+export default OIL_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

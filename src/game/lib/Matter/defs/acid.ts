@@ -11,11 +11,11 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { ACID_IMMUNE, registerMatterType } from '../matter.ts'
 
 const IS_SETTLED = new MatterTypeSet(ACID, EMPTY)
 
 export const ACID_DEF = {
+  id: ACID,
   name: 'Acid',
   liquid: true,
   acidImmune: true,
@@ -39,7 +39,7 @@ export const ACID_DEF = {
         if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue
 
         const nt = matterType(tiles[nidx])
-        if (ACID_IMMUNE.has(nt)) continue
+        if (world.ACID_IMMUNE.has(nt)) continue
 
         const ownerId = getOwner(tiles[idx])
         world.queueMatterCredit(tx, ty, ownerId)
@@ -82,7 +82,7 @@ export const ACID_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(ACID, ACID_DEF)
+export default ACID_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

@@ -2,33 +2,17 @@ import {
   EMPTY,
   isSettled,
   isStructuralFlag,
-  MatterType,
+  type MatterDef,
   matterType,
+  MatterType,
   PERMANENT,
   setStructuralFlag,
   SOLID,
 } from './_Matter.types.ts'
-import { MatterTypeSet } from './data/MatterTypeSet'
+import { MatterTypeSet } from './data/MatterTypeSet.ts'
 import type { MatterSim } from './MatterSim.ts'
 
 export type MatterAction = (world: MatterSim, x: number, y: number, idx: number) => void
-
-export type MatterDef = {
-  name: string
-  action?: MatterAction
-  passive?: boolean
-  lavaImmune?: boolean
-  acidImmune?: boolean
-  liquid?: boolean
-  settles?: boolean,
-  collidesWhenSettled?: boolean
-  sinksThrough?: MatterType[]
-  // type always participates in island detection (e.g. SOLID, WAX).
-  alwaysStructural?: boolean
-  // what the tile converts to when it is in a structural state and its island collapses.
-  // stays the same type if not set
-  structuralCollapseType?: MatterType
-}
 
 export interface MatterMetaRegistry {
 }
@@ -39,9 +23,8 @@ export const SETTLING_TYPES = new MatterTypeSet()
 export type SettlingTypes = {
   [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { settles: true } ? K : never;
 }[keyof MatterMetaRegistry];
-
 export const PASSIVE_MATER_TYPES = new MatterTypeSet()
-export type PassivMatterTypes = {
+export type PassiveMatterTypes = {
   [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { passive: true } ? K : never
 }[keyof MatterMetaRegistry]
 
@@ -80,38 +63,23 @@ export function isStructural(raw: number): boolean {
 }
 
 export const SINKS_THROUGH: Partial<Record<MatterType, MatterTypeSet>> = {}
-
-export function setStructural(target: number, value: boolean): number {
-  if (import.meta.env.DEV) {
-    const type = matterType(target)
-    if (type === EMPTY || ALWAYS_STRUCTURAL.has(type)) {
-      throw new Error(`Cannot set ${MatterType[type]} structural flag it is immutable.`)
-    }
-  }
-  return setStructuralFlag(target, value)
-}
-
-// always counts as settled
-export function isSolid(value: number) {
-  const type = matterType(value)
-  return type === SOLID || type === PERMANENT || isSettled(value)
-}
-
 const noop = () => {
 }
 
-export function registerMatterType(id: MatterType, {
-  name,
-  action = noop,
-  passive = false,
-  lavaImmune = false,
-  acidImmune = false,
-  collidesWhenSettled = false,
-  liquid = false,
-  sinksThrough,
-  alwaysStructural,
-  structuralCollapseType,
-}: MatterDef) {
+function registerMatterType({
+                     id,
+                     name,
+                     action = noop,
+                     passive = false,
+                     lavaImmune = false,
+                     acidImmune = false,
+                     collidesWhenSettled = false,
+                     liquid = false,
+                     sinksThrough,
+                     alwaysStructural,
+                     structuralCollapseType,
+                   }: MatterDef) {
+
   MATTER_ACTIONS[id] = action
   MATTER_NAMES.set(id, name)
 
@@ -123,4 +91,25 @@ export function registerMatterType(id: MatterType, {
   if (sinksThrough) SINKS_THROUGH[id] = new MatterTypeSet(...sinksThrough)
   if (alwaysStructural) ALWAYS_STRUCTURAL.add(id)
   if (structuralCollapseType !== undefined) STRUCTURAL_COLLAPSE_TO[id] = structuralCollapseType
+}
+
+const defs = import.meta.glob('./defs/*.ts', { eager: true }) as Record<string, { default: MatterDef }>
+
+for (const mod of Object.values(defs)) {
+  registerMatterType(mod.default)
+}
+
+export function setStructural(target: number, value: boolean): number {
+  if (import.meta.env.DEV) {
+    const type = matterType(target)
+    if (type === EMPTY || ALWAYS_STRUCTURAL.has(type)) {
+      throw new Error(`Cannot set ${MatterType[type]} structural flag it is immutable.`)
+    }
+  }
+  return setStructuralFlag(target, value)
+}
+
+export function isSolid(value: number) {
+  const type = matterType(value)
+  return type === SOLID || type === PERMANENT || isSettled(value)
 }

@@ -1,7 +1,7 @@
 import { type MatterDef, SAND, SOLID } from '../_Matter.types.ts'
-import { registerMatterType } from '../matter.ts'
 
 export const SOLID_DEF = {
+  id: SOLID,
   name: 'Solid',
   passive: true,
   // has small chance of lava hard coded
@@ -10,7 +10,7 @@ export const SOLID_DEF = {
   structuralCollapseType: SAND,
 } satisfies MatterDef
 
-registerMatterType(SOLID, SOLID_DEF)
+export default SOLID_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

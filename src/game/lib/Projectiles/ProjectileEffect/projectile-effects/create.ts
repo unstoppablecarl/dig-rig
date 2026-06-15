@@ -1,6 +1,7 @@
 import type { Position } from '../../../../types.ts'
 import { MatterType, setOwner } from '../../../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../../../Matter/data/MatterTypeSet'
+
 import { PASSIVE_MATER_TYPES } from '../../../Matter/matter.ts'
 import { NO_MATTER_TANK_ID } from '../../../Matter/MatterTank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'

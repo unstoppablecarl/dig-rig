@@ -1,8 +1,8 @@
 import { random } from '../../../helpers/random'
 import { type MatterDef, matterType, STEAM, WATER } from '../_Matter.types.ts'
-import { registerMatterType } from '../matter.ts'
 
 export const STEAM_DEF = {
+  id: STEAM,
   name: 'Steam',
   lavaImmune: true,
   action(world, tx, ty, idx): void {
@@ -43,7 +43,7 @@ export const STEAM_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(STEAM, STEAM_DEF)
+export default STEAM_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

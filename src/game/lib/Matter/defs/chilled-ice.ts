@@ -11,11 +11,11 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { registerMatterType } from '../matter.ts'
 
 const FAST_THAW_TARGETS = new MatterTypeSet(SALT, SALT_WATER, LAVA, FIRE, STEAM)
 
 export const CHILLED_ICE_DEF = {
+  id: MatterType.CHILLED_ICE,
   name: 'Chilled Ice',
   passive: true as const,
   acidImmune: true as const,
@@ -41,7 +41,7 @@ export const CHILLED_ICE_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(MatterType.CHILLED_ICE, CHILLED_ICE_DEF)
+export default CHILLED_ICE_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

@@ -2,7 +2,6 @@
 import { type PoolInMessage, PoolInMsg, type PoolOutMessage, PoolOutMsg } from './MatterCoordinator.types.ts'
 import { MatterSim } from './MatterSim.ts'
 import type { WorkerOutMessage } from './MatterSim.types.ts'
-import './_Matter.glob.ts'
 
 declare function postMessage(msg: PoolOutMessage | WorkerOutMessage, transfer?: Transferable[]): void
 

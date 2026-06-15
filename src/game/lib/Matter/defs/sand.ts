@@ -1,7 +1,7 @@
 import { type MatterDef, OIL, SALT_WATER, SAND, WATER } from '../_Matter.types.ts'
-import { registerMatterType } from '../matter.ts'
 
 export const SAND_DEF = {
+  id: SAND,
   name: 'Sand',
   collidesWhenSettled: true,
   sinksThrough: [WATER, OIL, SALT_WATER],
@@ -10,7 +10,7 @@ export const SAND_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(SAND, SAND_DEF)
+export default SAND_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

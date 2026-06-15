@@ -1,7 +1,7 @@
 import { FALLING_WAX, FIRE, type MatterDef, WAX } from '../_Matter.types.ts'
-import { registerMatterType } from '../matter.ts'
 
 export const WAX_DEF = {
+  id: WAX,
   name: 'Wax',
   passive: true,
   alwaysStructural: true,
@@ -16,7 +16,7 @@ export const WAX_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(WAX, WAX_DEF)
+export default WAX_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

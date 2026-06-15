@@ -1,7 +1,7 @@
 import { ACID, LAVA, type MatterDef, OIL, ROCK, SALT_WATER, WATER } from '../_Matter.types.ts'
-import { registerMatterType } from '../matter.ts'
 
 export const ROCK_DEF = {
+  id: ROCK,
   name: 'Rock',
   lavaImmune: true,
   collidesWhenSettled: true,
@@ -11,7 +11,7 @@ export const ROCK_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(ROCK, ROCK_DEF)
+export default ROCK_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {

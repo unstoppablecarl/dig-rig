@@ -18,13 +18,13 @@ import {
   WAX,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { registerMatterType } from '../matter.ts'
 
 const KEEP_ALIVE = new MatterTypeSet(PLANT, FUSE, OIL, WAX)
 const WATER_OR_SALT_WATER = new MatterTypeSet(WATER, SALT_WATER)
 
 // fire does not represent solid matter so does not follow the preserving matter rule
 export const FIRE_DEF = {
+  id: FIRE,
   name: 'Fire',
   action(world, tx, ty, idx): void {
     const { tiles, width, height } = world
@@ -161,7 +161,7 @@ export const FIRE_DEF = {
   },
 } satisfies MatterDef
 
-registerMatterType(FIRE, FIRE_DEF)
+export default FIRE_DEF
 
 declare module '../matter.ts' {
   export interface MatterMetaRegistry {
