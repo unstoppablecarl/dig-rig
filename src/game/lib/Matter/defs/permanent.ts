@@ -5,6 +5,7 @@ export const PERMANENT_DEF = {
   name: 'Permanent',
   lavaImmune: true as const,
   acidImmune: true as const,
+  passive: true as const,
 } satisfies MatterDef
 
 export default PERMANENT_DEF

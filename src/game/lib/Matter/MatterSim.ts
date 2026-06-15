@@ -13,11 +13,12 @@ import {
 import { MatterTypeSet } from './data/MatterTypeSet'
 import {
   ACID_IMMUNE,
-  isSolid,
   isStructural,
   LAVA_IMMUNE,
   LIQUID_TYPES,
   MATTER_ACTIONS,
+  PASSIVE_MATER_TYPES,
+  SETTLING_TYPES,
   SINKS_THROUGH,
 } from './matter.ts'
 import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
@@ -67,13 +68,9 @@ export class MatterSim {
         t === EMPTY ||
         t === MatterType.SOLID ||
         t === MatterType.PERMANENT ||
-        t === MatterType.WAX ||
-        t === MatterType.FUSE ||
-        t === MatterType.ICE ||
-        t === MatterType.CHILLED_ICE ||
-        t === MatterType.PLANT ||
         isAnchored(raw) ||
-        isStructural(raw)
+        isStructural(raw) ||
+        !SETTLING_TYPES.has(t)
       ) continue
 
       this.tiles[idx] = setSettled(raw, false)
@@ -489,6 +486,10 @@ export class MatterSim {
     tiles[idx] = ownerFire
     this.markDirty(tx, ty)
     this.next.add(idx)
+    this.reactivateAround(tx, ty)
+    if (ty > 0) this.reactivateAround(tx, ty - 1)
+    if (tx > 0) this.reactivateAround(tx - 1, ty)
+    if (tx < width - 1) this.reactivateAround(tx + 1, ty)
   }
 
   private _transferBuf = new Int32Array(256 * 3)
@@ -577,4 +578,8 @@ export class MatterSim {
       this.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1) ||
       this.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1)
   }
+}
+
+function isSolid(value: number) {
+  return PASSIVE_MATER_TYPES.has(matterType(value)) || isSettled(value)
 }

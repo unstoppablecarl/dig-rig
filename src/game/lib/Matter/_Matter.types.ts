@@ -164,6 +164,7 @@ export type MatterDef = {
   lavaImmune?: boolean
   acidImmune?: boolean
   liquid?: boolean
+  settles?: boolean,
   hasOwnerId?: boolean,
   collidesWhenSettled?: boolean
   sinksThrough?: MatterType[]

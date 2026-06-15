@@ -19,6 +19,8 @@ export const CRYO_DEF = {
   name: 'Cryo',
   acidImmune: true as const,
   hasOwnerId: true as const,
+  settles: true as const,
+  liquid: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width } = sim
     // Lava contact: cryo evaporates, lava solidifies
@@ -58,7 +60,6 @@ export const CRYO_DEF = {
     }
 
     const moved = sim.tryLiquidFlow(tx, ty, idx)
-
     if (!moved) {
       // Freeze an adjacent water cell when immobile
       const waterLoc = sim.borderingAdjacent(tx, ty, idx, WATER)

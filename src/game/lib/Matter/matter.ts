@@ -1,14 +1,4 @@
-import {
-  EMPTY,
-  isSettled,
-  isStructuralFlag,
-  type MatterDef,
-  matterType,
-  MatterType,
-  PERMANENT,
-  setStructuralFlag,
-  SOLID,
-} from './_Matter.types.ts'
+import { EMPTY, isStructuralFlag, type MatterDef, matterType, MatterType, setStructuralFlag } from './_Matter.types.ts'
 import { MatterTypeSet } from './data/MatterTypeSet.ts'
 import type { MatterSim } from './MatterSim.ts'
 
@@ -19,7 +9,10 @@ export interface MatterMetaRegistry {
 
 export const MATTER_ACTIONS: MatterAction[] = []
 export const MATTER_NAMES = new Map<MatterType, string>()
-
+export const SETTLING_TYPES = new MatterTypeSet()
+export type SettlingTypes = {
+  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { settles: true } ? K : never;
+}[keyof MatterMetaRegistry];
 export const PASSIVE_MATER_TYPES = new MatterTypeSet()
 export type PassiveMatterTypes = {
   [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { passive: true } ? K : never
@@ -53,7 +46,7 @@ export type MatterAlwaysStructuralTypes = {
 
 // Maps structural types to the type they convert to on island collapse (undefined = keep same type).
 export const STRUCTURAL_COLLAPSE_TO: Partial<Record<MatterType, MatterType>> = {}
-// True if this raw tile value participates in structural island detection:
+// structural matter types do not fall if part of an island touching anchored or permanent
 // either its type is always-structural, or it has STRUCTURAL_FLAG set (per-tile opt-in).
 export function isStructural(raw: number): boolean {
   return ALWAYS_STRUCTURAL.has(matterType(raw)) || isStructuralFlag(raw)
@@ -79,6 +72,7 @@ function registerMatterType({
                               collidesWhenSettled = false,
                               liquid = false,
                               hasOwnerId = false,
+                              settles = false,
                               sinksThrough,
                               alwaysStructural,
                               structuralCollapseType,
@@ -91,6 +85,7 @@ function registerMatterType({
   if (acidImmune) ACID_IMMUNE.add(id)
   if (liquid) LIQUID_TYPES.add(id)
   if (collidesWhenSettled) COLLIDES_WHEN_SETTLED.add(id)
+  if (settles) SETTLING_TYPES.add(id)
   if (sinksThrough) SINKS_THROUGH[id] = new MatterTypeSet(...sinksThrough)
   if (alwaysStructural) ALWAYS_STRUCTURAL.add(id)
   if (structuralCollapseType !== undefined) STRUCTURAL_COLLAPSE_TO[id] = structuralCollapseType
@@ -111,9 +106,4 @@ export function setStructural(target: number, value: boolean): number {
     }
   }
   return setStructuralFlag(target, value)
-}
-
-export function isSolid(value: number) {
-  const type = matterType(value)
-  return type === SOLID || type === PERMANENT || isSettled(value)
 }

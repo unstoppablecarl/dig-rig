@@ -20,6 +20,7 @@ export const ACID_DEF = {
   liquid: true as const,
   acidImmune: true as const,
   hasOwnerId: true as const,
+  settles: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width, height } = sim
     const leftFirst = sim.leftFirst

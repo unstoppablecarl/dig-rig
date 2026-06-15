@@ -6,6 +6,7 @@ export const SALT_WATER_DEF = {
   lavaImmune: true as const,
   acidImmune: true as const,
   liquid: true as const,
+  settles: true as const,
   action(sim, tx, ty, idx): void {
     sim.wakeSettledNeighbors(tx, ty, idx, LAVA)
     sim.wakeSettledNeighbors(tx, ty, idx, SALT)

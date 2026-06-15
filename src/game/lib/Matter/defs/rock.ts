@@ -4,6 +4,7 @@ export const ROCK_DEF = {
   id: ROCK,
   name: 'Rock',
   lavaImmune: true as const,
+  settles: true as const,
   collidesWhenSettled: true as const,
   sinksThrough: [WATER, OIL, SALT_WATER, LAVA, ACID],
   action(sim, tx, ty, idx): void {

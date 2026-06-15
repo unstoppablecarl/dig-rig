@@ -6,7 +6,7 @@ import { OWNED_MATTER_TYPES, PASSIVE_MATER_TYPES } from '../../../Matter/matter.
 import { NO_MATTER_TANK_ID } from '../../../Matter/MatterTank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import type { Tilemap } from '../../../Tilemap/Tilemap.ts'
-import { addTileHighlights, chunkAndIslandCheck, filterPlayerAABB, noVFX } from '../_ProjectileEffect-helpers.ts'
+import { addTileHighlights, filterPlayerAABB, noVFX } from '../_ProjectileEffect-helpers.ts'
 import type { ProjectileEffect, ProjectileEffectResult } from '../_ProjectileEffect.types.ts'
 
 function createApplied(
@@ -20,7 +20,6 @@ function createApplied(
 
 const solidCreateTilesCommitted: ProjectileEffect['onTilesCommitted'] = (tm: Tilemap, tiles: ProjectileEffectResult[]): void => {
   addTileHighlights(tm, tiles, FireMode.CREATE)
-  chunkAndIslandCheck(tm, tiles)
 }
 
 const liquidCreateTilesCommitted: ProjectileEffect['onTilesCommitted'] = (tm: Tilemap, tiles: ProjectileEffectResult[]): void => {

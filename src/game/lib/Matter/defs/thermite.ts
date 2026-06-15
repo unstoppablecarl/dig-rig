@@ -18,6 +18,7 @@ export const THERMITE_DEF = {
   collidesWhenSettled: true as const,
   sinksThrough: [WATER, SALT_WATER, OIL],
   hasOwnerId: true as const,
+  settles: true as const,
   action(sim, tx, ty, idx): void {
     if (sim.surroundedByAdjacent(tx, ty, idx, THERMITE)) {
       sim.tiles[idx] = setSettled(THERMITE, true)
