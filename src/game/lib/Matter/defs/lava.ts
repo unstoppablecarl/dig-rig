@@ -25,8 +25,8 @@ const COOLED = new MatterTypeSet(WATER, SALT_WATER)
 export const LAVA_DEF = {
   id: LAVA,
   name: 'Lava',
-  lavaImmune: true,
-  liquid: true,
+  lavaImmune: true as const,
+  liquid: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width, height } = sim
     const existing = tiles[idx]
@@ -74,8 +74,8 @@ export const LAVA_DEF = {
         sim.next.add(meltLoc)
       }
     }
-    //
-    // // Spawn fire in empty space directly above
+
+    // Spawn fire in empty space directly above
     const upIdx = ty > 0 ? idx - width : -1
     if (upIdx !== -1 && random() < 6 && matterType(tiles[upIdx]) === EMPTY) {
       tiles[upIdx] = setOwner(FIRE, ownerId)

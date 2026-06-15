@@ -8,9 +8,12 @@ const MELT_FAST = new MatterTypeSet(FIRE, LAVA)
 export const ICE_DEF = {
   id: ICE,
   name: 'Ice',
-  passive: true,
-  acidImmune: true,
+  passive: true as const,
+  acidImmune: true as const,
   action(sim, tx, ty, idx): void {
+    sim.doPowderFall(tx, ty, idx)
+
+    return
     // Surrounded by ice — fully stable
     if (sim.surroundedBy(tx, ty, idx, ICE)) return
 

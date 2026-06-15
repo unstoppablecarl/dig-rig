@@ -17,7 +17,7 @@ import {
 export const CRYO_DEF = {
   id: CRYO,
   name: 'Cryo',
-  acidImmune: true,
+  acidImmune: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width } = sim
     // Lava contact: cryo evaporates, lava solidifies

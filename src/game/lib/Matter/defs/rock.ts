@@ -3,8 +3,8 @@ import { ACID, LAVA, type MatterDef, OIL, ROCK, SALT_WATER, WATER } from '../_Ma
 export const ROCK_DEF = {
   id: ROCK,
   name: 'Rock',
-  lavaImmune: true,
-  collidesWhenSettled: true,
+  lavaImmune: true as const,
+  collidesWhenSettled: true as const,
   sinksThrough: [WATER, OIL, SALT_WATER, LAVA, ACID],
   action(sim, tx, ty, idx): void {
     sim.doPowderFall(tx, ty, idx)

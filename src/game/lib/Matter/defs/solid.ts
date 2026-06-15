@@ -5,8 +5,8 @@ export const SOLID_DEF = {
   name: 'Solid',
   passive: true,
   // has small chance of lava hard coded
-  lavaImmune: true,
-  alwaysStructural: true,
+  lavaImmune: true as const,
+  alwaysStructural: true as const,
   structuralCollapseType: SAND,
 } satisfies MatterDef
 

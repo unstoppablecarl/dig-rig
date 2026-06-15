@@ -13,7 +13,7 @@ import {
 export const THERMITE_DEF = {
   id: THERMITE,
   name: 'Thermite',
-  collidesWhenSettled: true,
+  collidesWhenSettled: true as const,
   sinksThrough: [WATER, SALT_WATER, OIL],
   action(sim, tx, ty, idx): void {
     if (sim.surroundedByAdjacent(tx, ty, idx, THERMITE)) {

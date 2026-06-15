@@ -4,7 +4,7 @@ import { type MatterDef, SALT, SALT_WATER, WATER } from '../_Matter.types.ts'
 export const SALT_DEF = {
   id: SALT,
   name: 'Salt',
-  collidesWhenSettled: true,
+  collidesWhenSettled: true as const,
   sinksThrough: [WATER, SALT_WATER],
   action(sim, tx, ty, idx): void {
     // Dissolve in water → salt water

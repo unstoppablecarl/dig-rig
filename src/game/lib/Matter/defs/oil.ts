@@ -4,7 +4,7 @@ import { FIRE, getFirstOwnerId, type MatterDef, OIL, setSettled } from '../_Matt
 export const OIL_DEF = {
   id: OIL,
   name: 'Oil',
-  liquid: true,
+  liquid: true as const,
   action(sim, tx, ty, idx): void {
     if (random() < 30) {
       const nidx = sim.bordering(tx, ty, idx, FIRE)

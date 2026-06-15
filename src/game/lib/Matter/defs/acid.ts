@@ -17,8 +17,8 @@ const IS_SETTLED = new MatterTypeSet(ACID, EMPTY)
 export const ACID_DEF = {
   id: ACID,
   name: 'Acid',
-  liquid: true,
-  acidImmune: true,
+  liquid: true as const,
+  acidImmune: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width, height } = sim
     const leftFirst = sim.leftFirst

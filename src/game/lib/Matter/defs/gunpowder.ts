@@ -74,4 +74,3 @@ declare module '../matter.ts' {
     [GUNPOWDER]: typeof GUNPOWDER_DEF;
   }
 }
-

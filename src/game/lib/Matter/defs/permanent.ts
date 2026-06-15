@@ -3,9 +3,8 @@ import { type MatterDef, PERMANENT } from '../_Matter.types.ts'
 export const PERMANENT_DEF = {
   id: PERMANENT,
   name: 'Permanent',
-  passive: true,
-  lavaImmune: true,
-  acidImmune: true,
+  lavaImmune: true as const,
+  acidImmune: true as const,
 } satisfies MatterDef
 
 export default PERMANENT_DEF

@@ -4,7 +4,7 @@ import { type MatterDef, matterType, STEAM, WATER } from '../_Matter.types.ts'
 export const STEAM_DEF = {
   id: STEAM,
   name: 'Steam',
-  lavaImmune: true,
+  lavaImmune: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width } = sim
 

@@ -3,9 +3,9 @@ import { LAVA, type MatterDef, OIL, SALT, SALT_WATER, setSettled, WATER } from '
 export const SALT_WATER_DEF = {
   id: SALT_WATER,
   name: 'Salt Water',
-  lavaImmune: true,
-  acidImmune: true,
-  liquid: true,
+  lavaImmune: true as const,
+  acidImmune: true as const,
+  liquid: true as const,
   action(sim, tx, ty, idx): void {
     sim.wakeSettledNeighbors(tx, ty, idx, LAVA)
     sim.wakeSettledNeighbors(tx, ty, idx, SALT)

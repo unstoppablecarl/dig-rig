@@ -5,9 +5,9 @@ export const WATER_SETTLED = setSettled(WATER, true)
 export const WATER_DEF = {
   id: WATER,
   name: 'Water',
-  lavaImmune: true,
-  acidImmune: true,
-  liquid: true,
+  lavaImmune: true as const,
+  acidImmune: true as const,
+  liquid: true as const,
   action(sim, tx, ty, idx): void {
     sim.wakeSettledNeighbors(tx, ty, idx, LAVA)
     sim.wakeSettledNeighbors(tx, ty, idx, SALT)

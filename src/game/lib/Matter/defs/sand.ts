@@ -3,7 +3,7 @@ import { type MatterDef, OIL, SALT_WATER, SAND, WATER } from '../_Matter.types.t
 export const SAND_DEF = {
   id: SAND,
   name: 'Sand',
-  collidesWhenSettled: true,
+  collidesWhenSettled: true as const,
   sinksThrough: [WATER, OIL, SALT_WATER],
   action(sim, tx, ty, idx): void {
     sim.doPowderFall(tx, ty, idx)

@@ -4,7 +4,7 @@ import { CONCRETE, type MatterDef, SALT_WATER, setSettled, SOLID, WATER } from '
 export const CONCRETE_DEF = {
   id: CONCRETE,
   name: 'Concrete',
-  collidesWhenSettled: true,
+  collidesWhenSettled: true as const,
   sinksThrough: [WATER, SALT_WATER],
   action(sim, tx, ty, idx): void {
     // Harden into SOLID near existing SOLID

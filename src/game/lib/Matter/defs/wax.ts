@@ -3,8 +3,7 @@ import { FALLING_WAX, FIRE, type MatterDef, WAX } from '../_Matter.types.ts'
 export const WAX_DEF = {
   id: WAX,
   name: 'Wax',
-  passive: true,
-  alwaysStructural: true,
+  alwaysStructural: true as const,
   structuralCollapseType: FALLING_WAX,
   action(sim, tx, ty, idx): void {
     // Melt to falling wax near fire

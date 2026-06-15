@@ -6,7 +6,6 @@ import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 export const NITRO_DEF = {
   id: NITRO,
   name: 'Nitro',
-  liquid: true,
   action(sim, tx, ty, idx): void {
     if (random() < 30) {
       const nidx = sim.bordering(tx, ty, idx, FIRE)

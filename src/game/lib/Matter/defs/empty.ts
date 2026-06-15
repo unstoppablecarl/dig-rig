@@ -3,9 +3,8 @@ import { EMPTY, type MatterDef } from '../_Matter.types.ts'
 export const EMPTY_DEF = {
   id: EMPTY,
   name: 'Empty',
-  passive: true,
-  lavaImmune: true,
-  acidImmune: true,
+  lavaImmune: true as const,
+  acidImmune: true as const,
 } satisfies MatterDef
 
 export default EMPTY_DEF
