@@ -19,10 +19,7 @@ export interface MatterMetaRegistry {
 
 export const MATTER_ACTIONS: MatterAction[] = []
 export const MATTER_NAMES = new Map<MatterType, string>()
-export const SETTLING_TYPES = new MatterTypeSet()
-export type SettlingTypes = {
-  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { settles: true } ? K : never;
-}[keyof MatterMetaRegistry];
+
 export const PASSIVE_MATER_TYPES = new MatterTypeSet()
 export type PassiveMatterTypes = {
   [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { passive: true } ? K : never
