@@ -1,3 +1,4 @@
+import type { PartialMatterRenderConfig } from '../../config/colors.ts'
 import { PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
@@ -21,7 +22,18 @@ export default class TestLevel2 extends GameLevel {
     return {
       glowStrength: 0.99,
       glowRadius: 12,
-      outlineOpacity: 0.4,
+    }
+  }
+
+  protected makeMatterRenderConfig(): PartialMatterRenderConfig {
+    const outlineOpacity = 0.4
+    return {
+      [SOLID]: {
+        outlineOpacity,
+      },
+      [PERMANENT]: {
+        outlineOpacity,
+      },
     }
   }
 

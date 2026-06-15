@@ -1,5 +1,5 @@
 import { GameObjects } from 'phaser'
-import { FIRE_MODE_COLORS } from '../../config/colors.ts'
+import { FIRE_MODE_COLORS, MATTER_RENDER_CONFIG_DEFAULTS, type MatterRenderConfig } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { FireMode } from '../Player/_FireMode-types'
@@ -23,12 +23,18 @@ export class TilemapRenderer extends SceneBound {
     public scene: GameLevel,
     readonly terrainTexture: CanvasTexture,
     config: Partial<TilemapRendererConfig> = {},
+    matterRenderConfig: Partial<MatterRenderConfig> = {},
   ) {
     super(scene)
 
-    const cfg = {
+    const _config = {
       ...TILEMAP_RENDERER_DEFAULTS,
       ...config,
+    }
+
+    const _matterRenderConfig = {
+      ...MATTER_RENDER_CONFIG_DEFAULTS,
+      ...matterRenderConfig,
     }
 
     const { width, height } = scene.tilemap
@@ -43,61 +49,12 @@ export class TilemapRenderer extends SceneBound {
     const shader: Shader = scene.add.shader(
       {
         name: 'TerrainShader',
-        fragmentSource: makeTilemapFragShader(cfg.glowRadius, cfg.glowEnabled, cfg.drawDebugSettled, cfg.drawDebugAnchored),
+        fragmentSource: makeTilemapFragShader(_config, _matterRenderConfig),
         setupUniforms: (setUniform: (name: string, value: any) => void) => {
           setUniform('uTerrain', 0)
           setUniform('uMask', 1)
           setUniform('uEffect', 2)
           setUniform('uParticles', 3)
-          setUniform('uGlowColor', cfg.glowColor)
-          setUniform('uOutlineColor', cfg.outlineColor)
-          setUniform('uInnerGlowStrength', cfg.glowStrength)
-          setUniform('uOutlineOpacity', cfg.outlineOpacity)
-          setUniform('uPermanentTileColor', cfg.permanentColor)
-          setUniform('uSandColor', cfg.sandColor)
-          setUniform('uSandSettledColor', cfg.sandSettledColor)
-          setUniform('uSandSettledColorAlpha', cfg.sandSettledColorAlpha)
-          setUniform('uSandSettledOutlineColor', cfg.sandSettledOutlineColor)
-          setUniform('uWaterColor', cfg.waterColor)
-          setUniform('uWaterAlpha', cfg.waterAlpha)
-          setUniform('uFireColor', cfg.fireColor)
-          setUniform('uOilColor', cfg.oilColor)
-          setUniform('uOilAlpha', cfg.oilAlpha)
-          setUniform('uLavaColor', cfg.lavaColor)
-          setUniform('uRockColor', cfg.rockColor)
-          setUniform('uSteamColor', cfg.steamColor)
-          setUniform('uSteamAlpha', cfg.steamAlpha)
-          setUniform('uMethaneColor', cfg.methaneColor)
-          setUniform('uMethaneAlpha', cfg.methaneAlpha)
-          setUniform('uSaltColor', cfg.saltColor)
-          setUniform('uSaltWaterColor', cfg.saltWaterColor)
-          setUniform('uSaltWaterAlpha', cfg.saltWaterAlpha)
-          setUniform('uConcreteColor', cfg.concreteColor)
-          setUniform('uPlantColor', cfg.plantColor)
-          setUniform('uFuseColor', cfg.fuseColor)
-          setUniform('uWaxColor', cfg.waxColor)
-          setUniform('uFallingWaxColor', cfg.fallingWaxColor)
-          setUniform('uFallingWaxAlpha', cfg.fallingWaxAlpha)
-          setUniform('uNitroColor', cfg.nitroColor)
-          setUniform('uNitroAlpha', cfg.nitroAlpha)
-          setUniform('uNapalmColor', cfg.napalmColor)
-          setUniform('uNapalmAlpha', cfg.napalmAlpha)
-          setUniform('uC4Color', cfg.c4Color)
-          setUniform('uIceColor', cfg.iceColor)
-          setUniform('uIceAlpha', cfg.iceAlpha)
-          setUniform('uChilledIceColor', cfg.chilledIceColor)
-          setUniform('uChilledIceAlpha', cfg.chilledIceAlpha)
-          setUniform('uCryoColor', cfg.cryoColor)
-          setUniform('uCryoAlpha', cfg.cryoAlpha)
-          setUniform('uAcidColor', cfg.acidColor)
-          setUniform('uAcidAlpha', cfg.acidAlpha)
-          setUniform('uThermiteColor', cfg.thermiteColor)
-          setUniform('uBurningThermiteColor', cfg.burningThermiteColor)
-          setUniform('uGunpowderColor', cfg.gunpowderColor)
-          setUniform('uDrawDebugSettledColor', cfg.drawDebugSettledColor)
-          setUniform('uDrawDebugSettledAlpha', cfg.drawDebugSettledAlpha)
-          setUniform('uDrawDebugAnchoredColor', cfg.drawDebugAnchoredColor)
-          setUniform('uDrawDebugAnchoredAlpha', cfg.drawDebugAnchoredAlpha)
           setUniform('uTime', scene.time.now)
           setUniform('uInvTilemapSize', [1.0 / width, 1.0 / height])
         },

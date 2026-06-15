@@ -7,6 +7,10 @@ import { type UIState, useUIState } from '../../store/uiState.ts'
 import { useWeaponUIState, type WeaponUIState } from '../../store/weaponUIState.ts'
 import { type InstantWeaponUIState, useInstantWeaponUIState } from '../../store/weaponUIState/InstantWeaponUIState.ts'
 import { DRAW_WORLD_BORDER_DEBUG } from '../config.ts'
+import {
+  MATTER_RENDER_CONFIG_DEFAULTS, type MatterRenderConfig, mergeMatterRenderConfig,
+  type PartialMatterRenderConfig,
+} from '../config/colors.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
 import { GAME_LEVEL_LOADED } from '../lib/events.ts'
@@ -72,6 +76,7 @@ export abstract class GameLevel extends Scene {
   public instantWeaponUIState: InstantWeaponUIState
   public brushUIState: BrushUIState
   public previewProjectileRenderer: ProjectileRenderer
+  public matterRenderConfig: MatterRenderConfig
 
   public ui: UIScene
   protected id: LevelId
@@ -79,10 +84,20 @@ export abstract class GameLevel extends Scene {
   private nextFpsUpdate = 0
 
   protected makeTilemapRenderer(tilemap: Tilemap): TilemapRenderer {
-    return new TilemapRenderer(this, this.getTerrainTexture(tilemap), this.tilemapRendererConfig())
+    this.matterRenderConfig = mergeMatterRenderConfig(MATTER_RENDER_CONFIG_DEFAULTS, this.makeMatterRenderConfig())
+    return new TilemapRenderer(
+      this,
+      this.getTerrainTexture(tilemap),
+      this.tilemapRendererConfig(),
+      this.matterRenderConfig,
+    )
   }
 
   protected tilemapRendererConfig(): Partial<TilemapRendererConfig> {
+    return {}
+  }
+
+  protected makeMatterRenderConfig(): PartialMatterRenderConfig {
     return {}
   }
 

@@ -1,4 +1,3 @@
-import { LAVA_COLOR, ROCK_COLOR } from '../../../config/colors.ts'
 import { EIGHTEENTH_PI, HALF_PI, QUARTER_PI } from '../../../helpers/_helpers.ts'
 import {
   CHILLED_ICE,
@@ -9,11 +8,15 @@ import {
   MatterType,
   PERMANENT,
   ROCK,
-  SALT_WATER, setOwner,
+  SALT_WATER,
+  setOwner,
   SOLID,
   WATER,
 } from '../../Matter/_Matter.types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
+
+const ROCK_COLOR = 0x442808
+const LAVA_COLOR = 0xF55A0F
 
 export const LAVA_BURST: ParticleDef = {
   particlesToSpawn: 5,

@@ -1,5 +1,4 @@
 import { CHUNK_SIZE, VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE } from '../../config.ts'
-import { SETTLE_TRANSITION_COLORS } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { ParticleBridge } from '../Particles/ParticleBridge.ts'
@@ -54,7 +53,7 @@ export class MatterBridge extends SceneBound {
         const { tilemapRenderer } = this.scene
         const now = this.scene.time.now
         for (const idx of e.data.indices) {
-          const color = SETTLE_TRANSITION_COLORS[matterType(tilemap.tiles[idx])]
+          const color = (this.scene.matterRenderConfig as Partial<Record<MatterType, { settledTransitionColor?: Phaser.Display.Color }>>)[matterType(tilemap.tiles[idx])]?.settledTransitionColor
           if (!color) continue
           const tx = idx % tilemap.width
           const ty = idx / tilemap.width | 0
