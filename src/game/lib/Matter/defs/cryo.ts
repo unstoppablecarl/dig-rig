@@ -18,69 +18,69 @@ export const CRYO_DEF = {
   id: CRYO,
   name: 'Cryo',
   acidImmune: true,
-  action(world, tx, ty, idx): void {
-    const { tiles, width } = world
+  action(sim, tx, ty, idx): void {
+    const { tiles, width } = sim
     // Lava contact: cryo evaporates, lava solidifies
-    const lavaLoc = world.bordering(tx, ty, idx, LAVA)
+    const lavaLoc = sim.bordering(tx, ty, idx, LAVA)
     if (lavaLoc !== -1) {
       const ownerId = getFirstOwnerId(tiles[idx], tiles[lavaLoc])
-      world.queueMatterCredit(tx, ty, ownerId)
+      sim.queueMatterCredit(tx, ty, ownerId)
       tiles[idx] = EMPTY
       tiles[lavaLoc] = ROCK
-      world.markDirty(tx, ty)
+      sim.markDirty(tx, ty)
       const lx = lavaLoc % width
       const ly = lavaLoc / width | 0
-      world.markDirty(lx, ly)
-      world.reactivateAround(tx, ty)
+      sim.markDirty(lx, ly)
+      sim.reactivateAround(tx, ty)
       return
     }
 
     // Freeze adjacent ice → CHILLED_ICE (cryo stays alive)
     if (random() < 50) {
-      const iceLoc = world.bordering(tx, ty, idx, ICE)
+      const iceLoc = sim.bordering(tx, ty, idx, ICE)
       if (iceLoc !== -1) {
         tiles[iceLoc] = CHILLED_ICE
         const ix = iceLoc % width
         const iy = iceLoc / width | 0
-        world.markDirty(ix, iy)
-        world.next.add(iceLoc)
+        sim.markDirty(ix, iy)
+        sim.next.add(iceLoc)
       }
     }
 
     // Density sink: cryo is denser than water/salt-water/oil — displaced water freezes
-    if (world.doDensityLiquid(tx, ty, idx, WATER, 80, 40, CHILLED_ICE)) return
-    if (world.doDensityLiquid(tx, ty, idx, SALT_WATER, 80, 40, CHILLED_ICE)) return
-    if (world.doDensityLiquid(tx, ty, idx, OIL, 80, 40)) return
-    if (world.hasDensityBelow(tx, ty, WATER) || world.hasDensityBelow(tx, ty, SALT_WATER) || world.hasDensityBelow(tx, ty, OIL)) {
-      world.next.add(idx)
+    if (sim.doDensityLiquid(tx, ty, idx, WATER, 80, 40, CHILLED_ICE)) return
+    if (sim.doDensityLiquid(tx, ty, idx, SALT_WATER, 80, 40, CHILLED_ICE)) return
+    if (sim.doDensityLiquid(tx, ty, idx, OIL, 80, 40)) return
+    if (sim.hasDensityBelow(tx, ty, WATER) || sim.hasDensityBelow(tx, ty, SALT_WATER) || sim.hasDensityBelow(tx, ty, OIL)) {
+      sim.next.add(idx)
       return
     }
 
-    const moved = world.tryLiquidFlow(tx, ty, idx)
+    const moved = sim.tryLiquidFlow(tx, ty, idx)
 
     if (!moved) {
       // Freeze an adjacent water cell when immobile
-      const waterLoc = world.borderingAdjacent(tx, ty, idx, WATER)
+      const waterLoc = sim.borderingAdjacent(tx, ty, idx, WATER)
       if (waterLoc !== -1) {
         tiles[waterLoc] = CHILLED_ICE
         const wx = waterLoc % width
         const wy = waterLoc / width | 0
-        world.markDirty(wx, wy)
-        world.next.add(waterLoc)
-        world.next.add(idx)
+        sim.markDirty(wx, wy)
+        sim.next.add(waterLoc)
+        sim.next.add(idx)
         return
       }
 
       // Slowly self-freeze when fully immobile and no water to interact with
       if (random() < 1 && random() < 50) {
         tiles[idx] = CHILLED_ICE
-        world.markDirty(tx, ty)
-        world.reactivateAround(tx, ty)
+        sim.markDirty(tx, ty)
+        sim.reactivateAround(tx, ty)
         return
       }
 
       tiles[idx] = setSettled(CRYO, true)
-      world.markDirty(tx, ty)
+      sim.markDirty(tx, ty)
     }
   },
 } satisfies MatterDef

@@ -27,26 +27,26 @@ export const LAVA_DEF = {
   name: 'Lava',
   lavaImmune: true,
   liquid: true,
-  action(world, tx, ty, idx): void {
-    const { tiles, width, height } = world
+  action(sim, tx, ty, idx): void {
+    const { tiles, width, height } = sim
     const existing = tiles[idx]
     const ownerId = getOwner(existing)
     // Turn to rock when touching water or salt-water
-    let waterLoc = world.borderingAny(tx, ty, idx, COOLED)
+    let waterLoc = sim.borderingAny(tx, ty, idx, COOLED)
     if (waterLoc !== -1) {
       tiles[waterLoc] = STEAM
       tiles[idx] = ROCK
-      world.markDirty(tx, ty)
+      sim.markDirty(tx, ty)
       const wx = waterLoc % width
       const wy = waterLoc / width | 0
-      world.markDirty(wx, wy)
-      world.next.add(waterLoc)
-      world.next.add(idx)
+      sim.markDirty(wx, wy)
+      sim.next.add(waterLoc)
+      sim.next.add(idx)
       return
     }
 
     // Spawn a lava burst particle and self-destruct when adjacent to oil
-    if (random() < 14 && world.bordering(tx, ty, idx, OIL) !== -1) {
+    if (random() < 14 && sim.bordering(tx, ty, idx, OIL) !== -1) {
       postMessage({
         type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
         particleType: ParticleType.LAVA_BURST,
@@ -54,24 +54,24 @@ export const LAVA_DEF = {
         y: ty,
       })
       tiles[idx] = EMPTY
-      world.markDirty(tx, ty)
-      world.reactivateAround(tx, ty)
+      sim.markDirty(tx, ty)
+      sim.reactivateAround(tx, ty)
       return
     }
 
     // Slowly melt adjacent SOLID (SOLID is lava immune otherwise)
     if (random() < 1 && random() < 50) {
-      const meltLoc = world.borderingAdjacent(tx, ty, idx, SOLID)
+      const meltLoc = sim.borderingAdjacent(tx, ty, idx, SOLID)
       if (meltLoc !== -1) {
         tiles[meltLoc] = EMPTY
-        world.queueMatterCreditFromTile(tx, ty, idx)
+        sim.queueMatterCreditFromTile(tx, ty, idx)
         tiles[idx] = EMPTY
         const mx = meltLoc % width
         const my = meltLoc / width | 0
-        world.markDirty(mx, my)
-        world.markDirty(tx, ty)
-        world.next.add(idx)
-        world.next.add(meltLoc)
+        sim.markDirty(mx, my)
+        sim.markDirty(tx, ty)
+        sim.next.add(idx)
+        sim.next.add(meltLoc)
       }
     }
     //
@@ -79,8 +79,8 @@ export const LAVA_DEF = {
     const upIdx = ty > 0 ? idx - width : -1
     if (upIdx !== -1 && random() < 6 && matterType(tiles[upIdx]) === EMPTY) {
       tiles[upIdx] = setOwner(FIRE, ownerId)
-      world.markDirty(tx, ty - 1)
-      world.next.add(upIdx)
+      sim.markDirty(tx, ty - 1)
+      sim.next.add(upIdx)
     }
 
     // Burn adjacent non-immune tiles (4-directional, SOLID is lava-immune so skipped)
@@ -94,12 +94,12 @@ export const LAVA_DEF = {
       for (const [nx, ny, nidx] of burnCandidates) {
         if (nidx === -1) continue
         const nt = matterType(tiles[nidx])
-        if (!world.LAVA_IMMUNE.has(nt)) {
+        if (!sim.LAVA_IMMUNE.has(nt)) {
           tiles[nidx] = setOwner(FIRE, ownerId)
-          world.queueMatterCredit(tx, ty, ownerId)
+          sim.queueMatterCredit(tx, ty, ownerId)
           tiles[idx] = EMPTY
-          world.markDirty(nx, ny)
-          world.next.add(nidx)
+          sim.markDirty(nx, ny)
+          sim.next.add(nidx)
         }
       }
     }
@@ -110,16 +110,16 @@ export const LAVA_DEF = {
       const belowType = matterType(tiles[downIdx])
       if (belowType === FIRE) {
         tiles[downIdx] = EMPTY
-        world.markDirty(tx, ty + 1)
-        world.reactivateAround(tx, ty + 1)
+        sim.markDirty(tx, ty + 1)
+        sim.reactivateAround(tx, ty + 1)
       } else if (belowType === STEAM && random() < 95) {
         // Lava sinks through steam — swap positions
         tiles[downIdx] = LAVA
         tiles[idx] = STEAM
-        world.markDirty(tx, ty)
-        world.markDirty(tx, ty + 1)
-        world.next.add(downIdx)
-        world.next.add(idx)
+        sim.markDirty(tx, ty)
+        sim.markDirty(tx, ty + 1)
+        sim.next.add(downIdx)
+        sim.next.add(idx)
         return
       }
     }
@@ -130,23 +130,23 @@ export const LAVA_DEF = {
       const rightIdx = tx < width - 1 ? idx + 1 : -1
       if (leftIdx !== -1 && matterType(tiles[leftIdx]) === FIRE) {
         tiles[leftIdx] = EMPTY
-        world.markDirty(tx - 1, ty)
-        world.reactivateAround(tx - 1, ty)
+        sim.markDirty(tx - 1, ty)
+        sim.reactivateAround(tx - 1, ty)
       }
       if (rightIdx !== -1 && matterType(tiles[rightIdx]) === FIRE) {
         tiles[rightIdx] = EMPTY
-        world.markDirty(tx + 1, ty)
-        world.reactivateAround(tx + 1, ty)
+        sim.markDirty(tx + 1, ty)
+        sim.reactivateAround(tx + 1, ty)
       }
     }
 
-    const moved = world.tryLiquidFlow(tx, ty, idx)
+    const moved = sim.tryLiquidFlow(tx, ty, idx)
     if (!moved) {
-      world.tiles[idx] = setSettled(existing, true)
-      world.markDirty(tx, ty)
+      sim.tiles[idx] = setSettled(existing, true)
+      sim.markDirty(tx, ty)
 
-      if (!world.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
-        world.next.add(idx)
+      if (!sim.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
+        sim.next.add(idx)
       }
     }
   },

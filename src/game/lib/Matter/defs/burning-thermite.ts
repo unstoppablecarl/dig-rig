@@ -24,8 +24,8 @@ export const BURNING_THERMITE_DEF = {
   id: BURNING_THERMITE,
   name: 'Burning Thermite',
   sinksThrough: [WATER, SALT_WATER, OIL],
-  action(world, tx, ty, idx): void {
-    const { tiles, width, height, leftFirst } = world
+  action(sim, tx, ty, idx): void {
+    const { tiles, width, height, leftFirst } = sim
 
     const ownerId = getOwner(tiles[idx])
 
@@ -43,8 +43,8 @@ export const BURNING_THERMITE_DEF = {
       const nt = matterType(neighborRaw)
       if (!NOT_FIRE_SPREADABLE.has(nt)) {
         tiles[nidx] = setOwner(FIRE, ownerId)
-        world.markDirty(nx, ny)
-        world.next.add(nidx)
+        sim.markDirty(nx, ny)
+        sim.next.add(nidx)
       }
     }
 
@@ -65,23 +65,23 @@ export const BURNING_THERMITE_DEF = {
         tiles[widx] = EMPTY
         const wx = widx % width
         const wy = widx / width | 0
-        world.queueMatterCredit(wx, wy, ownerId)
-        world.markDirty(wx, wy)
-        world.reactivateAround(wx, wy)
+        sim.queueMatterCredit(wx, wy, ownerId)
+        sim.markDirty(wx, wy)
+        sim.reactivateAround(wx, wy)
       }
     }
 
     // Slow self-consume
     if (random() < 2) {
       tiles[idx] = setOwner(FIRE, ownerId)
-      world.markDirty(tx, ty)
-      world.next.add(idx)
+      sim.markDirty(tx, ty)
+      sim.next.add(idx)
       return
     }
 
     // Gravity fall (heavy dense material)
-    const moved = world.tryMove(idx, tx, ty, tx, ty + 1)
-    if (!moved) world.next.add(idx)
+    const moved = sim.tryMove(idx, tx, ty, tx, ty + 1)
+    if (!moved) sim.next.add(idx)
 
     // Spawn charged particle occasionally
     if (random() < 2 && random() < 7) {
@@ -93,8 +93,8 @@ export const BURNING_THERMITE_DEF = {
         ownerId,
       })
       tiles[idx] = setOwner(FIRE, ownerId)
-      world.markDirty(tx, ty)
-      world.next.add(idx)
+      sim.markDirty(tx, ty)
+      sim.next.add(idx)
     }
   },
 }  satisfies MatterDef

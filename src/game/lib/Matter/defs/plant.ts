@@ -5,16 +5,16 @@ export const PLANT_DEF = {
   id: PLANT,
   name: 'Plant',
   passive: true,
-  action(world, tx, ty, idx): void {
+  action(sim, tx, ty, idx): void {
     // Grow into adjacent water
-    world.doGrow(tx, ty, idx, WATER, 50)
+    sim.doGrow(tx, ty, idx, WATER, 50)
 
     // Die from salt
     if (random() < 5) {
-      if (world.bordering(tx, ty, idx, SALT) !== -1) {
-        world.tiles[idx] = EMPTY
-        world.markDirty(tx, ty)
-        world.reactivateAround(tx, ty)
+      if (sim.bordering(tx, ty, idx, SALT) !== -1) {
+        sim.tiles[idx] = EMPTY
+        sim.markDirty(tx, ty)
+        sim.reactivateAround(tx, ty)
       }
     }
   },

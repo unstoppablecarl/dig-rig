@@ -15,11 +15,11 @@ import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 export const GUNPOWDER_DEF = {
   id: GUNPOWDER,
   name: 'Gunpowder',
-  action(world, tx, ty, idx): void {
+  action(sim, tx, ty, idx): void {
 
     if (random() < 95) {
-      const { tiles, width, height } = world
-      const fireIdx = world.bordering(tx, ty, idx, FIRE)
+      const { tiles, width, height } = sim
+      const fireIdx = sim.bordering(tx, ty, idx, FIRE)
       if (fireIdx !== -1) {
         const existingRaw = tiles[idx]
         const fireRaw = tiles[fireIdx]
@@ -38,15 +38,15 @@ export const GUNPOWDER_DEF = {
             const neighborType = matterType(neighborRaw)
             if (burn) {
               if (neighborType !== PERMANENT) {
-                world.queueMatterCredit(nx, ny, ownerId)
+                sim.queueMatterCredit(nx, ny, ownerId)
                 tiles[nidx] = newFire
-                world.markDirty(nx, ny)
-                world.next.add(nidx)
+                sim.markDirty(nx, ny)
+                sim.next.add(nidx)
               }
             } else if (neighborType === GUNPOWDER) {
               tiles[nidx] = setSettled(neighborRaw, false)
-              world.markDirty(nx, ny)
-              world.next.add(nidx)
+              sim.markDirty(nx, ny)
+              sim.next.add(nidx)
             }
           }
         }
@@ -63,7 +63,7 @@ export const GUNPOWDER_DEF = {
       }
     }
 
-    world.doPowderFall(tx, ty, idx)
+    sim.doPowderFall(tx, ty, idx)
   },
 } satisfies MatterDef
 

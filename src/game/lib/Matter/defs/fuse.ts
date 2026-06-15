@@ -4,17 +4,17 @@ export const FUSE_DEF = {
   id: FUSE,
   name: 'Fuse',
   passive: true,
-  action(world, tx, ty, idx): void {
-    const { tiles } = world
+  action(sim, tx, ty, idx): void {
+    const { tiles } = sim
     // Ignite when touching fire — convert self to fire and propagate
-    const nidx = world.bordering(tx, ty, idx, FIRE)
+    const nidx = sim.bordering(tx, ty, idx, FIRE)
     if (nidx !== -1) {
       // fuse owner or fallback to fire owner
       const ownerId = getFirstOwnerId(tiles[idx], tiles[nidx])
 
       tiles[idx] = setOwner(FIRE, ownerId)
-      world.markDirty(tx, ty)
-      world.next.add(idx)
+      sim.markDirty(tx, ty)
+      sim.next.add(idx)
     }
   },
 } satisfies MatterDef

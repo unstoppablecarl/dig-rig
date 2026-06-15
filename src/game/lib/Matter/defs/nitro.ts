@@ -7,15 +7,15 @@ export const NITRO_DEF = {
   id: NITRO,
   name: 'Nitro',
   liquid: true,
-  action(world, tx, ty, idx): void {
+  action(sim, tx, ty, idx): void {
     if (random() < 30) {
-      const nidx = world.bordering(tx, ty, idx, FIRE)
+      const nidx = sim.bordering(tx, ty, idx, FIRE)
       if (nidx !== -1) {
-        const tiles = world.tiles
+        const tiles = sim.tiles
 
         // nitro owner or fallback to fire owner
         const ownerId = getFirstOwnerId(tiles[idx], tiles[nidx])
-        world.doBorderBurn(tx, ty, idx, ownerId)
+        sim.doBorderBurn(tx, ty, idx, ownerId)
 
         postMessage({
           type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
@@ -28,7 +28,7 @@ export const NITRO_DEF = {
       }
     }
 
-    world.doPowderFall(tx, ty, idx)
+    sim.doPowderFall(tx, ty, idx)
   },
 } satisfies MatterDef
 

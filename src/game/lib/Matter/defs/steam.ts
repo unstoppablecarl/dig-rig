@@ -5,41 +5,41 @@ export const STEAM_DEF = {
   id: STEAM,
   name: 'Steam',
   lavaImmune: true,
-  action(world, tx, ty, idx): void {
-    const { tiles, width } = world
+  action(sim, tx, ty, idx): void {
+    const { tiles, width } = sim
 
     // Rise upward (primary movement)
     if (random() < 70) {
-      if (world.tryRise(idx, tx, ty)) return
+      if (sim.tryRise(idx, tx, ty)) return
     }
 
     // Spread sideways
-    const leftFirst = world.leftFirst
+    const leftFirst = sim.leftFirst
     if (
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1)
+      sim.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1) ||
+      sim.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1)
     ) return
 
     // Condense near water
-    if (random() < 5 && world.bordering(tx, ty, idx, WATER) !== -1) {
+    if (random() < 5 && sim.bordering(tx, ty, idx, WATER) !== -1) {
       tiles[idx] = WATER
-      world.markDirty(tx, ty)
-      world.next.add(idx)
+      sim.markDirty(tx, ty)
+      sim.next.add(idx)
       return
     }
 
     // Slow condense when trapped
     if (random() < 1 && random() < 5) {
       // Check nothing below
-      if (ty < world.height - 1 && matterType(tiles[(ty + 1) * width + tx]) !== STEAM) {
+      if (ty < sim.height - 1 && matterType(tiles[(ty + 1) * width + tx]) !== STEAM) {
         tiles[idx] = WATER
-        world.markDirty(tx, ty)
-        world.reactivateAround(tx, ty)
+        sim.markDirty(tx, ty)
+        sim.reactivateAround(tx, ty)
         return
       }
     }
 
-    world.next.add(idx)
+    sim.next.add(idx)
   },
 } satisfies MatterDef
 

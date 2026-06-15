@@ -6,23 +6,23 @@ export const SALT_WATER_DEF = {
   lavaImmune: true,
   acidImmune: true,
   liquid: true,
-  action(world, tx, ty, idx): void {
-    world.wakeSettledNeighbors(tx, ty, idx, LAVA)
-    world.wakeSettledNeighbors(tx, ty, idx, SALT)
+  action(sim, tx, ty, idx): void {
+    sim.wakeSettledNeighbors(tx, ty, idx, LAVA)
+    sim.wakeSettledNeighbors(tx, ty, idx, SALT)
 
-    const moved = world.tryLiquidFlow(tx, ty, idx)
+    const moved = sim.tryLiquidFlow(tx, ty, idx)
     if (moved) return
 
     // Salt water is denser than fresh water and oil — sink through them
-    if (world.doDensityLiquid(tx, ty, idx, WATER, 25, 25)) return
-    if (world.doDensityLiquid(tx, ty, idx, OIL, 25, 25)) return
-    if (world.hasDensityBelow(tx, ty, WATER) || world.hasDensityBelow(tx, ty, OIL)) {
-      world.next.add(idx)
+    if (sim.doDensityLiquid(tx, ty, idx, WATER, 25, 25)) return
+    if (sim.doDensityLiquid(tx, ty, idx, OIL, 25, 25)) return
+    if (sim.hasDensityBelow(tx, ty, WATER) || sim.hasDensityBelow(tx, ty, OIL)) {
+      sim.next.add(idx)
       return
     }
 
-    world.tiles[idx] = setSettled(SALT_WATER, true)
-    world.markDirty(tx, ty)
+    sim.tiles[idx] = setSettled(SALT_WATER, true)
+    sim.markDirty(tx, ty)
   },
 } satisfies MatterDef
 

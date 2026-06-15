@@ -10,42 +10,42 @@ export const ICE_DEF = {
   name: 'Ice',
   passive: true,
   acidImmune: true,
-  action(world, tx, ty, idx): void {
+  action(sim, tx, ty, idx): void {
     // Surrounded by ice — fully stable
-    if (world.surroundedBy(tx, ty, idx, ICE)) return
+    if (sim.surroundedBy(tx, ty, idx, ICE)) return
 
     // Melt from water
-    if (random() < 1 && world.bordering(tx, ty, idx, WATER) !== -1) {
-      world.tiles[idx] = WATER
-      world.markDirty(tx, ty)
-      world.next.add(idx)
+    if (random() < 1 && sim.bordering(tx, ty, idx, WATER) !== -1) {
+      sim.tiles[idx] = WATER
+      sim.markDirty(tx, ty)
+      sim.next.add(idx)
       return
     }
 
     // Melt from steam
-    if (random() < 70 && world.bordering(tx, ty, idx, STEAM) !== -1) {
-      world.tiles[idx] = WATER
-      world.markDirty(tx, ty)
-      world.next.add(idx)
+    if (random() < 70 && sim.bordering(tx, ty, idx, STEAM) !== -1) {
+      sim.tiles[idx] = WATER
+      sim.markDirty(tx, ty)
+      sim.next.add(idx)
       return
     }
 
     // Melt from salt / salt-water
     if (random() < 10) {
-      if (world.borderingAny(tx, ty, idx, MELT_SLOW) !== -1) {
-        world.tiles[idx] = WATER
-        world.markDirty(tx, ty)
-        world.next.add(idx)
+      if (sim.borderingAny(tx, ty, idx, MELT_SLOW) !== -1) {
+        sim.tiles[idx] = WATER
+        sim.markDirty(tx, ty)
+        sim.next.add(idx)
         return
       }
     }
 
     // Melt from fire / lava
     if (random() < 50) {
-      if (world.borderingAny(tx, ty, idx, MELT_FAST) !== -1) {
-        world.tiles[idx] = WATER
-        world.markDirty(tx, ty)
-        world.next.add(idx)
+      if (sim.borderingAny(tx, ty, idx, MELT_FAST) !== -1) {
+        sim.tiles[idx] = WATER
+        sim.markDirty(tx, ty)
+        sim.next.add(idx)
         return
       }
     }

@@ -6,17 +6,17 @@ import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 export const METHANE_DEF = {
   id: METHANE,
   name: 'Methane',
-  action(world, tx, ty, idx): void {
+  action(sim, tx, ty, idx): void {
     // Explode near fire
     if (random() < 25) {
-      const tiles = world.tiles
-      const nidx = world.bordering(tx, ty, idx, FIRE)
+      const tiles = sim.tiles
+      const nidx = sim.bordering(tx, ty, idx, FIRE)
       if (nidx !== -1) {
 
         // methane owner or fallback to fire owner
         const ownerId = getFirstOwnerId(tiles[idx], tiles[nidx])
 
-        world.doBorderBurn(tx, ty, idx, ownerId)
+        sim.doBorderBurn(tx, ty, idx, ownerId)
         postMessage({
           type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
           particleType: ParticleType.METHANE_EXPLOSION,
@@ -29,17 +29,17 @@ export const METHANE_DEF = {
 
     // Rise as a gas
     if (random() < 25) {
-      if (world.tryRise(idx, tx, ty)) return
+      if (sim.tryRise(idx, tx, ty)) return
     }
 
     // Spread sideways
-    const leftFirst = world.leftFirst
+    const leftFirst = sim.leftFirst
     if (
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1) ||
-      world.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1)
+      sim.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1) ||
+      sim.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1)
     ) return
 
-    world.next.add(idx)
+    sim.next.add(idx)
   },
 } satisfies MatterDef
 

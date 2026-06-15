@@ -19,9 +19,9 @@ export const ACID_DEF = {
   name: 'Acid',
   liquid: true,
   acidImmune: true,
-  action(world, tx, ty, idx): void {
-    const { tiles, width, height } = world
-    const leftFirst = world.leftFirst
+  action(sim, tx, ty, idx): void {
+    const { tiles, width, height } = sim
+    const leftFirst = sim.leftFirst
 
     // Dissolve a bordering tile
     if (random() < 10) {
@@ -39,44 +39,44 @@ export const ACID_DEF = {
         if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue
 
         const nt = matterType(tiles[nidx])
-        if (world.ACID_IMMUNE.has(nt)) continue
+        if (sim.ACID_IMMUNE.has(nt)) continue
 
         const ownerId = getOwner(tiles[idx])
-        world.queueMatterCredit(tx, ty, ownerId)
+        sim.queueMatterCredit(tx, ty, ownerId)
         tiles[idx] = EMPTY
-        world.markDirty(tx, ty)
-        world.next.add(idx)
+        sim.markDirty(tx, ty)
+        sim.next.add(idx)
 
-        world.queueMatterCredit(nx, ny, ownerId)
+        sim.queueMatterCredit(nx, ny, ownerId)
         tiles[nidx] = EMPTY
-        world.markDirty(nx, ny)
-        world.next.add(nidx)
+        sim.markDirty(nx, ny)
+        sim.next.add(nidx)
         return
       }
     }
 
     // Acid is denser than water and salt-water — sink through them
-    if (world.doDensityLiquid(tx, ty, idx, WATER, 25, 30)) return
-    if (world.doDensityLiquid(tx, ty, idx, SALT_WATER, 25, 30)) return
-    if (world.hasDensityBelow(tx, ty, WATER) || world.hasDensityBelow(tx, ty, SALT_WATER)) {
-      world.next.add(idx)
+    if (sim.doDensityLiquid(tx, ty, idx, WATER, 25, 30)) return
+    if (sim.doDensityLiquid(tx, ty, idx, SALT_WATER, 25, 30)) return
+    if (sim.hasDensityBelow(tx, ty, WATER) || sim.hasDensityBelow(tx, ty, SALT_WATER)) {
+      sim.next.add(idx)
       return
     }
 
     // stickiness
-    const touchingSolid = world.bordering(tx, ty, idx, SOLID) !== -1
+    const touchingSolid = sim.bordering(tx, ty, idx, SOLID) !== -1
     if (touchingSolid && random() < 95) {
-      world.next.add(idx)
+      sim.next.add(idx)
       return
     }
 
-    const moved = world.tryLiquidFlow(tx, ty, idx)
+    const moved = sim.tryLiquidFlow(tx, ty, idx)
     if (!moved) {
-      world.tiles[idx] = setSettled(world.tiles[idx], true)
-      world.markDirty(tx, ty)
+      sim.tiles[idx] = setSettled(sim.tiles[idx], true)
+      sim.markDirty(tx, ty)
 
-      if (!world.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
-        world.next.add(idx)
+      if (!sim.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
+        sim.next.add(idx)
       }
     }
   },

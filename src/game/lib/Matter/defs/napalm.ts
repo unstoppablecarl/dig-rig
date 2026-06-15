@@ -6,18 +6,18 @@ import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 export const NAPALM_DEF = {
   id: NAPALM,
   name: 'Napalm',
-  action(world, tx, ty, idx): void {
+  action(sim, tx, ty, idx): void {
     if (random() < 25) {
-      const nidx = world.bordering(tx, ty, idx, FIRE)
+      const nidx = sim.bordering(tx, ty, idx, FIRE)
       if (nidx !== -1) {
-        const tiles = world.tiles
+        const tiles = sim.tiles
 
         // napalm owner or fallback to fire owner
         const ownerId = getFirstOwnerId(tiles[idx], tiles[nidx])
 
         tiles[idx] = setOwner(FIRE, ownerId)
-        world.markDirty(tx, ty)
-        world.next.add(idx)
+        sim.markDirty(tx, ty)
+        sim.next.add(idx)
         postMessage({
           type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
           particleType: ParticleType.NAPALM_EXPLOSION,
@@ -29,10 +29,10 @@ export const NAPALM_DEF = {
       }
     }
 
-    const moved = world.tryLiquidFlow(tx, ty, idx)
+    const moved = sim.tryLiquidFlow(tx, ty, idx)
     if (!moved) {
-      world.tiles[idx] = setSettled(NAPALM, true)
-      world.markDirty(tx, ty)
+      sim.tiles[idx] = setSettled(NAPALM, true)
+      sim.markDirty(tx, ty)
     }
   },
 } satisfies MatterDef

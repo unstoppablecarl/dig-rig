@@ -7,16 +7,16 @@ export const C4_DEF = {
   id: C4,
   name: 'C4',
   passive: true,
-  action(world, tx, ty, idx): void {
+  action(sim, tx, ty, idx): void {
     if (random() < 60) {
-      const tiles = world.tiles
-      const nidx = world.bordering(tx, ty, idx, FIRE)
+      const tiles = sim.tiles
+      const nidx = sim.bordering(tx, ty, idx, FIRE)
       if (nidx !== -1) {
 
         // c4 owner or fallback to fire owner
         const ownerId = getFirstOwnerId(tiles[idx], tiles[nidx])
 
-        world.doBorderBurn(tx, ty, idx, ownerId)
+        sim.doBorderBurn(tx, ty, idx, ownerId)
         postMessage({
           type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
           particleType: ParticleType.C4_EXPLOSION,

@@ -9,25 +9,25 @@ export const CHILLED_ICE_DEF = {
   name: 'Chilled Ice',
   passive: true as const,
   acidImmune: true as const,
-  action(world, tx, ty, idx): void {
+  action(sim, tx, ty, idx): void {
     // Thaw to regular ice
     if (random() < 6) {
-      world.tiles[idx] = ICE
-      world.markDirty(tx, ty)
-      world.next.add(idx)
+      sim.tiles[idx] = ICE
+      sim.markDirty(tx, ty)
+      sim.next.add(idx)
       return
     }
 
     // Fast thaw near heat or salt
-    if (world.borderingAny(tx, ty, idx, FAST_THAW_TARGETS) !== -1) {
-      world.tiles[idx] = ICE
-      world.markDirty(tx, ty)
-      world.next.add(idx)
+    if (sim.borderingAny(tx, ty, idx, FAST_THAW_TARGETS) !== -1) {
+      sim.tiles[idx] = ICE
+      sim.markDirty(tx, ty)
+      sim.next.add(idx)
       return
     }
 
     // Freeze adjacent water
-    world.doGrow(tx, ty, idx, WATER, 50)
+    sim.doGrow(tx, ty, idx, WATER, 50)
   },
 } satisfies MatterDef
 

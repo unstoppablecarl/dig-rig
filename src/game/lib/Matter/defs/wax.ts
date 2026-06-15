@@ -6,12 +6,12 @@ export const WAX_DEF = {
   passive: true,
   alwaysStructural: true,
   structuralCollapseType: FALLING_WAX,
-  action(world, tx, ty, idx): void {
+  action(sim, tx, ty, idx): void {
     // Melt to falling wax near fire
-    if (world.borderingAdjacent(tx, ty, idx, FIRE) !== -1) {
-      world.tiles[idx] = FALLING_WAX
-      world.markDirty(tx, ty)
-      world.next.add(idx)
+    if (sim.borderingAdjacent(tx, ty, idx, FIRE) !== -1) {
+      sim.tiles[idx] = FALLING_WAX
+      sim.markDirty(tx, ty)
+      sim.next.add(idx)
     }
   },
 } satisfies MatterDef

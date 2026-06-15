@@ -3,22 +3,22 @@ import { FALLING_WAX, FIRE, getFirstOwnerId, type MatterDef, setOwner, WAX } fro
 export const FALLING_WAX_DEF = {
   id: FALLING_WAX,
   name: 'Falling Wax',
-  action(world, tx, ty, idx): void {
-    const moved = world.tryMove(idx, tx, ty, tx, ty + 1)
+  action(sim, tx, ty, idx): void {
+    const moved = sim.tryMove(idx, tx, ty, tx, ty + 1)
     if (!moved) {
-      const { tiles } = world
+      const { tiles } = sim
       // Catch fire if blocked by fire below (breaks the melt→fall→resolidify cycle)
-      const nidx = world.borderingAdjacent(tx, ty, idx, FIRE)
+      const nidx = sim.borderingAdjacent(tx, ty, idx, FIRE)
       if (nidx !== -1) {
         const ownerId = getFirstOwnerId(tiles[nidx], tiles[idx])
-        world.queueMatterCredit(tx, ty, ownerId)
+        sim.queueMatterCredit(tx, ty, ownerId)
         tiles[idx] = setOwner(FIRE, ownerId)
-        world.markDirty(tx, ty)
-        world.next.add(idx)
+        sim.markDirty(tx, ty)
+        sim.next.add(idx)
         return
       }
       tiles[idx] = WAX
-      world.markDirty(tx, ty)
+      sim.markDirty(tx, ty)
     }
   },
 } satisfies MatterDef

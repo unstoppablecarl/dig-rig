@@ -15,21 +15,21 @@ export const THERMITE_DEF = {
   name: 'Thermite',
   collidesWhenSettled: true,
   sinksThrough: [WATER, SALT_WATER, OIL],
-  action(world, tx, ty, idx): void {
-    if (world.surroundedByAdjacent(tx, ty, idx, THERMITE)) {
-      world.tiles[idx] = setSettled(THERMITE, true)
-      world.markDirty(tx, ty)
+  action(sim, tx, ty, idx): void {
+    if (sim.surroundedByAdjacent(tx, ty, idx, THERMITE)) {
+      sim.tiles[idx] = setSettled(THERMITE, true)
+      sim.markDirty(tx, ty)
       return
     }
 
     // Ignite near fire
-    if (random() < 50 && world.borderingAdjacent(tx, ty, idx, FIRE) !== -1) {
-      world.tiles[idx] = BURNING_THERMITE
-      world.markDirty(tx, ty)
-      world.next.add(idx)
+    if (random() < 50 && sim.borderingAdjacent(tx, ty, idx, FIRE) !== -1) {
+      sim.tiles[idx] = BURNING_THERMITE
+      sim.markDirty(tx, ty)
+      sim.next.add(idx)
       return
     }
-    world.doPowderFall(tx, ty, idx)
+    sim.doPowderFall(tx, ty, idx)
   },
 } satisfies MatterDef
 

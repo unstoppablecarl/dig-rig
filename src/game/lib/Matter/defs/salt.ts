@@ -6,24 +6,24 @@ export const SALT_DEF = {
   name: 'Salt',
   collidesWhenSettled: true,
   sinksThrough: [WATER, SALT_WATER],
-  action(world, tx, ty, idx): void {
+  action(sim, tx, ty, idx): void {
     // Dissolve in water → salt water
     if (random() < 25) {
-      const waterLoc = world.bordering(tx, ty, idx, WATER)
+      const waterLoc = sim.bordering(tx, ty, idx, WATER)
       if (waterLoc !== -1) {
-        world.tiles[idx] = SALT_WATER
-        world.tiles[waterLoc] = SALT_WATER
-        world.markDirty(tx, ty)
-        const wx = waterLoc % world.width
-        const wy = waterLoc / world.width | 0
-        world.markDirty(wx, wy)
-        world.next.add(idx)
-        world.next.add(waterLoc)
+        sim.tiles[idx] = SALT_WATER
+        sim.tiles[waterLoc] = SALT_WATER
+        sim.markDirty(tx, ty)
+        const wx = waterLoc % sim.width
+        const wy = waterLoc / sim.width | 0
+        sim.markDirty(wx, wy)
+        sim.next.add(idx)
+        sim.next.add(waterLoc)
         return
       }
     }
 
-    world.doPowderFall(tx, ty, idx)
+    sim.doPowderFall(tx, ty, idx)
   },
 } satisfies MatterDef
 

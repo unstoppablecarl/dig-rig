@@ -5,8 +5,8 @@ export const SAND_DEF = {
   name: 'Sand',
   collidesWhenSettled: true,
   sinksThrough: [WATER, OIL, SALT_WATER],
-  action(world, tx, ty, idx): void {
-    world.doPowderFall(tx, ty, idx)
+  action(sim, tx, ty, idx): void {
+    sim.doPowderFall(tx, ty, idx)
   },
 } satisfies MatterDef
 

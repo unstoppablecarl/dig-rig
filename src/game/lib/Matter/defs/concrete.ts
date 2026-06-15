@@ -6,31 +6,31 @@ export const CONCRETE_DEF = {
   name: 'Concrete',
   collidesWhenSettled: true,
   sinksThrough: [WATER, SALT_WATER],
-  action(world, tx, ty, idx): void {
+  action(sim, tx, ty, idx): void {
     // Harden into SOLID near existing SOLID
     if (random() < 10 && random() < 10) {
-      if (world.borderingAdjacent(tx, ty, idx, SOLID) !== -1) {
-        world.tiles[idx] = SOLID
-        world.markDirty(tx, ty)
+      if (sim.borderingAdjacent(tx, ty, idx, SOLID) !== -1) {
+        sim.tiles[idx] = SOLID
+        sim.markDirty(tx, ty)
         return
       }
     }
 
-    const leftFirst = world.leftFirst
+    const leftFirst = sim.leftFirst
     const moved =
-      world.tryMove(idx, tx, ty, tx, ty + 1) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1) ||
-      world.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1)
+      sim.tryMove(idx, tx, ty, tx, ty + 1) ||
+      sim.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1) ||
+      sim.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1)
 
     if (!moved) {
       // Slow harden even without adjacent solid
       if (random() < 10 && random() < 10 && random() < 5) {
-        world.tiles[idx] = SOLID
-        world.markDirty(tx, ty)
+        sim.tiles[idx] = SOLID
+        sim.markDirty(tx, ty)
         return
       }
-      world.tiles[idx] = setSettled(CONCRETE, true)
-      world.markDirty(tx, ty)
+      sim.tiles[idx] = setSettled(CONCRETE, true)
+      sim.markDirty(tx, ty)
     }
   },
 } satisfies MatterDef
