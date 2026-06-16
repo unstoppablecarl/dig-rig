@@ -14,6 +14,7 @@ import {
   GUNPOWDER,
   ICE,
   LAVA,
+  type MatterType,
   METHANE,
   NAPALM,
   NITRO,
@@ -30,6 +31,7 @@ import {
   WATER,
   WAX,
 } from '../lib/Matter/_Matter.types.ts'
+import type { LiquidTypes, SettlingTypes } from '../lib/Matter/matter.ts'
 import { FireGroup, FireMode } from '../lib/Player/_FireMode-types'
 import { BlendMode } from './blend-modes.ts'
 import Interpolate = Display.Color.Interpolate
@@ -61,22 +63,45 @@ export const BRUSH_OUTLINE_COLOR = rgbToColor(`rgba(255, 255, 0)`)
 
 export type MatterRenderConfig = typeof MATTER_RENDER_CONFIG_DEFAULTS
 
+type PowderConfig = {
+  color: Color,
+  settledTransitionColor?: Color
+  settledColor?: Color
+  settledColorHighlight?: Color
+  settledOutlineColor?: Color
+}
+
+type LiquidConfig = {
+  colorA: Color
+  colorB: Color
+  alpha: number
+} | any
+
+type MatterRenderConfigDefaults = {
+  [K in MatterType]:
+  K extends SettlingTypes
+    ? K extends LiquidTypes
+      ? LiquidConfig
+      : K extends typeof MatterType.EMPTY
+        ? {}
+        : PowderConfig
+    : any
+}
+
 export const MATTER_RENDER_CONFIG_DEFAULTS = {
-  [PERMANENT]: powderMatterConfig({
+  [PERMANENT]: {
     color: rgbToColor(`rgb(0, 255, 255)`),
     blendMode: BlendMode.OVERLAY,
     blendModeStrength: 0.8,
     outlineColor: rgbToColor(`rgb(255, 200, 200)`),
     outlineOpacity: 0.75,
-  }),
-  [SOLID]: powderMatterConfig({
-    // no color used
-    color: rgbToColor(`rgb(0, 0, 0)`),
+  },
+  [SOLID]: {
     outlineColor: rgbToColor(`rgb(255, 200, 200)`),
     outlineOpacity: 0.45,
     outlineBlendModeStrength: 0.75,
     outlineBlendMode: BlendMode.OVERLAY,
-  }),
+  },
   [SAND]: powderMatterConfig({
     color: rgbToColor(`rgb(195, 168, 117)`),
     settledColorHighlight: rgbToColor(`rgb(170, 138, 64)`),
@@ -89,7 +114,7 @@ export const MATTER_RENDER_CONFIG_DEFAULTS = {
     settledColor: rgbToColor(`rgb(69, 41, 8)`),
     rockSettledColorHighlight: rgbToColor(`rgb(143, 93, 36)`),
     settledOutlineColor: rgbToColor(`rgb(138, 123, 73)`),
-    settledTransitionColor: rgbToColor(`rgb(193 140 87)`),
+    settledTransitionColor: rgbToColor(`rgb(80, 60, 40)`),
   }),
   [SALT]: powderMatterConfig({
     color: rgbToColor(`rgb(252, 252, 252)`),
@@ -193,12 +218,12 @@ export const MATTER_RENDER_CONFIG_DEFAULTS = {
     color: rgbToColor(`rgb(255, 130, 130)`),
   }),
   [EMPTY]: {},
-} as const
+} as const satisfies MatterRenderConfigDefaults
 
 export function powderMatterConfig<T extends {
   color: Color,
   settledTransitionColor?: Color
-}>(value: T): T & { settledTransitionColor: Color } {
+}>(value: T): T & PowderConfig {
   return {
     ...value,
     settledTransitionColor: value.settledTransitionColor ?? value.color,

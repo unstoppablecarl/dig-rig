@@ -6,7 +6,7 @@ import { OWNED_MATTER_TYPES, SETTLING_TYPES } from '../../../Matter/matter.ts'
 import { NO_MATTER_TANK_ID } from '../../../Matter/MatterTank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import type { Tilemap } from '../../../Tilemap/Tilemap.ts'
-import { addTileHighlights, filterPlayerAABB, noVFX } from '../_ProjectileEffect-helpers.ts'
+import { addTileFireModeEffect, filterPlayerAABB, noVFX } from '../_ProjectileEffect-helpers.ts'
 import type { ProjectileEffect, ProjectileEffectResult } from '../_ProjectileEffect.types.ts'
 
 function createApplied(
@@ -19,11 +19,11 @@ function createApplied(
 }
 
 const solidCreateTilesCommitted: ProjectileEffect['onTilesCommitted'] = (tm: Tilemap, tiles: ProjectileEffectResult[]): void => {
-  addTileHighlights(tm, tiles, FireMode.CREATE)
+  addTileFireModeEffect(tm, tiles, FireMode.CREATE)
 }
 
 const liquidCreateTilesCommitted: ProjectileEffect['onTilesCommitted'] = (tm: Tilemap, tiles: ProjectileEffectResult[]): void => {
-  addTileHighlights(tm, tiles, FireMode.CREATE)
+  addTileFireModeEffect(tm, tiles, FireMode.CREATE)
   tm.scene.matterBridge.activateTiles(tiles)
 }
 

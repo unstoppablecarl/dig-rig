@@ -59,6 +59,14 @@ export function getSupportType(raw: number): SupportType {
   return (raw >>> SUPPORT_SHIFT) & 0b11
 }
 
+export function getImmutableSupportType(raw: number): SupportType {
+  const type = matterType(raw)
+  if (ALWAYS_ANCHORED.has(type)) return SupportType.ANCHORED
+  if (ALWAYS_STRUCTURAL.has(type)) return SupportType.STRUCTURAL
+  if (ALWAYS_AFFIXED.has(type)) return SupportType.AFFIXED
+  throw new Error(`Matter Type: "${MatterType[type]}" is not immutable"`)
+}
+
 // Maps structural types to the type they convert to on island collapse (undefined = keep same type).
 export const STRUCTURAL_COLLAPSE_TO: Partial<Record<MatterType, MatterType>> = {}
 

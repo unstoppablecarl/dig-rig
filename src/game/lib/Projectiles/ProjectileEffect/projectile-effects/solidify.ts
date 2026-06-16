@@ -2,7 +2,7 @@ import { MatterType, SAND, SOLID, WATER } from '../../../Matter/_Matter.types'
 import { MatterTypeSet } from '../../../Matter/data/MatterTypeSet'
 import { FireMode } from '../../../Player/_FireMode-types'
 import type { Tilemap } from '../../../Tilemap/Tilemap'
-import { addTileHighlights, chunkAndIslandCheck, noVFX } from '../_ProjectileEffect-helpers.ts'
+import { addTileFireModeEffect, chunkAndIslandCheck, noVFX } from '../_ProjectileEffect-helpers.ts'
 import type { ProjectileEffect, ProjectileEffectResult } from '../_ProjectileEffect.types.ts'
 
 export const SOLIDIFY_EFFECT: ProjectileEffect = {
@@ -14,7 +14,7 @@ export const SOLIDIFY_EFFECT: ProjectileEffect = {
     return null
   },
   onTilesCommitted(tm: Tilemap, out: ProjectileEffectResult[]): void {
-    addTileHighlights(tm, out, FireMode.SOLIDIFY)
+    addTileFireModeEffect(tm, out, FireMode.SOLIDIFY)
     tm.onActivateTiles?.(out)
     if (out.some(t => t.newValue === MatterType.SOLID)) chunkAndIslandCheck(tm, out)
   },
