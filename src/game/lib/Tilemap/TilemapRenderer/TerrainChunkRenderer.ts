@@ -57,6 +57,17 @@ export class TerrainChunkRenderer extends SceneBound {
     this.chunkUploadBuf = new Uint8Array(buf)
   }
 
+  beginBatch() {
+    const gl = (this.scene.renderer as WebGLRenderer).gl
+    gl.bindTexture(gl.TEXTURE_2D, this.maskWrapper.webGLTexture)
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
+  }
+
+  endBatch() {
+    const gl = (this.scene.renderer as WebGLRenderer).gl
+    gl.bindTexture(gl.TEXTURE_2D, null)
+  }
+
   renderChunk(chunk: Chunk) {
     const pixels = this.pixels
     const tilemap = this.scene.tilemap
@@ -110,10 +121,7 @@ export class TerrainChunkRenderer extends SceneBound {
     }
 
     const gl = (this.scene.renderer as WebGLRenderer).gl
-    gl.bindTexture(gl.TEXTURE_2D, this.maskWrapper.webGLTexture)
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
     gl.texSubImage2D(gl.TEXTURE_2D, 0, x, glY, uploadW, uploadH, gl.RGBA, gl.UNSIGNED_BYTE, src)
-    gl.bindTexture(gl.TEXTURE_2D, null)
   }
 
   protected onDestroy() {

@@ -99,6 +99,7 @@ export class TilemapRenderer extends SceneBound {
 
     const chunkManager = this.scene.tilemap.chunkManager
 
+    this.chunkRenderer.beginBatch()
     for (let cy = 0; cy < chunkManager.height; cy++) {
       for (let cx = 0; cx < chunkManager.width; cx++) {
         const chunk = chunkManager.getChunk(cx, cy)
@@ -107,6 +108,7 @@ export class TilemapRenderer extends SceneBound {
         chunk.renderDirty = false
       }
     }
+    this.chunkRenderer.endBatch()
 
     this.effectSystem.update()
   }
