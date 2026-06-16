@@ -218,7 +218,7 @@ export const MATTER_RENDER_CONFIG_DEFAULTS = {
     color: rgbToColor(`rgb(255, 130, 130)`),
   }),
   [EMPTY]: {},
-} as const satisfies MatterRenderConfigDefaults
+} satisfies MatterRenderConfigDefaults
 
 export function powderMatterConfig<T extends {
   color: Color,
