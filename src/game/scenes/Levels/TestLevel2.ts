@@ -1,4 +1,5 @@
 import type { PartialMatterRenderConfig } from '../../config/colors.ts'
+import { PortableMatterTank } from '../../lib/Entities/PortableMatterTank.ts'
 import { PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
@@ -14,6 +15,9 @@ export default class TestLevel2 extends GameLevel {
     super.preload()
 
     this.TERRAIN = this.loadPrefixedPixelImage('terrain', terrain)
+
+    this.load.setPath('assets')
+    this.loadPixelImage(PortableMatterTank.SPRITE_KEY, 'portable-matter-tank.png')
 
     this.preloadPlayer()
   }
@@ -62,5 +66,11 @@ export default class TestLevel2 extends GameLevel {
 
   makePlayer() {
     return new Player(this, 100, 300)
+  }
+
+  startLevel() {
+    const tank = new PortableMatterTank(this, 150, 450)
+
+    this.entities.add(tank)
   }
 }

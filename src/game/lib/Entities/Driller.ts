@@ -1,4 +1,5 @@
 import { GameObjects, Math as PMath, Time } from 'phaser'
+import { MATTER_TANK_TEXT_STYLES } from '../../config/styles.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { ParticleTarget } from '../../types.ts'
 import { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
@@ -37,9 +38,7 @@ export class Driller extends GameObject implements ParticleTarget {
     const sprite = scene.add.sprite(0, 0, 'enemy')
     this.container.add(sprite)
 
-    this.text = scene.add.dom(0, sprite.height)
-      .createFromHTML('<div/>')
-    this.text.node.classList.add('matter-tank-text')
+    this.text = scene.add.dom(0, sprite.height, 'div', MATTER_TANK_TEXT_STYLES)
 
     this.container.add(this.text)
     scene.layers.enemies.add(this.container)
