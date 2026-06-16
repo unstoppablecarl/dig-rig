@@ -12,6 +12,7 @@ import {
   pollingRef,
   VPane,
 } from 'vue-pane/src/index.ts'
+import { ENABLE_BRUSH_MODE_DEBUG } from '../game/config.ts'
 import { launchLevel } from '../game/launcher.ts'
 import { MATTER_NAMES } from '../game/lib/Matter/matter.ts'
 import type { GameLevel } from '../game/scenes/GameLevel.ts'
@@ -129,7 +130,7 @@ const levelEntries = Object.entries(LEVELS) as [LevelId, LevelEntry][]
           @click="level.matterBridge.addMatter(key, level.player.x, level.player.y - 100)"
         />
       </PFolder>
-      <BrushPane :level="level" />
+      <BrushPane v-if="ENABLE_BRUSH_MODE_DEBUG" :level="level" />
       <PFolder title="Controls">
         <PButton label="Clear Local Storage + Refresh" @click="clearStorage" />
       </PFolder>
