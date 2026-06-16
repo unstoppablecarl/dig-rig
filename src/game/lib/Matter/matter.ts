@@ -18,6 +18,7 @@ export interface MatterMetaRegistry {
 export const MATTER_ACTIONS: MatterAction[] = []
 export const MATTER_NAMES = new Map<MatterType, string>()
 export const SETTLING_TYPES = new MatterTypeSet()
+export const ALWAYS_ACTIVE_TYPES = new MatterTypeSet()
 export type SettlingTypes = {
   [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { settles: true } ? K : never;
 }[keyof MatterMetaRegistry]
@@ -91,6 +92,7 @@ function registerMatterType({
                               liquid = false,
                               hasOwnerId = false,
                               settles = false,
+                              alwaysActive = false,
                               sinksThrough,
                               structuralCollapseType,
                             }: MatterDef) {
@@ -106,6 +108,7 @@ function registerMatterType({
   if (liquid) LIQUID_TYPES.add(id)
   if (collidesWhenSettled) COLLIDES_WHEN_SETTLED.add(id)
   if (settles) SETTLING_TYPES.add(id)
+  if (alwaysActive) ALWAYS_ACTIVE_TYPES.add(id)
   if (sinksThrough) SINKS_THROUGH[id] = new MatterTypeSet(...sinksThrough)
   if (structuralCollapseType !== undefined) STRUCTURAL_COLLAPSE_TO[id] = structuralCollapseType
   if (hasOwnerId) OWNED_MATTER_TYPES.add(id)
@@ -116,6 +119,8 @@ const defs = import.meta.glob('./defs/*.ts', { eager: true }) as Record<string, 
 for (const mod of Object.values(defs)) {
   registerMatterType(mod.default)
 }
+
+export const ACTIVATABLE_TYPES = SETTLING_TYPES.merge(ALWAYS_ACTIVE_TYPES)
 
 export function setSupport(target: number, support: SupportType): number {
   if (import.meta.env.DEV) {

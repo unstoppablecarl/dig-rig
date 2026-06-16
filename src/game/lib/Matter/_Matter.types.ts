@@ -166,6 +166,7 @@ export type MatterDef = {
   acidImmune?: boolean
   liquid?: boolean
   settles?: boolean,
+  alwaysActive?: boolean,
   hasOwnerId?: boolean,
   collidesWhenSettled?: boolean
   sinksThrough?: MatterType[]

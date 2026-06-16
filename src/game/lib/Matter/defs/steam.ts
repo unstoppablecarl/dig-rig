@@ -5,6 +5,7 @@ export const STEAM_DEF = {
   id: STEAM,
   name: 'Steam',
   lavaImmune: true as const,
+  alwaysActive: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width } = sim
 

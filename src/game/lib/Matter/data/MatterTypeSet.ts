@@ -29,6 +29,14 @@ export class MatterTypeSet {
     const index = type >>> 5
     return (this._mask[index] & lookupMask) !== 0
   }
+
+  merge(other: MatterTypeSet): MatterTypeSet {
+    const result = new MatterTypeSet()
+    for (let i = 0; i < 8; i++) {
+      result._mask[i] = this._mask[i] | other._mask[i]
+    }
+    return result
+  }
 }
 
 export function matterTypeSetExcluding(exclude: MatterType[]): MatterTypeSet {

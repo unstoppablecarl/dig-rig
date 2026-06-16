@@ -13,11 +13,12 @@ import {
 import { MatterTypeSet } from './data/MatterTypeSet'
 import {
   ACID_IMMUNE,
+  ACTIVATABLE_TYPES,
+  ALWAYS_ACTIVE_TYPES,
   getSupportType,
   LAVA_IMMUNE,
   LIQUID_TYPES,
   MATTER_ACTIONS,
-  SETTLING_TYPES,
   SINKS_THROUGH,
 } from './matter.ts'
 import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
@@ -30,6 +31,7 @@ export class MatterSim {
   width = 0
   height = 0
   chunkSize = 0
+  chunkShift = 0
   chunksWidth = 0
 
   readonly LAVA_IMMUNE = LAVA_IMMUNE
@@ -53,6 +55,7 @@ export class MatterSim {
     this.width = width
     this.height = height
     this.chunkSize = chunkSize
+    this.chunkShift = Math.log2(chunkSize)
     this.chunksWidth = Math.ceil(width / chunkSize)
   }
 
@@ -63,9 +66,10 @@ export class MatterSim {
       const raw = this.tiles[idx]
       const t = matterType(raw)
 
-      if (getSupportType(raw) >= SupportType.STRUCTURAL || !SETTLING_TYPES.has(t)) continue
-
-      this.tiles[idx] = setSettled(raw, false)
+      if (getSupportType(raw) >= SupportType.STRUCTURAL || !ACTIVATABLE_TYPES.has(t)) continue
+      if (!ALWAYS_ACTIVE_TYPES.has(t)) {
+        this.tiles[idx] = setSettled(raw, false)
+      }
       this.markDirty(idx % this.width, idx / this.width | 0)
       target.add(idx)
     }
@@ -74,14 +78,14 @@ export class MatterSim {
   // Runs matterType actions for the given tile indices. Pool workers call this
   // once per round with their assigned subset of the active set.
   processSubset(indices: number[]) {
-    const phase = this.frame % 2
+    const phase = this.frame & 1
     for (const idx of indices) {
       const tx = idx % this.width
       const ty = idx / this.width | 0
 
       // Per-cell checkerboard: defer wrong-phase cells to next step to prevent
       // double-processing when an matterType moves into a neighbour's position.
-      if ((tx + ty) % 2 !== phase) {
+      if (((tx + ty) & 1) !== phase) {
         this.next.add(idx)
         continue
       }
@@ -98,8 +102,10 @@ export class MatterSim {
   }
 
   markDirty(tx: number, ty: number) {
-    this.dirtyChunks[(ty / this.chunkSize | 0) * this.chunksWidth + (tx / this.chunkSize | 0)] = 1
+    this.dirtyChunks[(ty >>> this.chunkShift) * this.chunksWidth + (tx >>> this.chunkShift)] = 1
   }
+
+  _reactiveAroundRange = [-1, 1]
 
   // Re-activate settled material that could flow into (tx, ty) now that it is empty.
   // When called outside a step (from message handlers), pass an explicit dest set.
@@ -123,7 +129,7 @@ export class MatterSim {
     }
 
     // Wake the horizontal chain of settled liquids so pools level quickly
-    for (const dir of [-1, 1]) {
+    for (const dir of this._reactiveAroundRange) {
       for (let d = 1; d <= MAX_FLOW; d++) {
         const ax = tx + dir * d
         if (ax < 0 || ax >= width) break
@@ -281,13 +287,16 @@ export class MatterSim {
     dir: -1 | 1,
   ): boolean {
     const { tiles, width, height } = this
+    const row = fromTy * width
+    const rowBelow = (fromTy + 1) * width
+    const hasBelow = fromTy + 1 < height
     let dist = 0
     for (let d = 1; d <= MAX_FLOW; d++) {
       const nx = fromTx + dir * d
       if (nx < 0 || nx >= width) break
-      if (matterType(tiles[fromTy * width + nx]) !== EMPTY) break
+      if (matterType(tiles[row + nx]) !== EMPTY) break
       dist = d
-      if (fromTy + 1 < height && matterType(tiles[(fromTy + 1) * width + nx]) === EMPTY) break
+      if (hasBelow && matterType(tiles[rowBelow + nx]) === EMPTY) break
     }
     if (dist === 0) return false
     return this.tryMove(fromIdx, fromTx, fromTy, fromTx + dir * dist, fromTy)
@@ -298,17 +307,40 @@ export class MatterSim {
   /** Clear SETTLED_FLAG on all 4-directional neighbours whose base type matches `type`. */
   wakeSettledNeighbors(tx: number, ty: number, idx: number, type: MatterType) {
     const { tiles, width, height } = this
-    for (const nidx of [
-      ty > 0 ? idx - width : -1,
-      ty < height - 1 ? idx + width : -1,
-      tx > 0 ? idx - 1 : -1,
-      tx < width - 1 ? idx + 1 : -1,
-    ]) {
-      if (nidx === -1) continue
-      const raw = tiles[nidx]
+    let nidx: number, raw: number
+    if (ty > 0) {
+      nidx = idx - width
+      raw = tiles[nidx]
       if (matterType(raw) === type && isSettled(raw)) {
         tiles[nidx] = setSettled(raw, false)
-        this.markDirty(nidx % width, nidx / width | 0)
+        this.markDirty(tx, ty - 1)
+        this.next.add(nidx)
+      }
+    }
+    if (ty < height - 1) {
+      nidx = idx + width
+      raw = tiles[nidx]
+      if (matterType(raw) === type && isSettled(raw)) {
+        tiles[nidx] = setSettled(raw, false)
+        this.markDirty(tx, ty + 1)
+        this.next.add(nidx)
+      }
+    }
+    if (tx > 0) {
+      nidx = idx - 1
+      raw = tiles[nidx]
+      if (matterType(raw) === type && isSettled(raw)) {
+        tiles[nidx] = setSettled(raw, false)
+        this.markDirty(tx - 1, ty)
+        this.next.add(nidx)
+      }
+    }
+    if (tx < width - 1) {
+      nidx = idx + 1
+      raw = tiles[nidx]
+      if (matterType(raw) === type && isSettled(raw)) {
+        tiles[nidx] = setSettled(raw, false)
+        this.markDirty(tx + 1, ty)
         this.next.add(nidx)
       }
     }
@@ -518,7 +550,8 @@ export class MatterSim {
   }
 
   doPowderFall(tx: number, ty: number, idx: number) {
-    if (getSupportType(this.tiles[idx]) === SupportType.ANCHORED) return
+    const raw = this.tiles[idx]
+    if (getSupportType(raw) === SupportType.ANCHORED) return
 
     const leftFirst = this.leftFirst
 
@@ -531,7 +564,7 @@ export class MatterSim {
       const ty1 = ty + 1
       if (ty1 >= this.height) {
         // Map boundary — unconditionally settled.
-        this.tiles[idx] = setSettled(this.tiles[idx], true)
+        this.tiles[idx] = setSettled(raw, true)
         this.markDirty(tx, ty)
         this.justSettled.push(idx)
       } else {
@@ -547,7 +580,7 @@ export class MatterSim {
           isSolid(tiles[row + dL]) &&
           isSolid(tiles[row + dR])
         ) {
-          this.tiles[idx] = setSettled(this.tiles[idx], true)
+          this.tiles[idx] = setSettled(raw, true)
           this.markDirty(tx, ty)
           this.justSettled.push(idx)
         } else {

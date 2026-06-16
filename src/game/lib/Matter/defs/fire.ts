@@ -27,6 +27,7 @@ export const FIRE_DEF = {
   id: FIRE,
   name: 'Fire',
   hasOwnerId: true as const,
+  alwaysActive: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width, height } = sim
 
