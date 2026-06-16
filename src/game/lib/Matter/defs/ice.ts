@@ -1,5 +1,5 @@
 import { random } from '../../../helpers/random'
-import { FIRE, ICE, LAVA, type MatterDef, SALT, SALT_WATER, STEAM, WATER } from '../_Matter.types.ts'
+import { FIRE, ICE, LAVA, type MatterDef, SALT, SALT_WATER, STEAM, SupportType, WATER } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
 
 const MELT_SLOW = new MatterTypeSet(SALT, SALT_WATER)
@@ -8,7 +8,7 @@ const MELT_FAST = new MatterTypeSet(FIRE, LAVA)
 export const ICE_DEF = {
   id: ICE,
   name: 'Ice',
-  passive: true as const,
+  immutableSupport: SupportType.AFFIXED as const,
   acidImmune: true as const,
   action(sim, tx, ty, idx): void {
     // Surrounded by ice — fully stable

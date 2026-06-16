@@ -1,5 +1,16 @@
 import { random } from '../../../helpers/random'
-import { FIRE, ICE, LAVA, type MatterDef, MatterType, SALT, SALT_WATER, STEAM, WATER } from '../_Matter.types.ts'
+import {
+  FIRE,
+  ICE,
+  LAVA,
+  type MatterDef,
+  MatterType,
+  SALT,
+  SALT_WATER,
+  STEAM,
+  SupportType,
+  WATER,
+} from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
 
 const FAST_THAW_TARGETS = new MatterTypeSet(SALT, SALT_WATER, LAVA, FIRE, STEAM)
@@ -7,7 +18,7 @@ const FAST_THAW_TARGETS = new MatterTypeSet(SALT, SALT_WATER, LAVA, FIRE, STEAM)
 export const CHILLED_ICE_DEF = {
   id: MatterType.CHILLED_ICE,
   name: 'Chilled Ice',
-  passive: true as const,
+  immutableSupport: SupportType.AFFIXED as const,
   acidImmune: true as const,
   action(sim, tx, ty, idx): void {
     // Thaw to regular ice

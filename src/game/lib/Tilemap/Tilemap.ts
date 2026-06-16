@@ -6,16 +6,16 @@ import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import {
   EMPTY,
-  isAnchored,
   isSettled,
   type MatterType,
   matterType,
   PERMANENT,
   SOLID,
+  SupportType,
 } from '../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../Matter/data/MatterTypeSet'
 
-import { COLLIDES_WHEN_SETTLED, isStructural } from '../Matter/matter.ts'
+import { COLLIDES_WHEN_SETTLED, getSupportType } from '../Matter/matter.ts'
 import { ChunkManager } from './ChunkManager.ts'
 import Rectangle = Geom.Rectangle
 
@@ -241,8 +241,9 @@ export class Tilemap extends SceneBound {
         const nidx = ny * this.width + nx
         if (newSet.has(nidx)) continue
         const nTile = this.getTile(nx, ny)
-        if (matterType(nTile) === PERMANENT || isAnchored(nTile)) return []
-        if (!isStructural(nTile)) continue
+        const supportType = getSupportType(nTile)
+        if (supportType === SupportType.ANCHORED) return []
+        if (supportType < SupportType.STRUCTURAL) continue
         if (this.chunkManager.getChunkByTile(nx, ny)?.anchored) {
           touchesAnchoredSolid = true
         } else {
@@ -273,11 +274,11 @@ export class Tilemap extends SceneBound {
         if (visited.has(nidx)) continue
         visited.add(nidx)
         const nTile = this.getTile(nx, ny)
-        if (matterType(nTile) === PERMANENT || isAnchored(nTile)) {
+        if (getSupportType(nTile) === SupportType.ANCHORED) {
           anchored = true
           break outer
         }
-        if (isStructural(nTile)) {
+        if (getSupportType(nTile) >= SupportType.STRUCTURAL) {
           if (this.chunkManager.getChunkByTile(nx, ny)?.anchored) {
             anchored = true
             break outer
@@ -297,8 +298,8 @@ export class Tilemap extends SceneBound {
   // No chunk-level seed pre-filter: chunk anchoring cannot distinguish between multiple
   // disconnected structural components within the same chunk. A chunk can be anchored
   // because one SOLID region touches a border while a separate floating SOLID island also
-  // lives in the same chunk. The tile-level BFS reaching PERMANENT is the only correct
-  // termination. isAnchored() tiles are the fast-path skip (they are PERMANENT-equivalent).
+  // lives in the same chunk. The tile-level BFS reaching an anchored tile is the only
+  // correct termination.
   public findNewlyDisconnectedByDestruction(destroyedTiles: Tile[]): Tile[] {
     const { width, height, tiles, _bfsVisited: vis, _bfsQueue: queue, _bfsComp: comp } = this
     vis.fill(0)
@@ -311,19 +312,19 @@ export class Tilemap extends SceneBound {
         if (sx < 0 || sx >= width || sy < 0 || sy >= height) continue
         const sidx = sy * width + sx
         if (vis[sidx] !== 0) continue
-        if (!isStructural(tiles[sidx])) continue
-        // Anchored tiles are PERMANENT-equivalent — always connected, skip.
-        if (isAnchored(tiles[sidx])) { vis[sidx] = 2; continue }
+        const supportType = getSupportType(tiles[sidx])
+        if (supportType < SupportType.STRUCTURAL) continue
+        // Anchored tiles are always connected — skip BFS for them.
+        if (supportType === SupportType.ANCHORED) { vis[sidx] = 2; continue }
 
         // Single-step pre-check: if the seed itself is on the world edge or directly
-        // touches PERMANENT/anchored, skip the full BFS setup.
+        // touches an anchored tile, skip the full BFS setup.
         let seedAnchored = sx === 0 || sx === width - 1 || sy === 0 || sy === height - 1
         if (!seedAnchored) {
           for (let dp = 0; dp < 4; dp++) {
             const px = sx + BFS_DX[dp], py = sy + BFS_DY[dp]
             if (px < 0 || px >= width || py < 0 || py >= height) { seedAnchored = true; break }
-            const pt = tiles[py * width + px]
-            if (matterType(pt) === PERMANENT || isAnchored(pt)) { seedAnchored = true; break }
+            if (getSupportType(tiles[py * width + px]) === SupportType.ANCHORED) { seedAnchored = true; break }
           }
         }
         if (seedAnchored) { vis[sidx] = 2; continue }
@@ -349,11 +350,12 @@ export class Tilemap extends SceneBound {
             const nidx = ny * width + nx
             if (vis[nidx] !== 0) continue
             const nt = tiles[nidx]
-            if (matterType(nt) === PERMANENT || isAnchored(nt)) {
+            const supportType1 = getSupportType(nt)
+            if (supportType1 === SupportType.ANCHORED) {
               anchored = true
               break bfs
             }
-            if (isStructural(nt)) {
+            if (supportType1 >= SupportType.STRUCTURAL) {
               vis[nidx] = 1
               queue[tail++] = nidx
               comp[compLen++] = nidx

@@ -1,12 +1,12 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { C4, FIRE, getFirstOwnerId, type MatterDef } from '../_Matter.types.ts'
+import { C4, FIRE, getFirstOwnerId, type MatterDef, SupportType } from '../_Matter.types.ts'
 import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 export const C4_DEF = {
   id: C4,
   name: 'C4',
-  passive: true as const,
+  immutableSupport: SupportType.AFFIXED as const,
   hasOwnerId: true as const,
   action(sim, tx, ty, idx): void {
     if (random() < 60) {

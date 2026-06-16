@@ -1,20 +1,17 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, ref } from 'vue'
-import { EMPTY, MatterType, setAnchored, setOwner } from '../game/lib/Matter/_Matter.types.ts'
-import { ALWAYS_STRUCTURAL, setStructural } from '../game/lib/Matter/matter.ts'
-import { PLAYER_MATTER_TANK_ID } from '../game/lib/Matter/MatterTank/_MatterTank.types.ts'
+import { EMPTY, MatterType, SupportType } from '../game/lib/Matter/_Matter.types.ts'
+import { ALWAYS_STRUCTURAL, setSupport, SUPPORT_IMMUTABLE } from '../game/lib/Matter/matter.ts'
 
 export type BrushUIState = ReturnType<typeof useBrushUIState>
 
 type SerializedData = {
   primaryMatterType: MatterType
-  primaryStructuralFlag: boolean
-  primaryAnchoredFlag: boolean
+  primarySupportFlag: SupportType
 
   secondaryMatterType: MatterType
-  secondaryStructuralFlag: boolean
-  secondaryAnchoredFlag: boolean
+  secondarySupportFlag: SupportType
 }
 
 const BRUSH_RADIUS_MIN = 10
@@ -34,37 +31,31 @@ export const useBrushUIState = defineStore('brush-ui-state', () => {
   const {
     matterType: primaryMatterType,
     isAlwaysStructural: primaryIsAlwaysStructural,
-    structuralFlag: primaryStructuralFlag,
-    anchoredFlag: primaryAnchoredFlag,
+    supportFlag: primarySupportFlag,
     matterValue: primaryMatterValue,
   } = makeMatterPaint()
 
   const {
     matterType: secondaryMatterType,
     isAlwaysStructural: secondaryIsAlwaysStructural,
-    structuralFlag: secondaryStructuralFlag,
-    anchoredFlag: secondaryAnchoredFlag,
+    supportFlag: secondarySupportFlag,
     matterValue: secondaryMatterValue,
   } = makeMatterPaint()
 
   const state = {
     primaryMatterType,
-    primaryStructuralFlag,
-    primaryAnchoredFlag,
+    primarySupportFlag,
 
     secondaryMatterType,
-    secondaryStructuralFlag,
-    secondaryAnchoredFlag,
+    secondarySupportFlag,
   }
 
   const defaults: SerializedData = {
     primaryMatterType: primaryMatterType.value,
-    primaryStructuralFlag: primaryStructuralFlag.value,
-    primaryAnchoredFlag: primaryAnchoredFlag.value,
+    primarySupportFlag: primarySupportFlag.value,
 
     secondaryMatterType: secondaryMatterType.value,
-    secondaryStructuralFlag: secondaryStructuralFlag.value,
-    secondaryAnchoredFlag: secondaryAnchoredFlag.value,
+    secondarySupportFlag: secondarySupportFlag.value,
   }
 
   const {
@@ -84,12 +75,10 @@ export const useBrushUIState = defineStore('brush-ui-state', () => {
     radius,
 
     primaryMatterType,
-    primaryStructuralFlag,
-    primaryAnchoredFlag,
+    primarySupportFlag,
 
     secondaryMatterType,
-    secondaryStructuralFlag,
-    secondaryAnchoredFlag,
+    secondarySupportFlag,
 
     // readonly
     primaryMatterValue,
@@ -104,26 +93,22 @@ export const useBrushUIState = defineStore('brush-ui-state', () => {
 
 function makeMatterPaint() {
   const matterType = ref<MatterType>(MatterType.SOLID)
-  const structuralFlag = ref(false)
-  const anchoredFlag = ref(false)
+  const supportFlag = ref<SupportType>(SupportType.NONE)
 
   const isAlwaysStructural = computed(() => ALWAYS_STRUCTURAL.has(matterType.value))
 
   const matterValue = computed(() => {
     let value: number = matterType.value
-    if (value !== EMPTY && !isAlwaysStructural.value && structuralFlag.value) {
-      value = setStructural(value, true)
+    if (value !== EMPTY && !SUPPORT_IMMUTABLE.has(value)) {
+      value = setSupport(value, supportFlag.value)
     }
-    value = setAnchored(value, anchoredFlag.value)
-    value = setOwner(value, PLAYER_MATTER_TANK_ID)
 
     return value
   })
   return {
     matterType,
     isAlwaysStructural,
-    structuralFlag,
-    anchoredFlag,
+    supportFlag,
     matterValue,
   }
 }

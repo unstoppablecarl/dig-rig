@@ -4,7 +4,7 @@
 //   tile & SETTLED_FLAG !== 0    → is this tile settled?
 //   tile & ~SETTLED_FLAG         → strip settled, get raw tile back
 
-import type { MatterAction } from './matter.ts'
+import { type MatterAction } from './matter.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from './MatterTank/_MatterTank.types.ts'
 
 export const SETTLED_FLAG = 0x100
@@ -56,31 +56,31 @@ export function clearOwner(value: number): number {
   return value & ~OWNER_MASK
 }
 
-// ANCHORED_FLAG — bit 25. Marks a tile as an immovable anchor regardless of type;
-// treated as equivalent to PERMANENT for structural-connectivity purposes.
-// Must be set/cleared explicitly — not maintained automatically by the simulation.
-export const ANCHORED_FLAG = 0x2000000
+// SUPPORT_TYPE — 2-bit field in bits 25–26. Encodes how a tile relates to structural
+// physics. Higher values dominate: anchored > structural > affixed > none.
+//
+//   none (0)       — normal physics; falls, flows, or is empty
+//   affixed (1)    — stays in place but plays no structural role (fuse, ice, c4, plant)
+//   structural (2) — held up by island connectivity; collapses to powder if disconnected
+//   anchored (3)   — immovable root; never collapses (permanent tiles, level terrain)
+//
+// Per-tile bits are IGNORED for types registered with alwaysSupport — their support type
+// is enforced at read-time by getSupportType() in matter.ts via ALWAYS_* sets.
+// setAnchored / setSupportBits only manipulate the per-tile bits.
+export const SUPPORT_SHIFT = 25
+export const SUPPORT_MASK = 0b11 << SUPPORT_SHIFT  // 0x6000000
 
-export function setAnchored(value: number, anchored: boolean): number {
-  return anchored ? (value | ANCHORED_FLAG) : (value & ~ANCHORED_FLAG)
+export const enum SupportType {
+  NONE = 0,
+  AFFIXED = 1,
+  STRUCTURAL = 2,
+  ANCHORED = 3,
 }
 
-export function isAnchored(value: number): boolean {
-  return (value & ANCHORED_FLAG) !== 0
-}
-
-// STRUCTURAL_FLAG — bit 26. Per-tile opt-in structural marker.
-// Types listed in ConditionallyStructuralType can have this set to participate in
-// island detection without being always-structural. TypeScript enforces valid types
-// at call sites via the setStructural signature; no runtime registry is needed.
-export const STRUCTURAL_FLAG = 0x4000000
-
-export function setStructuralFlag(target: number, value: boolean): number {
-  return value ? (target | STRUCTURAL_FLAG) : (target & ~STRUCTURAL_FLAG)
-}
-
-export function isStructuralFlag(value: number): boolean {
-  return (value & STRUCTURAL_FLAG) !== 0
+// getSupportBits — reads only the raw per-tile bits; does NOT apply ALWAYS_* overrides.
+// Use getSupportType() from matter.ts for correct type-safe reads.
+export function getSupport(target: number): SupportType {
+  return (target >>> SUPPORT_SHIFT) & 0b11
 }
 
 // extracts MatterType
@@ -160,7 +160,8 @@ export type MatterDef = {
   id: MatterType
   name: string
   action?: MatterAction
-  passive?: boolean
+  // alwaysSupport — immutable support type enforced at read-time regardless of per-tile bits.
+  immutableSupport?: SupportType.ANCHORED | SupportType.STRUCTURAL | SupportType.AFFIXED
   lavaImmune?: boolean
   acidImmune?: boolean
   liquid?: boolean
@@ -168,9 +169,6 @@ export type MatterDef = {
   hasOwnerId?: boolean,
   collidesWhenSettled?: boolean
   sinksThrough?: MatterType[]
-  // type always participates in island detection (e.g. SOLID, WAX).
-  alwaysStructural?: boolean
-  // what the tile converts to when it is in a structural state and its island collapses.
-  // stays the same type if not set
+  // what the tile converts to when its structural island collapses (undefined = keep type).
   structuralCollapseType?: MatterType
 }

@@ -4,8 +4,8 @@ import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { ParticleBridge } from '../Particles/ParticleBridge.ts'
 import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
-import { isStructuralFlag, matterType, MatterType, setStructuralFlag } from './_Matter.types.ts'
-import { isStructural, STRUCTURAL_COLLAPSE_TO } from './matter.ts'
+import { getSupport, matterType, MatterType, SupportType } from './_Matter.types.ts'
+import { getSupportType, setSupport, STRUCTURAL_COLLAPSE_TO } from './matter.ts'
 import MatterCoordinatorConstructor from './MatterCoordinator.worker.ts?worker'
 import {
   MatterCoordinatorInMsg,
@@ -109,10 +109,10 @@ export class MatterBridge extends SceneBound {
         const collapseType = STRUCTURAL_COLLAPSE_TO[t]
         if (collapseType !== undefined) {
           tilemap.setTile(x, y, collapseType)
-        } else if (isStructuralFlag(raw)) {
-          // No type conversion — clear the per-tile structural flag so the tile
+        } else if (getSupport(raw) === SupportType.STRUCTURAL) {
+          // No type conversion — clear the per-tile structural support so the tile
           // resumes normal simulation (e.g. structural GUNPOWDER falls again).
-          const cleared = setStructuralFlag(raw, false)
+          const cleared = setSupport(raw, SupportType.NONE)
           tilemap.tiles[y * tilemap.width + x] = cleared
           tilemap.chunkManager.setDirty(x, y, raw, cleared)
         }
@@ -152,7 +152,7 @@ export class MatterBridge extends SceneBound {
     }
     if (!indices.length) return
     this.worker.postMessage({ type: MatterCoordinatorInMsg.ACTIVATE, indices })
-    if (isStructural(value)) {
+    if (getSupportType(value) >= SupportType.STRUCTURAL) {
       tilemap.chunkManager.computeAnchored()
       const islands = tilemap.findIslandTiles(placed)
       if (islands.length) tilemap.onIslandDetected?.(islands)

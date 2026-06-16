@@ -1,18 +1,12 @@
 import { CHUNK_SIZE } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { isAnchored, matterType, MatterType, PERMANENT } from '../Matter/_Matter.types.ts'
-
-import { ALWAYS_STRUCTURAL } from '../Matter/matter.ts'
+import { matterType, MatterType, PERMANENT, SupportType } from '../Matter/_Matter.types.ts'
+import { getSupportType } from '../Matter/matter.ts'
 import { Chunk, type ChunkId } from './Chunk.ts'
 
-// Chunk anchoring only tracks always-structural types (SOLID, WAX) and ANCHORED tiles —
-// not STRUCTURAL_FLAG tiles. Including STRUCTURAL_FLAG would let a GUNPOWDER bridge mark
-// a chunk as anchored, breaking the invariant that every tile in an anchored chunk is
-// reachable from PERMANENT via always-structural paths.
 function isChunkStructural(raw: number): boolean {
-  const t = matterType(raw)
-  return t === PERMANENT || ALWAYS_STRUCTURAL.has(t) || isAnchored(raw)
+  return getSupportType(raw) >= SupportType.STRUCTURAL
 }
 
 export class ChunkManager extends SceneBound {
@@ -66,9 +60,9 @@ export class ChunkManager extends SceneBound {
     if (isSolid && !wasSolid) chunk.solidTileCount++
     if (wasSolid && !isSolid) chunk.solidTileCount--
 
-    // Invalidate chunk anchoring when always-structural or anchored tiles change.
-    const wasStructural = ALWAYS_STRUCTURAL.has(matterType(oldType)) || isAnchored(oldType)
-    const isNowStructural = ALWAYS_STRUCTURAL.has(matterType(newType)) || isAnchored(newType)
+    // Invalidate chunk anchoring when structural/anchored tiles change.
+    const wasStructural = getSupportType(oldType) >= SupportType.STRUCTURAL
+    const isNowStructural = getSupportType(newType) >= SupportType.STRUCTURAL
     if (wasStructural !== isNowStructural) this._anchoredDirty = true
 
     const { cx, cy } = chunk

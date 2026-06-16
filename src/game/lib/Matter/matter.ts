@@ -1,4 +1,12 @@
-import { EMPTY, isStructuralFlag, type MatterDef, matterType, MatterType, setStructuralFlag } from './_Matter.types.ts'
+import {
+  EMPTY,
+  type MatterDef,
+  matterType,
+  MatterType,
+  SUPPORT_MASK,
+  SUPPORT_SHIFT,
+  SupportType,
+} from './_Matter.types.ts'
 import { MatterTypeSet } from './data/MatterTypeSet.ts'
 import type { MatterSim } from './MatterSim.ts'
 
@@ -12,10 +20,6 @@ export const MATTER_NAMES = new Map<MatterType, string>()
 export const SETTLING_TYPES = new MatterTypeSet()
 export type SettlingTypes = {
   [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { settles: true } ? K : never;
-}[keyof MatterMetaRegistry];
-export const PASSIVE_MATER_TYPES = new MatterTypeSet()
-export type PassiveMatterTypes = {
-  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { passive: true } ? K : never
 }[keyof MatterMetaRegistry]
 
 export const LAVA_IMMUNE = new MatterTypeSet()
@@ -38,19 +42,25 @@ export type LiquidTypes = {
   [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { liquid: true } ? K : never
 }[keyof MatterMetaRegistry]
 
-// Types that are always structural (structural: true in MatterDef).
+export const ALWAYS_ANCHORED = new MatterTypeSet()
 export const ALWAYS_STRUCTURAL = new MatterTypeSet()
+export const ALWAYS_AFFIXED = new MatterTypeSet()
+export const SUPPORT_IMMUTABLE = new MatterTypeSet()
+
 export type MatterAlwaysStructuralTypes = {
-  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { alwaysStructural: true } ? K : never
+  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { alwaysSupport: 'structural' } ? K : never
 }[keyof MatterMetaRegistry]
+
+export function getSupportType(raw: number): SupportType {
+  const type = matterType(raw)
+  if (ALWAYS_ANCHORED.has(type)) return SupportType.ANCHORED
+  if (ALWAYS_STRUCTURAL.has(type)) return SupportType.STRUCTURAL
+  if (ALWAYS_AFFIXED.has(type)) return SupportType.AFFIXED
+  return (raw >>> SUPPORT_SHIFT) & 0b11
+}
 
 // Maps structural types to the type they convert to on island collapse (undefined = keep same type).
 export const STRUCTURAL_COLLAPSE_TO: Partial<Record<MatterType, MatterType>> = {}
-// structural matter types do not fall if part of an island touching anchored or permanent
-// either its type is always-structural, or it has STRUCTURAL_FLAG set (per-tile opt-in).
-export function isStructural(raw: number): boolean {
-  return ALWAYS_STRUCTURAL.has(matterType(raw)) || isStructuralFlag(raw)
-}
 
 export const SINKS_THROUGH: Partial<Record<MatterType, MatterTypeSet>> = {}
 
@@ -66,7 +76,7 @@ function registerMatterType({
                               id,
                               name,
                               action = noop,
-                              passive = false,
+                              immutableSupport,
                               lavaImmune = false,
                               acidImmune = false,
                               collidesWhenSettled = false,
@@ -74,20 +84,21 @@ function registerMatterType({
                               hasOwnerId = false,
                               settles = false,
                               sinksThrough,
-                              alwaysStructural,
                               structuralCollapseType,
                             }: MatterDef) {
 
   MATTER_ACTIONS[id] = action
   MATTER_NAMES.set(id, name)
-  if (passive) PASSIVE_MATER_TYPES.add(id)
+  if (immutableSupport === SupportType.ANCHORED) ALWAYS_ANCHORED.add(id)
+  else if (immutableSupport === SupportType.STRUCTURAL) ALWAYS_STRUCTURAL.add(id)
+  else if (immutableSupport === SupportType.AFFIXED) ALWAYS_AFFIXED.add(id)
+  if (immutableSupport !== undefined) SUPPORT_IMMUTABLE.add(id)
   if (lavaImmune) LAVA_IMMUNE.add(id)
   if (acidImmune) ACID_IMMUNE.add(id)
   if (liquid) LIQUID_TYPES.add(id)
   if (collidesWhenSettled) COLLIDES_WHEN_SETTLED.add(id)
   if (settles) SETTLING_TYPES.add(id)
   if (sinksThrough) SINKS_THROUGH[id] = new MatterTypeSet(...sinksThrough)
-  if (alwaysStructural) ALWAYS_STRUCTURAL.add(id)
   if (structuralCollapseType !== undefined) STRUCTURAL_COLLAPSE_TO[id] = structuralCollapseType
   if (hasOwnerId) OWNED_MATTER_TYPES.add(id)
 }
@@ -98,12 +109,12 @@ for (const mod of Object.values(defs)) {
   registerMatterType(mod.default)
 }
 
-export function setStructural(target: number, value: boolean): number {
+export function setSupport(target: number, support: SupportType): number {
   if (import.meta.env.DEV) {
     const type = matterType(target)
-    if (type === EMPTY || ALWAYS_STRUCTURAL.has(type)) {
-      throw new Error(`Cannot set ${MatterType[type]} structural flag it is immutable.`)
+    if (type === EMPTY || SUPPORT_IMMUTABLE.has(type)) {
+      throw new Error(`Cannot set ${MatterType[type]} support bits — support type is immutable.`)
     }
   }
-  return setStructuralFlag(target, value)
+  return (target & ~SUPPORT_MASK) | (support << SUPPORT_SHIFT)
 }

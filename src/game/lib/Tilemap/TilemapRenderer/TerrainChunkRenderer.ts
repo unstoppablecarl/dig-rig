@@ -1,7 +1,8 @@
 import { CHUNK_SIZE } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { isAnchored, MatterTypeValues, SETTLED_FLAG, TILE_STATE_MASK } from '../../Matter/_Matter.types.ts'
+import { MatterTypeValues, SETTLED_FLAG, SupportType, TILE_STATE_MASK } from '../../Matter/_Matter.types.ts'
+import { getSupportType } from '../../Matter/matter.ts'
 import type { Chunk } from '../Chunk.ts'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
@@ -14,7 +15,7 @@ import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
 //   G = SETTLED     (0 or 255)
 //   B = ANCHORED    (0 or 255)
 //   A = 255         (always opaque so the texture is never discarded)
-//
+
 // MASK_MAP is a 512-entry lookup table covering every combination of the 9
 // bits in TILE_STATE_MASK (8 type bits + 1 settled bit). Building it once at
 // module load avoids any per-tile branching inside the hot render loop.
@@ -72,7 +73,7 @@ export class TerrainChunkRenderer extends SceneBound {
         for (let x = 0; x < CHUNK_SIZE; x++) {
           const raw = tiles[srcRow + x]
           // Table lookup gives R/G/A; OR in B for anchored flag.
-          pixels[flippedRow + x] = MASK_MAP[raw & TILE_STATE_MASK] | (isAnchored(raw) ? ANCHORED_B : 0)
+          pixels[flippedRow + x] = MASK_MAP[raw & TILE_STATE_MASK] | (getSupportType(raw) === SupportType.ANCHORED ? ANCHORED_B : 0)
         }
       }
     } else {
@@ -81,7 +82,7 @@ export class TerrainChunkRenderer extends SceneBound {
         const flippedRow = (CHUNK_SIZE - 1 - y) * CHUNK_SIZE
         for (let x = 0; x < CHUNK_SIZE; x++) {
           const raw = tilemap.getTile(offX + x, offY + y)
-          pixels[flippedRow + x] = MASK_MAP[raw & TILE_STATE_MASK] | (isAnchored(raw) ? ANCHORED_B : 0)
+          pixels[flippedRow + x] = MASK_MAP[raw & TILE_STATE_MASK] | (getSupportType(raw) === SupportType.ANCHORED ? ANCHORED_B : 0)
         }
       }
     }

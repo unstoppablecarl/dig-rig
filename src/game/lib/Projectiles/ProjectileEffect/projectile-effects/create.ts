@@ -2,7 +2,7 @@ import type { Position } from '../../../../types.ts'
 import { MatterType, setOwner } from '../../../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../../../Matter/data/MatterTypeSet'
 
-import { OWNED_MATTER_TYPES, PASSIVE_MATER_TYPES } from '../../../Matter/matter.ts'
+import { OWNED_MATTER_TYPES, SETTLING_TYPES } from '../../../Matter/matter.ts'
 import { NO_MATTER_TANK_ID } from '../../../Matter/MatterTank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import type { Tilemap } from '../../../Tilemap/Tilemap.ts'
@@ -28,7 +28,7 @@ const liquidCreateTilesCommitted: ProjectileEffect['onTilesCommitted'] = (tm: Ti
 }
 
 export function makeCreateEffect(type: MatterType): ProjectileEffect {
-  const passive = PASSIVE_MATER_TYPES.has(type)
+  const passive = !SETTLING_TYPES.has(type)
 
   const convertWithOwnerId: ProjectileEffect['convertMatterType'] = (t: MatterType, ownerId) => {
     if (t === MatterType.EMPTY) {

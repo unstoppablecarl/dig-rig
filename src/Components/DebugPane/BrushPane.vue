@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { PButton, PCheckbox, PFolder, PSelect } from 'vue-pane/src/index.ts'
+import { PButton, PFolder, PSelect } from 'vue-pane/src/index.ts'
 import { InputMode } from '../../game/lib/Input/_input.types.ts'
-import { EMPTY } from '../../game/lib/Matter/_Matter.types.ts'
+import { EMPTY, SupportType } from '../../game/lib/Matter/_Matter.types.ts'
 import { MATTER_NAMES } from '../../game/lib/Matter/matter.ts'
 import type { GameLevel } from '../../game/scenes/GameLevel.ts'
 import { useBrushUIState } from '../../store/brushUIState.ts'
@@ -33,29 +33,33 @@ const brushOptions = [...MATTER_NAMES.entries()]
     label: value,
   }))
 
+const supportOptions = [
+  {
+    value: SupportType.NONE,
+    label: 'None',
+  },
+  {
+    value: SupportType.AFFIXED,
+    label: 'Affixed',
+  },
+  {
+    value: SupportType.STRUCTURAL,
+    label: 'Structural',
+  },
+  {
+    value: SupportType.ANCHORED,
+    label: 'Anchored',
+  },
+]
+
 </script>
 <template>
   <PFolder title="Brush">
     <PButton :label="brushLabel" @click="toggleBrush" />
     <PSelect label="Primary" :options="brushOptions" v-model="brushUI.primaryMatterType" />
-    <PCheckbox
-      label="Structural"
-      v-model="brushUI.primaryStructuralFlag"
-      :disabled="brushUI.primaryIsAlwaysStructural"
-    />
-    <PCheckbox
-      label="Anchored"
-      v-model="brushUI.primaryAnchoredFlag"
-    />
+    <PSelect label="Primary" :options="supportOptions" v-model="brushUI.primarySupportFlag" />
+
     <PSelect label="Secondary" :options="brushOptions" v-model="brushUI.secondaryMatterType" />
-    <PCheckbox
-      label="Structural"
-      v-model="brushUI.secondaryStructuralFlag"
-      :disabled="brushUI.secondaryIsAlwaysStructural"
-    />
-    <PCheckbox
-      label="Anchored"
-      v-model="brushUI.secondaryAnchoredFlag"
-    />
+    <PSelect label="Secondary" :options="supportOptions" v-model="brushUI.secondarySupportFlag" />
   </PFolder>
 </template>

@@ -3,21 +3,20 @@ import {
   EMPTY,
   FIRE,
   getOwner,
-  isAnchored,
   isSettled,
   MatterType,
   matterType,
   setOwner,
   setSettled,
+  SupportType,
 } from './_Matter.types.ts'
 import { MatterTypeSet } from './data/MatterTypeSet'
 import {
   ACID_IMMUNE,
-  isStructural,
+  getSupportType,
   LAVA_IMMUNE,
   LIQUID_TYPES,
   MATTER_ACTIONS,
-  PASSIVE_MATER_TYPES,
   SETTLING_TYPES,
   SINKS_THROUGH,
 } from './matter.ts'
@@ -64,14 +63,7 @@ export class MatterSim {
       const raw = this.tiles[idx]
       const t = matterType(raw)
 
-      if (
-        t === EMPTY ||
-        t === MatterType.SOLID ||
-        t === MatterType.PERMANENT ||
-        isAnchored(raw) ||
-        isStructural(raw) ||
-        !SETTLING_TYPES.has(t)
-      ) continue
+      if (getSupportType(raw) >= SupportType.STRUCTURAL || !SETTLING_TYPES.has(t)) continue
 
       this.tiles[idx] = setSettled(raw, false)
       this.markDirty(idx % this.width, idx / this.width | 0)
@@ -526,7 +518,7 @@ export class MatterSim {
   }
 
   doPowderFall(tx: number, ty: number, idx: number) {
-    if (isAnchored(this.tiles[idx])) return
+    if (getSupportType(this.tiles[idx]) === SupportType.ANCHORED) return
 
     const leftFirst = this.leftFirst
 
@@ -568,7 +560,7 @@ export class MatterSim {
   }
 
   tryLiquidFlow(tx: number, ty: number, idx: number) {
-    if (isAnchored(this.tiles[idx])) return
+    if (getSupportType(this.tiles[idx]) === SupportType.ANCHORED) return
 
     const leftFirst = this.leftFirst
 
@@ -581,5 +573,5 @@ export class MatterSim {
 }
 
 function isSolid(value: number) {
-  return PASSIVE_MATER_TYPES.has(matterType(value)) || isSettled(value)
+  return getSupportType(value) > SupportType.NONE || isSettled(value)
 }

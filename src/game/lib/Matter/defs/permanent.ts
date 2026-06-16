@@ -1,11 +1,11 @@
-import { type MatterDef, PERMANENT } from '../_Matter.types.ts'
+import { type MatterDef, PERMANENT, SupportType } from '../_Matter.types.ts'
 
 export const PERMANENT_DEF = {
   id: PERMANENT,
   name: 'Permanent',
   lavaImmune: true as const,
   acidImmune: true as const,
-  passive: true as const,
+  immutableSupport: SupportType.ANCHORED as const,
 } satisfies MatterDef
 
 export default PERMANENT_DEF

@@ -14,7 +14,6 @@ import {
   GUNPOWDER,
   ICE,
   LAVA,
-  type MatterType,
   METHANE,
   NAPALM,
   NITRO,
@@ -31,7 +30,6 @@ import {
   WATER,
   WAX,
 } from '../lib/Matter/_Matter.types.ts'
-import type { LiquidTypes } from '../lib/Matter/matter.ts'
 import { FireGroup, FireMode } from '../lib/Player/_FireMode-types'
 import { BlendMode } from './blend-modes.ts'
 import Interpolate = Display.Color.Interpolate
@@ -63,22 +61,6 @@ export const BRUSH_OUTLINE_COLOR = rgbToColor(`rgba(255, 255, 0)`)
 
 export type MatterRenderConfig = typeof MATTER_RENDER_CONFIG_DEFAULTS
 
-type LiquidConfig = {
-  alpha: number
-  colorA: Color
-  colorB: Color
-}
-type PowderConfig = {
-  color: Color,
-  // settledTransitionColor: Color
-  // settledColor: Color
-  // settledColorHighlight: Color
-  // settledOutlineColor: Color
-}
-
-type MatterRenderConfigDefaults = {
-  [K in MatterType]: K extends LiquidTypes ? LiquidConfig : K extends typeof MatterType.EMPTY ? {} : PowderConfig
-}
 export const MATTER_RENDER_CONFIG_DEFAULTS = {
   [PERMANENT]: powderMatterConfig({
     color: rgbToColor(`rgb(0, 255, 255)`),
@@ -111,7 +93,7 @@ export const MATTER_RENDER_CONFIG_DEFAULTS = {
   }),
   [SALT]: powderMatterConfig({
     color: rgbToColor(`rgb(252, 252, 252)`),
-    settledColor: rgbToColor(`rgb(164, 200, 195 )`),
+    settledColor: rgbToColor(`rgb(164, 200, 195)`),
     settledOutlineColor: rgbToColor(`rgb(255, 255, 255)`),
     rockSettledColorHighlight: rgbToColor(`rgb(255, 255, 255)`),
   }),
@@ -193,7 +175,7 @@ export const MATTER_RENDER_CONFIG_DEFAULTS = {
   [ACID]: {
     colorA: rgbToColor(`rgb(107, 240, 41)`),
     colorB: rgbToColor(`rgb(240, 223, 41)`),
-    alpha: 0.8
+    alpha: 0.8,
   },
   // gas
   [STEAM]: powderMatterConfig({ color: rgbToColor(`rgb(194, 214, 235)`), alpha: 0.55 }),
@@ -211,9 +193,12 @@ export const MATTER_RENDER_CONFIG_DEFAULTS = {
     color: rgbToColor(`rgb(255, 130, 130)`),
   }),
   [EMPTY]: {},
-} as const satisfies MatterRenderConfigDefaults
+} as const
 
-export function powderMatterConfig<T extends { color: Color, settledTransitionColor?: Color }>(value: T): T & PowderConfig {
+export function powderMatterConfig<T extends {
+  color: Color,
+  settledTransitionColor?: Color
+}>(value: T): T & { settledTransitionColor: Color } {
   return {
     ...value,
     settledTransitionColor: value.settledTransitionColor ?? value.color,

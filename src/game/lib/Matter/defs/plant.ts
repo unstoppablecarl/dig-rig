@@ -1,10 +1,10 @@
 import { random } from '../../../helpers/random'
-import { EMPTY, type MatterDef, PLANT, SALT, WATER } from '../_Matter.types.ts'
+import { EMPTY, type MatterDef, PLANT, SALT, SupportType, WATER } from '../_Matter.types.ts'
 
 export const PLANT_DEF = {
   id: PLANT,
   name: 'Plant',
-  passive: true as const,
+  immutableSupport: SupportType.AFFIXED as const,
   action(sim, tx, ty, idx): void {
     // Grow into adjacent water
     sim.doGrow(tx, ty, idx, WATER, 50)

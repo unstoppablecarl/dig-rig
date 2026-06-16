@@ -1,9 +1,9 @@
-import { FALLING_WAX, FIRE, type MatterDef, WAX } from '../_Matter.types.ts'
+import { FALLING_WAX, FIRE, type MatterDef, SupportType, WAX } from '../_Matter.types.ts'
 
 export const WAX_DEF = {
   id: WAX,
   name: 'Wax',
-  alwaysStructural: true as const,
+  immutableSupport: SupportType.STRUCTURAL as const,
   structuralCollapseType: FALLING_WAX,
   action(sim, tx, ty, idx): void {
     // Melt to falling wax near fire

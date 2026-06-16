@@ -1,9 +1,9 @@
-import { FIRE, FUSE, getFirstOwnerId, type MatterDef, setOwner } from '../_Matter.types.ts'
+import { FIRE, FUSE, getFirstOwnerId, type MatterDef, setOwner, SupportType } from '../_Matter.types.ts'
 
 export const FUSE_DEF = {
   id: FUSE,
   name: 'Fuse',
-  passive: true as const,
+  immutableSupport: SupportType.AFFIXED as const,
   hasOwnerId: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles } = sim
