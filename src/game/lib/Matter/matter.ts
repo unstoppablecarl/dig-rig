@@ -47,16 +47,16 @@ export const ALWAYS_STRUCTURAL = new MatterTypeSet()
 export const ALWAYS_AFFIXED = new MatterTypeSet()
 export const SUPPORT_IMMUTABLE = new MatterTypeSet()
 
+// 256-entry lookup: value is the fixed SupportType for that MatterType, or 0xFF = "read from tile bits".
+const SUPPORT_TYPE_LOOKUP = new Uint8Array(256).fill(0xFF)
+
 export type MatterAlwaysStructuralTypes = {
   [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { alwaysSupport: 'structural' } ? K : never
 }[keyof MatterMetaRegistry]
 
 export function getSupportType(raw: number): SupportType {
-  const type = matterType(raw)
-  if (ALWAYS_ANCHORED.has(type)) return SupportType.ANCHORED
-  if (ALWAYS_STRUCTURAL.has(type)) return SupportType.STRUCTURAL
-  if (ALWAYS_AFFIXED.has(type)) return SupportType.AFFIXED
-  return (raw >>> SUPPORT_SHIFT) & 0b11
+  const override = SUPPORT_TYPE_LOOKUP[raw & 0xFF]
+  return override !== 0xFF ? override : (raw >>> SUPPORT_SHIFT) & 0b11
 }
 
 export function getImmutableSupportType(raw: number): SupportType {
@@ -97,9 +97,9 @@ function registerMatterType({
 
   MATTER_ACTIONS[id] = action
   MATTER_NAMES.set(id, name)
-  if (immutableSupport === SupportType.ANCHORED) ALWAYS_ANCHORED.add(id)
-  else if (immutableSupport === SupportType.STRUCTURAL) ALWAYS_STRUCTURAL.add(id)
-  else if (immutableSupport === SupportType.AFFIXED) ALWAYS_AFFIXED.add(id)
+  if (immutableSupport === SupportType.ANCHORED) { ALWAYS_ANCHORED.add(id); SUPPORT_TYPE_LOOKUP[id] = SupportType.ANCHORED }
+  else if (immutableSupport === SupportType.STRUCTURAL) { ALWAYS_STRUCTURAL.add(id); SUPPORT_TYPE_LOOKUP[id] = SupportType.STRUCTURAL }
+  else if (immutableSupport === SupportType.AFFIXED) { ALWAYS_AFFIXED.add(id); SUPPORT_TYPE_LOOKUP[id] = SupportType.AFFIXED }
   if (immutableSupport !== undefined) SUPPORT_IMMUTABLE.add(id)
   if (lavaImmune) LAVA_IMMUNE.add(id)
   if (acidImmune) ACID_IMMUNE.add(id)
