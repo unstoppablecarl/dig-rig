@@ -163,7 +163,6 @@ export class MatterSim {
 
     if (!canEnter) return false
 
-    // Write full raw value (owner bits intact), settled flag cleared
     tiles[toIdx] = setSettled(rawFrom, false)
     tiles[fromIdx] = toType === EMPTY ? EMPTY : setSettled(rawTo, false)
     this.markDirty(fromTx, fromTy)
