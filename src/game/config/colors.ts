@@ -14,6 +14,7 @@ import {
   GUNPOWDER,
   ICE,
   LAVA,
+  LAVA_DROP,
   type MatterType,
   METHANE,
   NAPALM,
@@ -190,6 +191,10 @@ export const MATTER_RENDER_CONFIG_DEFAULTS = {
   [LAVA]: {
     colorA: rgbToColor(`rgb(245, 89, 15)`),
     colorB: rgbToColor(`rgb(245, 199, 15)`),
+    alpha: 1,
+  },
+  [LAVA_DROP]: {
+    color: rgbToColor(`rgb(245, 200, 15)`),
     alpha: 1,
   },
   [NAPALM]: {

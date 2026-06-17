@@ -14,6 +14,7 @@ import {
   GUNPOWDER,
   ICE,
   LAVA,
+  LAVA_DROP,
   METHANE,
   NAPALM,
   NITRO,
@@ -162,7 +163,7 @@ export function makeTilemapFragShader(
           }
           return color;
       }
-      
+
       vec4 liquid(float t, vec3 colorA, vec3 colorB, float alpha){
           const float speed = 1.0;
           const float scale = 100.0;
@@ -303,7 +304,7 @@ export function makeTilemapFragShader(
               } else {
                   color = vec4(saltColor, 1.0);
               }
-              
+
               if (outline > 0.5) {
                   color.rgb = mix(color.rgb, saltSettledOutlineColor, 0.5);
               } else if (glow > 0.01) {
@@ -419,7 +420,7 @@ export function makeTilemapFragShader(
               const vec3 colorA = ${v3(m[SALT_WATER].colorA)};
               const vec3 colorB = ${v3(m[SALT_WATER].colorB)};
               const float alpha = ${fl(m[SALT_WATER].alpha)};
-          
+
               color = liquid(t, colorA, colorB, alpha);
           }
           else if (tileType == ${OIL}) {
@@ -435,6 +436,12 @@ export function makeTilemapFragShader(
               const float alpha = ${fl(m[LAVA].alpha)};
 
               color = liquid(t, colorA, colorB, alpha);
+          }
+          else if (tileType == ${LAVA_DROP}) {
+              const vec3 dropColor = ${v3(m[LAVA_DROP].color)};
+              const float alpha = ${fl(m[LAVA_DROP].alpha)};
+
+              color = vec4(dropColor, alpha);
           }
           else if (tileType == ${NAPALM}) {
               const vec3 colorA = ${v3(m[NAPALM].colorA)};
@@ -460,7 +467,7 @@ export function makeTilemapFragShader(
           else if (tileType == ${METHANE}) {
               const vec3 methaneColor = ${v3(m[METHANE].color)};
               const float alpha = ${fl(m[METHANE].alpha)};
-              
+
               color = vec4(methaneColor, alpha);
           }
           // other
@@ -472,14 +479,14 @@ export function makeTilemapFragShader(
           else if (tileType == ${CRYO}) {
               const vec3 cryoColor = ${v3(m[CRYO].color)};
               const float alpha = ${fl(m[CRYO].alpha)};
-              
+
               color = vec4(cryoColor, alpha);
           }
           else if (tileType == ${PLANT}) {
               const vec3 plantColor = ${v3(m[PLANT].color)};
               const vec3 plantSettledColor = ${v3(m[PLANT].settledColor)};
               const vec3 plantSettledOutlineColor = ${v3(m[PLANT].settledOutlineColor)};
-              
+
               color = vec4(settled ? plantSettledColor : plantColor, 1.0);
               if (outline > 0.5) {
                   color.rgb = mix(color.rgb, plantSettledOutlineColor, 0.5);

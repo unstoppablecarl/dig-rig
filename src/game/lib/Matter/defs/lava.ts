@@ -5,7 +5,9 @@ import {
   FIRE,
   getOwner,
   LAVA,
+  LAVA_DROP,
   type MatterDef,
+  setLavaDropVel,
   matterType,
   OIL,
   ROCK,
@@ -24,6 +26,7 @@ const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)
 const COOLED = new MatterTypeSet(WATER, SALT_WATER)
 
 const pass2: [number, number, number][] = []
+export const LAVA_DROP_INITIAL_VEL = 10
 
 export const LAVA_DEF = {
   id: LAVA,
@@ -130,12 +133,19 @@ export const LAVA_DEF = {
       }
     }
 
-    // Spawn fire in empty space directly above
+    // Launch a lava drop upward — converts this lava tile into a projectile
     const upIdx = ty > 0 ? idx - width : -1
-    if (upIdx !== -1 && random() < 6 && matterType(tiles[upIdx]) === EMPTY) {
-      tiles[upIdx] = setOwner(FIRE, ownerId)
-      sim.markDirty(tx, ty - 1)
-      sim.next.add(upIdx)
+    const canMoveUp = upIdx !== -1
+    if (
+      canMoveUp &&
+      random() < 6 &&
+      matterType(tiles[upIdx]) === EMPTY &&
+      sim.bordering(tx, ty, idx, LAVA)
+    ) {
+      tiles[idx] = setLavaDropVel(setOwner(LAVA_DROP, ownerId), LAVA_DROP_INITIAL_VEL)
+      sim.markDirty(tx, ty)
+      sim.next.add(idx)
+      return
     }
 
     // Burn adjacent non-immune tiles (4-directional, SOLID is lava-immune so skipped)

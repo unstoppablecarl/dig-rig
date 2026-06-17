@@ -56,6 +56,19 @@ export function clearOwner(value: number): number {
   return value & ~OWNER_MASK
 }
 
+// LAVA_DROP velocity — bits 27–30 encode remaining upward ticks for in-flight lava drops.
+//   0 = falling, 1–15 = remaining upward steps.
+export const LAVA_DROP_VEL_SHIFT = 27
+export const LAVA_DROP_VEL_MASK = 0xF << 27  // 0x78000000, bits 27–30
+
+export function getLavaDropVel(tile: number): number {
+  return (tile >>> LAVA_DROP_VEL_SHIFT) & 0xF
+}
+
+export function setLavaDropVel(tile: number, vel: number): number {
+  return (tile & ~LAVA_DROP_VEL_MASK) | ((vel & 0xF) << LAVA_DROP_VEL_SHIFT)
+}
+
 // SUPPORT_TYPE — 2-bit field in bits 25–26. Encodes how a tile relates to structural
 // physics. Higher values dominate: anchored > structural > affixed > none.
 //
@@ -117,6 +130,7 @@ export enum MatterType {
   THERMITE = 26,
   BURNING_THERMITE = 27,
   GUNPOWDER = 28,
+  LAVA_DROP = 29,
 }
 
 export const EMPTY = MatterType.EMPTY
@@ -147,6 +161,7 @@ export const ACID = MatterType.ACID
 export const THERMITE = MatterType.THERMITE
 export const BURNING_THERMITE = MatterType.BURNING_THERMITE
 export const GUNPOWDER = MatterType.GUNPOWDER
+export const LAVA_DROP = MatterType.LAVA_DROP
 
 export const MatterTypeValues = Object.values(MatterType).filter(
   (k) => !isNaN(Number(k)),
