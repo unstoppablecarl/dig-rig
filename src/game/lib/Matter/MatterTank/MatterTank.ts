@@ -7,6 +7,7 @@ import type { MatterManager } from './MatterManager.ts'
 export class MatterTank {
   private _matter: number
   matterStart: number
+  overflowTank: MatterTank | null = null
 
   constructor(
     private manager: MatterManager,
@@ -39,7 +40,17 @@ export class MatterTank {
   }
 
   forceAdd(value: number) {
-    this.add(value)
+    const space = this.matterMax - this._matter
+    if (value <= space) {
+      this.add(value)
+    } else {
+      if (space > 0) this.add(space)
+      if (this.overflowTank) {
+        const transferAmount = value - space
+        this.overflowTank.forceAdd(transferAmount)
+        this.manager.scene.vfxParticleManager.spawnMatterTankTransfer(transferAmount, this.source, this.overflowTank.source)
+      }
+    }
   }
 
   // Private — only applyPendingCharge may call these.
@@ -96,7 +107,7 @@ export class MatterTank {
     this.removePendingCharge(mode, value)
 
     if (mode === FireMode.DESTROY) {
-      this.add(value)
+      this.forceAdd(value)
       return
     }
 

@@ -23,11 +23,12 @@ export class PortableMatterTank extends GameObject implements Position {
     public scene: GameLevel,
     public x: number,
     public y: number,
+    startingMatter = 0,
     matterMax = Infinity,
   ) {
     super(scene, 'Portable Matter Tank')
 
-    this.matterTank = scene.matterManager.makeMatterTank(this, matterMax, 99)
+    this.matterTank = scene.matterManager.makeMatterTank(this, matterMax, startingMatter)
     const width = 16
     const height = 27
 

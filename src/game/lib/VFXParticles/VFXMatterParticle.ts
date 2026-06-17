@@ -38,10 +38,6 @@ const DYNAMIC_TARGET_SNAP = 2
 
 const FADE_TIME = 1
 
-// Quadratic Bezier control points for scale: [1, 3, 1] * PARTICLE_BASE_SCALE
-const SCALE_S0 = PARTICLE_BASE_SCALE
-const SCALE_S1 = PARTICLE_BASE_SCALE * 3
-const SCALE_S2 = PARTICLE_BASE_SCALE
 
 const {
   WIND_LUT_X,
@@ -74,8 +70,14 @@ export class VFXMatterParticle extends Particle {
   private localWindScale: number
   private localScale: number
 
-  constructor(emitter: ParticleEmitter) {
+  private quadraticMidPointScale: number
+
+  constructor(
+    emitter: ParticleEmitter,
+    quadraticMidPointScale = 3,
+  ) {
     super(emitter)
+    this.quadraticMidPointScale = PARTICLE_BASE_SCALE * quadraticMidPointScale
   }
 
   public init(
@@ -190,9 +192,9 @@ export class VFXMatterParticle extends Particle {
     const distanceProgress = 1 - Math.min(1, distance / this.initialDistance)
     const k = 1 - distanceProgress
     const scale = (
-      k * k * SCALE_S0 +
-      2 * k * distanceProgress * SCALE_S1 +
-      distanceProgress * distanceProgress * SCALE_S2
+      k * k * PARTICLE_BASE_SCALE +
+      2 * k * distanceProgress * this.quadraticMidPointScale +
+      distanceProgress * distanceProgress * PARTICLE_BASE_SCALE
     ) * this.localScale
 
     this.scaleX = this.scaleY = scale

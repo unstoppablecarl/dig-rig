@@ -66,7 +66,10 @@ export class VFXParticleManager extends SceneBound {
       const key = (cy << 11) | cx
       if (seen.has(key)) continue
       seen.add(key)
-      this.spawn(source, { x: (cx + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE, y: (cy + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE }, true, DESTROY_COLOR, CREATE_COLOR)
+      this.spawn(source, {
+        x: (cx + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE,
+        y: (cy + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE,
+      }, true, DESTROY_COLOR, CREATE_COLOR)
     }
   }
 
@@ -80,7 +83,18 @@ export class VFXParticleManager extends SceneBound {
       const key = (cy << 11) | cx
       if (seen.has(key)) continue
       seen.add(key)
-      this.spawn({ x: (cx + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE, y: (cy + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE }, target, false, DESTROY_COLOR, CREATE_COLOR)
+      this.spawn({
+        x: (cx + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE,
+        y: (cy + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE,
+      }, target, false, DESTROY_COLOR, CREATE_COLOR)
+    }
+  }
+
+  spawnMatterTankTransfer(amount: number, source: Position, target: Position) {
+    if (MAX_MATTER_PARTICLES <= 0) return
+    const count = Math.max(Math.floor(amount / 10), 1)
+    for (let i = 0; i < count; i++) {
+      this.spawn(source, target, false, CREATE_COLOR, CREATE_COLOR)
     }
   }
 
