@@ -315,7 +315,10 @@ export class Tilemap extends SceneBound {
         const supportType = getSupportType(tiles[sidx])
         if (supportType < SupportType.STRUCTURAL) continue
         // Anchored tiles are always connected — skip BFS for them.
-        if (supportType === SupportType.ANCHORED) { vis[sidx] = 2; continue }
+        if (supportType === SupportType.ANCHORED) {
+          vis[sidx] = 2
+          continue
+        }
 
         // Single-step pre-check: if the seed itself is on the world edge or directly
         // touches an anchored tile, skip the full BFS setup.
@@ -323,11 +326,20 @@ export class Tilemap extends SceneBound {
         if (!seedAnchored) {
           for (let dp = 0; dp < 4; dp++) {
             const px = sx + BFS_DX[dp], py = sy + BFS_DY[dp]
-            if (px < 0 || px >= width || py < 0 || py >= height) { seedAnchored = true; break }
-            if (getSupportType(tiles[py * width + px]) === SupportType.ANCHORED) { seedAnchored = true; break }
+            if (px < 0 || px >= width || py < 0 || py >= height) {
+              seedAnchored = true
+              break
+            }
+            if (getSupportType(tiles[py * width + px]) === SupportType.ANCHORED) {
+              seedAnchored = true
+              break
+            }
           }
         }
-        if (seedAnchored) { vis[sidx] = 2; continue }
+        if (seedAnchored) {
+          vis[sidx] = 2
+          continue
+        }
 
         let head = 0, tail = 0, compLen = 0
         let anchored = false
