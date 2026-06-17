@@ -41,6 +41,9 @@ export class MatterCoordinator {
   private coordinatorTransfers = new Int32Array(256 * 3)
   private coordinatorTransfersLen = 0
   private readonly promises: Promise<PoolOutDone>[] = []
+  private chunksWide = 0
+  private readonly chunkMap = new Map<number, number[]>()
+  private workerBatches: number[][] = []
 
   init(
     tilesBuffer: SharedArrayBuffer,
@@ -52,6 +55,8 @@ export class MatterCoordinator {
   ) {
     this.width = width
     this.chunkSize = chunkSize
+    this.chunksWide = Math.ceil(width / chunkSize)
+    this.workerBatches = Array.from({ length: poolWorkers.length }, () => [])
 
     // Coordinator's own MatterSim — used only for activate() and
     // reactivateAround() (tile reads/writes + set population). No step loop.
@@ -163,15 +168,32 @@ export class MatterCoordinator {
     for (const roundIndices of rounds) {
       if (roundIndices.length === 0) continue
 
-      // Distribute round's indices evenly across pool workers.
-      const poolSize = this.pool.length
-      const sliceLen = Math.ceil(roundIndices.length / poolSize)
-      promises.length = 0
+      // Group tiles by chunk, assign whole chunks round-robin to workers.
+      // All tiles from a given chunk go to one worker, so intra-chunk tile
+      // processing is sequential — no concurrent diagonal write races.
+      const { chunkMap, workerBatches, chunksWide } = this
+      chunkMap.clear()
+      for (const idx of roundIndices) {
+        const cx = (idx % this.width) / this.chunkSize | 0
+        const cy = (idx / this.width | 0) / this.chunkSize | 0
+        const key = cy * chunksWide + cx
+        let bucket = chunkMap.get(key)
+        if (!bucket) { bucket = []; chunkMap.set(key, bucket) }
+        bucket.push(idx)
+      }
 
-      for (let i = 0; i < poolSize; i++) {
-        const start = i * sliceLen
-        if (start >= roundIndices.length) break
-        promises.push(this.sendToWorker(i, roundIndices.slice(start, start + sliceLen), leftFirst, frame))
+      for (const batch of workerBatches) batch.length = 0
+      let w = 0
+      for (const chunkTiles of chunkMap.values()) {
+        const batch = workerBatches[w]
+        for (const idx of chunkTiles) batch.push(idx)
+        w = (w + 1) % this.pool.length
+      }
+
+      promises.length = 0
+      for (let i = 0; i < this.pool.length; i++) {
+        if (workerBatches[i].length === 0) continue
+        promises.push(this.sendToWorker(i, workerBatches[i], leftFirst, frame))
       }
 
       const results = await Promise.all(promises)
