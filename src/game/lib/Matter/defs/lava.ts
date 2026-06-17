@@ -22,6 +22,7 @@ import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)
 
 const COOLED = new MatterTypeSet(WATER, SALT_WATER)
+
 export const LAVA_DEF = {
   id: LAVA,
   name: 'Lava',
@@ -70,7 +71,6 @@ export const LAVA_DEF = {
         tiles[idx] = EMPTY
         const mx = meltLoc % width
         const my = meltLoc / width | 0
-        sim.queueMatterCredit(mx, my, ownerId)
         sim.markDirty(mx, my)
         sim.markDirty(tx, ty)
         sim.next.add(idx)
