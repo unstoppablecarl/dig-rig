@@ -98,7 +98,7 @@ export const LAVA_DROP_DEF = {
     }
 
     // Settle as lava
-    setOwner(LAVA, ownerId)
+    tiles[idx] = setOwner(LAVA, ownerId)
     sim.next.add(idx)
     sim.markDirty(tx, ty)
     sim.reactivateAround(tx, ty)
