@@ -1,7 +1,6 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import { C4, FIRE, getFirstOwnerId, type MatterDef, SupportType } from '../_Matter.types.ts'
-import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 export const C4_DEF = {
   id: C4,
@@ -18,13 +17,7 @@ export const C4_DEF = {
         const ownerId = getFirstOwnerId(tiles[idx], tiles[nidx])
 
         sim.doBorderBurn(tx, ty, idx, ownerId)
-        postMessage({
-          type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
-          particleType: ParticleType.C4_EXPLOSION,
-          x: tx,
-          y: ty,
-          ownerId,
-        })
+        sim.spawnParticle(ParticleType.C4_EXPLOSION, tx, ty, ownerId)
       }
     }
   },

@@ -17,7 +17,6 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 const NOT_FIRE_SPREADABLE = new MatterTypeSet(THERMITE, BURNING_THERMITE, LAVA, SOLID)
 export const BURNING_THERMITE_DEF = {
@@ -87,13 +86,8 @@ export const BURNING_THERMITE_DEF = {
 
     // Spawn charged particle occasionally
     if (random() < 2 && random() < 7) {
-      postMessage({
-        type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
-        particleType: ParticleType.CHARGED_NITRO,
-        x: tx,
-        y: ty,
-        ownerId,
-      })
+      sim.spawnParticle(ParticleType.CHARGED_NITRO, tx, ty, ownerId)
+
       tiles[idx] = setOwner(FIRE, ownerId)
       sim.markDirty(tx, ty)
       sim.next.add(idx)

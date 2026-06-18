@@ -1,22 +1,17 @@
 /// <reference lib="webworker" />
-import {
-  type PoolInMessage,
-  PoolInMsg,
-  type PoolOutDone,
-  type PoolOutMessage,
-  PoolOutMsg,
-} from './MatterCoordinator.types.ts'
+import { type CoordinatorOutMessage, CoordinatorOutMsg } from './MatterCoordinator.types.ts'
 import { MatterSim } from './MatterSim.ts'
-import { MatterCoordinatorOutMsg, type WorkerOutMessage } from './MatterSim.types.ts'
+import { type SimOutMessage, SimOutMsg, type SimOutMsgDone } from './MatterSim.types.ts'
+import { MatterSimWorkerController } from './MatterSimWorkerController.ts'
 
 export class MatterCoordinator {
-  constructor(private readonly post: (msg: WorkerOutMessage, transfer?: Transferable[]) => void) {
+  constructor(private readonly post: (msg: CoordinatorOutMessage, transfer?: Transferable[]) => void) {
   }
 
   private sim!: MatterSim
-  private pool: Worker[] = []
+  private pool: MatterSimWorkerController[] = []
   // Per-worker slot for the resolve of the in-flight PROCESS promise.
-  private pendingResolvers: (((r: PoolOutDone) => void) | null)[] = []
+  private pendingResolvers: (((r: SimOutMsgDone) => void) | null)[] = []
   private readyCount = 0
 
   // Two pre-allocated sets that swap roles each step: one is activeSet (receives
@@ -38,12 +33,15 @@ export class MatterCoordinator {
   //                execution: any adjacent tile belongs to an inactive round.
   private readonly rounds: number[][] = [[], [], [], []]
   private readonly allSettled: number[] = []
-  private coordinatorTransfers = new Int32Array(256 * 3)
-  private coordinatorTransfersLen = 0
-  private readonly promises: Promise<PoolOutDone>[] = []
+  private coordinatorTransfers = makeTransferCoordinator()
+  private readonly promises: Promise<SimOutMsgDone>[] = []
   private chunksWide = 0
   private readonly chunkMap = new Map<number, number[]>()
   private workerBatches: number[][] = []
+  private writeQueue: {
+    indices: number[]
+    tile: number,
+  }[] = []
 
   init(
     tilesBuffer: SharedArrayBuffer,
@@ -51,32 +49,31 @@ export class MatterCoordinator {
     width: number,
     height: number,
     chunkSize: number,
-    poolWorkers: Worker[],
+    poolSize: number,
   ) {
     this.width = width
     this.chunkSize = chunkSize
     this.chunksWide = Math.ceil(width / chunkSize)
-    this.workerBatches = Array.from({ length: poolWorkers.length }, () => [])
+    this.workerBatches = Array.from({ length: poolSize }, () => [])
 
     // Coordinator's own MatterSim — used only for activate() and
     // reactivateAround() (tile reads/writes + set population). No step loop.
     this.sim = new MatterSim()
     this.sim.init(tilesBuffer, dirtyChunksBuffer, width, height, chunkSize)
 
-    this.pendingResolvers = new Array(poolWorkers.length).fill(null)
+    this.pendingResolvers = new Array(poolSize).fill(null)
 
-    for (let i = 0; i < poolWorkers.length; i++) {
-      const w = poolWorkers[i]
-      w.onmessage = (e: MessageEvent<PoolOutMessage | WorkerOutMessage>) => this.onPoolMessage(i, e.data)
-      w.postMessage({
-        type: PoolInMsg.INIT,
-        tilesBuffer,
-        dirtyChunksBuffer,
-        width,
-        height,
-        chunkSize,
-      } satisfies PoolInMessage)
-      this.pool.push(w)
+    for (let i = 0; i < poolSize; i++) {
+      const poolWorker = new MatterSimWorkerController({
+          tilesBuffer,
+          dirtyChunksBuffer,
+          width,
+          height,
+          chunkSize,
+        }, (e) => this.onPoolMessage(i, e.data),
+      )
+
+      this.pool.push(poolWorker)
     }
     // startLoop() is called once all pool workers reply READY.
   }
@@ -89,13 +86,17 @@ export class MatterCoordinator {
     this.sim.reactivateAround(tx, ty, this.activeSet)
   }
 
-  private onPoolMessage(workerIdx: number, msg: PoolOutMessage | WorkerOutMessage) {
-    if (msg.type === PoolOutMsg.READY) {
+  write(indices: number[], tile: number) {
+    this.writeQueue.push({ indices, tile })
+  }
+
+  private onPoolMessage(workerIdx: number, msg: SimOutMessage | CoordinatorOutMessage) {
+    if (msg.type === SimOutMsg.READY) {
       this.readyCount++
       if (this.readyCount === this.pool.length) this.startLoop()
       return
     }
-    if (msg.type === PoolOutMsg.DONE) {
+    if (msg.type === SimOutMsg.DONE) {
       this.pendingResolvers[workerIdx]?.(msg)
       this.pendingResolvers[workerIdx] = null
       return
@@ -104,7 +105,7 @@ export class MatterCoordinator {
     // SPAWN_PARTICLE and any other matterType-action postMessage calls:
     // pool workers call postMessage() which reaches the coordinator;
     // forward straight to the main thread.
-    this.post(msg as WorkerOutMessage)
+    this.post(msg as CoordinatorOutMessage)
   }
 
   private sendToWorker(
@@ -112,15 +113,14 @@ export class MatterCoordinator {
     indices: number[],
     leftFirst: boolean,
     frame: number,
-  ): Promise<PoolOutDone> {
+  ): Promise<SimOutMsgDone> {
     return new Promise(resolve => {
       this.pendingResolvers[workerIdx] = resolve
-      this.pool[workerIdx].postMessage({
-        type: PoolInMsg.PROCESS,
+      this.pool[workerIdx].process(
         indices,
         leftFirst,
         frame,
-      } satisfies PoolInMessage)
+      )
     })
   }
 
@@ -152,6 +152,8 @@ export class MatterCoordinator {
     rounds[1].length = 0
     rounds[2].length = 0
     rounds[3].length = 0
+    allSettled.length = 0
+    this.coordinatorTransfers.reset()
 
     // Partition snapshot into 4 checkerboard parity groups by chunk coords.
     // parity = (cx & 1) | ((cy & 1) << 1) → 0=A  1=B  2=C  3=D
@@ -161,9 +163,6 @@ export class MatterCoordinator {
       const cy = (idx / width | 0) / chunkSize | 0
       rounds[(cx & 1) | ((cy & 1) << 1)].push(idx)
     }
-
-    allSettled.length = 0
-    this.coordinatorTransfersLen = 0
 
     for (const roundIndices of rounds) {
       if (roundIndices.length === 0) continue
@@ -178,8 +177,11 @@ export class MatterCoordinator {
         const cy = (idx / this.width | 0) / this.chunkSize | 0
         const key = cy * chunksWide + cx
         let bucket = chunkMap.get(key)
-        if (!bucket) { bucket = []; chunkMap.set(key, bucket) }
-        bucket.push(idx)
+        if (!bucket) {
+          chunkMap.set(key, [idx])
+        } else {
+          bucket.push(idx)
+        }
       }
 
       for (const batch of workerBatches) batch.length = 0
@@ -201,14 +203,7 @@ export class MatterCoordinator {
         for (const idx of r.next) this.activeSet.add(idx)
         for (const idx of r.settled) allSettled.push(idx)
         if (r.transfers.length > 0) {
-          const needed = this.coordinatorTransfersLen + r.transfers.length
-          if (needed > this.coordinatorTransfers.length) {
-            const bigger = new Int32Array(Math.max(this.coordinatorTransfers.length * 2, needed))
-            bigger.set(this.coordinatorTransfers.subarray(0, this.coordinatorTransfersLen))
-            this.coordinatorTransfers = bigger
-          }
-          this.coordinatorTransfers.set(r.transfers, this.coordinatorTransfersLen)
-          this.coordinatorTransfersLen += r.transfers.length
+          this.coordinatorTransfers.add(r.transfers)
         }
       }
     }
@@ -219,18 +214,52 @@ export class MatterCoordinator {
       // for vfx purposes.
       const toFlash = allSettled.filter(idx => !this.activeSet.has(idx))
       if (toFlash.length > 0) {
-        this.post({ type: MatterCoordinatorOutMsg.SETTLED, indices: toFlash })
+        this.post({ type: CoordinatorOutMsg.SETTLED, indices: toFlash })
       }
     }
-    if (this.coordinatorTransfersLen > 0) {
-      const len = this.coordinatorTransfersLen
-      const buf = this.coordinatorTransfers.buffer
-      this.coordinatorTransfers = new Int32Array(Math.max(256 * 3, len))
-      this.coordinatorTransfersLen = 0
+
+    if (this.coordinatorTransfers.length > 0) {
+      const transfers = this.coordinatorTransfers.flush()
       this.post(
-        { type: MatterCoordinatorOutMsg.TRANSFER_TO_MATTER_TANKS, transfers: new Int32Array(buf, 0, len) },
-        [buf],
+        { type: CoordinatorOutMsg.TRANSFER_TO_MATTER_TANKS, transfers },
+        [transfers.buffer],
       )
     }
+
+    // @TODO handle this.writeQueue
+  }
+}
+
+function makeTransferCoordinator() {
+  let coordinatorTransfers = new Int32Array(256 * 3)
+  let currentLength = 0
+
+  return {
+    add(transfers: Int32Array) {
+      const needed = currentLength + transfers.length
+      // grow if needed
+      if (needed > coordinatorTransfers.length) {
+        const bigger = new Int32Array(Math.max(coordinatorTransfers.length * 2, needed))
+        bigger.set(coordinatorTransfers.subarray(0, currentLength))
+        coordinatorTransfers = bigger
+      }
+      coordinatorTransfers.set(transfers, currentLength)
+      currentLength += transfers.length
+    },
+
+    flush() {
+      const len = currentLength
+      const oldCapacity = coordinatorTransfers.length
+      const buf = coordinatorTransfers.buffer
+      coordinatorTransfers = new Int32Array(Math.max(256 * 3, oldCapacity))
+      currentLength = 0
+      return new Int32Array(buf, 0, len)
+    },
+    get length() {
+      return currentLength
+    },
+    reset() {
+      currentLength = 0
+    },
   }
 }

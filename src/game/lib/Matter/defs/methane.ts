@@ -1,7 +1,6 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import { FIRE, getFirstOwnerId, type MatterDef, METHANE } from '../_Matter.types.ts'
-import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 export const METHANE_DEF = {
   id: METHANE,
@@ -19,12 +18,7 @@ export const METHANE_DEF = {
         const ownerId = getFirstOwnerId(tiles[idx], tiles[nidx])
 
         sim.doBorderBurn(tx, ty, idx, ownerId)
-        postMessage({
-          type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
-          particleType: ParticleType.METHANE_EXPLOSION,
-          x: tx,
-          y: ty,
-        })
+        sim.spawnParticle(ParticleType.METHANE_EXPLOSION, tx, ty, ownerId)
         return
       }
     }

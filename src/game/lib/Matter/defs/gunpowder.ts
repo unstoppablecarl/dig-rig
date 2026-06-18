@@ -10,7 +10,6 @@ import {
   setOwner,
   setSettled,
 } from '../_Matter.types.ts'
-import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 export const GUNPOWDER_DEF = {
   id: GUNPOWDER,
@@ -53,14 +52,8 @@ export const GUNPOWDER_DEF = {
           }
         }
 
-        // Spawn visual particle via main thread
-        postMessage({
-          type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
-          particleType: ParticleType.GUNPOWDER_EXPLOSION,
-          x: tx,
-          y: ty,
-          ownerId,
-        })
+        sim.spawnParticle(ParticleType.GUNPOWDER_EXPLOSION, tx, ty, ownerId)
+
         return
       }
     }

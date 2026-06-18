@@ -1,35 +1,37 @@
 /// <reference lib="webworker" />
-import { type PoolInMessage, PoolInMsg, type PoolOutMessage, PoolOutMsg } from './MatterCoordinator.types.ts'
+import type { CoordinatorOutMessage } from './MatterCoordinator.types.ts'
 import { MatterSim } from './MatterSim.ts'
-import type { WorkerOutMessage } from './MatterSim.types.ts'
+import { type SimInMessage, SimInMsg, type SimOutMessage, SimOutMsg, type SimOutMsgDone } from './MatterSim.types.ts'
 
-declare function postMessage(msg: PoolOutMessage | WorkerOutMessage, transfer?: Transferable[]): void
+declare function postMessage(msg: SimOutMessage | CoordinatorOutMessage, transfer?: Transferable[]): void
 
 declare let self: DedicatedWorkerGlobalScope & {
-  onmessage: ((e: MessageEvent<PoolInMessage>) => void) | null
+  onmessage: ((e: MessageEvent<SimInMessage>) => void) | null
 }
 
 const sim = new MatterSim()
 
-self.onmessage = (e: MessageEvent<PoolInMessage>) => {
+const _done: SimOutMsgDone = {
+  type: SimOutMsg.DONE as const,
+  next: [],
+  settled: [],
+  transfers: new Int32Array(),
+}
+
+self.onmessage = (e: MessageEvent<SimInMessage>) => {
   const msg = e.data
 
-  if (msg.type === PoolInMsg.INIT) {
+  if (msg.type === SimInMsg.INIT) {
     sim.init(msg.tilesBuffer, msg.dirtyChunksBuffer, msg.width, msg.height, msg.chunkSize)
-    postMessage({ type: PoolOutMsg.READY })
+    postMessage({ type: SimOutMsg.READY })
     return
   }
 
-  if (msg.type === PoolInMsg.PROCESS) {
-    sim.next.clear()
-    sim.frame = msg.frame
-    sim.leftFirst = msg.leftFirst
-    sim.justSettled = []
-    sim.processSubset(msg.indices)
-    const transfers = sim.flushTransferToMatterTank()
+  if (msg.type === SimInMsg.PROCESS) {
+    const result = sim.process(msg.indices, msg.leftFirst, msg.frame, _done)
     postMessage(
-      { type: PoolOutMsg.DONE, next: Array.from(sim.next), settled: sim.justSettled, transfers },
-      transfers.length > 0 ? [transfers.buffer] : [],
+      result,
+      result.transfers.length > 0 ? [result.transfers.buffer] : [],
     )
   }
 }

@@ -7,11 +7,11 @@ import {
   LAVA,
   LAVA_DROP,
   type MatterDef,
-  setLavaDropVel,
   matterType,
   OIL,
   ROCK,
   SALT_WATER,
+  setLavaDropVel,
   setOwner,
   setSettled,
   SOLID,
@@ -19,7 +19,6 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)
 
@@ -55,12 +54,7 @@ export const LAVA_DEF = {
 
     // Spawn a lava burst particle and self-destruct when adjacent to oil
     if (random() < 14 && sim.bordering(tx, ty, idx, OIL) !== -1) {
-      postMessage({
-        type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
-        particleType: ParticleType.LAVA_BURST,
-        x: tx,
-        y: ty,
-      })
+      sim.spawnParticle(ParticleType.LAVA_BURST, tx, ty, ownerId)
       tiles[idx] = EMPTY
       sim.markDirty(tx, ty)
       sim.reactivateAround(tx, ty)

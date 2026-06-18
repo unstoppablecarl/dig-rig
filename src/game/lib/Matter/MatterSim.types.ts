@@ -1,20 +1,17 @@
-import type { ParticleType } from '../Particles/_particle-types.ts'
-import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
+// String enums avoid numeric collision with MatterWorkerOutMsg values.
 
-export enum MatterCoordinatorInMsg {
-  INIT,
-  ACTIVATE,
-  CHECK,
+export enum SimInMsg {
+  INIT = 'pool.init',
+  PROCESS = 'pool.process',
 }
 
-export enum MatterCoordinatorOutMsg {
-  SETTLED,
-  SPAWN_PARTICLE,
-  TRANSFER_TO_MATTER_TANKS,
+export enum SimOutMsg {
+  READY = 'pool.ready',
+  DONE = 'pool.done',
 }
 
-type Init = {
-  type: MatterCoordinatorInMsg.INIT
+export type SimInMsgInit = {
+  type: SimInMsg.INIT
   tilesBuffer: SharedArrayBuffer
   dirtyChunksBuffer: SharedArrayBuffer
   width: number
@@ -22,45 +19,33 @@ type Init = {
   chunkSize: number
 }
 
-type Activate = {
-  type: MatterCoordinatorInMsg.ACTIVATE; indices: number[]
-}
-
-type Check = {
-  type: MatterCoordinatorInMsg.CHECK
-  tx: number
-  ty: number
-}
-
-export type MatterCoordinatorInMessage =
-  | Init
-  | Activate
-  | Check
-
-type Settled = {
-  type: MatterCoordinatorOutMsg.SETTLED
+export type SimInMsgProcess = {
+  type: SimInMsg.PROCESS
   indices: number[]
+  leftFirst: boolean
+  frame: number
 }
 
-type SpawnParticle = {
-  type: MatterCoordinatorOutMsg.SPAWN_PARTICLE
-  particleType: ParticleType
-  x: number
-  y: number
-  ownerId?: MatterTankId
+export type SimInMessage =
+  | SimInMsgInit
+  | SimInMsgProcess
+
+export type SimOutMsgReady = {
+  type: SimOutMsg.READY
 }
 
-type TransferToMatterTanks = {
-  type: MatterCoordinatorOutMsg.TRANSFER_TO_MATTER_TANKS,
+export type SimOutMsgDone = {
+  type: SimOutMsg.DONE
+  next: number[]
+  settled: number[]
   transfers: Int32Array
 }
 
-export type WorkerOutMessage =
-  | Settled
-  | SpawnParticle
-  | TransferToMatterTanks
+export type SimOutMessage =
+  | SimOutMsgReady
+  | SimOutMsgDone
 
-export type TypedMatterCoordinatorWorker = Omit<Worker, 'postMessage' | 'onmessage'> & {
-  postMessage(msg: MatterCoordinatorInMessage): void
-  onmessage: ((e: MessageEvent<WorkerOutMessage>) => void) | null
+export type TypedMatterSimWorker = Omit<Worker, 'postMessage' | 'onmessage'> & {
+  postMessage(msg: SimInMessage): void
+  onmessage: ((e: MessageEvent<SimOutMessage>) => void) | null
 }

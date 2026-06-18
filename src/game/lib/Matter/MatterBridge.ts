@@ -6,16 +6,11 @@ import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
 import { getSupport, matterType, MatterType, SupportType } from './_Matter.types.ts'
 import { getSupportType, setSupport, STRUCTURAL_COLLAPSE_TO } from './matter.ts'
-import MatterCoordinatorConstructor from './MatterCoordinator.worker.ts?worker'
-import {
-  MatterCoordinatorInMsg,
-  MatterCoordinatorOutMsg,
-  type TypedMatterCoordinatorWorker,
-} from './MatterSim.types.ts'
+import { MatterCoordinatorWorkerController } from './MatterCoordinatorWorkerController.ts'
 import { type MatterTankId } from './MatterTank/_MatterTank.types.ts'
 
 export class MatterBridge extends SceneBound {
-  private readonly worker: TypedMatterCoordinatorWorker
+  private readonly workerController: MatterCoordinatorWorkerController
   private readonly dirtyChunksBuffer: SharedArrayBuffer
   private readonly dirtyChunks: Uint8Array
   private readonly numChunksX: number
@@ -35,24 +30,20 @@ export class MatterBridge extends SceneBound {
 
     this.particleBridge = new ParticleBridge(this.scene)
     this.particleBridge.onActivations = (indices) => {
-      this.worker?.postMessage({ type: MatterCoordinatorInMsg.ACTIVATE, indices })
+      this.workerController.activate(indices)
     }
 
-    this.worker = new MatterCoordinatorConstructor()
-    this.worker.postMessage({
-      type: MatterCoordinatorInMsg.INIT,
+    this.workerController = new MatterCoordinatorWorkerController({
       tilesBuffer: tilemap.tilesBuffer,
       dirtyChunksBuffer: this.dirtyChunksBuffer,
       width: tilemap.width,
       height: tilemap.height,
       chunkSize: CHUNK_SIZE,
-    })
-
-    this.worker.onmessage = (e) => {
-      if (e.data.type === MatterCoordinatorOutMsg.SETTLED) {
+    }, {
+      settled: (indices) => {
         const { tilemapRenderer } = this.scene
         const now = this.scene.time.now
-        for (const idx of e.data.indices) {
+        for (const idx of indices) {
           const color = (this.scene.matterRenderConfig as Partial<Record<MatterType, {
             settledTransitionColor?: Phaser.Display.Color
           }>>)[matterType(tilemap.tiles[idx])]?.settledTransitionColor
@@ -61,15 +52,11 @@ export class MatterBridge extends SceneBound {
           const ty = idx / tilemap.width | 0
           tilemapRenderer.addColorEffect(tx, ty, color, now)
         }
-        return
-      }
-
-      if (e.data.type === MatterCoordinatorOutMsg.SPAWN_PARTICLE) {
-        this.particleBridge.queueSpawn(e.data.particleType, e.data.x, e.data.y, e.data.ownerId)
-      }
-
-      if (e.data.type === MatterCoordinatorOutMsg.TRANSFER_TO_MATTER_TANKS) {
-        const { transfers } = e.data
+      },
+      spawnParticle: (particleType, x, y, ownerId) => {
+        this.particleBridge.queueSpawn(particleType, x, y, ownerId)
+      },
+      transferToMatterTanks: (transfers) => {
         // Track which tile chunks have already spawned a VFX particle this batch.
         // Key packs (tankId << 22) | (cy << 11) | cx, valid for maps up to 4096 tiles wide.
         const spawnedChunks = new Set<number>()
@@ -95,11 +82,11 @@ export class MatterBridge extends SceneBound {
             )
           }
         }
-      }
-    }
+      },
+    })
 
     tilemap.onTileEmpty = (tx, ty) => {
-      this.worker.postMessage({ type: MatterCoordinatorInMsg.CHECK, tx, ty })
+      this.workerController.check(tx, ty)
     }
 
     tilemap.onIslandDetected = (islands) => {
@@ -129,7 +116,7 @@ export class MatterBridge extends SceneBound {
     const tilemap = this.scene.tilemap
     const indices = tiles.map(({ x, y }) => y * tilemap.width + x)
     if (indices.length) {
-      this.worker.postMessage({ type: MatterCoordinatorInMsg.ACTIVATE, indices })
+      this.workerController.activate(indices)
     }
   }
 
@@ -151,7 +138,7 @@ export class MatterBridge extends SceneBound {
       }
     }
     if (!indices.length) return
-    this.worker.postMessage({ type: MatterCoordinatorInMsg.ACTIVATE, indices })
+    this.workerController.activate(indices)
     if (getSupportType(value) >= SupportType.STRUCTURAL) {
       tilemap.chunkManager.computeAnchored()
       const islands = tilemap.findIslandTiles(placed)
@@ -209,8 +196,8 @@ export class MatterBridge extends SceneBound {
     this.scene.tilemap.onTileEmpty = undefined
     this.scene.tilemap.onIslandDetected = undefined
     this.scene.tilemap.onActivateTiles = undefined
-    this.worker.terminate()
+    this.workerController.terminate()
     // @ts-expect-error: destroy
-    this.worker = null
+    this.workerController = null
   }
 }

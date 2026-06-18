@@ -1,4 +1,5 @@
 import { random } from '../../helpers/random'
+import { ParticleType } from '../Particles/_particle-types.ts'
 import {
   EMPTY,
   FIRE,
@@ -21,6 +22,8 @@ import {
   MATTER_ACTIONS,
   SINKS_THROUGH,
 } from './matter.ts'
+import { CoordinatorOutMsg, type CoordinatorOutMsgSpawnParticle } from './MatterCoordinator.types.ts'
+import { type SimInMsgProcess, type SimOutMsgDone } from './MatterSim.types.ts'
 import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
 
 const MAX_FLOW = 8
@@ -57,6 +60,44 @@ export class MatterSim {
     this.chunkSize = chunkSize
     this.chunkShift = Math.log2(chunkSize)
     this.chunksWidth = Math.ceil(width / chunkSize)
+  }
+
+  process(
+    indices: SimInMsgProcess['indices'],
+    leftFirst: SimInMsgProcess['leftFirst'],
+    frame: SimInMsgProcess['frame'],
+    out: SimOutMsgDone,
+  ): SimOutMsgDone {
+    this.next.clear()
+    this.frame = frame
+    this.leftFirst = leftFirst
+    this.justSettled.length = 0
+    this.processSubset(indices)
+    const transfers = this.flushTransferToMatterTank()
+
+    out.next = Array.from(this.next)
+    out.settled = this.justSettled
+    out.transfers = transfers
+
+    return out
+  }
+
+  private _spawnParticle: CoordinatorOutMsgSpawnParticle = {
+    type: CoordinatorOutMsg.SPAWN_PARTICLE as const,
+    particleType: ParticleType.NONE,
+    x: 0,
+    y: 0,
+    ownerId: undefined,
+  }
+
+  spawnParticle(particleType: ParticleType, x: number, y: number, ownerId?: MatterTankId) {
+
+    this._spawnParticle.particleType = particleType
+    this._spawnParticle.x = x
+    this._spawnParticle.y = y
+    this._spawnParticle.ownerId = ownerId
+
+    postMessage(this._spawnParticle)
   }
 
   // Wakes tiles in `target`. Called by coordinator on ACTIVATE messages.
@@ -105,7 +146,7 @@ export class MatterSim {
     this.dirtyChunks[(ty >>> this.chunkShift) * this.chunksWidth + (tx >>> this.chunkShift)] = 1
   }
 
-  _reactiveAroundRange = [-1, 1]
+  private _reactiveAroundRange = [-1, 1]
 
   // Re-activate settled material that could flow into (tx, ty) now that it is empty.
   // When called outside a step (from message handlers), pass an explicit dest set.

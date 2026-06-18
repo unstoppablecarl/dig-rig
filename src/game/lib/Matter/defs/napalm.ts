@@ -1,7 +1,6 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import { FIRE, getFirstOwnerId, type MatterDef, NAPALM, setOwner, setSettled } from '../_Matter.types.ts'
-import { MatterCoordinatorOutMsg } from '../MatterSim.types.ts'
 
 export const NAPALM_DEF = {
   id: NAPALM,
@@ -21,13 +20,7 @@ export const NAPALM_DEF = {
         tiles[idx] = setOwner(FIRE, ownerId)
         sim.markDirty(tx, ty)
         sim.next.add(idx)
-        postMessage({
-          type: MatterCoordinatorOutMsg.SPAWN_PARTICLE,
-          particleType: ParticleType.NAPALM_EXPLOSION,
-          x: tx,
-          y: ty,
-          ownerId,
-        })
+        sim.spawnParticle(ParticleType.NAPALM_EXPLOSION, tx, ty, ownerId)
         return
       }
     }

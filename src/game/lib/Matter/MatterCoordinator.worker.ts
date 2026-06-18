@@ -1,31 +1,31 @@
 /// <reference lib="webworker" />
 import { MatterCoordinator } from './MatterCoordinator.ts'
-import { type MatterCoordinatorInMessage, MatterCoordinatorInMsg } from './MatterSim.types.ts'
-import MatterSimWorkerConstructor from './MatterSim.worker.ts?worker'
+import { type CoordinatorInMessage, CoordinatorInMsg } from './MatterCoordinator.types.ts'
 
 declare let self: DedicatedWorkerGlobalScope & {
-  onmessage: ((e: MessageEvent<MatterCoordinatorInMessage>) => void) | null
+  onmessage: ((e: MessageEvent<CoordinatorInMessage>) => void) | null
 }
 
 const poolSize = Math.max(1, (navigator.hardwareConcurrency ?? 4) - 2)
-const poolWorkers: Worker[] = Array.from({ length: poolSize }, () => new MatterSimWorkerConstructor())
-
 const coordinator = new MatterCoordinator((msg, transfer) => postMessage(msg, transfer ?? []))
 
-self.onmessage = (e: MessageEvent<MatterCoordinatorInMessage>) => {
+self.onmessage = (e: MessageEvent<CoordinatorInMessage>) => {
   const msg = e.data
 
-  if (msg.type === MatterCoordinatorInMsg.INIT) {
-    coordinator.init(msg.tilesBuffer, msg.dirtyChunksBuffer, msg.width, msg.height, msg.chunkSize, poolWorkers)
+  if (msg.type === CoordinatorInMsg.INIT) {
+    coordinator.init(msg.tilesBuffer, msg.dirtyChunksBuffer, msg.width, msg.height, msg.chunkSize, poolSize)
     return
   }
 
-  if (msg.type === MatterCoordinatorInMsg.ACTIVATE) {
+  if (msg.type === CoordinatorInMsg.ACTIVATE) {
     coordinator.activate(msg.indices)
     return
   }
 
-  if (msg.type === MatterCoordinatorInMsg.CHECK) {
+  if (msg.type === CoordinatorInMsg.CHECK) {
     coordinator.check(msg.tx, msg.ty)
+  }
+  if (msg.type === CoordinatorInMsg.WRITE) {
+    coordinator.write(msg.indices, msg.tile)
   }
 }
