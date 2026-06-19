@@ -77,6 +77,7 @@ export class MatterManager extends SceneBound {
   }
 
   playerMatter(): number {
+    if (this.destroyed) return 0
     return this.playerMatterTank.matterContained()
   }
 
