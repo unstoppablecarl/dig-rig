@@ -1,8 +1,11 @@
-import { EMPTY, MatterType, setOwner } from '../../Matter/_Matter.types.ts'
+import { EMPTY, FIRE, MatterType, PERMANENT, setOwner, WATER } from '../../Matter/_Matter.types.ts'
+import { MatterTypeSet } from '../../Matter/data/MatterTypeSet.ts'
 import { OWNED_MATTER_TYPES } from '../../Matter/matter.ts'
 import type { MatterTankId } from '../../Matter/MatterTank/_MatterTank.types.ts'
 import { NO_MATTER_TANK_ID } from '../../Matter/MatterTank/_MatterTank.types.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
+
+const DESTROY_IGNORE = new MatterTypeSet(PERMANENT, EMPTY, WATER, FIRE)
 
 // this logic needs to be accessible by the workers without importing phaser
 export function convertMatterTile(
@@ -13,7 +16,7 @@ export function convertMatterTile(
 ): MatterType | null {
   switch (mode) {
     case FireMode.DESTROY:
-      if (existing === MatterType.PERMANENT || existing === EMPTY || existing === MatterType.WATER || existing === MatterType.FIRE) return null
+      if (DESTROY_IGNORE.has(existing)) return null
       return EMPTY
     case FireMode.MELT:
       if (existing === MatterType.SOLID) return MatterType.SAND
