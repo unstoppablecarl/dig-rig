@@ -117,15 +117,6 @@ const levelEntries = Object.entries(LEVELS) as [LevelId, LevelEntry][]
           <PCheckbox label="Ground" :poll="player.touchGround" readonly />
         </PFolder>
       </PFolder>
-
-      <PFolder title="Add Matter">
-        <PButton
-          v-for="[key, name] in matterEntries"
-          :key="key"
-          :label="`Add ${name}`"
-          @click="level.matterBridge.addMatter(key, level.player.x, level.player.y - 100)"
-        />
-      </PFolder>
       <BrushPane v-if="ENABLE_BRUSH_MODE_DEBUG" :level="level" />
       <PFolder title="Controls">
         <PButton label="Clear Local Storage + Refresh" @click="clearStorage" />
