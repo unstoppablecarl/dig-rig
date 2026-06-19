@@ -3,7 +3,7 @@ import { DRAW_PARTICLE_DEBUG, MAX_MATTER_PARTICLES, VFX_PARTICLE_TO_TERRAIN_CHUN
 import { CREATE_COLOR, DESTROY_COLOR } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import type { Position } from '../../types.ts'
+import type { ParticleTarget, Position } from '../../types.ts'
 import { PARTICLE_SIZE, VFXMatterParticle } from './VFXMatterParticle.ts'
 import Color = Display.Color
 import Graphics = GameObjects.Graphics
@@ -48,12 +48,14 @@ export class VFXParticleManager extends SceneBound {
     }))
   }
 
+  spawnMatter(source: Position, target: Position, staticTarget: true): void
+  spawnMatter(source: Position, target: ParticleTarget, staticTarget: false): void
   spawnMatter(
     source: Position,
-    target: Position,
+    target: Position | ParticleTarget,
     staticTarget: boolean,
   ) {
-    this.spawn(source, target, staticTarget, DESTROY_COLOR, CREATE_COLOR)
+    this.spawn(source, target as Position, staticTarget as true, DESTROY_COLOR, CREATE_COLOR)
   }
 
   // One particle per chunk: source is fixed, targets are tile positions.
@@ -73,8 +75,8 @@ export class VFXParticleManager extends SceneBound {
     }
   }
 
-  // One particle per chunk: sources are tile positions, target is fixed.
-  spawnMatterFromTiles(tiles: ReadonlyArray<Position>, target: Position) {
+  // One particle per chunk: sources are tile positions, target is a live entity.
+  spawnMatterFromTiles(tiles: ReadonlyArray<Position>, target: ParticleTarget) {
     if (MAX_MATTER_PARTICLES <= 0) return
     const seen = new Set<number>()
     for (const tile of tiles) {
@@ -90,7 +92,7 @@ export class VFXParticleManager extends SceneBound {
     }
   }
 
-  spawnMatterTankTransfer(amount: number, source: Position, target: Position) {
+  spawnMatterTankTransfer(amount: number, source: Position, target: ParticleTarget) {
     if (MAX_MATTER_PARTICLES <= 0) return
     const count = Math.max(Math.floor(amount / 10), 1)
     for (let i = 0; i < count; i++) {
@@ -98,16 +100,18 @@ export class VFXParticleManager extends SceneBound {
     }
   }
 
+  spawn(source: Position, target: Position, staticTarget: true, colorFrom: Color, colorTo: Color): void
+  spawn(source: Position, target: ParticleTarget, staticTarget: false, colorFrom: Color, colorTo: Color): void
   spawn(
     source: Position,
-    target: Position,
+    target: Position | ParticleTarget,
     staticTarget: boolean,
     colorFrom: Color,
     colorTo: Color,
   ) {
     if (MAX_MATTER_PARTICLES <= 0) return
     const particle = this.emitter.emitParticleAt(source.x, source.y, 1) as VFXMatterParticle
-    particle?.init(target, staticTarget, colorFrom, colorTo)
+    particle?.init(target as Position, staticTarget as true, colorFrom, colorTo)
   }
 
   protected onDestroy() {
