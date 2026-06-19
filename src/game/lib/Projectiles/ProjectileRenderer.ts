@@ -115,10 +115,7 @@ export class ProjectileRenderer extends SceneBound {
     this.setColor(color)
 
     const update = () => {
-      if (projectile.destroyed) {
-        this.destroy()
-      }
-      if (this.destroyed) {
+      if (projectile.destroyed || this.destroyed) {
         scene.events.off(UPDATE, update)
         return
       }
