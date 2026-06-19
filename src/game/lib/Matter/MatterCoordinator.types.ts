@@ -1,16 +1,9 @@
-import type { MatterType } from './_Matter.types.ts'
 import type { ParticleType } from '../Particles/_particle-types.ts'
 import type { FireMode } from '../Player/_FireMode-types.ts'
 import type { ProjectileEffectResult } from '../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
+import type { MatterType } from './_Matter.types.ts'
+import { CoordinatorInMsg, CoordinatorOutMsg } from './_WorkerMessage.types.ts'
 import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
-
-export enum CoordinatorInMsg {
-  INIT,
-  ACTIVATE,
-  CHECK,
-  WRITE,
-  APPLY_EFFECT,
-}
 
 export type CoordinatorInMsgInit = {
   type: CoordinatorInMsg.INIT
@@ -73,13 +66,6 @@ export type CoordinatorOutMsgSpawnParticle = {
   x: number
   y: number
   ownerId?: MatterTankId
-}
-
-export enum CoordinatorOutMsg {
-  SETTLED,
-  SPAWN_PARTICLE,
-  TRANSFER_TO_MATTER_TANKS,
-  APPLY_EFFECT_RESULT,
 }
 
 export type CoordinatorOutMsgTransferToMatterTanks = {

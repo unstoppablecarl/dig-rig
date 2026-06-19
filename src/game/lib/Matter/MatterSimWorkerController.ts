@@ -1,6 +1,6 @@
+import { SimInMsg } from './_WorkerMessage.types.ts'
 import type { CoordinatorOutMessage } from './MatterCoordinator.types.ts'
 import {
-  SimInMsg,
   type SimInMsgInit,
   type SimInMsgProcess,
   type SimOutMessage,

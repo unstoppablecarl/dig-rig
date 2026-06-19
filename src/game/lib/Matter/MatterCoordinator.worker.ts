@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
+import { CoordinatorInMsg } from './_WorkerMessage.types.ts'
 import { MatterCoordinator } from './MatterCoordinator.ts'
-import { type CoordinatorInMessage, CoordinatorInMsg } from './MatterCoordinator.types.ts'
+import { type CoordinatorInMessage } from './MatterCoordinator.types.ts'
 
 declare let self: DedicatedWorkerGlobalScope & {
   onmessage: ((e: MessageEvent<CoordinatorInMessage>) => void) | null

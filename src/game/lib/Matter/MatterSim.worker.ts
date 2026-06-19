@@ -1,7 +1,8 @@
 /// <reference lib="webworker" />
+import { SimInMsg, SimOutMsg } from './_WorkerMessage.types.ts'
 import type { CoordinatorOutMessage } from './MatterCoordinator.types.ts'
 import { MatterSim } from './MatterSim.ts'
-import { type SimInMessage, SimInMsg, type SimOutMessage, SimOutMsg, type SimOutMsgDone } from './MatterSim.types.ts'
+import { type SimInMessage, type SimOutMessage, type SimOutMsgDone } from './MatterSim.types.ts'
 
 declare function postMessage(msg: SimOutMessage | CoordinatorOutMessage, transfer?: Transferable[]): void
 

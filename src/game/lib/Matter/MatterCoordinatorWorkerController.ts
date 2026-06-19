@@ -1,11 +1,10 @@
+import { CoordinatorInMsg, CoordinatorOutMsg } from './_WorkerMessage.types.ts'
 import {
   type CoordinatorInMessageApplyEffect,
   type CoordinatorInMessageCheck,
   type CoordinatorInMessageWrite,
-  CoordinatorInMsg,
   type CoordinatorInMsgActivate,
   type CoordinatorInMsgInit,
-  CoordinatorOutMsg,
   type CoordinatorOutMsgApplyEffectResult,
   type CoordinatorOutMsgSettled,
   type CoordinatorOutMsgSpawnParticle,

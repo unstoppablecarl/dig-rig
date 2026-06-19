@@ -1,14 +1,6 @@
 // String enums avoid numeric collision with CoordinatorOutMsg values.
 
-export enum SimInMsg {
-  INIT = 'sim.init',
-  PROCESS = 'sim.process',
-}
-
-export enum SimOutMsg {
-  READY = 'sim.ready',
-  DONE = 'sim.done',
-}
+import { SimInMsg, SimOutMsg } from './_WorkerMessage.types.ts'
 
 export type SimInMsgInit = {
   type: SimInMsg.INIT

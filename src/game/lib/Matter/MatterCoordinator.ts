@@ -6,7 +6,8 @@ import {
   MatterType,
   SupportType,
 } from './_Matter.types.ts'
-import { type CoordinatorInMessageApplyEffect, type CoordinatorOutMessage, CoordinatorOutMsg } from './MatterCoordinator.types.ts'
+import { CoordinatorOutMsg, SimOutMsg } from './_WorkerMessage.types.ts'
+import { type CoordinatorInMessageApplyEffect, type CoordinatorOutMessage } from './MatterCoordinator.types.ts'
 import { MatterSim } from './MatterSim.ts'
 import {
   SETTLING_TYPES,
@@ -14,7 +15,7 @@ import {
   STRUCTURAL_COLLAPSE_TO,
   setSupport,
 } from './matter.ts'
-import { type SimOutMessage, SimOutMsg, type SimOutMsgDone } from './MatterSim.types.ts'
+import { type SimOutMessage, type SimOutMsgDone } from './MatterSim.types.ts'
 import { MatterSimWorkerController } from './MatterSimWorkerController.ts'
 import { FireMode } from '../Player/_FireMode-types.ts'
 import type { ProjectileEffectResult } from '../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'

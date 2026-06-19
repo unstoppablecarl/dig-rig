@@ -11,6 +11,7 @@ import {
   setSettled,
   SupportType,
 } from './_Matter.types.ts'
+import { CoordinatorOutMsg } from './_WorkerMessage.types.ts'
 import { MatterTypeSet } from './data/MatterTypeSet'
 import {
   ACID_IMMUNE,
@@ -22,7 +23,7 @@ import {
   MATTER_ACTIONS,
   SINKS_THROUGH,
 } from './matter.ts'
-import { CoordinatorOutMsg, type CoordinatorOutMsgSpawnParticle } from './MatterCoordinator.types.ts'
+import { type CoordinatorOutMsgSpawnParticle } from './MatterCoordinator.types.ts'
 import { type SimInMsgProcess, type SimOutMsgDone } from './MatterSim.types.ts'
 import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
 
