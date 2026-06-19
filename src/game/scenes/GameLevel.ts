@@ -22,7 +22,6 @@ import { MatterManager } from '../lib/Matter/MatterTank/MatterManager.ts'
 import { Player } from '../lib/Player/Player.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
 import { makePreviewProjectileRenderer, ProjectileRenderer } from '../lib/Projectiles/ProjectileRenderer.ts'
-import { TerrainBlobParticleManager } from '../lib/Tilemap/TerrainBlobParticleManager.ts'
 import { Tilemap } from '../lib/Tilemap/Tilemap.ts'
 import { TilemapRenderer } from '../lib/Tilemap/TilemapRenderer.ts'
 import type { TilemapRendererConfig } from '../lib/Tilemap/TilemapRendererConfig'
@@ -69,7 +68,6 @@ export abstract class GameLevel extends Scene {
   public worldBounds: Geom.Rectangle
   public inputManager: InputManager
   public playerActions: PlayerActions
-  public terrainBlobParticleManager: TerrainBlobParticleManager
   public matterBridge: MatterBridge
   public uiState: UIState
   public weaponUIState: WeaponUIState
@@ -232,7 +230,6 @@ export abstract class GameLevel extends Scene {
       this.tilemap.height,
     )
 
-    this.terrainBlobParticleManager = new TerrainBlobParticleManager(this)
     this.tilemapRenderer = this.makeTilemapRenderer(this.tilemap)
     this.matterBridge = new MatterBridge(this)
     this.terrainChunkBodyManager = new TerrainChunkBodyManager(this)
@@ -279,7 +276,6 @@ export abstract class GameLevel extends Scene {
     this.player.update()
     this.projectiles.update(dt)
     this.terrainChunkBodyManager.update()
-    this.terrainBlobParticleManager.update(dt)
 
     this.tilemapRenderer.render()
   }
