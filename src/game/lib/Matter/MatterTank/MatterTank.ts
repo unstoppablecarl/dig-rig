@@ -11,7 +11,7 @@ export class MatterTank {
 
   constructor(
     private manager: MatterManager,
-    private source: MatterTankSource,
+    readonly source: MatterTankSource,
     readonly id: MatterTankId,
     public matterMax = 5000,
     matter = 0,
@@ -121,8 +121,9 @@ export class MatterTank {
   }
 
   clampToChargeAvailable(charge: number, mode: MatterTankFireMode) {
-    const available = this.chargeAvailable(mode)
-    return Math.min(charge, available)
+    // chargeAvailable might be negative but that is valid.
+    // it shouldn't keep going negative here though
+    return Math.max(0, Math.min(charge, this.chargeAvailable(mode)))
   }
 
   chargeAvailable(mode: MatterTankFireMode) {
