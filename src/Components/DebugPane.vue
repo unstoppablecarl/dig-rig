@@ -44,7 +44,6 @@ const physics = {
   static: pollingComputed(() => level?.matter?.world?.getAllBodies()?.filter(b => b.isStatic)?.length ?? 0, 500),
   dynamic: pollingComputed(() => level?.matter?.world?.getAllBodies()?.filter(b => !b.isStatic)?.length ?? 0, 500),
   sleeping: pollingComputed(() => level?.matter?.world?.getAllBodies()?.filter(b => b.isSleeping)?.length ?? 0, 500),
-  terrain: pollingComputed(() => level?.terrainBlobParticleManager?.particles?.length ?? 0, 500),
 }
 
 const particles = {
@@ -98,9 +97,6 @@ const levelEntries = Object.entries(LEVELS) as [LevelId, LevelEntry][]
           <PNumber label="Static" :poll="physics.static" readonly />
           <PNumber label="Dynamic" :poll="physics.dynamic" readonly />
           <PNumber label="Sleeping" :poll="physics.sleeping" readonly />
-          <PNumber label="Terrain" :poll="physics.terrain" readonly />
-          <PButton label="Add"
-                   @click="level.terrainBlobParticleManager.explode(level.player.x, level.player.y - 100, 100)" />
         </PFolder>
         <PFolder title="Particles">
           <PNumber label="Count" :poll="particles.count" readonly />
