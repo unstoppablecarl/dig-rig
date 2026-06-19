@@ -126,6 +126,7 @@ export class ProjectileRenderer extends SceneBound {
       this.setRadius(projectile.radius)
       this.setPosition(projectile)
     }
+    this.setPosition(projectile)
 
     scene.events.on(UPDATE, update)
     this.unBind = () => scene.events.off(UPDATE, update)
