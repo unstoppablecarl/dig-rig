@@ -29,7 +29,7 @@ self.onmessage = (e: MessageEvent<CoordinatorInMessage>) => {
   }
 
   if (msg.type === CoordinatorInMsg.WRITE) {
-    coordinator.write(msg.indices, msg.tile)
+    coordinator.write(msg.indices, msg.tile, msg.reactivateAround)
     return
   }
 

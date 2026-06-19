@@ -3,7 +3,6 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { MatterType } from '../Matter/_Matter.types.ts'
 import type { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
-import { PLAYER_HEIGHT, PLAYER_WIDTH } from '../Player/Player.ts'
 import { addTileFireModeEffect } from './ProjectileEffect/_ProjectileEffect-helpers.ts'
 import type { ProjectileEffect, ProjectileEffectResult } from './ProjectileEffect/_ProjectileEffect.types.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
@@ -12,10 +11,6 @@ import { ProjectileRenderer } from './ProjectileRenderer.ts'
 type BaseProjectileArgs = ConstructorParameters<typeof BaseProjectile>;
 
 export type BaseProjectileConstructor<T extends BaseProjectile> = new (...args: BaseProjectileArgs) => T;
-
-const PLAYER_RADIUS_X = PLAYER_WIDTH * 0.5
-const PLAYER_RADIUS_Y = PLAYER_HEIGHT * 0.5
-const PLAYER_CREATE_VEL_EXTEND = 8
 
 export abstract class BaseProjectile extends SceneBound {
   public tilesToModify: number = -1
@@ -93,14 +88,7 @@ export abstract class BaseProjectile extends SceneBound {
     const emitPos = { x: emitX, y: emitY }
     const collectTarget = matterTank.source
 
-    // Compute player AABB for the CREATE filterTile (worker ignores for other modes).
-    const player = this.scene.player
-    const vel = player.container.body?.velocity
-    const vx = vel?.x ?? 0, vy = vel?.y ?? 0
-    const playerBoundsLeft = player.x - PLAYER_RADIUS_X + Math.max(Math.min(vx, 0), -PLAYER_CREATE_VEL_EXTEND)
-    const playerBoundsRight = player.x + PLAYER_RADIUS_X + Math.min(Math.max(vx, 0), PLAYER_CREATE_VEL_EXTEND)
-    const playerBoundsTop = player.y - PLAYER_RADIUS_Y + Math.max(Math.min(vy, 0), -PLAYER_CREATE_VEL_EXTEND)
-    const playerBoundsBot = player.y + PLAYER_RADIUS_Y + Math.min(Math.max(vy, 0), PLAYER_CREATE_VEL_EXTEND)
+    const bounds = this.scene.player.getPreventCreateBounds()
 
     this.scene.matterBridge.sendApplyEffect(
       {
@@ -112,10 +100,10 @@ export abstract class BaseProjectile extends SceneBound {
         innerRadius,
         ownerId: matterTank.id,
         tilesToModify: count,
-        playerBoundsLeft,
-        playerBoundsRight,
-        playerBoundsTop,
-        playerBoundsBot,
+        playerBoundsLeft: bounds.playerBoundsLeft,
+        playerBoundsRight: bounds.playerBoundsRight,
+        playerBoundsTop: bounds.playerBoundsTop,
+        playerBoundsBottom: bounds.playerBoundsBottom,
       },
       (result) => {
         this._waitingForResult = false

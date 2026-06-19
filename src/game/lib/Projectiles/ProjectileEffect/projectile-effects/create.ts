@@ -4,9 +4,9 @@ import { MatterTypeSet } from '../../../Matter/data/MatterTypeSet'
 import { SETTLING_TYPES } from '../../../Matter/matter.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import type { Tilemap } from '../../../Tilemap/Tilemap.ts'
-import { addTileFireModeEffect, noVFX } from '../_ProjectileEffect-helpers.ts'
-import { convertMatterTile } from '../convertMatterTile.ts'
+import { noVFX } from '../_ProjectileEffect-helpers.ts'
 import type { ProjectileEffect, ProjectileEffectResult } from '../_ProjectileEffect.types.ts'
+import { convertMatterTile } from '../convertMatterTile.ts'
 
 function createApplied(
   tilemap: Tilemap,
@@ -17,15 +17,6 @@ function createApplied(
   tilemap.scene.vfxParticleManager.spawnMatterToTiles(emitPos, tiles)
 }
 
-const solidCreateTilesCommitted: ProjectileEffect['onTilesCommitted'] = (tm: Tilemap, tiles: ProjectileEffectResult[]): void => {
-  addTileFireModeEffect(tm, tiles, FireMode.CREATE)
-}
-
-const liquidCreateTilesCommitted: ProjectileEffect['onTilesCommitted'] = (tm: Tilemap, tiles: ProjectileEffectResult[]): void => {
-  addTileFireModeEffect(tm, tiles, FireMode.CREATE)
-  tm.scene.matterBridge.activateTiles(tiles)
-}
-
 export function makeCreateEffect(type: MatterType): ProjectileEffect {
   const passive = !SETTLING_TYPES.has(type)
 
@@ -34,7 +25,6 @@ export function makeCreateEffect(type: MatterType): ProjectileEffect {
     createType: type,
     reactsWithMatterTypes: new MatterTypeSet(type),
     convertMatterType: (t, ownerId) => convertMatterTile(FireMode.CREATE, type, t, ownerId),
-    onTilesCommitted: passive ? solidCreateTilesCommitted : liquidCreateTilesCommitted,
     onApplied: passive ? createApplied : noVFX,
   }
 }

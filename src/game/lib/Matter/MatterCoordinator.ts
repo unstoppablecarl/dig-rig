@@ -1,31 +1,20 @@
 /// <reference lib="webworker" />
-import {
-  EMPTY,
-  getSupport,
-  matterType,
-  MatterType,
-  SupportType,
-} from './_Matter.types.ts'
-import { CoordinatorOutMsg, SimOutMsg } from './_WorkerMessage.types.ts'
-import { type CoordinatorInMessageApplyEffect, type CoordinatorOutMessage } from './MatterCoordinator.types.ts'
-import { MatterSim } from './MatterSim.ts'
-import {
-  SETTLING_TYPES,
-  getSupportType,
-  STRUCTURAL_COLLAPSE_TO,
-  setSupport,
-} from './matter.ts'
-import { type SimOutMessage, type SimOutMsgDone } from './MatterSim.types.ts'
-import { MatterSimWorkerController } from './MatterSimWorkerController.ts'
 import { FireMode } from '../Player/_FireMode-types.ts'
 import type { ProjectileEffectResult } from '../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 import { convertMatterTile } from '../Projectiles/ProjectileEffect/convertMatterTile.ts'
+import { EMPTY, getSupport, matterType, MatterType, SupportType } from './_Matter.types.ts'
+import { CoordinatorOutMsg, SimOutMsg } from './_WorkerMessage.types.ts'
+import { getSupportType, setSupport, SETTLING_TYPES, STRUCTURAL_COLLAPSE_TO } from './matter.ts'
+import { type CoordinatorInMsgApplyEffect, type CoordinatorOutMessage } from './MatterCoordinator.types.ts'
+import { MatterSim } from './MatterSim.ts'
+import { type SimOutMessage, type SimOutMsgDone } from './MatterSim.types.ts'
+import { MatterSimWorkerController } from './MatterSimWorkerController.ts'
 import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
 
 const BFS_DX = [-1, 1, 0, 0]
 const BFS_DY = [0, 0, -1, 1]
 
-type EffectRequest = CoordinatorInMessageApplyEffect
+type EffectRequest = CoordinatorInMsgApplyEffect
 
 export class MatterCoordinator {
   constructor(private readonly post: (msg: CoordinatorOutMessage, transfer?: Transferable[]) => void) {
@@ -54,6 +43,7 @@ export class MatterCoordinator {
   private writeQueue: {
     indices: number[]
     tile: number,
+    reactivateAround: boolean
   }[] = []
   private effectQueue: EffectRequest[] = []
 
@@ -108,8 +98,8 @@ export class MatterCoordinator {
     this.sim.reactivateAround(tx, ty, this.activeSet)
   }
 
-  write(indices: number[], tile: number) {
-    this.writeQueue.push({ indices, tile })
+  write(indices: number[], tile: number, reactivateAround: boolean) {
+    this.writeQueue.push({ indices, tile, reactivateAround })
   }
 
   applyEffect(req: EffectRequest) {
@@ -156,7 +146,7 @@ export class MatterCoordinator {
   }
 
   private async step() {
-    if (this.activeSet.size === 0 && this.effectQueue.length === 0) return
+    if (this.activeSet.size === 0 && this.effectQueue.length === 0 && this.writeQueue.length === 0) return
 
     const frame = this.frame++
     const leftFirst = (frame % 2) === 0
@@ -169,6 +159,28 @@ export class MatterCoordinator {
 
     // clear fresh active set
     this.activeSet.clear()
+
+    // Drain write queue — raw tile writes committed to SAB before any sim round.
+    if (this.writeQueue.length > 0) {
+      const tiles = this.sim.tiles
+      const w = this.width
+      for (const { indices, tile, reactivateAround } of this.writeQueue) {
+        for (const idx of indices) {
+          const x = idx % w
+          const y = idx / w | 0
+          tiles[idx] = tile
+          this.sim.markDirty(x, y)
+          if (reactivateAround) {
+            this.sim.reactivateAround(x, y, this.activeSet)
+          }
+        }
+        const t = matterType(tile)
+        if (t !== EMPTY && SETTLING_TYPES.has(t)) {
+          this.sim.activate(indices, this.activeSet)
+        }
+      }
+      this.writeQueue.length = 0
+    }
 
     // Drain effect queue — writes are committed to SAB here, before any sim
     // round runs, so sim workers see the updated tile state this step.
@@ -268,7 +280,7 @@ export class MatterCoordinator {
     const tiles = this.sim.tiles
     const {
       mode, createType, tileX, tileY, tileRadius, innerRadius, ownerId,
-      tilesToModify, playerBoundsLeft, playerBoundsRight, playerBoundsTop, playerBoundsBot,
+      tilesToModify, playerBoundsLeft, playerBoundsRight, playerBoundsTop, playerBoundsBottom,
     } = req
 
     // --- Phase 1: collect candidates ---
@@ -290,10 +302,10 @@ export class MatterCoordinator {
         const innerDx = Math.sqrt(ir2 - dy2)
         const xSkipStart = Math.ceil(tileX - innerDx)
         const xSkipEnd = Math.floor(tileX + innerDx)
-        for (let x = xMin; x < xSkipStart; x++) this._tryCandidate(candidates, tiles, x, y, mode, createType, ownerId, playerBoundsLeft, playerBoundsRight, playerBoundsTop, playerBoundsBot)
-        for (let x = xSkipEnd + 1; x <= xMax; x++) this._tryCandidate(candidates, tiles, x, y, mode, createType, ownerId, playerBoundsLeft, playerBoundsRight, playerBoundsTop, playerBoundsBot)
+        for (let x = xMin; x < xSkipStart; x++) this._tryCandidate(candidates, tiles, x, y, mode, createType, ownerId, playerBoundsLeft, playerBoundsRight, playerBoundsTop, playerBoundsBottom)
+        for (let x = xSkipEnd + 1; x <= xMax; x++) this._tryCandidate(candidates, tiles, x, y, mode, createType, ownerId, playerBoundsLeft, playerBoundsRight, playerBoundsTop, playerBoundsBottom)
       } else {
-        for (let x = xMin; x <= xMax; x++) this._tryCandidate(candidates, tiles, x, y, mode, createType, ownerId, playerBoundsLeft, playerBoundsRight, playerBoundsTop, playerBoundsBot)
+        for (let x = xMin; x <= xMax; x++) this._tryCandidate(candidates, tiles, x, y, mode, createType, ownerId, playerBoundsLeft, playerBoundsRight, playerBoundsTop, playerBoundsBottom)
       }
     }
 
@@ -399,17 +411,29 @@ export class MatterCoordinator {
         if (vis[sidx] !== 0) continue
         const supportType = getSupportType(tiles[sidx])
         if (supportType < SupportType.STRUCTURAL) continue
-        if (supportType === SupportType.ANCHORED) { vis[sidx] = 2; continue }
+        if (supportType === SupportType.ANCHORED) {
+          vis[sidx] = 2
+          continue
+        }
 
         let seedAnchored = sx === 0 || sx === width - 1 || sy === 0 || sy === height - 1
         if (!seedAnchored) {
           for (let dp = 0; dp < 4; dp++) {
             const px = sx + BFS_DX[dp], py = sy + BFS_DY[dp]
-            if (px < 0 || px >= width || py < 0 || py >= height) { seedAnchored = true; break }
-            if (getSupportType(tiles[py * width + px]) === SupportType.ANCHORED) { seedAnchored = true; break }
+            if (px < 0 || px >= width || py < 0 || py >= height) {
+              seedAnchored = true
+              break
+            }
+            if (getSupportType(tiles[py * width + px]) === SupportType.ANCHORED) {
+              seedAnchored = true
+              break
+            }
           }
         }
-        if (seedAnchored) { vis[sidx] = 2; continue }
+        if (seedAnchored) {
+          vis[sidx] = 2
+          continue
+        }
 
         let head = 0, tail = 0, compLen = 0, anchored = false
         vis[sidx] = 1
@@ -423,12 +447,18 @@ export class MatterCoordinator {
 
           for (let d2 = 0; d2 < 4; d2++) {
             const nx = cx + BFS_DX[d2], ny = cy + BFS_DY[d2]
-            if (nx < 0 || nx >= width || ny < 0 || ny >= height) { anchored = true; break bfs }
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+              anchored = true
+              break bfs
+            }
             const nidx = ny * width + nx
             if (vis[nidx] !== 0) continue
             const nt = tiles[nidx]
             const st = getSupportType(nt)
-            if (st === SupportType.ANCHORED) { anchored = true; break bfs }
+            if (st === SupportType.ANCHORED) {
+              anchored = true
+              break bfs
+            }
             if (st >= SupportType.STRUCTURAL) {
               vis[nidx] = 1
               queue[tail++] = nidx
@@ -481,12 +511,18 @@ export class MatterCoordinator {
       const [x, y] = queue[head++]
       for (let d = 0; d < 4; d++) {
         const nx = x + BFS_DX[d], ny = y + BFS_DY[d]
-        if (nx < 0 || nx >= width || ny < 0 || ny >= height) { anchored = true; break outer }
+        if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+          anchored = true
+          break outer
+        }
         const nidx = ny * width + nx
         if (visited.has(nidx)) continue
         visited.add(nidx)
         const st = getSupportType(tiles[nidx])
-        if (st === SupportType.ANCHORED) { anchored = true; break outer }
+        if (st === SupportType.ANCHORED) {
+          anchored = true
+          break outer
+        }
         if (st >= SupportType.STRUCTURAL) queue.push([nx, ny])
       }
     }

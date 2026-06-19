@@ -146,7 +146,7 @@ export class BrushInput extends InputController {
       playerBoundsLeft: 0,
       playerBoundsRight: 0,
       playerBoundsTop: 0,
-      playerBoundsBot: 0,
+      playerBoundsBottom: 0,
     })
   }
 

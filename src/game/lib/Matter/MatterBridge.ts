@@ -6,11 +6,11 @@ import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
 import { getSupport, matterType, MatterType, SupportType } from './_Matter.types.ts'
 import { getSupportType, setSupport, STRUCTURAL_COLLAPSE_TO } from './matter.ts'
-import type { CoordinatorInMessageApplyEffect, CoordinatorOutMsgApplyEffectResult } from './MatterCoordinator.types.ts'
+import type { CoordinatorInMsgApplyEffect, CoordinatorOutMsgApplyEffectResult } from './MatterCoordinator.types.ts'
 import { MatterCoordinatorWorkerController } from './MatterCoordinatorWorkerController.ts'
 import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
 
-export type ApplyEffectParams = Omit<CoordinatorInMessageApplyEffect, 'type' | 'requestId'>
+export type ApplyEffectParams = Omit<CoordinatorInMsgApplyEffect, 'type' | 'requestId'>
 export type ApplyEffectCallback = (result: CoordinatorOutMsgApplyEffectResult) => void
 
 export class MatterBridge extends SceneBound {
@@ -215,6 +215,10 @@ export class MatterBridge extends SceneBound {
       }
     }
     chunk.solidTileCount = count
+  }
+
+  write(indices: number[], tile: number, reactivateAround = false) {
+    this.workerController.write(indices, tile, reactivateAround)
   }
 
   protected onDestroy() {

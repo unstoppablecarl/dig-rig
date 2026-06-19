@@ -19,19 +19,20 @@ export type CoordinatorInMsgActivate = {
   indices: number[]
 }
 
-export type CoordinatorInMessageCheck = {
+export type CoordinatorInMsgCheck = {
   type: CoordinatorInMsg.CHECK
   tx: number
   ty: number
 }
 
-export type CoordinatorInMessageWrite = {
+export type CoordinatorInMsgWrite = {
   type: CoordinatorInMsg.WRITE
   indices: number[]
   tile: number,
+  reactivateAround: boolean,
 }
 
-export type CoordinatorInMessageApplyEffect = {
+export type CoordinatorInMsgApplyEffect = {
   type: CoordinatorInMsg.APPLY_EFFECT
   requestId: number
   mode: FireMode
@@ -45,15 +46,23 @@ export type CoordinatorInMessageApplyEffect = {
   playerBoundsLeft: number
   playerBoundsRight: number
   playerBoundsTop: number
-  playerBoundsBot: number
+  playerBoundsBottom: number
 }
+
+export type PlayerPreventCreateBounds = Pick<
+  CoordinatorInMsgApplyEffect,
+  | 'playerBoundsTop'
+  | 'playerBoundsBottom'
+  | 'playerBoundsLeft'
+  | 'playerBoundsRight'
+>
 
 export type CoordinatorInMessage =
   | CoordinatorInMsgInit
   | CoordinatorInMsgActivate
-  | CoordinatorInMessageCheck
-  | CoordinatorInMessageWrite
-  | CoordinatorInMessageApplyEffect
+  | CoordinatorInMsgCheck
+  | CoordinatorInMsgWrite
+  | CoordinatorInMsgApplyEffect
 
 export type CoordinatorOutMsgSettled = {
   type: CoordinatorOutMsg.SETTLED

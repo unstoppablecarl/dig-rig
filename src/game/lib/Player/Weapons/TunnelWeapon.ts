@@ -4,8 +4,9 @@ import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import { WeaponConstantInput } from '../../Input/InputController/WeaponInputControllers/WeaponConstantInput.ts'
 import type { Weapon } from '../../Input/InputController/WeaponManagerInput.ts'
-import { EMPTY, MatterType } from '../../Matter/_Matter.types.ts'
+import { EMPTY, SOLID } from '../../Matter/_Matter.types.ts'
 import { MatterTank } from '../../Matter/MatterTank/MatterTank.ts'
+import { addTileFireModeEffect } from '../../Projectiles/ProjectileEffect/_ProjectileEffect-helpers.ts'
 import type { ProjectileEffectResult } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 import { PROJECTILE_EFFECT } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import type { SweepRecord } from '../../Projectiles/TunnelDestroyProjectile.ts'
@@ -26,7 +27,9 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   matterTank!: MatterTank
 
   private _restoreVisited = new Set<number>()
-  private _restoreResult: Tile[] = []
+  private _restoreResultTiles: Tile[] = []
+  private _restoreResultIndices: number[] = []
+
   private _commitOut: ProjectileEffectResult[] = []
   private _emitPos: Position = { x: 0, y: 0 }
 
@@ -106,7 +109,8 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
 
     const visited = this._restoreVisited
     visited.clear()
-    const result = this._restoreResult
+    const result = this._restoreResultTiles
+    const indices = this._restoreResultIndices
     result.length = 0
 
     let writeIdx = 0
@@ -141,7 +145,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
         }
       }
 
-      const obstructed = this._processRecord(record, result, visited, available, px, py, allSafe, dpx, dpy, dpR2)
+      const obstructed = this._processRecord(record, result, indices, visited, available, px, py, allSafe, dpx, dpy, dpR2)
 
       // Flood-fill fallback for tiles whose exact position was obstructed (solid).
       // Phase 1: adjacent-to-solid tiles only. Phase 2: any empty tile.
@@ -166,6 +170,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
               if (ddx * ddx + ddy * ddy <= dpR2) return false
               visited.add(key)
               result.push({ x, y })
+              indices.push(key)
               return result.length >= targetLen
             }, true)
             searchRadius = Math.round(searchRadius * 1.5)
@@ -203,6 +208,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
             if (ddx * ddx + ddy * ddy <= dpR2) return false
             visited.add(key)
             result.push({ x, y })
+            indices.push(key)
             return result.length >= available
           }, true)
           searchRadius = Math.round(searchRadius * 1.5)
@@ -213,7 +219,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
     }
 
     if (result.length > 0) {
-      this._applyCreate(result)
+      this._applyCreate(result, indices)
     }
   }
 
@@ -226,6 +232,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
   private _processRecord(
     record: SweepRecord,
     result: Tile[],
+    indices: number[],
     visited: Set<number>,
     available: number,
     px: number,
@@ -284,6 +291,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
       if (visited.has(key)) continue
       visited.add(key)
       result.push(tile)
+      indices.push(key)
     }
 
     remaining.length = writeIdx
@@ -300,19 +308,20 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
     )
   }
 
-  private _applyCreate(tiles: Tile[]) {
+  private _applyCreate(tiles: Tile[], indices: number[]) {
     this._commitOut.length = 0
     if (!tiles.length) return this._commitOut
     const created = this._commitOut
     const tilemap = this.scene.tilemap
 
-    const newValue = PROJECTILE_EFFECT.CREATE_SOLID.convertMatterType(MatterType.EMPTY)!
+    this.scene.matterBridge.write(indices, SOLID)
+
+    const newValue = SOLID
     for (const { x, y } of tiles) {
       tilemap.setTile(x, y, newValue)
       created.push({ x, y, newValue })
     }
-    PROJECTILE_EFFECT.CREATE_SOLID.onTilesCommitted(tilemap, created)
-
+    addTileFireModeEffect(this.scene.tilemap, created, FireMode.CREATE)
     if (!created.length) return
     this.matterTank.addPendingCharge(FireMode.CREATE, created.length)
     const source = this.scene.player.matterParticleEmitPosition(this._emitPos)

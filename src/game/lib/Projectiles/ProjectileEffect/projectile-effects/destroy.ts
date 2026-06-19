@@ -3,7 +3,6 @@ import { EMPTY, FIRE, PERMANENT, SOLID, WATER } from '../../../Matter/_Matter.ty
 import { matterTypeSetExcluding } from '../../../Matter/data/MatterTypeSet'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import type { Tilemap } from '../../../Tilemap/Tilemap.ts'
-import { addTileFireModeEffect } from '../_ProjectileEffect-helpers.ts'
 import type { ProjectileEffect, ProjectileEffectResult } from '../_ProjectileEffect.types.ts'
 import { convertMatterTile } from '../convertMatterTile.ts'
 
@@ -12,11 +11,6 @@ export const DESTROY_EFFECT: ProjectileEffect = {
   mode: FireMode.DESTROY,
   reactsWithMatterTypes,
   convertMatterType: (t, ownerId) => convertMatterTile(FireMode.DESTROY, SOLID, t, ownerId),
-  onTilesCommitted(tm: Tilemap, out: ProjectileEffectResult[]): void {
-    addTileFireModeEffect(tm, out, FireMode.DESTROY)
-    const islands = tm.findNewlyDisconnectedByDestruction(out)
-    if (islands.length) tm.onIslandDetected?.(islands)
-  },
   onApplied(
     tilemap: Tilemap,
     _emitPos,

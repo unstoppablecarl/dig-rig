@@ -14,7 +14,6 @@ export type ProjectileEffect = {
   readonly createType?: MatterType,
   reactsWithMatterTypes: MatterTypeSet,
   convertMatterType(existingType: MatterType, ownerId?: MatterTankId): MatterType | null
-  onTilesCommitted(tilemap: Tilemap, out: ProjectileEffectResult[]): void
   onApplied(
     tilemap: Tilemap,
     emitPos: Position,

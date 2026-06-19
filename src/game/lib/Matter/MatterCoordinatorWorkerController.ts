@@ -1,8 +1,8 @@
 import { CoordinatorInMsg, CoordinatorOutMsg } from './_WorkerMessage.types.ts'
 import {
-  type CoordinatorInMessageApplyEffect,
-  type CoordinatorInMessageCheck,
-  type CoordinatorInMessageWrite,
+  type CoordinatorInMsgApplyEffect,
+  type CoordinatorInMsgCheck,
+  type CoordinatorInMsgWrite,
   type CoordinatorInMsgActivate,
   type CoordinatorInMsgInit,
   type CoordinatorOutMsgApplyEffectResult,
@@ -62,31 +62,38 @@ export class MatterCoordinatorWorkerController {
     this.worker.postMessage(this._activate)
   }
 
-  private _check: CoordinatorInMessageCheck = {
+  private _check: CoordinatorInMsgCheck = {
     type: CoordinatorInMsg.CHECK as const,
     tx: 0,
     ty: 0,
   }
 
-  check(tx: CoordinatorInMessageCheck['tx'], ty: CoordinatorInMessageCheck['ty']) {
+  check(tx: CoordinatorInMsgCheck['tx'], ty: CoordinatorInMsgCheck['ty']) {
     this._check.tx = tx
     this._check.ty = ty
     this.worker.postMessage(this._check)
   }
 
-  private _write: CoordinatorInMessageWrite = {
+  private _write: CoordinatorInMsgWrite = {
     type: CoordinatorInMsg.WRITE as const,
     indices: [],
     tile: 0,
+    reactivateAround: false,
   }
 
-  write(indices: CoordinatorInMessageWrite['indices'], tile: CoordinatorInMessageWrite['tile']) {
+  write(
+    indices: CoordinatorInMsgWrite['indices'],
+    tile: CoordinatorInMsgWrite['tile'],
+    reactivateAround: CoordinatorInMsgWrite['reactivateAround']
+  ) {
     this._write.indices = indices
     this._write.tile = tile
+    this._write.reactivateAround = reactivateAround
+
     this.worker.postMessage(this._write)
   }
 
-  applyEffect(req: Omit<CoordinatorInMessageApplyEffect, 'type'>) {
+  applyEffect(req: Omit<CoordinatorInMsgApplyEffect, 'type'>) {
     this.worker.postMessage({ type: CoordinatorInMsg.APPLY_EFFECT, ...req })
   }
 
