@@ -41,16 +41,15 @@ export class TunnelDestroyProjectile extends BaseProjectile {
     this.renderer?.setVisible(this.active)
     if (!this.active) return
 
-    // Reset per-frame: this projectile runs indefinitely, so cross-frame deduplication
-    // would permanently block tiles that the restore system has refilled.
-    this.visitedTiles.clear()
-
     const charge = this.charge()
     if (charge > 0) {
-      const tiles = this.applyTiles(charge)
-      if (tiles.length > 0) {
-        this.sweepQueue.push({ cx: this.x, cy: this.y, radius: this.radius, remaining: tiles.slice() })
-      }
+      const snapX = this.x, snapY = this.y, snapR = this.radius
+      this.applyTiles(charge, 0, (tiles) => {
+        if (this.destroyed) return
+        if (tiles.length > 0) {
+          this.sweepQueue.push({ cx: snapX, cy: snapY, radius: snapR, remaining: tiles.slice() })
+        }
+      })
     } else {
       this.recharge()
     }

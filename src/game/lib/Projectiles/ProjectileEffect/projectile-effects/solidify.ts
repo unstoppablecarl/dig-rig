@@ -1,18 +1,15 @@
-import { MatterType, SAND, SOLID, WATER } from '../../../Matter/_Matter.types'
+import { MatterType, SAND, WATER } from '../../../Matter/_Matter.types'
 import { MatterTypeSet } from '../../../Matter/data/MatterTypeSet'
 import { FireMode } from '../../../Player/_FireMode-types'
 import type { Tilemap } from '../../../Tilemap/Tilemap'
 import { addTileFireModeEffect, chunkAndIslandCheck, noVFX } from '../_ProjectileEffect-helpers.ts'
+import { convertMatterTile } from '../convertMatterTile.ts'
 import type { ProjectileEffect, ProjectileEffectResult } from '../_ProjectileEffect.types.ts'
 
 export const SOLIDIFY_EFFECT: ProjectileEffect = {
   mode: FireMode.SOLIDIFY,
   reactsWithMatterTypes: new MatterTypeSet(WATER, SAND),
-  convertMatterType(t: MatterType): MatterType | null {
-    if (t === WATER) return SAND
-    if (t === SAND) return SOLID
-    return null
-  },
+  convertMatterType: (t, ownerId) => convertMatterTile(FireMode.SOLIDIFY, MatterType.SOLID, t, ownerId),
   onTilesCommitted(tm: Tilemap, out: ProjectileEffectResult[]): void {
     addTileFireModeEffect(tm, out, FireMode.SOLIDIFY)
     tm.onActivateTiles?.(out)

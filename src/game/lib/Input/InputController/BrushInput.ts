@@ -1,10 +1,9 @@
 import { GameObjects, Input, Math, Scenes } from 'phaser'
 import { BRUSH_OUTLINE_COLOR } from '../../../config/colors.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
+import { FireMode } from '../../Player/_FireMode-types.ts'
 import { MatterType } from '../../Matter/_Matter.types.ts'
-import type { ProjectileEffectResult } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
-import { PROJECTILE_EFFECT } from '../../Projectiles/ProjectileEffect/ProjectileEffect.ts'
-import { applyEffect } from '../../Tilemap/TileMutation.ts'
+import { NO_MATTER_TANK_ID } from '../../Matter/MatterTank/_MatterTank.types.ts'
 import { makeRestartableTimerEvent, RestartableTimerEvent } from '../../Util/RestartableTimerEvent.ts'
 import { InputController } from './InputController.ts'
 import POINTER_MOVE = Input.Events.POINTER_MOVE
@@ -14,7 +13,6 @@ import POST_UPDATE = Scenes.Events.POST_UPDATE
 
 export class BrushInput extends InputController {
   public graphics: GameObjects.Graphics | null = null
-  private _effectTiles: ProjectileEffectResult[] = []
   private _drawnRadius = -1
   private _drawnZoom = -1
   private _primaryTimer: RestartableTimerEvent
@@ -136,7 +134,20 @@ export class BrushInput extends InputController {
 
   brushDestroy(tx: number, ty: number) {
     const radius = this.scene.brushUIState.radius
-    applyEffect(this.scene.tilemap, this._effectTiles, tx, ty, radius, PROJECTILE_EFFECT.DESTROY)
+    this.scene.matterBridge.sendApplyEffect({
+      mode: FireMode.DESTROY,
+      createType: MatterType.SOLID,
+      tileX: tx,
+      tileY: ty,
+      tileRadius: radius,
+      innerRadius: 0,
+      ownerId: NO_MATTER_TANK_ID,
+      tilesToModify: Number.MAX_SAFE_INTEGER,
+      playerBoundsLeft: 0,
+      playerBoundsRight: 0,
+      playerBoundsTop: 0,
+      playerBoundsBot: 0,
+    })
   }
 
   protected onDestroy() {

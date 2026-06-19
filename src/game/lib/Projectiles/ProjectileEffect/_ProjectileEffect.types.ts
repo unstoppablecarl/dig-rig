@@ -1,4 +1,4 @@
-import type { Position } from '../../../types.ts'
+import type { ParticleTarget, Position } from '../../../types.ts'
 import { MatterType } from '../../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../../Matter/data/MatterTypeSet'
 import type { MatterTankId } from '../../Matter/MatterTank/_MatterTank.types.ts'
@@ -11,14 +11,14 @@ export type ProjectileEffectResult = Tile & {
 
 export type ProjectileEffect = {
   readonly mode: FireMode,
+  readonly createType?: MatterType,
   reactsWithMatterTypes: MatterTypeSet,
-  filterTile?(tilemap: Tilemap, x: number, y: number): boolean
   convertMatterType(existingType: MatterType, ownerId?: MatterTankId): MatterType | null
   onTilesCommitted(tilemap: Tilemap, out: ProjectileEffectResult[]): void
   onApplied(
     tilemap: Tilemap,
     emitPos: Position,
-    collectPos: Position,
+    collectTarget: ParticleTarget,
     tiles: ProjectileEffectResult[],
   ): void
 }

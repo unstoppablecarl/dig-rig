@@ -6,8 +6,12 @@ import type { Chunk } from '../Tilemap/Chunk.ts'
 import type { Tile } from '../Tilemap/Tilemap.ts'
 import { getSupport, matterType, MatterType, SupportType } from './_Matter.types.ts'
 import { getSupportType, setSupport, STRUCTURAL_COLLAPSE_TO } from './matter.ts'
+import type { CoordinatorInMessageApplyEffect, CoordinatorOutMsgApplyEffectResult } from './MatterCoordinator.types.ts'
 import { MatterCoordinatorWorkerController } from './MatterCoordinatorWorkerController.ts'
-import { type MatterTankId } from './MatterTank/_MatterTank.types.ts'
+import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
+
+export type ApplyEffectParams = Omit<CoordinatorInMessageApplyEffect, 'type' | 'requestId'>
+export type ApplyEffectCallback = (result: CoordinatorOutMsgApplyEffectResult) => void
 
 export class MatterBridge extends SceneBound {
   private readonly workerController: MatterCoordinatorWorkerController
@@ -16,6 +20,8 @@ export class MatterBridge extends SceneBound {
   private readonly numChunksX: number
   private readonly numChunksY: number
   private readonly particleBridge: ParticleBridge
+  private readonly pendingEffects = new Map<number, ApplyEffectCallback>()
+  private _nextRequestId = 1
 
   constructor(public scene: GameLevel) {
     super(scene)
@@ -56,6 +62,9 @@ export class MatterBridge extends SceneBound {
       spawnParticle: (particleType, x, y, ownerId) => {
         this.particleBridge.queueSpawn(particleType, x, y, ownerId)
       },
+      applyEffectResult: (result) => {
+        this._onApplyEffectResult(result)
+      },
       transferToMatterTanks: (transfers) => {
         // Track which tile chunks have already spawned a VFX particle this batch.
         // Key packs (tankId << 22) | (cy << 11) | cx, valid for maps up to 4096 tiles wide.
@@ -77,7 +86,7 @@ export class MatterBridge extends SceneBound {
                 x: (cx + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE,
                 y: (cy + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE,
               },
-              tank.getCollectPos(),
+              tank.source,
               false,
             )
           }
@@ -109,6 +118,22 @@ export class MatterBridge extends SceneBound {
 
     tilemap.onActivateTiles = (tiles) => {
       this.activateTiles(tiles)
+    }
+  }
+
+  sendApplyEffect(params: ApplyEffectParams, callback?: ApplyEffectCallback) {
+    const requestId = callback ? this._nextRequestId++ : 0
+    if (callback) this.pendingEffects.set(requestId, callback)
+    this.workerController.applyEffect({ requestId, ...params })
+  }
+
+  private _onApplyEffectResult(result: CoordinatorOutMsgApplyEffectResult) {
+    if (result.requestId !== 0) {
+      const cb = this.pendingEffects.get(result.requestId)
+      if (cb) {
+        this.pendingEffects.delete(result.requestId)
+        cb(result)
+      }
     }
   }
 

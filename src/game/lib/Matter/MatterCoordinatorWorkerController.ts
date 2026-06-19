@@ -1,10 +1,12 @@
 import {
+  type CoordinatorInMessageApplyEffect,
   type CoordinatorInMessageCheck,
   type CoordinatorInMessageWrite,
   CoordinatorInMsg,
   type CoordinatorInMsgActivate,
   type CoordinatorInMsgInit,
   CoordinatorOutMsg,
+  type CoordinatorOutMsgApplyEffectResult,
   type CoordinatorOutMsgSettled,
   type CoordinatorOutMsgSpawnParticle,
   type CoordinatorOutMsgTransferToMatterTanks,
@@ -28,6 +30,7 @@ export class MatterCoordinatorWorkerController {
       transferToMatterTanks: (
         transfers: CoordinatorOutMsgTransferToMatterTanks['transfers'],
       ) => void,
+      applyEffectResult: (result: CoordinatorOutMsgApplyEffectResult) => void,
     },
   ) {
     this.worker = new MatterCoordinatorConstructor()
@@ -44,6 +47,8 @@ export class MatterCoordinatorWorkerController {
         responders.spawnParticle(d.particleType, d.x, d.y, d.ownerId)
       } else if (d.type === CoordinatorOutMsg.TRANSFER_TO_MATTER_TANKS) {
         responders.transferToMatterTanks(d.transfers)
+      } else if (d.type === CoordinatorOutMsg.APPLY_EFFECT_RESULT) {
+        responders.applyEffectResult(d)
       }
     }
   }
@@ -80,6 +85,10 @@ export class MatterCoordinatorWorkerController {
     this._write.indices = indices
     this._write.tile = tile
     this.worker.postMessage(this._write)
+  }
+
+  applyEffect(req: Omit<CoordinatorInMessageApplyEffect, 'type'>) {
+    this.worker.postMessage({ type: CoordinatorInMsg.APPLY_EFFECT, ...req })
   }
 
   terminate() {

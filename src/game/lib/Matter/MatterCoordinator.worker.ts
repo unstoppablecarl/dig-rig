@@ -24,8 +24,15 @@ self.onmessage = (e: MessageEvent<CoordinatorInMessage>) => {
 
   if (msg.type === CoordinatorInMsg.CHECK) {
     coordinator.check(msg.tx, msg.ty)
+    return
   }
+
   if (msg.type === CoordinatorInMsg.WRITE) {
     coordinator.write(msg.indices, msg.tile)
+    return
+  }
+
+  if (msg.type === CoordinatorInMsg.APPLY_EFFECT) {
+    coordinator.applyEffect(msg)
   }
 }

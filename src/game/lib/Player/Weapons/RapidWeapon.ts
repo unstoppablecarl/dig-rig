@@ -5,7 +5,7 @@ import type { FireGroupWeapon } from '../../Input/InputController/WeaponManagerI
 import { Projectile } from '../../Projectiles/Projectile.ts'
 import type { ProjectileEffect } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 
-const RAPID_VELOCITY = 300
+const RAPID_VELOCITY = 100
 
 export class RapidWeapon extends WeaponRapidFireInput implements FireGroupWeapon {
   rateOfFireMs = 100

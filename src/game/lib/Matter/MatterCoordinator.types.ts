@@ -1,11 +1,15 @@
+import type { MatterType } from './_Matter.types.ts'
 import type { ParticleType } from '../Particles/_particle-types.ts'
+import type { FireMode } from '../Player/_FireMode-types.ts'
+import type { ProjectileEffectResult } from '../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 import type { MatterTankId } from './MatterTank/_MatterTank.types.ts'
 
 export enum CoordinatorInMsg {
   INIT,
   ACTIVATE,
   CHECK,
-  WRITE
+  WRITE,
+  APPLY_EFFECT,
 }
 
 export type CoordinatorInMsgInit = {
@@ -34,11 +38,29 @@ export type CoordinatorInMessageWrite = {
   tile: number,
 }
 
+export type CoordinatorInMessageApplyEffect = {
+  type: CoordinatorInMsg.APPLY_EFFECT
+  requestId: number
+  mode: FireMode
+  createType: MatterType
+  tileX: number
+  tileY: number
+  tileRadius: number
+  innerRadius: number
+  ownerId: MatterTankId
+  tilesToModify: number
+  playerBoundsLeft: number
+  playerBoundsRight: number
+  playerBoundsTop: number
+  playerBoundsBot: number
+}
+
 export type CoordinatorInMessage =
   | CoordinatorInMsgInit
   | CoordinatorInMsgActivate
   | CoordinatorInMessageCheck
   | CoordinatorInMessageWrite
+  | CoordinatorInMessageApplyEffect
 
 export type CoordinatorOutMsgSettled = {
   type: CoordinatorOutMsg.SETTLED
@@ -53,21 +75,31 @@ export type CoordinatorOutMsgSpawnParticle = {
   ownerId?: MatterTankId
 }
 
+export enum CoordinatorOutMsg {
+  SETTLED,
+  SPAWN_PARTICLE,
+  TRANSFER_TO_MATTER_TANKS,
+  APPLY_EFFECT_RESULT,
+}
+
 export type CoordinatorOutMsgTransferToMatterTanks = {
   type: CoordinatorOutMsg.TRANSFER_TO_MATTER_TANKS,
   transfers: Int32Array
 }
 
-export enum CoordinatorOutMsg {
-  SETTLED,
-  SPAWN_PARTICLE,
-  TRANSFER_TO_MATTER_TANKS,
+export type CoordinatorOutMsgApplyEffectResult = {
+  type: CoordinatorOutMsg.APPLY_EFFECT_RESULT
+  requestId: number
+  mode: FireMode
+  tilesModified: number
+  tiles: ProjectileEffectResult[]
 }
 
 export type CoordinatorOutMessage =
   | CoordinatorOutMsgSettled
   | CoordinatorOutMsgSpawnParticle
   | CoordinatorOutMsgTransferToMatterTanks
+  | CoordinatorOutMsgApplyEffectResult
 
 export type TypedMatterCoordinatorWorker = Omit<Worker, 'postMessage' | 'onmessage'> & {
   postMessage(msg: CoordinatorInMessage): void

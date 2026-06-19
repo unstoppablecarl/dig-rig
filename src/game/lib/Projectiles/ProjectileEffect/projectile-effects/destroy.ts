@@ -1,16 +1,17 @@
-import type { Position } from '../../../../types.ts'
-import { EMPTY, MatterType, PERMANENT, WATER } from '../../../Matter/_Matter.types.ts'
+import type { ParticleTarget } from '../../../../types.ts'
+import { EMPTY, FIRE, PERMANENT, SOLID, WATER } from '../../../Matter/_Matter.types.ts'
 import { matterTypeSetExcluding } from '../../../Matter/data/MatterTypeSet'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import type { Tilemap } from '../../../Tilemap/Tilemap.ts'
 import { addTileFireModeEffect } from '../_ProjectileEffect-helpers.ts'
 import type { ProjectileEffect, ProjectileEffectResult } from '../_ProjectileEffect.types.ts'
+import { convertMatterTile } from '../convertMatterTile.ts'
 
-const reactsWithMatterTypes = matterTypeSetExcluding([PERMANENT, EMPTY, WATER])
+const reactsWithMatterTypes = matterTypeSetExcluding([PERMANENT, EMPTY, WATER, FIRE])
 export const DESTROY_EFFECT: ProjectileEffect = {
   mode: FireMode.DESTROY,
   reactsWithMatterTypes,
-  convertMatterType: (t: MatterType) => reactsWithMatterTypes.has(t) ? MatterType.EMPTY : null,
+  convertMatterType: (t, ownerId) => convertMatterTile(FireMode.DESTROY, SOLID, t, ownerId),
   onTilesCommitted(tm: Tilemap, out: ProjectileEffectResult[]): void {
     addTileFireModeEffect(tm, out, FireMode.DESTROY)
     const islands = tm.findNewlyDisconnectedByDestruction(out)
@@ -18,10 +19,10 @@ export const DESTROY_EFFECT: ProjectileEffect = {
   },
   onApplied(
     tilemap: Tilemap,
-    _emitPos: Position,
-    collectPos: Position,
+    _emitPos,
+    collectTarget: ParticleTarget,
     tiles: ProjectileEffectResult[],
   ): void {
-    tilemap.scene.vfxParticleManager.spawnMatterFromTiles(tiles, collectPos)
+    tilemap.scene.vfxParticleManager.spawnMatterFromTiles(tiles, collectTarget)
   },
 }

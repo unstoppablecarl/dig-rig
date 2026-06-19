@@ -2,16 +2,20 @@ import { GameObjects, Math as PMath } from 'phaser'
 import { FIRE_MODE_COLORS } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
+import { MatterType } from '../Matter/_Matter.types.ts'
+import { NO_MATTER_TANK_ID } from '../Matter/MatterTank/_MatterTank.types.ts'
 import { FireMode } from '../Player/_FireMode-types'
-import type { ProjectileEffectResult } from '../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 import { fireModeToEffect } from '../Projectiles/ProjectileEffect/ProjectileEffect.ts'
 import { VFXTerrainParticle } from '../VFXParticles/VFXTerrainParticle.ts'
-import { applyEffect } from './TileMutation.ts'
+import { PLAYER_HEIGHT, PLAYER_WIDTH } from '../Player/Player.ts'
+
+const PLAYER_RADIUS_X = PLAYER_WIDTH * 0.5
+const PLAYER_RADIUS_Y = PLAYER_HEIGHT * 0.5
+const PLAYER_CREATE_VEL_EXTEND = 8
 
 export class TerrainBlobParticleManager extends SceneBound {
   public particles: VFXTerrainParticle[] = []
   private graphics: GameObjects.Graphics
-  private _effectTiles: ProjectileEffectResult[] = []
 
   constructor(public scene: GameLevel) {
     super(scene)
@@ -60,7 +64,24 @@ export class TerrainBlobParticleManager extends SceneBound {
 
     if (result.collision) {
       const { stepX, stepY } = result
-      applyEffect(this.scene.tilemap, this._effectTiles, stepX, stepY, d.radius, fireModeToEffect(d.mode))
+      const effect = fireModeToEffect(d.mode)
+      const player = this.scene.player
+      const vel = player.container.body?.velocity
+      const vx = vel?.x ?? 0, vy = vel?.y ?? 0
+      this.scene.matterBridge.sendApplyEffect({
+        mode: effect.mode,
+        createType: effect.createType ?? MatterType.SOLID,
+        tileX: Math.round(stepX),
+        tileY: Math.round(stepY),
+        tileRadius: d.radius,
+        innerRadius: 0,
+        ownerId: NO_MATTER_TANK_ID,
+        tilesToModify: Number.MAX_SAFE_INTEGER,
+        playerBoundsLeft: player.x - PLAYER_RADIUS_X + Math.max(Math.min(vx, 0), -PLAYER_CREATE_VEL_EXTEND),
+        playerBoundsRight: player.x + PLAYER_RADIUS_X + Math.min(Math.max(vx, 0), PLAYER_CREATE_VEL_EXTEND),
+        playerBoundsTop: player.y - PLAYER_RADIUS_Y + Math.max(Math.min(vy, 0), -PLAYER_CREATE_VEL_EXTEND),
+        playerBoundsBot: player.y + PLAYER_RADIUS_Y + Math.min(Math.max(vy, 0), PLAYER_CREATE_VEL_EXTEND),
+      })
       return false
     } else {
       const { dx, dy } = result

@@ -18,7 +18,10 @@ export class InstantProjectile extends BaseProjectile {
     if (isMatterTankFireMode(this.effect.mode)) {
       this.matterTank.addPendingCharge(this.effect.mode, charge)
     }
-    this.applyTiles(charge)
+     this.applyTiles(charge)
+  }
+
+  protected onApplyTilesResult() {
     this.destroy()
   }
 

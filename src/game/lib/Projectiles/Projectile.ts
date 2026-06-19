@@ -92,7 +92,6 @@ export class Projectile extends BaseProjectile {
     }
 
     this.lifespanPercent = (this.tilesModified / this.tilesToModify)
-
   }
 
   public startExpandTimer() {
