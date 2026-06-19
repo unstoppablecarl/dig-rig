@@ -38,7 +38,6 @@ const DYNAMIC_TARGET_SNAP = 2
 
 const FADE_TIME = 1
 
-
 const {
   WIND_LUT_X,
   WIND_LUT_Y,
@@ -81,11 +80,25 @@ export class VFXMatterParticle extends Particle {
   }
 
   public init(
+    target: Position,
+    staticTarget: true,
+    colorFrom: Color,
+    colorTo: Color,
+  ): void
+
+  public init(
+    target: ParticleTarget,
+    staticTarget: false,
+    colorFrom: Color,
+    colorTo: Color,
+  ): void
+
+  public init(
     target: Position | ParticleTarget,
     staticTarget: boolean,
     colorFrom: Color,
     colorTo: Color,
-  ) {
+  ) :void {
     this.target = target
     this.staticTarget = staticTarget
 
