@@ -1,13 +1,13 @@
-// String enums avoid numeric collision with MatterWorkerOutMsg values.
+// String enums avoid numeric collision with CoordinatorOutMsg values.
 
 export enum SimInMsg {
-  INIT = 'pool.init',
-  PROCESS = 'pool.process',
+  INIT = 'sim.init',
+  PROCESS = 'sim.process',
 }
 
 export enum SimOutMsg {
-  READY = 'pool.ready',
-  DONE = 'pool.done',
+  READY = 'sim.ready',
+  DONE = 'sim.done',
 }
 
 export type SimInMsgInit = {
