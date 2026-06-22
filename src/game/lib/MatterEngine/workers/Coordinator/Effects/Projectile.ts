@@ -1,10 +1,10 @@
 /// <reference lib="webworker" />
-import { EMPTY, matterType, MatterType, SupportType } from '../../../Matter/_Matter.types.ts'
-import { getSupportType } from '../../../Matter/matter.ts'
-import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
-import type { PlayerBounds } from '../../data/PlayerBoundsData.ts'
-import type { MatterSim } from '../MatterSim/MatterSim.ts'
-import type { Physics } from './Physics.ts'
+import { EMPTY, matterType, MatterType, SupportType } from '../../../../Matter/_Matter.types.ts'
+import { getSupportType } from '../../../../Matter/matter.ts'
+import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
+import type { PlayerBounds } from '../../../data/PlayerBoundsData.ts'
+import type { MatterSim } from '../../MatterSim/MatterSim.ts'
+import type { Physics } from '../Physics.ts'
 
 export type ProjectileEffectResult = { x: number, y: number, newValue: MatterType }
 export type EffectResult = { tiles: ProjectileEffectResult[], structuralDirty: boolean }

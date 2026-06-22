@@ -1,17 +1,17 @@
 /// <reference lib="webworker" />
-import { EMPTY, FIRE, MatterType, PERMANENT, WATER } from '../../../Matter/_Matter.types.ts'
-import { MatterTypeSet } from '../../../Matter/data/MatterTypeSet.ts'
-import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
+import { MatterType } from '../../../../Matter/_Matter.types.ts'
+import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
 import { Projectile, type ProjectileEffectResult } from './Projectile.ts'
 
-const IGNORE = new MatterTypeSet(PERMANENT, EMPTY, WATER, FIRE)
-
-export class ProjectileDestroy extends Projectile {
+export class ProjectileMelt extends Projectile {
   protected convertTile(existing: MatterType, _createType: MatterType, _ownerId: MatterTankId): MatterType | null {
-    return IGNORE.has(existing) ? null : EMPTY
+    if (existing === MatterType.SOLID) return MatterType.SAND
+    if (existing === MatterType.SAND) return MatterType.WATER
+    return null
   }
 
   protected postApply(candidates: ProjectileEffectResult[], _createType: MatterType, activeSet: Set<number>, dirtyChunks: Set<number>): void {
+    this.sim.activateTiles(candidates, activeSet)
     const islands = this.physics.findNewlyDisconnected(candidates, dirtyChunks)
     if (islands.length > 0) this.physics.collapseIslands(islands, activeSet, dirtyChunks)
   }

@@ -1,18 +1,18 @@
 /// <reference lib="webworker" />
+import { EMPTY, MatterType, matterType, SOLID, SupportType } from '../../../Matter/_Matter.types.ts'
+import { getSupportType, SETTLING_TYPES } from '../../../Matter/matter.ts'
+import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import { EMPTY_PLAYER_BOUNDS, type PlayerBoundsDataType } from '../../data/PlayerBoundsData.ts'
 import type { ProjectileManagerData } from '../../data/ProjectileManagerData.ts'
-import { EMPTY, matterType, MatterType, SOLID, SupportType } from '../../../Matter/_Matter.types.ts'
-import { getSupportType, SETTLING_TYPES } from '../../../Matter/matter.ts'
-import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import type { CoordinatorInMsgBrushEraseMatter } from '../Coordinator.types.ts'
 import type { MatterSim } from '../MatterSim/MatterSim.ts'
+import type { EffectResult } from './Effects/Projectile.ts'
+import { ProjectileCreate } from './Effects/ProjectileCreate.ts'
+import { ProjectileDestroy } from './Effects/ProjectileDestroy.ts'
+import { ProjectileMelt } from './Effects/ProjectileMelt.ts'
+import { ProjectileSolidify } from './Effects/ProjectileSolidify.ts'
 import { Physics } from './Physics.ts'
-import type { EffectResult } from './Projectile.ts'
-import { ProjectileCreate } from './ProjectileCreate.ts'
-import { ProjectileDestroy } from './ProjectileDestroy.ts'
-import { ProjectileMelt } from './ProjectileMelt.ts'
-import { ProjectileSolidify } from './ProjectileSolidify.ts'
 
 export type WriteEntry = {
   indices: number[]
@@ -47,8 +47,10 @@ export class Effects {
     const tiles = this.sim.tiles
     const w = this.width
     let structuralDirty = false
-
     for (const { indices, tile, reactivateAround } of writes) {
+      const t = matterType(tile)
+      const shouldActivate = t !== EMPTY && SETTLING_TYPES.has(t)
+
       for (const idx of indices) {
         const x = idx % w
         const y = idx / w | 0
@@ -58,11 +60,13 @@ export class Effects {
         tiles[idx] = tile
         this.sim.markDirty(x, y)
         dirtyChunks.add(this.physics.chunkIdxForTile(idx))
-        if (reactivateAround) this.sim.reactivateAround(x, y, activeSet)
+        if (reactivateAround) {
+          this.sim.reactivateAround(x, y, activeSet)
+        }
+        if (shouldActivate) {
+          this.sim.activate(idx, activeSet)
+        }
       }
-
-      const t = matterType(tile)
-      if (t !== EMPTY && SETTLING_TYPES.has(t)) this.sim.activate(indices, activeSet)
 
       if (getSupportType(tile) >= SupportType.STRUCTURAL) {
         const placed = indices.map(idx => ({ x: idx % w, y: idx / w | 0 }))

@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
-import { MatterType } from '../../../Matter/_Matter.types.ts'
-import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
+import { MatterType } from '../../../../Matter/_Matter.types.ts'
+import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
 import { Projectile, type ProjectileEffectResult } from './Projectile.ts'
 
 export class ProjectileSolidify extends Projectile {
@@ -11,7 +11,7 @@ export class ProjectileSolidify extends Projectile {
   }
 
   protected postApply(candidates: ProjectileEffectResult[], _createType: MatterType, activeSet: Set<number>, dirtyChunks: Set<number>): void {
-    this.sim.activate(candidates.map(({ x, y }) => y * this.width + x), activeSet)
+    this.sim.activateTiles(candidates, activeSet)
     const solidTiles = candidates.filter(t => t.newValue === MatterType.SOLID)
     if (solidTiles.length > 0) {
       const islands = this.physics.findIslandTiles(solidTiles)

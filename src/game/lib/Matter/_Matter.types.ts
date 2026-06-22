@@ -188,3 +188,5 @@ export type MatterDef = {
   // what the tile converts to when its structural island collapses (undefined = keep type).
   structuralCollapseType?: MatterType
 }
+
+export type IndexedTile = { x: number, y: number, idx: number }

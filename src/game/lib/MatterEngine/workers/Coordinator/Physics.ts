@@ -1,8 +1,8 @@
 /// <reference lib="webworker" />
 import { CHUNK_SIZE } from '../../../../config.ts'
-import { ChunkGrid } from '../../../Tilemap/ChunkGrid.ts'
 import { getSupport, isSettled, matterType, PERMANENT, SOLID, SupportType } from '../../../Matter/_Matter.types.ts'
 import { COLLIDES_WHEN_SETTLED, getSupportType, setSupport, STRUCTURAL_COLLAPSE_TO } from '../../../Matter/matter.ts'
+import { ChunkGrid } from '../../../Tilemap/ChunkGrid.ts'
 import { MatterSim } from '../MatterSim/MatterSim.ts'
 
 type XY = { x: number; y: number }
@@ -77,7 +77,10 @@ export class Physics {
     const { width, height, chunkGrid } = this
     const tiles = this.sim.tiles
 
-    if (this._bfsEpoch > 0xFFFFFFFD) { this._bfsVisited.fill(0); this._bfsEpoch = 0 }
+    if (this._bfsEpoch > 0xFFFFFFFD) {
+      this._bfsVisited.fill(0)
+      this._bfsEpoch = 0
+    }
     this._bfsEpoch += 2
     const VISITED = this._bfsEpoch
     const { _bfsVisited: vis, _bfsQueue: queue } = this
@@ -120,13 +123,22 @@ export class Physics {
       const y = idx / width | 0
       for (let d = 0; d < 4; d++) {
         const nx = x + BFS_DX[d], ny = y + BFS_DY[d]
-        if (nx < 0 || nx >= width || ny < 0 || ny >= height) { anchored = true; break outer }
+        if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+          anchored = true
+          break outer
+        }
         const nidx = ny * width + nx
         if (vis[nidx] === VISITED) continue
         const st = getSupportType(tiles[nidx])
-        if (st === SupportType.ANCHORED) { anchored = true; break outer }
+        if (st === SupportType.ANCHORED) {
+          anchored = true
+          break outer
+        }
         if (st >= SupportType.STRUCTURAL) {
-          if (chunkGrid.isAnchoredCoord(nx / CHUNK_SIZE | 0, ny / CHUNK_SIZE | 0)) { anchored = true; break outer }
+          if (chunkGrid.isAnchoredCoord(nx / CHUNK_SIZE | 0, ny / CHUNK_SIZE | 0)) {
+            anchored = true
+            break outer
+          }
           vis[nidx] = VISITED
           queue[tail++] = nidx
         }
@@ -140,7 +152,10 @@ export class Physics {
   // dirtyChunks: chunks modified this step — their chunkGrid.anchored data is stale, so we skip the
   // chunk-level pruning for them and rely on tile-level BFS instead.
   findNewlyDisconnected(destroyedTiles: XY[], dirtyChunks: Set<number>): XY[] {
-    if (this._bfsEpoch > 0xFFFFFFFD) { this._bfsVisited.fill(0); this._bfsEpoch = 0 }
+    if (this._bfsEpoch > 0xFFFFFFFD) {
+      this._bfsVisited.fill(0)
+      this._bfsEpoch = 0
+    }
     this._bfsEpoch += 2
     const VISITED = this._bfsEpoch
     const CONFIRMED = this._bfsEpoch + 1
@@ -157,7 +172,10 @@ export class Physics {
         if (vis[sidx] >= VISITED) continue
         const supportType = getSupportType(tiles[sidx])
         if (supportType < SupportType.STRUCTURAL) continue
-        if (supportType === SupportType.ANCHORED) { vis[sidx] = CONFIRMED; continue }
+        if (supportType === SupportType.ANCHORED) {
+          vis[sidx] = CONFIRMED
+          continue
+        }
 
         // Seed-level pruning: skip full BFS if this tile's chunk is already anchored.
         // Skip the chunk check for dirty chunks — their anchored flag is from the previous step.
@@ -169,11 +187,20 @@ export class Physics {
         if (!seedAnchored) {
           for (let dp = 0; dp < 4; dp++) {
             const px = sx + BFS_DX[dp], py = sy + BFS_DY[dp]
-            if (px < 0 || px >= width || py < 0 || py >= height) { seedAnchored = true; break }
-            if (getSupportType(tiles[py * width + px]) === SupportType.ANCHORED) { seedAnchored = true; break }
+            if (px < 0 || px >= width || py < 0 || py >= height) {
+              seedAnchored = true
+              break
+            }
+            if (getSupportType(tiles[py * width + px]) === SupportType.ANCHORED) {
+              seedAnchored = true
+              break
+            }
           }
         }
-        if (seedAnchored) { vis[sidx] = CONFIRMED; continue }
+        if (seedAnchored) {
+          vis[sidx] = CONFIRMED
+          continue
+        }
 
         let head = 0, tail = 0, compLen = 0, anchored = false
         vis[sidx] = VISITED
@@ -186,15 +213,26 @@ export class Physics {
           const cy = (cidx / width) | 0
           for (let d2 = 0; d2 < 4; d2++) {
             const nx = cx + BFS_DX[d2], ny = cy + BFS_DY[d2]
-            if (nx < 0 || nx >= width || ny < 0 || ny >= height) { anchored = true; break bfs }
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+              anchored = true
+              break bfs
+            }
             const nidx = ny * width + nx
             if (vis[nidx] >= VISITED) continue
             const st = getSupportType(tiles[nidx])
-            if (st === SupportType.ANCHORED) { anchored = true; break bfs }
+            if (st === SupportType.ANCHORED) {
+              anchored = true
+              break bfs
+            }
             if (st >= SupportType.STRUCTURAL) {
               const nCx = nx / CHUNK_SIZE | 0, nCy = ny / CHUNK_SIZE | 0
-              if (!dirtyChunks.has(nCy * chunksWide + nCx) && chunkGrid.isAnchoredCoord(nCx, nCy)) { anchored = true; break bfs }
-              vis[nidx] = VISITED; queue[tail++] = nidx; comp[compLen++] = nidx
+              if (!dirtyChunks.has(nCy * chunksWide + nCx) && chunkGrid.isAnchoredCoord(nCx, nCy)) {
+                anchored = true
+                break bfs
+              }
+              vis[nidx] = VISITED
+              queue[tail++] = nidx
+              comp[compLen++] = nidx
             }
           }
         }
@@ -216,7 +254,6 @@ export class Physics {
   collapseIslands(islands: XY[], activeSet: Set<number>, dirtyChunks: Set<number>): void {
     const tiles = this.sim.tiles
     const { width } = this
-    const toActivate: number[] = []
 
     for (const { x, y } of islands) {
       const idx = y * width + x
@@ -225,18 +262,13 @@ export class Physics {
       const collapseType = STRUCTURAL_COLLAPSE_TO[t]
       if (collapseType !== undefined) {
         tiles[idx] = collapseType
-        this.sim.markDirty(x, y)
-        dirtyChunks.add(this.chunkIdxForTile(idx))
-        toActivate.push(idx)
       } else if (getSupport(raw) === SupportType.STRUCTURAL) {
         tiles[idx] = setSupport(raw, SupportType.NONE)
         this.sim.markDirty(x, y)
         dirtyChunks.add(this.chunkIdxForTile(idx))
-        toActivate.push(idx)
+        this.sim.activate(idx, activeSet)
       }
     }
-
-    if (toActivate.length > 0) this.sim.activate(toActivate, activeSet)
   }
 
   private initPermanentChunks(): void {

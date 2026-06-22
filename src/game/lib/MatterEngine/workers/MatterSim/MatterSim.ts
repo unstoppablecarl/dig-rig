@@ -25,6 +25,7 @@ import {
 import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { ParticleType } from '../../../Particles/_particle-types.ts'
 import { ChunkGrid, type ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
+import type { Tile } from '../../../Tilemap/TileGrid.ts'
 import { CoordinatorOutMsg, type CoordinatorOutMsgSpawnParticle } from '../Coordinator.types.ts'
 import { type SimInMsgProcess, type SimOutMsgDone } from './MatterSim.types.ts'
 
@@ -100,22 +101,33 @@ export class MatterSim {
   }
 
   // Wakes tiles in `target`. Called by coordinator on ACTIVATE messages.
-  activate(indices: number[], target: Set<number>) {
+  activateIndexes(indices: number[], target: Set<number>) {
     for (const idx of indices) {
-      if (idx < 0 || idx >= this.tiles.length) continue
-      const raw = this.tiles[idx]
-      const t = matterType(raw)
-
-      if (getSupportType(raw) >= SupportType.STRUCTURAL || !ACTIVATABLE_TYPES.has(t)) continue
-      if (!ALWAYS_ACTIVE_TYPES.has(t)) {
-        this.tiles[idx] = setSettled(raw, false)
-      }
-      this.markDirty(idx % this.width, idx / this.width | 0)
-      target.add(idx)
+      this.activate(idx, target)
     }
   }
 
-  // Runs matterType actions for the given tile indices. Pool workers call this
+  activateTiles(tiles: Tile[], target: Set<number>) {
+    for (const { x, y } of tiles) {
+      const idx = y * this.width + x
+      this.activate(idx, target)
+    }
+  }
+
+  activate(idx: number, target: Set<number>) {
+    if (idx < 0 || idx >= this.tiles.length) return
+    const raw = this.tiles[idx]
+    const t = matterType(raw)
+
+    if (getSupportType(raw) >= SupportType.STRUCTURAL || !ACTIVATABLE_TYPES.has(t)) return
+    if (!ALWAYS_ACTIVE_TYPES.has(t)) {
+      this.tiles[idx] = setSettled(raw, false)
+    }
+    this.markDirtyRaw(idx)
+    target.add(idx)
+  }
+
+// Runs matterType actions for the given tile indices. Pool workers call this
   // once per round with their assigned subset of the active set.
   processSubset(indices: number[]) {
     const phase = this.frame & 1
@@ -144,6 +156,10 @@ export class MatterSim {
   markDirty(tx: number, ty: number) {
     const idx = (ty >>> this.chunkShift) * this.chunksWidth + (tx >>> this.chunkShift)
 
+    this.chunkGrid.markDirty(idx)
+  }
+
+  markDirtyRaw(idx: number) {
     this.chunkGrid.markDirty(idx)
   }
 
