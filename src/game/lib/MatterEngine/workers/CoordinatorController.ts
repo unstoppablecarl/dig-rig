@@ -1,11 +1,10 @@
+import type { MatterType } from '../../Matter/_Matter.types.ts'
+import type { MatterTankId } from '../../Matter/Tank/_MatterTank.types.ts'
+import type { ParticleType } from '../../Particles/_particle-types.ts'
 import {
   CoordinatorInMsg,
-  type CoordinatorInMsgActivateTiles,
-  type CoordinatorInMsgAddBrushMatter,
-  type CoordinatorInMsgBrushEraseMatter,
   type CoordinatorInMsgInit,
   CoordinatorOutMsg,
-  type CoordinatorOutMsgSpawnParticle,
   type TypedMatterCoordinatorWorker,
 } from './Coordinator.types.ts'
 import CoordinatorWorkerConstructor from './Coordinator.worker.ts?worker'
@@ -17,10 +16,10 @@ export class CoordinatorController {
     config: Omit<CoordinatorInMsgInit, 'type'>,
     responders: {
       spawnParticle: (
-        particleType: CoordinatorOutMsgSpawnParticle['particleType'],
-        x: CoordinatorOutMsgSpawnParticle['x'],
-        y: CoordinatorOutMsgSpawnParticle['y'],
-        ownerId?: CoordinatorOutMsgSpawnParticle['ownerId'],
+        particleType: ParticleType,
+        x: number,
+        y: number,
+        ownerId?: MatterTankId,
       ) => void,
     },
   ) {
@@ -38,20 +37,25 @@ export class CoordinatorController {
     }
   }
 
-  brushEraseMatter(req: Omit<CoordinatorInMsgBrushEraseMatter, 'type'>) {
-    this.worker.postMessage({ type: CoordinatorInMsg.BRUSH_ERASE_MATTER, ...req })
+  brushEraseMatter(
+    tileX: number,
+    tileY: number,
+    tileRadius: number,
+    ownerId: MatterTankId,
+  ) {
+    this.worker.postMessage({ type: CoordinatorInMsg.BRUSH_ERASE_MATTER, tileX, tileY, tileRadius, ownerId })
   }
 
   brushAddMatter(
-    value: CoordinatorInMsgAddBrushMatter['value'],
-    tx: CoordinatorInMsgAddBrushMatter['tx'],
-    ty: CoordinatorInMsgAddBrushMatter['ty'],
-    radius: CoordinatorInMsgAddBrushMatter['radius'],
+    value: MatterType,
+    tx: number,
+    ty: number,
+    radius: number,
   ) {
     this.worker.postMessage({ type: CoordinatorInMsg.BRUSH_ADD_MATTER, value, tx, ty, radius })
   }
 
-  activateTiles(indices: CoordinatorInMsgActivateTiles['indices']) {
+  activateTiles(indices: number[]) {
     this.worker.postMessage({ type: CoordinatorInMsg.ACTIVATE_TILES, indices })
   }
 

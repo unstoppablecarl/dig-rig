@@ -1,4 +1,4 @@
-import { GameObjects, Input, Math, Scenes } from 'phaser'
+import { GameObjects, Input, Math as PMath, Scenes } from 'phaser'
 import { BRUSH_OUTLINE_COLOR } from '../../../config/colors.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { MatterType } from '../../Matter/_Matter.types.ts'
@@ -7,7 +7,7 @@ import { makeRestartableTimerEvent, RestartableTimerEvent } from '../../Util/Res
 import { InputController } from './InputController.ts'
 import POINTER_MOVE = Input.Events.POINTER_MOVE
 import Pointer = Input.Pointer
-import Vector2 = Math.Vector2
+import Vector2 = PMath.Vector2
 import POST_UPDATE = Scenes.Events.POST_UPDATE
 
 export class BrushInput extends InputController {
@@ -81,18 +81,22 @@ export class BrushInput extends InputController {
 
   protected brushPrimaryDown(p: Pointer) {
     const { x, y } = this.scene.cameras.main.getWorldPoint(p.x, p.y, this._worldPoint)
+    const tx = Math.floor(x)
+    const ty = Math.floor(y)
     const a = this.scene.playerActions
     const destroying = a.BRUSH_ERASE_MODIFIER.isDown()
     if (destroying) {
-      this.brushDestroy(x, y)
+      this.brushDestroy(tx, ty)
     } else {
-      this.brushCreate(x, y, this.scene.brushUIState.primaryMatterValue)
+      this.brushCreate(tx, ty, this.scene.brushUIState.primaryMatterValue)
     }
   }
 
   protected brushSecondaryDown(p: Pointer) {
     const { x, y } = this.scene.cameras.main.getWorldPoint(p.x, p.y, this._worldPoint)
-    this.brushCreate(x, y, this.scene.brushUIState.secondaryMatterValue)
+    const tx = Math.floor(x)
+    const ty = Math.floor(y)
+    this.brushCreate(tx, ty, this.scene.brushUIState.secondaryMatterValue)
   }
 
   pointermove(p: Pointer) {
@@ -133,12 +137,7 @@ export class BrushInput extends InputController {
 
   brushDestroy(tx: number, ty: number) {
     const radius = this.scene.brushUIState.radius
-    this.scene.matterEngine.brushEraseMatter({
-      tileX: tx,
-      tileY: ty,
-      tileRadius: radius,
-      ownerId: NO_MATTER_TANK_ID,
-    })
+    this.scene.matterEngine.brushEraseMatter(tx, ty, radius, NO_MATTER_TANK_ID)
   }
 
   protected onDestroy() {

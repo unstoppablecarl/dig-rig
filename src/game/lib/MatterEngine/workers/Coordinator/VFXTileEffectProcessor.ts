@@ -2,7 +2,7 @@ import type { GameLevel } from '../../../../scenes/GameLevel.ts'
 import type { VFXTileEffectData } from '../../data/VFXTileEffectData.ts'
 import Color = Phaser.Display.Color
 
-export class VFXTileEffect {
+export class VFXTileEffectProcessor {
 
   constructor(
     private readonly scene: GameLevel,

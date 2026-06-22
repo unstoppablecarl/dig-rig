@@ -1,22 +1,24 @@
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { MatterType } from '../Matter/_Matter.types.ts'
+import type { MatterTankId } from '../Matter/Tank/_MatterTank.types.ts'
 import { DataManager } from './DataManager.ts'
 import { VFXParticleProcessor } from './processors/VFXParticleProcessor.ts'
 import { VFXSettledTileProcessor } from './processors/VFXSettledTileProcessor.ts'
 import type { CoordinatorInMsgBrushEraseMatter } from './workers/Coordinator.types.ts'
-import { VFXTileEffect } from './workers/Coordinator/VFXTileEffect.ts'
+import { VFXTileEffectProcessor } from './workers/Coordinator/VFXTileEffectProcessor.ts'
 import { CoordinatorController } from './workers/CoordinatorController.ts'
 import { ParticleSimController } from './workers/ParticleSim/ParticleSimController.ts'
 
 export type ApplyDestroyParams = Omit<CoordinatorInMsgBrushEraseMatter, 'type'>
 
 export class MatterEngine extends SceneBound {
-  private readonly workerController: CoordinatorController
+  private readonly worker: CoordinatorController
   private readonly particleSim: ParticleSimController
+
   private readonly vfxParticle: VFXParticleProcessor
   private readonly vfxSettled: VFXSettledTileProcessor
-  private readonly vfxTileEffect: VFXTileEffect
+  private readonly vfxTileEffect: VFXTileEffectProcessor
 
   readonly data: DataManager
 
@@ -33,13 +35,13 @@ export class MatterEngine extends SceneBound {
       this.data.vfxParticleCreate,
     )
     this.vfxSettled = new VFXSettledTileProcessor(scene, this.data.vfxSettledTile)
-    this.vfxTileEffect = new VFXTileEffect(scene, this.data.vfxTileEffect)
+    this.vfxTileEffect = new VFXTileEffectProcessor(scene, this.data.vfxTileEffect)
 
     this.particleSim = new ParticleSimController(this.scene, this.data.particle, {
-      onActivations: (indices) => this.workerController.activateTiles(indices),
+      onActivations: (indices) => this.worker.activateTiles(indices),
     })
 
-    this.workerController = new CoordinatorController({
+    this.worker = new CoordinatorController({
       ...this.data.buffers,
       width: tilemap.width,
       height: tilemap.height,
@@ -50,12 +52,17 @@ export class MatterEngine extends SceneBound {
     })
   }
 
-  brushEraseMatter(params: ApplyDestroyParams) {
-    this.workerController.brushEraseMatter(params)
+  brushEraseMatter(
+    tileX: number,
+    tileY: number,
+    tileRadius: number,
+    ownerId: MatterTankId,
+  ) {
+    this.worker.brushEraseMatter(tileX, tileY, tileRadius, ownerId)
   }
 
   brushAddMatter(value: MatterType, tx: number, ty: number, radius = 8) {
-    this.workerController.brushAddMatter(value, Math.floor(tx), Math.floor(ty), radius)
+    this.worker.brushAddMatter(value, tx, ty, radius)
   }
 
   update() {
@@ -67,8 +74,8 @@ export class MatterEngine extends SceneBound {
   }
 
   protected onDestroy() {
-    this.workerController.terminate()
+    this.worker.terminate()
     // @ts-expect-error: destroy
-    this.workerController = null
+    this.worker = null
   }
 }
