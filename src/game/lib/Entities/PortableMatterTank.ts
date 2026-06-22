@@ -2,7 +2,7 @@ import { GameObjects } from 'phaser'
 import { MATTER_TANK_TEXT_STYLES } from '../../config/styles.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
-import { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
+import { MatterTank } from '../Matter/Tank/MatterTank.ts'
 import Container = GameObjects.Container
 import GameObject = GameObjects.GameObject
 import Sprite = Phaser.GameObjects.Sprite
@@ -24,7 +24,7 @@ export class PortableMatterTank extends GameObject implements Position {
     public x: number,
     public y: number,
     startingMatter = 0,
-    matterMax = Infinity,
+    matterMax = Number.MAX_SAFE_INTEGER,
   ) {
     super(scene, 'Portable Matter Tank')
 

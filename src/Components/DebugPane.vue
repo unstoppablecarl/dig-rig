@@ -14,7 +14,6 @@ import {
 } from 'vue-pane/src/index.ts'
 import { ENABLE_BRUSH_MODE_DEBUG } from '../game/config.ts'
 import { launchLevel } from '../game/launcher.ts'
-import { MATTER_NAMES } from '../game/lib/Matter/matter.ts'
 import type { GameLevel } from '../game/scenes/GameLevel.ts'
 import { type LevelEntry, type LevelId, LEVELS } from '../game/scenes/Levels'
 import BrushPane from './DebugPane/BrushPane.vue'
@@ -46,7 +45,7 @@ const physics = {
   sleeping: pollingComputed(() => level?.matter?.world?.getAllBodies()?.filter(b => b.isSleeping)?.length ?? 0, 500),
 }
 
-const particles = {
+const vfxParticles = {
   count: pollingComputed(() => level?.vfxParticleManager?.emitter?.getAliveParticleCount() ?? 0, 200),
   dead: pollingComputed(() => level?.vfxParticleManager?.emitter?.getDeadParticleCount() ?? 0, 200),
 }
@@ -74,7 +73,6 @@ function clearStorage() {
   window.location.reload()
 }
 
-const matterEntries = [...MATTER_NAMES.entries()]
 const levelEntries = Object.entries(LEVELS) as [LevelId, LevelEntry][]
 </script>
 <template>
@@ -98,9 +96,9 @@ const levelEntries = Object.entries(LEVELS) as [LevelId, LevelEntry][]
           <PNumber label="Dynamic" :poll="physics.dynamic" readonly />
           <PNumber label="Sleeping" :poll="physics.sleeping" readonly />
         </PFolder>
-        <PFolder title="Particles">
-          <PNumber label="Count" :poll="particles.count" readonly />
-          <PNumber label="Dead" :poll="particles.dead" readonly />
+        <PFolder title="VFX Particles">
+          <PNumber label="Count" :poll="vfxParticles.count" readonly />
+          <PNumber label="Dead" :poll="vfxParticles.dead" readonly />
         </PFolder>
       </PFolder>
 

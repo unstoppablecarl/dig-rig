@@ -5,7 +5,7 @@
 //   tile & ~SETTLED_FLAG         → strip settled, get raw tile back
 
 import { type MatterAction } from './matter.ts'
-import { type MatterTankId, NO_MATTER_TANK_ID } from './MatterTank/_MatterTank.types.ts'
+import { type MatterTankId, NO_MATTER_TANK_ID } from './Tank/_MatterTank.types.ts'
 
 export const SETTLED_FLAG = 0x100
 

@@ -1,9 +1,8 @@
 import { GameObjects, Input, Math, Scenes } from 'phaser'
 import { BRUSH_OUTLINE_COLOR } from '../../../config/colors.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { FireMode } from '../../Player/_FireMode-types.ts'
 import { MatterType } from '../../Matter/_Matter.types.ts'
-import { NO_MATTER_TANK_ID } from '../../Matter/MatterTank/_MatterTank.types.ts'
+import { NO_MATTER_TANK_ID } from '../../Matter/Tank/_MatterTank.types.ts'
 import { makeRestartableTimerEvent, RestartableTimerEvent } from '../../Util/RestartableTimerEvent.ts'
 import { InputController } from './InputController.ts'
 import POINTER_MOVE = Input.Events.POINTER_MOVE
@@ -129,24 +128,16 @@ export class BrushInput extends InputController {
 
   brushCreate(tx: number, ty: number, type: MatterType) {
     const radius = this.scene.brushUIState.radius
-    this.scene.matterBridge.addMatter(type, tx, ty, radius)
+    this.scene.matterEngine.brushAddMatter(type, tx, ty, radius)
   }
 
   brushDestroy(tx: number, ty: number) {
     const radius = this.scene.brushUIState.radius
-    this.scene.matterBridge.sendApplyEffect({
-      mode: FireMode.DESTROY,
-      createType: MatterType.SOLID,
+    this.scene.matterEngine.brushEraseMatter({
       tileX: tx,
       tileY: ty,
       tileRadius: radius,
-      innerRadius: 0,
       ownerId: NO_MATTER_TANK_ID,
-      tilesToModify: Number.MAX_SAFE_INTEGER,
-      playerBoundsLeft: 0,
-      playerBoundsRight: 0,
-      playerBoundsTop: 0,
-      playerBoundsBottom: 0,
     })
   }
 

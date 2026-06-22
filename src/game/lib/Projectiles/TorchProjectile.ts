@@ -15,9 +15,7 @@ export class TorchProjectile extends BaseProjectile {
   update() {
     if (!this.fired) return
 
-    if (this.charge() > 0) {
-      this.applyTiles(this.charge())
-    }
+    this.sync(this.charge())
 
     if (!this.charge()) {
       this.destroy()

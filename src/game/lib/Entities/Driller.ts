@@ -2,7 +2,7 @@ import { GameObjects, Math as PMath, Time } from 'phaser'
 import { MATTER_TANK_TEXT_STYLES } from '../../config/styles.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { ParticleTarget } from '../../types.ts'
-import { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
+import { MatterTank } from '../Matter/Tank/MatterTank.ts'
 import { FireMode } from '../Player/_FireMode-types'
 import { Projectile } from '../Projectiles/Projectile.ts'
 import type { ProjectileEffect } from '../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
@@ -74,7 +74,7 @@ export class Driller extends GameObject implements ParticleTarget {
     if (matterTank.full()) {
       if (matterTank.getPendingCharge(FireMode.CREATE) > 0) return
       this.queue(this.projectileCharge, PROJECTILE_EFFECT.CREATE_SOLID)
-        .fireRaw(0, 1)
+        ?.fireRaw(0, 1)
 
       return
     }
@@ -82,7 +82,7 @@ export class Driller extends GameObject implements ParticleTarget {
     if (matterTank.getPendingCharge(FireMode.DESTROY) > 0) return
     if (matterTank.chargeAvailable(FireMode.DESTROY) >= this.projectileCharge) {
       this.queue(this.projectileCharge, PROJECTILE_EFFECT.DESTROY)
-        .fireRaw(0, 1)
+        ?.fireRaw(0, 1)
     }
   }
 

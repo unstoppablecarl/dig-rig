@@ -8,7 +8,9 @@ import { useWeaponUIState, type WeaponUIState } from '../../store/weaponUIState.
 import { type InstantWeaponUIState, useInstantWeaponUIState } from '../../store/weaponUIState/InstantWeaponUIState.ts'
 import { DRAW_WORLD_BORDER_DEBUG } from '../config.ts'
 import {
-  MATTER_RENDER_CONFIG_DEFAULTS, type MatterRenderConfig, mergeMatterRenderConfig,
+  MATTER_RENDER_CONFIG_DEFAULTS,
+  type MatterRenderConfig,
+  mergeMatterRenderConfig,
   type PartialMatterRenderConfig,
 } from '../config/colors.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
@@ -17,8 +19,9 @@ import { GAME_LEVEL_LOADED } from '../lib/events.ts'
 import { WeaponManagerInput } from '../lib/Input/InputController/WeaponManagerInput.ts'
 import { InputManager } from '../lib/Input/InputManager.ts'
 import { makePlayerActions, type PlayerActions } from '../lib/Input/PlayerActions.ts'
-import { MatterBridge } from '../lib/Matter/MatterBridge.ts'
-import { MatterManager } from '../lib/Matter/MatterTank/MatterManager.ts'
+import { MatterManager } from '../lib/Matter/Tank/MatterManager.ts'
+import type { DataManager } from '../lib/MatterEngine/DataManager.ts'
+import { MatterEngine } from '../lib/MatterEngine/MatterEngine.ts'
 import { Player } from '../lib/Player/Player.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
 import { makePreviewProjectileRenderer, ProjectileRenderer } from '../lib/Projectiles/ProjectileRenderer.ts'
@@ -68,13 +71,14 @@ export abstract class GameLevel extends Scene {
   public worldBounds: Geom.Rectangle
   public inputManager: InputManager
   public playerActions: PlayerActions
-  public matterBridge: MatterBridge
+  public matterEngine: MatterEngine
   public uiState: UIState
   public weaponUIState: WeaponUIState
   public instantWeaponUIState: InstantWeaponUIState
   public brushUIState: BrushUIState
   public previewProjectileRenderer: ProjectileRenderer
   public matterRenderConfig: MatterRenderConfig
+  public io: DataManager
 
   public ui: UIScene
   protected id: LevelId
@@ -231,7 +235,8 @@ export abstract class GameLevel extends Scene {
     )
 
     this.tilemapRenderer = this.makeTilemapRenderer(this.tilemap)
-    this.matterBridge = new MatterBridge(this)
+    this.matterEngine = new MatterEngine(this)
+    this.io = this.matterEngine.data
     this.terrainChunkBodyManager = new TerrainChunkBodyManager(this)
     this.projectiles = new ProjectileManager(this)
     this.playerActions = makePlayerActions(this, INPUT_ACTIONS, KEY_EVENT_GUARD)
@@ -271,7 +276,7 @@ export abstract class GameLevel extends Scene {
       this.nextFpsUpdate = time + 500
     }
 
-    this.matterBridge.update()
+    this.matterEngine.update()
     this.cameraController.update()
     this.player.update()
     this.projectiles.update(dt)

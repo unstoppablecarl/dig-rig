@@ -15,8 +15,7 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import { MASK_PLAYER, MASK_TERRAIN } from '../Collision/BodyCategories.ts'
-import type { PlayerPreventCreateBounds } from '../Matter/MatterCoordinator.types.ts'
-import { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
+import { MatterTank } from '../Matter/Tank/MatterTank.ts'
 import { EventsBinder } from '../Util/EventsBinder.ts'
 import Animation = Animations.Animation
 import AnimationFrame = Animations.AnimationFrame
@@ -332,6 +331,15 @@ export class Player extends SceneBound {
   public update() {
     this.updateFacing()
     this.updatePosition()
+    const vel = this.container.body?.velocity
+    const vx = vel?.x ?? 0
+    const vy = vel?.y ?? 0
+    const pb = this.scene.io.playerBounds
+
+    pb.left = this.x - PLAYER_RADIUS_X + Math.max(Math.min(vx, 0), -PLAYER_CREATE_VEL_EXTEND)
+    pb.right = this.x + PLAYER_RADIUS_X + Math.min(Math.max(vx, 0), PLAYER_CREATE_VEL_EXTEND)
+    pb.top = this.y - PLAYER_RADIUS_Y + Math.max(Math.min(vy, 0), -PLAYER_CREATE_VEL_EXTEND)
+    pb.bottom = this.y + PLAYER_RADIUS_Y + Math.min(Math.max(vy, 0), PLAYER_CREATE_VEL_EXTEND)
   }
 
   private updatePosition() {
@@ -453,24 +461,6 @@ export class Player extends SceneBound {
     if (this.facing === Facing.LEFT) {
       this.arm.rotation += Math.PI
     }
-  }
-
-  private _tilePreventCreateBounds: PlayerPreventCreateBounds = {
-    playerBoundsLeft: 0,
-    playerBoundsRight: 0,
-    playerBoundsTop: 0,
-    playerBoundsBottom: 0,
-  }
-
-  getPreventCreateBounds() {
-    const vel = this.container.body?.velocity
-    const vx = vel?.x ?? 0
-    const vy = vel?.y ?? 0
-    this._tilePreventCreateBounds.playerBoundsLeft = this.x - PLAYER_RADIUS_X + Math.max(Math.min(vx, 0), -PLAYER_CREATE_VEL_EXTEND)
-    this._tilePreventCreateBounds.playerBoundsRight = this.x + PLAYER_RADIUS_X + Math.min(Math.max(vx, 0), PLAYER_CREATE_VEL_EXTEND)
-    this._tilePreventCreateBounds.playerBoundsTop = this.y - PLAYER_RADIUS_Y + Math.max(Math.min(vy, 0), -PLAYER_CREATE_VEL_EXTEND)
-    this._tilePreventCreateBounds.playerBoundsBottom = this.y + PLAYER_RADIUS_Y + Math.min(Math.max(vy, 0), PLAYER_CREATE_VEL_EXTEND)
-    return this._tilePreventCreateBounds
   }
 
   protected onDestroy() {

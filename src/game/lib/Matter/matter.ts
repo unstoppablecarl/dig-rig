@@ -8,7 +8,7 @@ import {
   SupportType,
 } from './_Matter.types.ts'
 import { MatterTypeSet } from './data/MatterTypeSet.ts'
-import type { MatterSim } from './MatterSim.ts'
+import type { MatterSim } from '../MatterEngine/workers/MatterSim/MatterSim.ts'
 
 export type MatterAction = (world: MatterSim, x: number, y: number, idx: number) => void
 

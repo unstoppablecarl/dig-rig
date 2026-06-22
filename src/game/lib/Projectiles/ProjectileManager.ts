@@ -1,8 +1,9 @@
+import { MAX_PROJECTILES } from '../../config.ts'
 import { isMatterTankFireMode } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
-import type { MatterTank } from '../Matter/MatterTank/MatterTank.ts'
+import type { MatterTank } from '../Matter/Tank/MatterTank.ts'
 import type { BaseProjectile, BaseProjectileConstructor } from './BaseProjectile.ts'
 import type { ProjectileEffect } from './ProjectileEffect/_ProjectileEffect.types.ts'
 import type { ProjectileRenderer } from './ProjectileRenderer.ts'
@@ -11,12 +12,17 @@ import { ProjectileRendererPool } from './ProjectileRendererPool.ts'
 export class ProjectileManager extends SceneBound {
   public children: BaseProjectile[] = []
   private rendererPool: ProjectileRendererPool
+  private readonly _bySlot: (BaseProjectile | null)[] = new Array(MAX_PROJECTILES).fill(null)
 
   constructor(
     public scene: GameLevel,
   ) {
     super(scene)
     this.rendererPool = new ProjectileRendererPool(scene)
+  }
+
+  bySlot(slotIdx: number): BaseProjectile | null {
+    return this._bySlot[slotIdx] ?? null
   }
 
   add<T extends BaseProjectile>(
@@ -27,10 +33,21 @@ export class ProjectileManager extends SceneBound {
     charge: number,
     effect: ProjectileEffect,
     renderer: null | ProjectileRenderer = this.rendererPool.acquire(),
-  ): T {
-    const projectile = new Constructor(this.scene, this, matterTank, x, y, effect, renderer)
+  ): T | undefined {
+    const data = this.scene.io.projectileManager
+    const slotIdx = data.acquire()
+    if (slotIdx < 0) {
+      console.warn('projectiles full')
+      return undefined
+    }
+
+    const projectile = new Constructor(this.scene, this, matterTank, x, y, effect, slotIdx, renderer)
+    this._bySlot[slotIdx] = projectile
+    data.tilesModified[slotIdx] = 0
+    data.active[slotIdx] = 0
 
     projectile.setTilesToModify(charge)
+    data.registerPending(projectile)
     this.children.push(projectile)
     return projectile
   }
@@ -54,7 +71,7 @@ export class ProjectileManager extends SceneBound {
     const startAngle = angle ?? player.getProjectileAngle()
 
     const projectile = this.add(Constructor, player.matterTank, startPos.x, startPos.y, charge, effect, renderer)
-    projectile.fire(startAngle, velocity)
+    projectile?.fire(startAngle, velocity)
 
     return projectile
   }
@@ -68,6 +85,10 @@ export class ProjectileManager extends SceneBound {
   remove(projectile: BaseProjectile) {
     // already destroyed
     if (!this.children) return
+    if (projectile.slotIdx >= 0) {
+      const data = this.scene.io.projectileManager
+      data.release(projectile.slotIdx)
+    }
     const i = this.children.indexOf(projectile)
     if (i !== -1) {
       this.children[i] = this.children[this.children.length - 1]

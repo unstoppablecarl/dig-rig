@@ -3,7 +3,7 @@ import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, ref } from 'vue'
 import { EMPTY, MatterType, setOwner, SupportType } from '../game/lib/Matter/_Matter.types.ts'
 import { ALWAYS_STRUCTURAL, OWNED_MATTER_TYPES, setSupport, SUPPORT_IMMUTABLE } from '../game/lib/Matter/matter.ts'
-import { PLAYER_MATTER_TANK_ID } from '../game/lib/Matter/MatterTank/_MatterTank.types.ts'
+import { PLAYER_MATTER_TANK_ID } from '../game/lib/Matter/Tank/_MatterTank.types.ts'
 
 export type BrushUIState = ReturnType<typeof useBrushUIState>
 

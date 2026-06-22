@@ -1,10 +1,15 @@
-import { MatterType } from '../../Matter/_Matter.types.ts'
+import { EMPTY, FIRE, MatterType, PERMANENT, SAND, SOLID, WATER } from '../../Matter/_Matter.types.ts'
+import { MatterTypeSet, matterTypeSetExcluding } from '../../Matter/data/MatterTypeSet.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
 import type { ProjectileEffect } from './_ProjectileEffect.types.ts'
-import { makeCreateEffect } from './projectile-effects/create.ts'
-import { DESTROY_EFFECT } from './projectile-effects/destroy.ts'
-import { MELT_EFFECT } from './projectile-effects/melt.ts'
-import { SOLIDIFY_EFFECT } from './projectile-effects/solidify'
+
+export function makeCreateEffect(type: MatterType): ProjectileEffect {
+  return {
+    mode: FireMode.CREATE,
+    createType: type,
+    collidesWithMatterTypes: matterTypeSetExcluding([type]),
+  }
+}
 
 export const PROJECTILE_EFFECT = {
   CREATE_SOLID: makeCreateEffect(MatterType.SOLID),
@@ -12,9 +17,18 @@ export const PROJECTILE_EFFECT = {
   CREATE_WATER: makeCreateEffect(MatterType.WATER),
   CREATE_ACID: makeCreateEffect(MatterType.ACID),
   CREATE_LAVA: makeCreateEffect(MatterType.LAVA),
-  DESTROY: DESTROY_EFFECT,
-  MELT: MELT_EFFECT,
-  SOLIDIFY: SOLIDIFY_EFFECT,
+  DESTROY: {
+    mode: FireMode.DESTROY,
+    collidesWithMatterTypes: matterTypeSetExcluding([PERMANENT, EMPTY, WATER, FIRE]),
+  },
+  MELT: {
+    mode: FireMode.MELT,
+    collidesWithMatterTypes: new MatterTypeSet(SOLID, SAND),
+  },
+  SOLIDIFY: {
+    mode: FireMode.SOLIDIFY,
+    collidesWithMatterTypes: new MatterTypeSet(WATER, SAND),
+  },
 } as const satisfies Record<string, ProjectileEffect>
 
 export type ProjectileEffectType = keyof typeof PROJECTILE_EFFECT

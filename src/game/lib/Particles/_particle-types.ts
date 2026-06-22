@@ -1,7 +1,7 @@
 import type { Particle } from './Particle.ts'
-import type { ParticlePixelRenderer } from './ParticlePixelRenderer.ts'
-import type { ParticlePool } from './ParticlePool.ts'
-import type { ParticleSim } from './ParticleSim.ts'
+import type { ParticleData } from '../MatterEngine/data/ParticleData.ts'
+import type { ParticlePool } from '../MatterEngine/workers/ParticleSim/ParticlePool.ts'
+import type { ParticleSim } from '../MatterEngine/workers/ParticleSim/ParticleSim.ts'
 
 export enum ParticleType {
   NONE,
@@ -22,7 +22,7 @@ export type ParticleDef = {
   ) => void
   action: (
     p: Particle,
-    renderer: ParticlePixelRenderer,
+    renderer: ParticleData,
     pool: ParticlePool,
     ctx: ParticleSim,
   ) => void

@@ -4,7 +4,7 @@ import { computed, ref } from 'vue'
 import { FIRE_GROUP_COLORS } from '../game/config/colors.ts'
 import { makeArrayCyclerRef } from '../game/helpers/ArrayCycler.ts'
 import { MatterType } from '../game/lib/Matter/_Matter.types.ts'
-import type { MatterTank } from '../game/lib/Matter/MatterTank/MatterTank.ts'
+import type { MatterTank } from '../game/lib/Matter/Tank/MatterTank.ts'
 import { FireGroup, FireGroupModes, FireGroupValues, FireMode } from '../game/lib/Player/_FireMode-types.ts'
 import { PlayerWeapon, WEAPONS } from '../game/lib/Player/weapons.ts'
 import {
