@@ -11,16 +11,16 @@ export const NITRO_EXPLOSION: ParticleDef = {
     p.setVelocity(velocity, Math.random() * TWO_PI)
     p.size = 3 + Math.random() * 9
   },
-  action(p, renderer, pool, world) {
+  action(p, sim) {
     const x2 = p.x + p.xVelocity
     const y2 = p.y + p.yVelocity
-    renderer.drawThickLine(p.x, p.y, x2, y2, p.size, p.color)
-    world.setTileType(Math.round(x2), Math.round(y2), setOwner(FIRE, p.ownerId))
+    sim.data.drawThickLine(p.x, p.y, x2, y2, p.size, p.color)
+    sim.setTileType(Math.round(x2), Math.round(y2), setOwner(FIRE, p.ownerId))
     p.x = x2
     p.y = y2
     if (p.actionIterations % 4 === 0) p.size /= 1.35
     p.yVelocity += 0.5
-    if (p.size < 1.5) pool.release(p)
-    else if (world.outOfBounds(p)) pool.release(p)
+    if (p.size < 1.5) sim.pool.release(p)
+    else if (sim.outOfBounds(p)) sim.pool.release(p)
   },
 }

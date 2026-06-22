@@ -1,7 +1,5 @@
-import type { Particle } from './Particle.ts'
-import type { ParticleData } from '../MatterEngine/data/ParticleData.ts'
-import type { ParticlePool } from '../MatterEngine/workers/ParticleSim/ParticlePool.ts'
 import type { ParticleSim } from '../MatterEngine/workers/ParticleSim/ParticleSim.ts'
+import type { Particle } from './Particle.ts'
 
 export enum ParticleType {
   NONE,
@@ -18,12 +16,10 @@ export type ParticleDef = {
   particlesToSpawn: number,
   init: (
     p: Particle,
-    ctx: ParticleSim,
+    sim: ParticleSim,
   ) => void
   action: (
     p: Particle,
-    renderer: ParticleData,
-    pool: ParticlePool,
-    ctx: ParticleSim,
+    sim: ParticleSim,
   ) => void
 }

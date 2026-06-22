@@ -12,16 +12,16 @@ export const GUNPOWDER_EXPLOSION: ParticleDef = {
     p.setVelocity(velocity, angle)
     p.size = 2 + Math.random() * 7
   },
-  action(p, renderer, pool, world) {
+  action(p, sim) {
     const x2 = p.x + p.xVelocity
     const y2 = p.y + p.yVelocity
-    renderer.drawThickLine(p.x, p.y, x2, y2, p.size, p.color)
-    world.destroyTile(Math.round(x2), Math.round(y2), setOwner(FIRE, p.ownerId))
+    sim.data.drawThickLine(p.x, p.y, x2, y2, p.size, p.color)
+    sim.destroyTile(Math.round(x2), Math.round(y2), setOwner(FIRE, p.ownerId))
     p.x = x2
     p.y = y2
     p.yVelocity += 0.3
     if (p.actionIterations % 5 === 0) p.size /= 1.3
-    if (p.size < 1.75) pool.release(p)
-    else if (world.outOfBounds(p)) pool.release(p)
+    if (p.size < 1.75) sim.pool.release(p)
+    else if (sim.outOfBounds(p)) sim.pool.release(p)
   },
 }

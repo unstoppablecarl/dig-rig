@@ -35,20 +35,20 @@ export const LAVA_BURST: ParticleDef = {
     p.size = 4 + Math.random() * 3
     p.y -= p.size
   },
-  action(p, renderer, pool, world) {
+  action(p, sim) {
     const x2 = p.x + p.xVelocity
     const y2 = p.data.initY
       + p.data.initYVelocity * p.actionIterations
       + (p.data.yAcceleration * p.actionIterations * p.actionIterations) / 2
-    renderer.drawThickLine(p.x, p.y, x2, y2, p.size, p.color)
+    sim.data.drawThickLine(p.x, p.y, x2, y2, p.size, p.color)
     // Trail leaves fire in the world
-    world.destroyTile(Math.round(x2), Math.round(y2), setOwner(FIRE, p.ownerId))
+    sim.destroyTile(Math.round(x2), Math.round(y2), setOwner(FIRE, p.ownerId))
     p.x = x2
     p.y = y2
 
     // Allow the particle to arc above the canvas top but retire it off the sides or bottom
-    if (p.x < 0 || p.x >= world.width || p.y >= world.height) {
-      pool.release(p)
+    if (p.x < 0 || p.x >= sim.width || p.y >= sim.height) {
+      sim.pool.release(p)
       return
     }
 
@@ -56,7 +56,7 @@ export const LAVA_BURST: ParticleDef = {
     if (Math.random() < 0.25) {
       // Update yVelocity to the current value so tileAtTip uses the right direction
       p.yVelocity = p.data.initYVelocity + p.data.yAcceleration * p.actionIterations
-      const tile = world.tileAtTip(p)
+      const tile = sim.tileAtTip(p)
       let splatColor = -1
       let splatTile: MatterType | null = null
       if (tile === WATER || tile === SALT_WATER) {
@@ -78,9 +78,9 @@ export const LAVA_BURST: ParticleDef = {
         if (Math.random() < 0.25) splatColor = LAVA_COLOR  // visual only — don't overwrite structural tiles
       }
       if (splatColor !== -1) {
-        renderer.drawCircleFromParticle(p, p.size / 2, splatColor)
-        if (splatTile !== null) world.writeTileCircle(p.x, p.y, p.size / 2, setOwner(splatTile, p.ownerId))
-        pool.release(p)
+        sim.data.drawCircleFromParticle(p, p.size / 2, splatColor)
+        if (splatTile !== null) sim.writeTileCircle(p.x, p.y, p.size / 2, setOwner(splatTile, p.ownerId))
+        sim.pool.release(p)
         return
       }
     }

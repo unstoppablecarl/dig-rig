@@ -12,12 +12,12 @@ export const C4_EXPLOSION: ParticleDef = {
     else if (r < 9800) p.size = Math.random() * 64 + 3
     else p.size = Math.random() * 128 + 3
   },
-  action(p, renderer, pool, world) {
-    renderer.drawCircleFromParticle(p, p.size, p.color)
-    world.writeTileCircle(p.x, p.y, p.size / 2, setOwner(FIRE, p.ownerId))
+  action(p, sim) {
+    sim.data.drawCircleFromParticle(p, p.size, p.color)
+    sim.writeTileCircle(p.x, p.y, p.size / 2, setOwner(FIRE, p.ownerId))
     if (p.actionIterations % 3 === 0) {
       p.size /= 3
-      if (p.size <= 1) pool.release(p)
+      if (p.size <= 1) sim.pool.release(p)
     }
   },
 }

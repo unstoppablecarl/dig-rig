@@ -14,7 +14,7 @@ export class ParticleSim {
   height = 0
   pool!: ParticlePool
   pendingActivations: number[] = []
-  private data: ParticleData
+  data: ParticleData
   private loopRunning = false
 
   init(tiles: Uint32Array, buffers: ParticleDataBuffers) {
@@ -40,8 +40,7 @@ export class ParticleSim {
   }
 
   step() {
-    const data = this.data
-    data.clear()
+    this.data.clear()
     this.pendingActivations.length = 0
 
     this.pool.forEachActive((p) => {
@@ -50,11 +49,11 @@ export class ParticleSim {
         this.pool.release(p)
         return
       }
-      def.action(p, data, this.pool, this)
+      def.action(p, this)
       p.actionIterations++
     })
 
-    data.publish()
+    this.data.publish()
 
     if (this.pendingActivations.length) {
       postMessage({ type: ParticleWorkerOutMsg.ACTIVATIONS, indices: this.pendingActivations.slice() })

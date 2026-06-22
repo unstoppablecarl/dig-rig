@@ -11,12 +11,12 @@ export const NAPALM_EXPLOSION: ParticleDef = {
     p.yVelocity = -(Math.random() * 4 + 4)
     p.data.maxIter = Math.floor(Math.random() * 10) + 5
   },
-  action(p, renderer, pool, world) {
-    renderer.drawCircleFromParticle(p, p.size, p.color)
-    world.writeTileCircle(p.x, p.y, p.size / 2, setOwner(FIRE, p.ownerId))
+  action(p, sim) {
+    sim.data.drawCircleFromParticle(p, p.size, p.color)
+    sim.writeTileCircle(p.x, p.y, p.size / 2, setOwner(FIRE, p.ownerId))
     p.x += p.xVelocity
     p.y += p.yVelocity
     p.size *= 1 + Math.random() * 0.1
-    if (p.actionIterations > p.data.maxIter || world.outOfBounds(p)) pool.release(p)
+    if (p.actionIterations > p.data.maxIter || sim.outOfBounds(p)) sim.pool.release(p)
   },
 }

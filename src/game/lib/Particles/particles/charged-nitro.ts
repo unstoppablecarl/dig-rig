@@ -24,17 +24,17 @@ export const CHARGED_NITRO: ParticleDef = {
       }
     }
   },
-  action(p, renderer, pool, world) {
+  action(p, sim) {
     const x2 = p.data.initX
     const y2 = Math.max(p.data.minY, p.y + p.yVelocity)
-    renderer.drawThickLine(x2, p.data.initY, x2, y2, p.size, p.color)
+    sim.data.drawThickLine(x2, p.data.initY, x2, y2, p.size, p.color)
     // Write FIRE tiles along the bolt column from initY down to the current tip
     const colX = Math.round(x2)
     for (let cy = Math.round(y2); cy <= Math.round(p.data.initY); cy++) {
-      world.setTileType(colX, cy, setOwner(FIRE, p.ownerId))
+      sim.setTileType(colX, cy, setOwner(FIRE, p.ownerId))
     }
     p.y = y2
-    if (p.y <= p.data.minY) pool.release(p)
+    if (p.y <= p.data.minY) sim.pool.release(p)
   },
 }
 

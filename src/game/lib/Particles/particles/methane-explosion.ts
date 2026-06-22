@@ -8,9 +8,9 @@ export const METHANE_EXPLOSION: ParticleDef = {
     p.color = PARTICLE_FIRE_COLOR
     p.size = 10 + Math.random() * 10
   },
-  action(p, renderer, pool, world) {
-    renderer.drawCircleFromParticle(p, p.size, p.color)
-    world.writeTileCircle(p.x, p.y, p.size / 2, setOwner(FIRE, p.ownerId))
-    if (p.actionIterations > 2) pool.release(p)
+  action(p, sim) {
+    sim.data.drawCircleFromParticle(p, p.size, p.color)
+    sim.writeTileCircle(p.x, p.y, p.size / 2, setOwner(FIRE, p.ownerId))
+    if (p.actionIterations > 2) sim.pool.release(p)
   },
 }
