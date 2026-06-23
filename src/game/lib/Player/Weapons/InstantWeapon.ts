@@ -62,7 +62,7 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     super.update(_time, delta)
     const armPosition = this.scene.player.getProjectilePosition(0, this._playerArmPos)
     const armAngle = this.scene.player.getProjectileAngle()
-    const COLLISION_TYPES = this.getEffect().collidesWithMatterTypes
+    const COLLISION_TYPES = this.getEffect().instantProjectileCollidesWith
     this.targetPos = this.scene.tilemap.getAngleRayCollision(armPosition.x, armPosition.y, armAngle, COLLISION_TYPES)
 
     this.renderer.setPosition(this.targetPos)

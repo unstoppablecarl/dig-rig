@@ -15,7 +15,11 @@ export type ChunkGridBuffers = Buffers<ChunkGridSchema> & {
   chunksHigh: number
 }
 
-export enum ChunkType { EMPTY, FULL, PARTIAL }
+export enum ChunkType {
+  EMPTY,
+  FULL,
+  PARTIAL
+}
 
 const CHUNK_MAX_SOLID = CHUNK_SIZE * CHUNK_SIZE
 

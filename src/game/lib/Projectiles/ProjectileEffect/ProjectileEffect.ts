@@ -7,7 +7,7 @@ export function makeCreateEffect(type: MatterType): ProjectileEffect {
   return {
     mode: FireMode.CREATE,
     createType: type,
-    collidesWithMatterTypes: matterTypeSetExcluding([EMPTY]),
+    instantProjectileCollidesWith: matterTypeSetExcluding([EMPTY]),
   }
 }
 
@@ -19,15 +19,15 @@ export const PROJECTILE_EFFECT = {
   CREATE_LAVA: makeCreateEffect(MatterType.LAVA),
   DESTROY: {
     mode: FireMode.DESTROY,
-    collidesWithMatterTypes: matterTypeSetExcluding([PERMANENT, EMPTY, WATER, FIRE]),
+    instantProjectileCollidesWith: matterTypeSetExcluding([PERMANENT, EMPTY, WATER, FIRE]),
   },
   MELT: {
     mode: FireMode.MELT,
-    collidesWithMatterTypes: new MatterTypeSet(SOLID, SAND),
+    instantProjectileCollidesWith: new MatterTypeSet(SOLID, SAND),
   },
   SOLIDIFY: {
     mode: FireMode.SOLIDIFY,
-    collidesWithMatterTypes: new MatterTypeSet(WATER, SAND),
+    instantProjectileCollidesWith: new MatterTypeSet(WATER, SAND),
   },
 } as const satisfies Record<string, ProjectileEffect>
 
