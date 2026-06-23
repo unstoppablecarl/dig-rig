@@ -11,7 +11,7 @@ const SCHEMA = {
 
 export type ChunkGridSchema = typeof SCHEMA
 export type ChunkGridBuffers = Buffers<ChunkGridSchema> & {
-  chunksWide: number,
+  chunksWide: number
   chunksHigh: number
 }
 
