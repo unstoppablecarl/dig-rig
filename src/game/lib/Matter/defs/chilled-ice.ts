@@ -20,6 +20,8 @@ export const CHILLED_ICE_DEF = {
   name: 'Chilled Ice',
   immutableSupport: SupportType.AFFIXED as const,
   acidImmune: true as const,
+  alwaysCollides: true as const,
+  // alwaysActive: true as const,
   action(sim, tx, ty, idx): void {
     // Thaw to regular ice
     if (random() < 6) {
@@ -38,7 +40,8 @@ export const CHILLED_ICE_DEF = {
     }
 
     // Freeze adjacent water
-    sim.doGrow(tx, ty, idx, WATER, 50)
+    sim.doGrow(tx, ty, idx, WATER, 99)
+    sim.next.add(idx)
   },
 } satisfies MatterDef
 
