@@ -1,12 +1,12 @@
 /// <reference lib="webworker" />
-import type { Tile } from '../../../Tilemap/TileGrid.ts'
-import { EMPTY, matterType, type MatterType, SupportType } from '../../../Matter/_Matter.types.ts'
+import { EMPTY, matterType, type MatterType, PLANT, SupportType } from '../../../Matter/_Matter.types.ts'
 import { getSupportType } from '../../../Matter/matter.ts'
+import type { Tile } from '../../../Tilemap/TileGrid.ts'
 import type { CoordinatorInMsgBrushEraseMatter } from '../Coordinator.types.ts'
 import { MatterSim } from '../MatterSim/MatterSim.ts'
 import type { Effects } from './Effects.ts'
-import type { Physics } from './Physics.ts'
 import type { EffectResult } from './Effects/SimProjectile.ts'
+import type { Physics } from './Physics.ts'
 
 type BrushEntry = { value: MatterType; tx: number; ty: number; radius: number }
 
@@ -58,6 +58,8 @@ export class Brush {
     return structuralDirty
   }
 
+  private _processAddMatter: Tile[] = []
+
   private processAddMatter(
     value: MatterType,
     tx: number, ty: number, radius: number,
@@ -66,8 +68,8 @@ export class Brush {
   ): boolean {
     const tiles = this.sim.tiles
     const { width, height } = this
-    const placed: Tile[] = []
-    const toActivate: number[] = []
+    this._processAddMatter.length = 0
+    const placed = this._processAddMatter
     const r2 = radius * radius
 
     for (let dy = -radius; dy <= radius; dy++) {
@@ -78,16 +80,18 @@ export class Brush {
         if (x < 0 || x >= width || y < 0 || y >= height) continue
         const idx = y * width + x
         if (matterType(tiles[idx]) !== EMPTY) continue
+
+        if (matterType(value) === PLANT) {
+          activeSet.add(idx)
+        }
+
         tiles[idx] = value
         this.sim.markDirty(x, y)
         dirtyChunks.add(this.physics.chunkIdxForTile(idx))
         placed.push({ x, y })
-        toActivate.push(idx)
+        this.sim.activate(idx, activeSet)
       }
     }
-
-    if (!toActivate.length) return false
-    this.sim.activateIndexes(toActivate, activeSet)
 
     if (getSupportType(value) >= SupportType.STRUCTURAL) {
       const islands = this.physics.findIslandTiles(placed)
