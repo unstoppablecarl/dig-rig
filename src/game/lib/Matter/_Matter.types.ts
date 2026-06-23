@@ -182,6 +182,7 @@ export type MatterDef = {
   liquid?: boolean
   settles?: boolean,
   alwaysActive?: boolean,
+  alwaysCollides?: boolean,
   hasOwnerId?: boolean,
   collidesWhenSettled?: boolean
   sinksThrough?: MatterType[]

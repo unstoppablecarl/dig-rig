@@ -73,14 +73,6 @@ export const CRYO_DEF = {
         return
       }
 
-      // Slowly self-freeze when fully immobile and no water to interact with
-      if (random() < 1 && random() < 50) {
-        tiles[idx] = CHILLED_ICE
-        sim.markDirty(tx, ty)
-        sim.reactivateAround(tx, ty)
-        return
-      }
-
       tiles[idx] = setSettled(CRYO, true)
       sim.markDirty(tx, ty)
     }

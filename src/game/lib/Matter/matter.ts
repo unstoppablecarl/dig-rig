@@ -1,3 +1,4 @@
+import type { MatterSim } from '../MatterEngine/workers/MatterSim/MatterSim.ts'
 import {
   EMPTY,
   type MatterDef,
@@ -8,7 +9,6 @@ import {
   SupportType,
 } from './_Matter.types.ts'
 import { MatterTypeSet } from './data/MatterTypeSet.ts'
-import type { MatterSim } from '../MatterEngine/workers/MatterSim/MatterSim.ts'
 
 export type MatterAction = (world: MatterSim, x: number, y: number, idx: number) => void
 
@@ -46,6 +46,7 @@ export type LiquidTypes = {
 export const ALWAYS_ANCHORED = new MatterTypeSet()
 export const ALWAYS_STRUCTURAL = new MatterTypeSet()
 export const ALWAYS_AFFIXED = new MatterTypeSet()
+export const ALWAYS_COLLIDES = new MatterTypeSet()
 export const SUPPORT_IMMUTABLE = new MatterTypeSet()
 
 // 256-entry lookup: value is the fixed SupportType for that MatterType, or 0xFF = "read from tile bits".
@@ -93,15 +94,23 @@ function registerMatterType({
                               hasOwnerId = false,
                               settles = false,
                               alwaysActive = false,
+                              alwaysCollides = false,
                               sinksThrough,
                               structuralCollapseType,
                             }: MatterDef) {
 
   MATTER_ACTIONS[id] = action
   MATTER_NAMES.set(id, name)
-  if (immutableSupport === SupportType.ANCHORED) { ALWAYS_ANCHORED.add(id); SUPPORT_TYPE_LOOKUP[id] = SupportType.ANCHORED }
-  else if (immutableSupport === SupportType.STRUCTURAL) { ALWAYS_STRUCTURAL.add(id); SUPPORT_TYPE_LOOKUP[id] = SupportType.STRUCTURAL }
-  else if (immutableSupport === SupportType.AFFIXED) { ALWAYS_AFFIXED.add(id); SUPPORT_TYPE_LOOKUP[id] = SupportType.AFFIXED }
+  if (immutableSupport === SupportType.ANCHORED) {
+    ALWAYS_ANCHORED.add(id)
+    SUPPORT_TYPE_LOOKUP[id] = SupportType.ANCHORED
+  } else if (immutableSupport === SupportType.STRUCTURAL) {
+    ALWAYS_STRUCTURAL.add(id)
+    SUPPORT_TYPE_LOOKUP[id] = SupportType.STRUCTURAL
+  } else if (immutableSupport === SupportType.AFFIXED) {
+    ALWAYS_AFFIXED.add(id)
+    SUPPORT_TYPE_LOOKUP[id] = SupportType.AFFIXED
+  }
   if (immutableSupport !== undefined) SUPPORT_IMMUTABLE.add(id)
   if (lavaImmune) LAVA_IMMUNE.add(id)
   if (acidImmune) ACID_IMMUNE.add(id)
@@ -109,6 +118,7 @@ function registerMatterType({
   if (collidesWhenSettled) COLLIDES_WHEN_SETTLED.add(id)
   if (settles) SETTLING_TYPES.add(id)
   if (alwaysActive) ALWAYS_ACTIVE_TYPES.add(id)
+  if (alwaysCollides) ALWAYS_COLLIDES.add(id)
   if (sinksThrough) SINKS_THROUGH[id] = new MatterTypeSet(...sinksThrough)
   if (structuralCollapseType !== undefined) STRUCTURAL_COLLAPSE_TO[id] = structuralCollapseType
   if (hasOwnerId) OWNED_MATTER_TYPES.add(id)

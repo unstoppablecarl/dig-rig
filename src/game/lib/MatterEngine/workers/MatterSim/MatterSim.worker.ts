@@ -14,7 +14,7 @@ const sim = new MatterSim()
 const _done: SimOutMsgDone = {
   type: SimOutMsg.DONE as const,
   next: [],
-  settled: [],
+  vfxJustSettled: [],
   transfers: new Int32Array(),
 }
 

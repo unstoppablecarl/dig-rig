@@ -36,7 +36,7 @@ export class Coordinator {
   private pendingActivations: number[] = []
   private frame = 0
   private width = 0
-  private readonly allSettled: number[] = []
+  private readonly vfxJustSettled: number[] = []
   private readonly _dirtyChunksThisStep = new Set<number>()
 
   init(buffers: CoordinatorInMsgInit, poolSize: number) {
@@ -144,21 +144,24 @@ export class Coordinator {
 
     // Process active projectile slots — debits/credits tanks, emits VFX, recomputes pending.
     structuralDirty ||= this.projectileProcessor.step(this.activeSet, this._dirtyChunksThisStep)
-    this.allSettled.length = 0
+    this.vfxJustSettled.length = 0
 
     const dirtyChunksThisStep = await this.workerPool.step(snapshot, leftFirst, frame, (results) => {
       for (const r of results) {
         for (const idx of r.next) this.activeSet.add(idx)
-        for (const idx of r.settled) this.allSettled.push(idx)
+        for (const idx of r.vfxJustSettled) this.vfxJustSettled.push(idx)
         for (let i = 0; i < r.transfers.length; i += 3) {
+          const x = r.transfers[i]
+          const y = r.transfers[i + 1]
           const tankId = r.transfers[i + 2] as MatterTankId
+
           this.matterTanks.addCredit(tankId, 1)
-          this.data.vfxParticleDestroy.writeTile(r.transfers[i], r.transfers[i + 1], tankId)
+          this.data.vfxParticleDestroy.writeTile(x, y, tankId)
         }
       }
     })
 
-    for (const idx of this.allSettled) {
+    for (const idx of this.vfxJustSettled) {
       if (this.activeSet.has(idx)) continue
       const x = idx % this.width
       const y = (idx / this.width) | 0
@@ -167,11 +170,10 @@ export class Coordinator {
 
     const overflows = this.matterTanks.flushCredit()
     for (let i = 0; i < overflows.length; i += 3) {
-      this.data.vfxParticleOverflow.write(
-        overflows[i] as MatterTankId,
-        overflows[i + 1] as MatterTankId,
-        overflows[i + 2],
-      )
+      const from = overflows[i] as MatterTankId
+      const to = overflows[i + 1] as MatterTankId
+      const amount = overflows[i + 2]
+      this.data.vfxParticleOverflow.write(from, to, amount)
     }
 
     for (const idx of this._dirtyChunksThisStep) dirtyChunksThisStep.add(idx)

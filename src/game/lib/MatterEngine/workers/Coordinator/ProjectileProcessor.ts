@@ -39,17 +39,15 @@ export class ProjectileProcessor {
       if (!modified) continue
 
       const ownerId = d.ownerId[i] as MatterTankId
-      const tank = this.matterTanks.getTank(ownerId)
-      if (!tank) throw new Error(`matter tank not found: ${ownerId}`)
 
       const mode = d.mode[i] as FireMode
       if (mode === FireMode.DESTROY) {
-        tank.add(modified)
+        this.matterTanks.add(ownerId, modified)
         this.vfxParticleDestroyData.writeTiles(tiles, ownerId)
         this.tileEffectData.writeFireModeTiles(tiles, mode)
 
       } else if (mode === FireMode.CREATE) {
-        tank.remove(modified)
+        this.matterTanks.remove(ownerId, modified)
         const createType = d.createType[i] as MatterType
         if (!SETTLING_TYPES.has(matterType(createType))) {
           this.tileEffectData.writeFireModeTiles(tiles, mode)

@@ -7,6 +7,7 @@ export const SOLID_DEF = {
   lavaImmune: true as const,
   immutableSupport: SupportType.STRUCTURAL as const,
   structuralCollapseType: SAND,
+  alwaysCollides: true as const,
 } satisfies MatterDef
 
 export default SOLID_DEF

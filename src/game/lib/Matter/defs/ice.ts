@@ -1,5 +1,16 @@
 import { random } from '../../../helpers/random'
-import { FIRE, ICE, LAVA, type MatterDef, SALT, SALT_WATER, STEAM, SupportType, WATER } from '../_Matter.types.ts'
+import {
+  FIRE,
+  ICE,
+  LAVA,
+  type MatterDef,
+  SALT,
+  SALT_WATER,
+  setSettled,
+  STEAM,
+  SupportType,
+  WATER,
+} from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
 
 const MELT_SLOW = new MatterTypeSet(SALT, SALT_WATER)
@@ -10,9 +21,9 @@ export const ICE_DEF = {
   name: 'Ice',
   immutableSupport: SupportType.AFFIXED as const,
   acidImmune: true as const,
+  settles: true as const,
+  alwaysCollides: true as const,
   action(sim, tx, ty, idx): void {
-    // Surrounded by ice — fully stable
-    if (sim.surroundedBy(tx, ty, idx, ICE)) return
 
     // Melt from water
     if (random() < 1 && sim.bordering(tx, ty, idx, WATER) !== -1) {
@@ -49,6 +60,9 @@ export const ICE_DEF = {
         return
       }
     }
+
+    sim.tiles[idx] = setSettled(sim.tiles[idx], true)
+    sim.markDirty(tx, ty)
   },
 } satisfies MatterDef
 

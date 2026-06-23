@@ -45,7 +45,7 @@ export class MatterSim {
   // Set externally by coordinator/pool before processSubset
   frame = 0
   leftFirst = false
-  justSettled: number[] = []
+  vfxJustSettled: number[] = []
   next = new Set<number>()
 
   init(
@@ -71,12 +71,12 @@ export class MatterSim {
     this.next.clear()
     this.frame = frame
     this.leftFirst = leftFirst
-    this.justSettled.length = 0
+    this.vfxJustSettled.length = 0
     this.processSubset(indices)
     const transfers = this.flushTransferToMatterTank()
 
     out.next = Array.from(this.next)
-    out.settled = this.justSettled
+    out.vfxJustSettled = this.vfxJustSettled
     out.transfers = transfers
 
     return out
@@ -666,7 +666,7 @@ export class MatterSim {
         // Map boundary — unconditionally settled.
         this.tiles[idx] = setSettled(raw, true)
         this.markDirty(tx, ty)
-        this.justSettled.push(idx)
+        this.vfxJustSettled.push(idx)
       } else {
         // Only commit to settled if all three fall positions are blocked by stable
         // material (solid/settled). If any is occupied by unsettled (falling) sand,
@@ -682,7 +682,7 @@ export class MatterSim {
         ) {
           this.tiles[idx] = setSettled(raw, true)
           this.markDirty(tx, ty)
-          this.justSettled.push(idx)
+          this.vfxJustSettled.push(idx)
         } else {
           this.next.add(idx)
         }
