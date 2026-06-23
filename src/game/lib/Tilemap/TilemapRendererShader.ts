@@ -72,6 +72,7 @@ export function makeTilemapFragShader(
       #define GLOW_ENABLED ${c.glowEnabled ? 1 : 0}
       #define DEBUG_SETTLED ${c.drawDebugSettled ? 1 : 0}
       #define DEBUG_ANCHORED ${c.drawDebugAnchored ? 1 : 0}
+      #define ICE_TEXTURE_ENABLED ${c.iceTextureEnabled ? 1 : 0}
 
       uniform sampler2D uTerrain;
       uniform sampler2D uMask;
@@ -181,6 +182,15 @@ export function makeTilemapFragShader(
           return vec4(mix(colorA, colorB, blend), alpha);
       }
 
+      vec3 iceTexture(vec3 color, vec3 bgColor, vec2 uv, float glow){
+          vec2 id = floor(uv);
+          float h = hash(id);
+          float body = mix(0.0, 1.0, h) * 1.2;
+          vec3 col = mix(bgColor, color, body * (glow + 0.2));
+
+          return col;
+      }
+
       void main() {
           // Normalise time to seconds in a small range to avoid mediump precision loss
           float t = mod(uTime * 0.001, 100.0);
@@ -188,6 +198,7 @@ export function makeTilemapFragShader(
           // is expressed in tiles rather than normalised [0,1] UV space.
           vec2 tileUV = outTexCoord / uInvTilemapSize;
           // uMask R = MatterType (0–255), G = SETTLED (0 or 255), B = ANCHORED (0 or 255).
+
           vec3 mask    = texture2D(uMask, outTexCoord).rgb;
           int tileType = int(mask.r * 255.0 + 0.5);
           bool settled  = mask.g > 0.5;
@@ -313,15 +324,23 @@ export function makeTilemapFragShader(
           }
           else if (tileType == ${ICE}) {
               const vec3 iceColor = ${v3(m[ICE].color)};
-              const vec3 iceSettledColor = ${v3(m[ICE].settledColor)};
+              const vec3 settledColor = ${v3(m[ICE].settledColor)};
+              const vec3 bgColor = ${v3(m[ICE].bgColor)};
+              const vec3 outlineColor = ${v3(m[ICE].outlineColor)};
               const float iceAlpha = ${fl(m[ICE].alpha)};
-              const vec3 iceSettledOutlineColor = ${v3(m[ICE].settledOutlineColor)};
 
-              color = vec4(settled ? iceSettledColor : iceColor, iceAlpha);
+              if (settled) {
+                  #if ICE_TEXTURE_ENABLED
+                  color = vec4(iceTexture(settledColor, bgColor, tileUV, glow), iceAlpha);
+                  #else
+                  color = vec4(settledColor, iceAlpha);
+                  #endif
+              } else {
+                  color = vec4(iceColor, iceAlpha);
+              }
+
               if (outline > 0.5) {
-                  color.rgb = mix(color.rgb, iceSettledOutlineColor, 0.5);
-              } else if (glow > 0.01) {
-                  color.rgb = mix(color.rgb, glowColor, glow * innerGlowStrength * 0.4);
+                  color = vec4(outlineColor, iceAlpha);
               }
           }
           else if (tileType == ${CHILLED_ICE}) {

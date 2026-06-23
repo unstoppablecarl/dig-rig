@@ -124,10 +124,11 @@ export const MATTER_RENDER_CONFIG_DEFAULTS = {
     rockSettledColorHighlight: rgbToColor(`rgb(255, 255, 255)`),
   }),
   [ICE]: powderMatterConfig({
-    color: rgbToColor(`rgb(161, 232, 255)`),
+    color: rgbToColor(`rgb(229 252 255)`),
+    outlineColor: rgbToColor(`rgb(195 248 255)`),
+    settledColor: rgbToColor(`rgb(153, 204, 242)`),
     alpha: 0.85,
-    settledColor: rgbToColor(`rgb(125, 200, 235)`),
-    settledOutlineColor: rgbToColor(`rgb(195, 248, 255)`),
+    bgColor: rgbToColor(`rgb(51, 102, 179)`),
   }),
   [CHILLED_ICE]: powderMatterConfig({
     color: rgbToColor(`rgb(20, 153, 219)`),
@@ -224,6 +225,12 @@ export const MATTER_RENDER_CONFIG_DEFAULTS = {
   }),
   [EMPTY]: {},
 } satisfies MatterRenderConfigDefaults
+
+export function customConfig<T extends {
+  color: Color,
+}>(value: T): T {
+  return value
+}
 
 export function powderMatterConfig<T extends {
   color: Color,
