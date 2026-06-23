@@ -1,8 +1,8 @@
 import type { Position } from '../../../types.ts'
+import type { MatterTankManagerData } from '../../MatterEngine/data/MatterTankManagerData.ts'
 import { FireMode, type MatterTankFireMode } from '../../Player/_FireMode-types'
 import { type MatterTankId, type MatterTankSource, NO_MATTER_TANK_ID } from './_MatterTank.types.ts'
 import type { MatterManager } from './MatterManager.ts'
-import type { MatterTankManagerData } from '../../MatterEngine/data/MatterTankManagerData.ts'
 
 export class MatterTank {
   matterStart: number

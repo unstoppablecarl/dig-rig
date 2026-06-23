@@ -46,7 +46,6 @@ export class ProjectileManager extends SceneBound {
     data.tilesModified[slotIdx] = 0
     this._bySlot[slotIdx] = projectile
 
-
     projectile.setTilesToModify(charge)
     data.registerPending(projectile)
     this.children.push(projectile)

@@ -59,7 +59,7 @@ export class TileGrid {
   isCollidable(x: number, y: number): boolean {
     const raw = this.getTile(Math.floor(x), Math.floor(y))
     const type = matterType(raw)
-    if(ALWAYS_COLLIDES.has(type)) return true
+    if (ALWAYS_COLLIDES.has(type)) return true
     if (type === SOLID || type === PERMANENT) return true
     if (isSettled(raw)) return COLLIDES_WHEN_SETTLED.has(type)
     return false

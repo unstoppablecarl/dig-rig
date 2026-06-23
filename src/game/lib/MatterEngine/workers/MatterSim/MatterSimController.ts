@@ -1,4 +1,3 @@
-
 import type { CoordinatorOutMessage } from '../Coordinator.types.ts'
 import {
   SimInMsg,

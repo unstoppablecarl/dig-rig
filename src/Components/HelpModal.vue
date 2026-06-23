@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { PLAYER_ACTION_DISPLAY_NAME, PlayerAction, type Binding, bindingLabels } from '../game/lib/Input/PlayerActions.ts'
+import {
+  type Binding,
+  bindingLabels,
+  PLAYER_ACTION_DISPLAY_NAME,
+  PlayerAction,
+} from '../game/lib/Input/PlayerActions.ts'
 import { INPUT_ACTIONS } from '../input.ts'
 import { useUIState } from '../store/uiState.ts'
 

@@ -2,7 +2,7 @@
 import { EMPTY, FIRE, MatterType, PERMANENT, WATER } from '../../../../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../../../../Matter/data/MatterTypeSet.ts'
 import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
-import { SimProjectile, type ProjectileEffectResult } from './SimProjectile.ts'
+import { type ProjectileEffectResult, SimProjectile } from './SimProjectile.ts'
 
 const IGNORE = new MatterTypeSet(PERMANENT, EMPTY, WATER, FIRE)
 

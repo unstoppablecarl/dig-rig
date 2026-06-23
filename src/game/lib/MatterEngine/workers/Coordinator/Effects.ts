@@ -7,11 +7,11 @@ import { EMPTY_PLAYER_BOUNDS, type PlayerBoundsDataType } from '../../data/Playe
 import type { ProjectileManagerData } from '../../data/ProjectileManagerData.ts'
 import type { CoordinatorInMsgBrushEraseMatter } from '../Coordinator.types.ts'
 import type { MatterSim } from '../MatterSim/MatterSim.ts'
-import type { EffectResult } from './Effects/SimProjectile.ts'
 import { ProjectileCreate } from './Effects/ProjectileCreate.ts'
 import { ProjectileDestroy } from './Effects/ProjectileDestroy.ts'
 import { ProjectileMelt } from './Effects/ProjectileMelt.ts'
 import { ProjectileSolidify } from './Effects/ProjectileSolidify.ts'
+import type { EffectResult } from './Effects/SimProjectile.ts'
 import { Physics } from './Physics.ts'
 
 export type WriteEntry = {
@@ -106,7 +106,7 @@ export class Effects {
     const radius = data.radius[slotIdx]
     const ownerId = data.ownerId[slotIdx] as MatterTankId
 
-  let result: EffectResult
+    let result: EffectResult
     switch (mode) {
       case FireMode.CREATE: {
         const createType = data.createType[slotIdx] as MatterType

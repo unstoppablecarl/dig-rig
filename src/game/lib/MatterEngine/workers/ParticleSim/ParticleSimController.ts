@@ -3,9 +3,9 @@ import type { GameLevel } from '../../../../scenes/GameLevel.ts'
 import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import type { ParticleType } from '../../../Particles/_particle-types.ts'
 import type { ParticleData } from '../../data/ParticleData.ts'
-import { ParticleSpawnBuffer } from './ParticleSpawnBuffer.ts'
 import { ParticleWorkerInMsg, ParticleWorkerOutMsg, type TypedParticleWorker } from './ParticleSim.types.ts'
 import ParticleWorkerConstructor from './ParticleSim.worker.ts?worker'
+import { ParticleSpawnBuffer } from './ParticleSpawnBuffer.ts'
 
 export class ParticleSimController extends SceneBound<GameLevel> {
   private readonly worker: TypedParticleWorker

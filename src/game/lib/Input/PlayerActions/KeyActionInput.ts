@@ -4,6 +4,7 @@ import type { ActionInput, KeyEvent } from '../PlayerActions.ts'
 import DOWN = Input.Keyboard.Events.DOWN
 import UP = Input.Keyboard.Events.UP
 import Key = Input.Keyboard.Key
+
 const MODIFIER_KEYS: Record<string, keyof Pick<MouseEvent, 'shiftKey' | 'ctrlKey' | 'altKey' | 'metaKey'>> = {
   SHIFT: 'shiftKey',
   CTRL: 'ctrlKey',

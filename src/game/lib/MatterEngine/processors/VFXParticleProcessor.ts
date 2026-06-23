@@ -2,8 +2,8 @@ import { VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE } from '../../../config.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { MatterTankId } from '../../Matter/Tank/_MatterTank.types.ts'
 import type { MatterTank } from '../../Matter/Tank/MatterTank.ts'
-import type { VFXParticleOverflowData } from '../data/VFXParticleOverflowData.ts'
 import { VFXParticleData } from '../data/VFXParticleData.ts'
+import type { VFXParticleOverflowData } from '../data/VFXParticleOverflowData.ts'
 
 export class VFXParticleProcessor {
   private readonly _destroyChunks = new Set<number>()
@@ -14,7 +14,8 @@ export class VFXParticleProcessor {
     private readonly overflow: VFXParticleOverflowData,
     readonly vfxParticleDestroyData: VFXParticleData,
     readonly vfxParticleCreateData: VFXParticleData,
-  ) {}
+  ) {
+  }
 
   drain() {
     const { matterManager, vfxParticleManager } = this.scene

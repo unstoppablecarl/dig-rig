@@ -11,8 +11,10 @@ const next = bindingLabels(INPUT_ACTIONS.NEXT_MATTER_TYPE)
 </script>
 <template>
   <span class="imu-section">
-    <KbdArray :values="prev" /> /
-    <KbdArray :values="next" />  = Matter: {{ state.matterTypeName }}
+    <KbdArray :values="prev" />
+    /
+    <KbdArray :values="next" />
+    = Matter: {{ state.matterTypeName }}
   </span>
 </template>
 <style lang="scss">

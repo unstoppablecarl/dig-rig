@@ -13,8 +13,10 @@ const next = bindingLabels(INPUT_ACTIONS.NEXT_MODE)
 </script>
 <template>
   <span class="imu-section">
-    <KbdArray :values="prev" /> /
-    <KbdArray :values="next" /> = Change Fire Group
+    <KbdArray :values="prev" />
+    /
+    <KbdArray :values="next" />
+    = Change Fire Group
   </span>
 
   <span class="imu-section">

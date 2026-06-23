@@ -98,7 +98,7 @@ export class VFXMatterParticle extends Particle {
     staticTarget: boolean,
     colorFrom: Color,
     colorTo: Color,
-  ) :void {
+  ): void {
     this.target = target
     this.staticTarget = staticTarget
 

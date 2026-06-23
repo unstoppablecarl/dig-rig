@@ -200,8 +200,14 @@ export class Physics {
         if (!seedAnchored) {
           for (let dp = 0; dp < 4; dp++) {
             const px = sx + BFS_DX[dp], py = sy + BFS_DY[dp]
-            if (px < 0 || px >= width || py < 0 || py >= height) { seedAnchored = true; break }
-            if (getSupportType(tiles[py * width + px]) === SupportType.ANCHORED) { seedAnchored = true; break }
+            if (px < 0 || px >= width || py < 0 || py >= height) {
+              seedAnchored = true
+              break
+            }
+            if (getSupportType(tiles[py * width + px]) === SupportType.ANCHORED) {
+              seedAnchored = true
+              break
+            }
           }
         }
         if (seedAnchored) {
@@ -220,15 +226,24 @@ export class Physics {
           const cy = (cidx / width) | 0
           for (let d2 = 0; d2 < 4; d2++) {
             const nx = cx + BFS_DX[d2], ny = cy + BFS_DY[d2]
-            if (nx < 0 || nx >= width || ny < 0 || ny >= height) { anchored = true; break bfs }
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+              anchored = true
+              break bfs
+            }
             const nidx = ny * width + nx
             if (vis[nidx] >= VISITED) continue
             const st = getSupportType(tiles[nidx])
-            if (st === SupportType.ANCHORED) { anchored = true; break bfs }
+            if (st === SupportType.ANCHORED) {
+              anchored = true
+              break bfs
+            }
             if (st >= SupportType.STRUCTURAL) {
               const nCx = nx / CHUNK_SIZE | 0
               const nCy = ny / CHUNK_SIZE | 0
-              if (isFastAnchored(nCx, nCy)) { anchored = true; break bfs }
+              if (isFastAnchored(nCx, nCy)) {
+                anchored = true
+                break bfs
+              }
               vis[nidx] = VISITED
               queue[tail++] = nidx
               comp[compLen++] = nidx

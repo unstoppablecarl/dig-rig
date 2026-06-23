@@ -1,4 +1,4 @@
-import { type Schema, type Views, type Cursor, makeFlyweightCursor } from './StructOfArrays'
+import { type Cursor, makeFlyweightCursor, type Schema, type Views } from './StructOfArrays'
 
 const HEADER_BYTES = 8  // writeHead (Int32) + readHead (Int32)
 

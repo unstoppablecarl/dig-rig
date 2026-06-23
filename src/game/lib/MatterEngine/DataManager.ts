@@ -1,7 +1,7 @@
 import { ChunkGrid, type ChunkGridBuffers } from '../Tilemap/ChunkGrid.ts'
 import type { Tilemap } from '../Tilemap/Tilemap.ts'
 import { type MatterTankManagerBuffers, MatterTankManagerData } from './data/MatterTankManagerData.ts'
-import { type ParticleDataBuffers, ParticleData } from './data/ParticleData.ts'
+import { ParticleData, type ParticleDataBuffers } from './data/ParticleData.ts'
 import { PlayerBoundsData, type PlayerBoundsDataType } from './data/PlayerBoundsData.ts'
 import { type ProjectileBuffers, ProjectileManagerData } from './data/ProjectileManagerData.ts'
 import { TunnelWeaponData, type TunnelWeaponDataType } from './data/TunnelWeaponData.ts'

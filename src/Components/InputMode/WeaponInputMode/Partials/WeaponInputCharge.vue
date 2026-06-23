@@ -12,7 +12,11 @@ const add = bindingLabels(INPUT_ACTIONS.CHARGE_INCREASE)
 <template>
   <span class="imu-section">
     <strong>Charge: </strong>
-    <kbd>Mouse Wheel</kbd> / <KbdArray :values="sub"/> / <KbdArray :values="add"/> = {{ state.charge }}
+    <kbd>Mouse Wheel</kbd> /
+    <KbdArray :values="sub" />
+    /
+    <KbdArray :values="add" />
+    = {{ state.charge }}
   </span>
 </template>
 <style lang="scss">
