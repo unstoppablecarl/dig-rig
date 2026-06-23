@@ -19,6 +19,7 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
+import { NO_MATTER_TANK_ID } from '../Tank/_MatterTank.types.ts'
 
 const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)
 
@@ -38,6 +39,9 @@ export const LAVA_DEF = {
     const { tiles, width, height } = sim
     const existing = tiles[idx]
     const ownerId = getOwner(existing)
+    if (ownerId === NO_MATTER_TANK_ID) {
+      console.trace('!!')
+    }
     // Turn to rock when touching water or salt-water
     let waterLoc = sim.borderingAny(tx, ty, idx, COOLED)
     if (waterLoc !== -1) {
@@ -137,6 +141,10 @@ export const LAVA_DEF = {
       sim.bordering(tx, ty, idx, LAVA)
     ) {
       tiles[idx] = setLavaDropVel(setOwner(LAVA_DROP, ownerId), LAVA_DROP_INITIAL_VEL)
+
+      if (getOwner(tiles[idx]) === NO_MATTER_TANK_ID) {
+        console.trace('asd')
+      }
       sim.markDirty(tx, ty)
       sim.next.add(idx)
       return
@@ -155,6 +163,9 @@ export const LAVA_DEF = {
         const nt = matterType(tiles[nidx])
         if (!sim.LAVA_IMMUNE.has(nt)) {
           tiles[nidx] = setOwner(FIRE, ownerId)
+          if (ownerId === NO_MATTER_TANK_ID) {
+            console.trace('err')
+          }
           sim.queueMatterCredit(tx, ty, ownerId)
           tiles[idx] = EMPTY
           sim.markDirty(nx, ny)
@@ -173,7 +184,7 @@ export const LAVA_DEF = {
         sim.reactivateAround(tx, ty + 1)
       } else if (belowType === STEAM && random() < 95) {
         // Lava sinks through steam — swap positions
-        tiles[downIdx] = LAVA
+        tiles[downIdx] = setOwner(LAVA, ownerId)
         tiles[idx] = STEAM
         sim.markDirty(tx, ty)
         sim.markDirty(tx, ty + 1)
