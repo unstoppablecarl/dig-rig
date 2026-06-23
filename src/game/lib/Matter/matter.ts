@@ -1,6 +1,7 @@
 import type { MatterSim } from '../MatterEngine/workers/MatterSim/MatterSim.ts'
 import {
   EMPTY,
+  isSettled,
   type MatterDef,
   matterType,
   MatterType,
@@ -140,4 +141,11 @@ export function setSupport(target: number, support: SupportType): number {
     }
   }
   return (target & ~SUPPORT_MASK) | (support << SUPPORT_SHIFT)
+}
+
+export function isCollidable(value: number): boolean {
+  const type = matterType(value)
+  if (ALWAYS_COLLIDES.has(type)) return true
+  if (isSettled(value)) return COLLIDES_WHEN_SETTLED.has(type)
+  return false
 }

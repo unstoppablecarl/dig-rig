@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 import { CHUNK_SIZE } from '../../../../config.ts'
-import { getSupport, isSettled, matterType, PERMANENT, SOLID, SupportType } from '../../../Matter/_Matter.types.ts'
-import { COLLIDES_WHEN_SETTLED, getSupportType, setSupport, STRUCTURAL_COLLAPSE_TO } from '../../../Matter/matter.ts'
+import { getSupport, matterType, PERMANENT, SupportType } from '../../../Matter/_Matter.types.ts'
+import { getSupportType, isCollidable, setSupport, STRUCTURAL_COLLAPSE_TO } from '../../../Matter/matter.ts'
 import { ChunkGrid, ChunkType } from '../../../Tilemap/ChunkGrid.ts'
 import { MatterSim } from '../MatterSim/MatterSim.ts'
 
@@ -9,13 +9,6 @@ type XY = { x: number; y: number }
 
 const BFS_DX = [-1, 1, 0, 0]
 const BFS_DY = [0, 0, -1, 1]
-
-function isTileCollidable(raw: number): boolean {
-  const type = matterType(raw)
-  if (type === SOLID || type === PERMANENT) return true
-  if (isSettled(raw)) return COLLIDES_WHEN_SETTLED.has(type)
-  return false
-}
 
 function isChunkStructural(raw: number): boolean {
   return getSupportType(raw) >= SupportType.STRUCTURAL
@@ -335,7 +328,7 @@ export class Physics {
     let count = 0
     for (let y = y0; y < y1; y++) {
       for (let x = x0; x < x1; x++) {
-        if (isTileCollidable(tiles[y * width + x])) count++
+        if (isCollidable(tiles[y * width + x])) count++
       }
     }
     return count
