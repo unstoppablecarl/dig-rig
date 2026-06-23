@@ -1,6 +1,6 @@
 import type { PartialMatterRenderConfig } from '../../config/colors.ts'
 import { PortableMatterTank } from '../../lib/Entities/PortableMatterTank.ts'
-import { PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
+import { EMPTY, PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
 import type { TilemapRendererConfig } from '../../lib/Tilemap/TilemapRendererConfig'
@@ -57,6 +57,7 @@ export default class TestLevel2 extends GameLevel {
     tilemap.setRect(200, ref - 160, 160, 60, SOLID)
     tilemap.setRect(230, ref - 200, 60, 60, SOLID)
     tilemap.setRect(450, ref - 220, 60, 60, SOLID)
+    tilemap.setRect(400, ref - 100, 100, 60, EMPTY)
 
     tilemap.setRect(200, ref - 100, 60, 60, PERMANENT)
 
