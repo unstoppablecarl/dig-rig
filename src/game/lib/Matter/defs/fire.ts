@@ -22,6 +22,7 @@ import { MatterTypeSet } from '../data/MatterTypeSet'
 const KEEP_ALIVE = new MatterTypeSet(PLANT, FUSE, OIL, WAX)
 const WATER_OR_SALT_WATER = new MatterTypeSet(WATER, SALT_WATER)
 
+const WAKE_SETTLED = new MatterTypeSet(GUNPOWDER, NAPALM, NITRO, THERMITE)
 // fire does not represent solid matter so does not follow the preserving matter rule
 export const FIRE_DEF = {
   id: FIRE,
@@ -33,10 +34,7 @@ export const FIRE_DEF = {
     const { tiles, width, height } = sim
 
     // Wake settled defs that react to fire but won't self-activate
-    sim.wakeSettledNeighbors(tx, ty, idx, GUNPOWDER)
-    sim.wakeSettledNeighbors(tx, ty, idx, NAPALM)
-    sim.wakeSettledNeighbors(tx, ty, idx, NITRO)
-    sim.wakeSettledNeighbors(tx, ty, idx, THERMITE)
+    sim.wakeSettledNeighborTypes(tx, ty, idx, WAKE_SETTLED)
 
     const existing = tiles[idx]
 

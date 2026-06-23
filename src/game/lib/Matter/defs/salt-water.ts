@@ -1,4 +1,7 @@
 import { LAVA, type MatterDef, OIL, SALT, SALT_WATER, setSettled, WATER } from '../_Matter.types.ts'
+import { MatterTypeSet } from '../data/MatterTypeSet.ts'
+
+const WAKE_SETTLED = new MatterTypeSet(LAVA, SALT)
 
 export const SALT_WATER_DEF = {
   id: SALT_WATER,
@@ -8,8 +11,7 @@ export const SALT_WATER_DEF = {
   liquid: true as const,
   settles: true as const,
   action(sim, tx, ty, idx): void {
-    sim.wakeSettledNeighbors(tx, ty, idx, LAVA)
-    sim.wakeSettledNeighbors(tx, ty, idx, SALT)
+    sim.wakeSettledNeighborTypes(tx, ty, idx, WAKE_SETTLED)
 
     const moved = sim.tryLiquidFlow(tx, ty, idx)
     if (moved) return

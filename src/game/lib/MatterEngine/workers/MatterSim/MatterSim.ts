@@ -405,6 +405,47 @@ export class MatterSim {
     }
   }
 
+  wakeSettledNeighborTypes(tx: number, ty: number, idx: number, targets: MatterTypeSet) {
+    const { tiles, width, height } = this
+    let nidx: number, raw: number
+    if (ty > 0) {
+      nidx = idx - width
+      raw = tiles[nidx]
+      if (targets.has(matterType(raw)) && isSettled(raw)) {
+        tiles[nidx] = setSettled(raw, false)
+        this.markDirty(tx, ty - 1)
+        this.next.add(nidx)
+      }
+    }
+    if (ty < height - 1) {
+      nidx = idx + width
+      raw = tiles[nidx]
+      if (targets.has(matterType(raw)) && isSettled(raw)) {
+        tiles[nidx] = setSettled(raw, false)
+        this.markDirty(tx, ty + 1)
+        this.next.add(nidx)
+      }
+    }
+    if (tx > 0) {
+      nidx = idx - 1
+      raw = tiles[nidx]
+      if (targets.has(matterType(raw)) && isSettled(raw)) {
+        tiles[nidx] = setSettled(raw, false)
+        this.markDirty(tx - 1, ty)
+        this.next.add(nidx)
+      }
+    }
+    if (tx < width - 1) {
+      nidx = idx + 1
+      raw = tiles[nidx]
+      if (targets.has(matterType(raw)) && isSettled(raw)) {
+        tiles[nidx] = setSettled(raw, false)
+        this.markDirty(tx + 1, ty)
+        this.next.add(nidx)
+      }
+    }
+  }
+
   /** Return linear index of the first neighbour of `type` (4-directional), or -1. */
   bordering(tx: number, ty: number, idx: number, type: MatterType): number {
     const { tiles, width, height } = this

@@ -15,8 +15,11 @@ export const PLANT_DEF = {
         sim.tiles[idx] = EMPTY
         sim.markDirty(tx, ty)
         sim.reactivateAround(tx, ty)
+        return
       }
     }
+
+    sim.next.add(idx)
   },
 } satisfies MatterDef
 
