@@ -4,13 +4,6 @@ import type { ParticleTarget, Position } from '../types.ts'
 import GameObject = GameObjects.GameObject
 import Velocity = Physics.Matter.Components.Velocity
 
-export function clampMaxInt(value: number, max: number) {
-  let m = value
-  m = Math.min(m, max)
-  m = Math.max(m, 0)
-  return Math.floor(m)
-}
-
 export function getCollisionSteps(vx: number, vy: number, dt: number, scale = 1) {
 
   const dx = vx * dt
