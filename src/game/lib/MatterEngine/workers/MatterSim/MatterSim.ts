@@ -160,7 +160,9 @@ export class MatterSim {
   }
 
   markDirtyRaw(idx: number) {
-    this.chunkGrid.markDirty(idx)
+    const tx = idx % this.width
+    const ty = idx / this.width | 0
+    this.markDirty(tx, ty)
   }
 
   private _reactiveAroundRange = [-1, 1]
