@@ -66,7 +66,7 @@ export default class TestLevel2 extends GameLevel {
 
   makePlayer() {
     const player = new Player(this, 100, 300)
-    const tank = new PortableMatterTank(this, 150, 450, 99)
+    const tank = new PortableMatterTank(this, 150, 350, 99)
 
     this.entities.add(tank)
 
