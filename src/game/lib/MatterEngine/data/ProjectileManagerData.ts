@@ -4,7 +4,7 @@ import type { BaseProjectile } from '../../Projectiles/BaseProjectile.ts'
 import { type Buffers, makeSOABuffers, type Schema, soaBuffersToViews } from '../../Util/StructOfArrays.ts'
 
 const SCHEMA = {
-  active: Uint8Array,
+  status: Uint8Array,
   mode: Uint8Array,
   tileX: Uint32Array,
   tileY: Uint32Array,
@@ -19,8 +19,14 @@ const SCHEMA = {
 export type ProjectileSchema = typeof SCHEMA
 export type ProjectileBuffers = Record<keyof ProjectileSchema, SharedArrayBuffer>
 
+export enum ProjectileStatus {
+  INACTIVE,
+  ACTIVE,
+  PENDING,
+}
+
 export class ProjectileManagerData {
-  readonly active: Uint8Array
+  readonly status: Uint8Array
   readonly mode: Uint8Array
   readonly tileX: Uint32Array
   readonly tileY: Uint32Array
@@ -39,24 +45,19 @@ export class ProjectileManagerData {
     return makeSOABuffers(SCHEMA, MAX_PROJECTILES)
   }
 
-  static make(): ProjectileManagerData {
-    const buffers = makeSOABuffers(SCHEMA, MAX_PROJECTILES)
-    return new ProjectileManagerData(buffers)
-  }
-
   constructor(buffers: Buffers<ProjectileSchema>) {
     const views = soaBuffersToViews(SCHEMA, buffers)
 
-    this.active = views.active
+    this.status = views.status
     this.mode = views.mode
     this.tileX = views.tileX
     this.tileY = views.tileY
     this.radius = views.radius
     this.innerRadius = views.innerRadius
     this.tilesToModify = views.tilesToModify
+    this.tilesModified = views.tilesModified
     this.ownerId = views.ownerId
     this.createType = views.createType
-    this.tilesModified = views.tilesModified
 
     this.buffers = buffers
   }
@@ -67,35 +68,39 @@ export class ProjectileManagerData {
 
   release(slotIdx: number) {
     if (slotIdx < 0) return
-    if (this.active[slotIdx] === 0) {
+    if (this.status[slotIdx] === ProjectileStatus.INACTIVE) {
       console.error(`ProjectileManagerData: double-release of slot ${slotIdx}`)
       return
     }
-    this.active[slotIdx] = 0
+    this.status[slotIdx] = ProjectileStatus.INACTIVE
     this.tilesModified[slotIdx] = 0
     this._freeSlots.push(slotIdx)
   }
 
-  // Mark slot as pending-only (active=2): counted in _recomputePending but not processed.
+  // Mark slot as pending-only (active=ProjectileStatus.PENDING): counted in _recomputePending but not processed.
   // Call immediately on projectile creation so pendingCreate is correct before first sync().
   registerPending(p: BaseProjectile) {
     const idx = p.slotIdx
     this.tilesToModify[idx] = p.tilesToModify
-    this.ownerId[idx] = p.matterTank.id as unknown as number
-    this.mode[idx] = p.effect.mode as unknown as number
-    this.active[idx] = 2
+    this.ownerId[idx] = p.matterTank.id
+    this.mode[idx] = p.effect.mode
+    this.status[idx] = ProjectileStatus.PENDING
   }
 
-  syncFromProjectile(p: BaseProjectile, innerRadius = 0) {
+  syncFromProjectile(p: BaseProjectile, innerRadius = 0, tilesToModify?: number) {
     const idx = p.slotIdx
     this.tileX[idx] = Math.round(p.x)
     this.tileY[idx] = Math.round(p.y)
     this.radius[idx] = Math.round(p.radius)
     this.innerRadius[idx] = innerRadius
-    this.tilesToModify[idx] = p.tilesToModify
-    this.ownerId[idx] = p.matterTank.id as unknown as number
-    this.mode[idx] = p.effect.mode as unknown as number
-    this.createType[idx] = (p.effect.createType ?? MatterType.SOLID) as unknown as number
-    this.active[idx] = 1
+    this.tilesToModify[idx] = tilesToModify ?? p.tilesToModify
+    this.ownerId[idx] = p.matterTank.id
+    this.mode[idx] = p.effect.mode
+    this.createType[idx] = (p.effect.createType ?? MatterType.SOLID)
+    this.status[idx] = ProjectileStatus.ACTIVE
+  }
+
+  isActive(idx: number) {
+    return this.status[idx] === ProjectileStatus.ACTIVE
   }
 }

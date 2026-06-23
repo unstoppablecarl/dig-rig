@@ -6,7 +6,7 @@ import type { CoordinatorInMsgBrushEraseMatter } from '../Coordinator.types.ts'
 import { MatterSim } from '../MatterSim/MatterSim.ts'
 import type { Effects } from './Effects.ts'
 import type { Physics } from './Physics.ts'
-import type { EffectResult } from './Effects/Projectile.ts'
+import type { EffectResult } from './Effects/SimProjectile.ts'
 
 type BrushEntry = { value: MatterType; tx: number; ty: number; radius: number }
 

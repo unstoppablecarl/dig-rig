@@ -2,7 +2,7 @@
 import { CHUNK_SIZE } from '../../../../config.ts'
 import { getSupport, isSettled, matterType, PERMANENT, SOLID, SupportType } from '../../../Matter/_Matter.types.ts'
 import { COLLIDES_WHEN_SETTLED, getSupportType, setSupport, STRUCTURAL_COLLAPSE_TO } from '../../../Matter/matter.ts'
-import { ChunkGrid } from '../../../Tilemap/ChunkGrid.ts'
+import { ChunkGrid, ChunkType } from '../../../Tilemap/ChunkGrid.ts'
 import { MatterSim } from '../MatterSim/MatterSim.ts'
 
 type XY = { x: number; y: number }
@@ -149,9 +149,16 @@ export class Physics {
   }
 
   // Returns structural tiles adjacent to destroyedTiles that are no longer connected to anchored terrain.
-  // dirtyChunks: chunks modified this step — their chunkGrid.anchored data is stale, so we skip the
-  // chunk-level pruning for them and rely on tile-level BFS instead.
+  // Chunk-level pruning is safe only for chunks that are non-dirty AND FULL (no holes) AND anchored:
+  // FULL guarantees every tile in the chunk reaches its border; anchored guarantees the border
+  // reaches permanent terrain. PARTIAL chunks may contain isolated tiles even if the chunk is
+  // anchored, so they always need tile-level BFS. Dirty chunks have stale solidCount/type so they
+  // are also excluded from the fast path.
   findNewlyDisconnected(destroyedTiles: XY[], dirtyChunks: Set<number>): XY[] {
+    // Refresh chunk anchored flags — they reflect the previous step's tile state. Any chunk whose
+    // only path to permanent terrain ran through a now-destroyed tile would otherwise read as stale-anchored.
+    this.computeAnchored()
+
     if (this._bfsEpoch > 0xFFFFFFFD) {
       this._bfsVisited.fill(0)
       this._bfsEpoch = 0
@@ -161,8 +168,16 @@ export class Physics {
     const CONFIRMED = this._bfsEpoch + 1
     const { width, height, chunksWide, chunkGrid, _bfsVisited: vis, _bfsQueue: queue, _bfsComp: comp } = this
     const tiles = this.sim.tiles
-
     const islandTiles: XY[] = []
+
+    // Returns true only when chunk-level data is a trustworthy anchor proxy:
+    //   non-dirty  → solidCount/type is accurate for this step
+    //   FULL       → no holes, so every tile in the chunk connects to its border
+    //   anchored   → the border connects to permanent terrain (fresh after computeAnchored above)
+    const isFastAnchored = (cx: number, cy: number): boolean => {
+      const id = cy * chunksWide + cx
+      return !dirtyChunks.has(id) && chunkGrid.getType(id) === ChunkType.FULL && chunkGrid.isAnchored(id)
+    }
 
     for (const { x: dx, y: dy } of destroyedTiles) {
       for (let d = 0; d < 4; d++) {
@@ -181,20 +196,12 @@ export class Physics {
         // Skip the chunk check for dirty chunks — their anchored flag is from the previous step.
         const seedCx = sx / CHUNK_SIZE | 0, seedCy = sy / CHUNK_SIZE | 0
         let seedAnchored = sx === 0 || sx === width - 1 || sy === 0 || sy === height - 1
-        if (!seedAnchored && !dirtyChunks.has(seedCy * chunksWide + seedCx)) {
-          seedAnchored = chunkGrid.isAnchoredCoord(seedCx, seedCy)
-        }
+        if (!seedAnchored) seedAnchored = isFastAnchored(seedCx, seedCy)
         if (!seedAnchored) {
           for (let dp = 0; dp < 4; dp++) {
             const px = sx + BFS_DX[dp], py = sy + BFS_DY[dp]
-            if (px < 0 || px >= width || py < 0 || py >= height) {
-              seedAnchored = true
-              break
-            }
-            if (getSupportType(tiles[py * width + px]) === SupportType.ANCHORED) {
-              seedAnchored = true
-              break
-            }
+            if (px < 0 || px >= width || py < 0 || py >= height) { seedAnchored = true; break }
+            if (getSupportType(tiles[py * width + px]) === SupportType.ANCHORED) { seedAnchored = true; break }
           }
         }
         if (seedAnchored) {
@@ -213,23 +220,15 @@ export class Physics {
           const cy = (cidx / width) | 0
           for (let d2 = 0; d2 < 4; d2++) {
             const nx = cx + BFS_DX[d2], ny = cy + BFS_DY[d2]
-            if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
-              anchored = true
-              break bfs
-            }
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height) { anchored = true; break bfs }
             const nidx = ny * width + nx
             if (vis[nidx] >= VISITED) continue
             const st = getSupportType(tiles[nidx])
-            if (st === SupportType.ANCHORED) {
-              anchored = true
-              break bfs
-            }
+            if (st === SupportType.ANCHORED) { anchored = true; break bfs }
             if (st >= SupportType.STRUCTURAL) {
-              const nCx = nx / CHUNK_SIZE | 0, nCy = ny / CHUNK_SIZE | 0
-              if (!dirtyChunks.has(nCy * chunksWide + nCx) && chunkGrid.isAnchoredCoord(nCx, nCy)) {
-                anchored = true
-                break bfs
-              }
+              const nCx = nx / CHUNK_SIZE | 0
+              const nCy = ny / CHUNK_SIZE | 0
+              if (isFastAnchored(nCx, nCy)) { anchored = true; break bfs }
               vis[nidx] = VISITED
               queue[tail++] = nidx
               comp[compLen++] = nidx
@@ -241,7 +240,9 @@ export class Physics {
         if (!anchored) {
           for (let k = 0; k < compLen; k++) {
             const idx = comp[k]
-            islandTiles.push({ x: idx % width, y: (idx / width) | 0 })
+            const x = idx % width
+            const y = (idx / width) | 0
+            islandTiles.push({ x, y })
           }
         }
       }
@@ -262,6 +263,9 @@ export class Physics {
       const collapseType = STRUCTURAL_COLLAPSE_TO[t]
       if (collapseType !== undefined) {
         tiles[idx] = collapseType
+        this.sim.markDirty(x, y)
+        dirtyChunks.add(this.chunkIdxForTile(idx))
+        this.sim.activate(idx, activeSet)
       } else if (getSupport(raw) === SupportType.STRUCTURAL) {
         tiles[idx] = setSupport(raw, SupportType.NONE)
         this.sim.markDirty(x, y)

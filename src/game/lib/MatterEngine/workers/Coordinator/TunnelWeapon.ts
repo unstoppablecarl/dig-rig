@@ -1,6 +1,5 @@
 /// <reference lib="webworker" />
 import { EMPTY, matterType, SOLID } from '../../../Matter/_Matter.types.ts'
-import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { PLAYER_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import type { PlayerBoundsDataType } from '../../data/PlayerBoundsData.ts'
@@ -13,7 +12,6 @@ type Tile = { x: number; y: number }
 type RestoreRecord = { cx: number; cy: number; radius: number; remaining: Tile[] }
 const TILE_SAFE_RADIUS = 25
 const TILE_SAFE_RSQ = TILE_SAFE_RADIUS * TILE_SAFE_RADIUS
-const DUMMY_OWNER = 0 as unknown as MatterTankId
 const DESTROY_BUDGET = 10000
 
 export class TunnelWeapon {
@@ -56,8 +54,12 @@ export class TunnelWeapon {
     const cy = b.destroyY
     const radius = b.destroyRadius
     const { tiles, structuralDirty } = this.effects.processTunnelDestroy(
-      Math.round(cx), Math.round(cy), radius, DESTROY_BUDGET, DUMMY_OWNER,
-      activeSet, dirtyChunks,
+      Math.round(cx),
+      Math.round(cy),
+      radius,
+      DESTROY_BUDGET,
+      activeSet,
+      dirtyChunks,
     )
     if (tiles.length > 0) {
       this.vfxParticleData.writeTiles(tiles, PLAYER_MATTER_TANK_ID)

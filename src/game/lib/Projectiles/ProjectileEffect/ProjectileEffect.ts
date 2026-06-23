@@ -7,7 +7,7 @@ export function makeCreateEffect(type: MatterType): ProjectileEffect {
   return {
     mode: FireMode.CREATE,
     createType: type,
-    collidesWithMatterTypes: matterTypeSetExcluding([type]),
+    collidesWithMatterTypes: matterTypeSetExcluding([EMPTY]),
   }
 }
 

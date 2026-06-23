@@ -1,13 +1,13 @@
 /// <reference lib="webworker" />
 import { EMPTY, MatterType, matterType, SOLID, SupportType } from '../../../Matter/_Matter.types.ts'
 import { getSupportType, SETTLING_TYPES } from '../../../Matter/matter.ts'
-import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
+import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import { EMPTY_PLAYER_BOUNDS, type PlayerBoundsDataType } from '../../data/PlayerBoundsData.ts'
 import type { ProjectileManagerData } from '../../data/ProjectileManagerData.ts'
 import type { CoordinatorInMsgBrushEraseMatter } from '../Coordinator.types.ts'
 import type { MatterSim } from '../MatterSim/MatterSim.ts'
-import type { EffectResult } from './Effects/Projectile.ts'
+import type { EffectResult } from './Effects/SimProjectile.ts'
 import { ProjectileCreate } from './Effects/ProjectileCreate.ts'
 import { ProjectileDestroy } from './Effects/ProjectileDestroy.ts'
 import { ProjectileMelt } from './Effects/ProjectileMelt.ts'
@@ -100,56 +100,46 @@ export class Effects {
     const budget = data.tilesToModify[slotIdx] - data.tilesModified[slotIdx]
     if (budget <= 0) return { tiles: [], structuralDirty: false }
 
-    const pb = this.playerBoundsData
     const mode = data.mode[slotIdx] as FireMode
-    const createType = data.createType[slotIdx] as MatterType
     const tileX = data.tileX[slotIdx]
     const tileY = data.tileY[slotIdx]
     const radius = data.radius[slotIdx]
-    const innerRadius = data.innerRadius[slotIdx]
     const ownerId = data.ownerId[slotIdx] as MatterTankId
 
-    let result: EffectResult
+  let result: EffectResult
     switch (mode) {
-      case FireMode.CREATE:
-        result = this.createProjectile.apply(
-          createType, tileX, tileY, radius, innerRadius, ownerId, budget,
-          pb,
-          activeSet, dirtyChunks,
-        )
+      case FireMode.CREATE: {
+        const createType = data.createType[slotIdx] as MatterType
+        const innerRadius = data.innerRadius[slotIdx]
+        result = this.createProjectile.apply(createType, tileX, tileY, radius, innerRadius, ownerId, budget, this.playerBoundsData, activeSet, dirtyChunks)
+        data.tilesModified[slotIdx] += result.tiles.length
         break
+      }
       case FireMode.DESTROY:
-        result = this.destroyProjectile.apply(
-          SOLID, tileX, tileY, radius, innerRadius, ownerId, budget,
-          EMPTY_PLAYER_BOUNDS,
-          activeSet, dirtyChunks,
-        )
+        result = this.destroyProjectile.apply(EMPTY, tileX, tileY, radius, 0, ownerId, budget, EMPTY_PLAYER_BOUNDS, activeSet, dirtyChunks)
+        data.tilesModified[slotIdx] += result.tiles.length
         break
       case FireMode.MELT:
-        result = this.meltProjectile.apply(SOLID, tileX, tileY, radius, 0, ownerId, Number.MAX_SAFE_INTEGER, EMPTY_PLAYER_BOUNDS, activeSet, dirtyChunks)
+        result = this.meltProjectile.apply(EMPTY, tileX, tileY, radius, 0, ownerId, Number.MAX_SAFE_INTEGER, EMPTY_PLAYER_BOUNDS, activeSet, dirtyChunks)
         break
       case FireMode.SOLIDIFY:
-        result = this.solidifyProjectile.apply(
-          SOLID, tileX, tileY, radius, innerRadius, ownerId, budget,
-          EMPTY_PLAYER_BOUNDS,
-          activeSet, dirtyChunks,
-        )
+        result = this.solidifyProjectile.apply(EMPTY, tileX, tileY, radius, 0, ownerId, Number.MAX_SAFE_INTEGER, EMPTY_PLAYER_BOUNDS, activeSet, dirtyChunks)
         break
+      default:
+        return { tiles: [], structuralDirty: false }
     }
 
-    data.tilesModified[slotIdx] += result!.tiles.length
-    return result!
+    return result
   }
 
-  // DESTROY-only fast path for the SAB-driven destroy zone; no playerBounds.
   processTunnelDestroy(
-    tileX: number, tileY: number, radius: number, tilesToModify: number, ownerId: MatterTankId,
-    activeSet: Set<number>, dirtyChunks: Set<number>,
+    tileX: number,
+    tileY: number,
+    radius: number,
+    tilesToModify: number,
+    activeSet: Set<number>,
+    dirtyChunks: Set<number>,
   ): EffectResult {
-    return this.destroyProjectile.apply(
-      SOLID, tileX, tileY, radius, 0, ownerId, tilesToModify,
-      EMPTY_PLAYER_BOUNDS,
-      activeSet, dirtyChunks,
-    )
+    return this.destroyProjectile.apply(EMPTY, tileX, tileY, radius, 0, NO_MATTER_TANK_ID, tilesToModify, EMPTY_PLAYER_BOUNDS, activeSet, dirtyChunks)
   }
 }

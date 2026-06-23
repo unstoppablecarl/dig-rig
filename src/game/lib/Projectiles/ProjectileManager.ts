@@ -4,6 +4,7 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
 import type { MatterTank } from '../Matter/Tank/MatterTank.ts'
+import { ProjectileStatus } from '../MatterEngine/data/ProjectileManagerData.ts'
 import type { BaseProjectile, BaseProjectileConstructor } from './BaseProjectile.ts'
 import type { ProjectileEffect } from './ProjectileEffect/_ProjectileEffect.types.ts'
 import type { ProjectileRenderer } from './ProjectileRenderer.ts'
@@ -40,11 +41,11 @@ export class ProjectileManager extends SceneBound {
       console.warn('projectiles full')
       return undefined
     }
-
     const projectile = new Constructor(this.scene, this, matterTank, x, y, effect, slotIdx, renderer)
-    this._bySlot[slotIdx] = projectile
+    data.status[slotIdx] = ProjectileStatus.INACTIVE
     data.tilesModified[slotIdx] = 0
-    data.active[slotIdx] = 0
+    this._bySlot[slotIdx] = projectile
+
 
     projectile.setTilesToModify(charge)
     data.registerPending(projectile)
