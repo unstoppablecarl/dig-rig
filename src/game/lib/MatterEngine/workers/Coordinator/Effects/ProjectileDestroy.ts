@@ -2,11 +2,11 @@
 import { EMPTY, FIRE, MatterType, PERMANENT, WATER } from '../../../../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../../../../Matter/data/MatterTypeSet.ts'
 import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
-import { Projectile, type ProjectileEffectResult } from './Projectile.ts'
+import { SimProjectile, type ProjectileEffectResult } from './SimProjectile.ts'
 
 const IGNORE = new MatterTypeSet(PERMANENT, EMPTY, WATER, FIRE)
 
-export class ProjectileDestroy extends Projectile {
+export class ProjectileDestroy extends SimProjectile {
   protected convertTile(existing: MatterType, _createType: MatterType, _ownerId: MatterTankId): MatterType | null {
     return IGNORE.has(existing) ? null : EMPTY
   }

@@ -1,9 +1,9 @@
 /// <reference lib="webworker" />
 import { MatterType } from '../../../../Matter/_Matter.types.ts'
 import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
-import { Projectile, type ProjectileEffectResult } from './Projectile.ts'
+import { SimProjectile, type ProjectileEffectResult } from './SimProjectile.ts'
 
-export class ProjectileMelt extends Projectile {
+export class ProjectileMelt extends SimProjectile {
   protected convertTile(existing: MatterType, _createType: MatterType, _ownerId: MatterTankId): MatterType | null {
     if (existing === MatterType.SOLID) return MatterType.SAND
     if (existing === MatterType.SAND) return MatterType.WATER

@@ -9,7 +9,7 @@ import type { Physics } from '../Physics.ts'
 export type ProjectileEffectResult = { x: number, y: number, newValue: MatterType }
 export type EffectResult = { tiles: ProjectileEffectResult[], structuralDirty: boolean }
 
-export abstract class Projectile {
+export abstract class SimProjectile {
   constructor(
     protected readonly sim: MatterSim,
     protected readonly physics: Physics,
@@ -33,10 +33,15 @@ export abstract class Projectile {
 
   apply(
     createType: MatterType,
-    tileX: number, tileY: number, tileRadius: number, innerRadius: number,
-    ownerId: MatterTankId, budget: number,
+    tileX: number,
+    tileY: number,
+    tileRadius: number,
+    innerRadius: number,
+    ownerId: MatterTankId,
+    budget: number,
     playerBounds: PlayerBounds,
-    activeSet: Set<number>, dirtyChunks: Set<number>,
+    activeSet: Set<number>,
+    dirtyChunks: Set<number>,
   ): EffectResult {
     const { width, height } = this
     const tiles = this.sim.tiles
@@ -97,8 +102,10 @@ export abstract class Projectile {
   private _tryCandidate(
     out: ProjectileEffectResult[],
     tiles: Uint32Array,
-    x: number, y: number,
-    createType: MatterType, ownerId: MatterTankId,
+    x: number,
+    y: number,
+    createType: MatterType,
+    ownerId: MatterTankId,
     playerBounds: PlayerBounds,
   ) {
     if (this.shouldSkipTile(x, y, playerBounds)) return
