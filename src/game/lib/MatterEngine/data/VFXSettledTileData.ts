@@ -17,11 +17,6 @@ export class VFXSettledTileData {
     return new SharedArrayBuffer(BYTE_LENGTH)
   }
 
-  static make(): VFXSettledTileData {
-    const buffer = new SharedArrayBuffer(BYTE_LENGTH)
-    return new VFXSettledTileData(buffer)
-  }
-
   constructor(readonly buffer: SharedArrayBuffer) {
     this.writer = new RingBufferWriter(SCHEMA, CAPACITY, buffer)
     this.reader = new RingBufferReader(SCHEMA, CAPACITY, buffer)

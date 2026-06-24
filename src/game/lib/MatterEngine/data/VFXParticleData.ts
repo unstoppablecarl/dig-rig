@@ -18,11 +18,6 @@ export class VFXParticleData {
     return new SharedArrayBuffer(BYTE_LENGTH)
   }
 
-  static make(): VFXParticleData {
-    const buffer = new SharedArrayBuffer(BYTE_LENGTH)
-    return new VFXParticleData(buffer)
-  }
-
   constructor(readonly buffer: SharedArrayBuffer) {
     this.writer = new RingBufferWriter(SCHEMA, CAPACITY, buffer)
     this.reader = new RingBufferReader(SCHEMA, CAPACITY, buffer)
