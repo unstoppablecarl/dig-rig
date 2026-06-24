@@ -3,7 +3,6 @@ import { random } from '../../../../helpers/random.ts'
 import {
   EMPTY,
   FIRE,
-  getOwner,
   isSettled,
   MatterType,
   matterType,
@@ -26,6 +25,7 @@ import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { ParticleType } from '../../../Particles/_particle-types.ts'
 import { ChunkGrid, type ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 import type { Tile } from '../../../Tilemap/TileGrid.ts'
+import { MatterCreditTransferBuffer } from '../_helpers/MatterCreditTransferBuffer.ts'
 import { CoordinatorOutMsg, type CoordinatorOutMsgSpawnParticle } from '../Coordinator.types.ts'
 import { type SimInMsgProcess, type SimOutMsgDone } from './MatterSim.types.ts'
 
@@ -38,6 +38,8 @@ export class MatterSim {
   height = 0
   chunkShift = 0
   chunksWidth = 0
+
+  private matterTankCredits: MatterCreditTransferBuffer
 
   readonly LAVA_IMMUNE = LAVA_IMMUNE
   readonly ACID_IMMUNE = ACID_IMMUNE
@@ -60,6 +62,7 @@ export class MatterSim {
     this.chunkShift = Math.log2(CHUNK_SIZE)
     this.chunkGrid = ChunkGrid.fromBuffers(chunkBuffers)
     this.chunksWidth = this.chunkGrid.chunksWide
+    this.matterTankCredits = new MatterCreditTransferBuffer(this.tiles)
   }
 
   process(
@@ -73,11 +76,10 @@ export class MatterSim {
     this.leftFirst = leftFirst
     this.vfxJustSettled.length = 0
     this.processSubset(indices)
-    const transfers = this.flushTransferToMatterTank()
 
     out.next = Array.from(this.next)
     out.vfxJustSettled = this.vfxJustSettled
-    out.transfers = transfers
+    out.matterTankTransfers = this.matterTankCredits.flush()
 
     return out
   }
@@ -616,37 +618,12 @@ export class MatterSim {
     if (tx < width - 1) this.reactivateAround(tx + 1, ty)
   }
 
-  private _transferBuf = new Int32Array(256 * 3)
-  private _transferLen = 0
-
   queueMatterCredit(tx: number, ty: number, ownerId: MatterTankId) {
-    const needed = this._transferLen + 3
-    if (needed > this._transferBuf.length) {
-      const bigger = new Int32Array(this._transferBuf.length * 2)
-      bigger.set(this._transferBuf)
-      this._transferBuf = bigger
-    }
-    this._transferBuf[this._transferLen++] = tx
-    this._transferBuf[this._transferLen++] = ty
-    this._transferBuf[this._transferLen++] = ownerId
+    this.matterTankCredits.queueCredit(tx, ty, ownerId)
   }
 
   queueMatterCreditFromTile(tx: number, ty: number, idx: number) {
-    const ownerId = getOwner(this.tiles[idx])
-    if (!ownerId) {
-      const label = MatterType[matterType(this.tiles[idx] as MatterType)]
-      throw new Error('no owner found for: ' + label)
-    }
-    this.queueMatterCredit(tx, ty, ownerId)
-  }
-
-  flushTransferToMatterTank(): Int32Array {
-    const len = this._transferLen
-    if (len === 0) return new Int32Array(0)
-    const buf = this._transferBuf.buffer
-    this._transferBuf = new Int32Array(Math.max(256 * 3, len))
-    this._transferLen = 0
-    return new Int32Array(buf, 0, len)
+    this.matterTankCredits.queueCreditFromTile(tx, ty, idx)
   }
 
   doPowderFall(tx: number, ty: number, idx: number) {

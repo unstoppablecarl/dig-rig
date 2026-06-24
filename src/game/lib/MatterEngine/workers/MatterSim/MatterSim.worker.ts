@@ -15,7 +15,7 @@ const _done: SimOutMsgDone = {
   type: SimOutMsg.DONE as const,
   next: [],
   vfxJustSettled: [],
-  transfers: new Int32Array(),
+  matterTankTransfers: new Int32Array(),
 }
 
 self.onmessage = (e: MessageEvent<SimInMessage>) => {
@@ -31,7 +31,7 @@ self.onmessage = (e: MessageEvent<SimInMessage>) => {
     const result = sim.process(msg.indices, msg.leftFirst, msg.frame, _done)
     postMessage(
       result,
-      result.transfers.length > 0 ? [result.transfers.buffer] : [],
+      result.matterTankTransfers.length > 0 ? [result.matterTankTransfers.buffer] : [],
     )
   }
 }

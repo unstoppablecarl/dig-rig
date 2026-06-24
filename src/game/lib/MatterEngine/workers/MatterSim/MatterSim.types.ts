@@ -39,7 +39,7 @@ export type SimOutMsgDone = {
   type: SimOutMsg.DONE
   next: number[]
   vfxJustSettled: number[]
-  transfers: Int32Array
+  matterTankTransfers: Int32Array
 }
 
 export type SimOutMessage =

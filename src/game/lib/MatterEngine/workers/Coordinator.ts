@@ -3,6 +3,7 @@ import { matterType, MatterType } from '../../Matter/_Matter.types.ts'
 import type { MatterTankId } from '../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
 import { DataManager } from '../DataManager.ts'
+import { MatterCreditTransferBuffer } from './_helpers/MatterCreditTransferBuffer.ts'
 import {
   type CoordinatorInMsgBrushEraseMatter,
   type CoordinatorInMsgInit,
@@ -150,14 +151,10 @@ export class Coordinator {
       for (const r of results) {
         for (const idx of r.next) this.activeSet.add(idx)
         for (const idx of r.vfxJustSettled) this.vfxJustSettled.push(idx)
-        for (let i = 0; i < r.transfers.length; i += 3) {
-          const x = r.transfers[i]
-          const y = r.transfers[i + 1]
-          const tankId = r.transfers[i + 2] as MatterTankId
-
-          this.matterTanks.addCredit(tankId, 1)
-          this.data.vfxParticleDestroy.writeTile(x, y, tankId)
-        }
+        MatterCreditTransferBuffer.readBuffer(r.matterTankTransfers, (x, y, ownerId) => {
+          this.matterTanks.addCredit(ownerId, 1)
+          this.data.vfxParticleDestroy.writeTile(x, y, ownerId)
+        })
       }
     })
 
