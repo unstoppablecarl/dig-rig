@@ -27,11 +27,11 @@ export class Brush {
     return this.queue.length > 0 || this.eraseQueue.length > 0
   }
 
-  enqueue(value: MatterType, tx: number, ty: number, radius: number) {
+  queueAdd(value: MatterType, tx: number, ty: number, radius: number) {
     this.queue.push({ value, tx, ty, radius })
   }
 
-  enqueueErase(req: CoordinatorInMsgBrushEraseMatter) {
+  queueErase(req: CoordinatorInMsgBrushEraseMatter) {
     this.eraseQueue.push(req)
   }
 

@@ -1,12 +1,10 @@
-/// <reference lib="webworker" />
 import { matterType, MatterType } from '../../../Matter/_Matter.types.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import type { ParticleType } from '../../../Particles/_particle-types.ts'
 import type { Particle } from '../../../Particles/Particle.ts'
 import { PARTICLE_DEFS } from '../../../Particles/particles.ts'
-import { ParticleData } from '../../data/ParticleData.ts'
+import { ParticleData, type ParticlesBuffers } from '../../data/ParticleData.ts'
 import { ParticlePool } from './ParticlePool.ts'
-import { type ParticleSimInMsgInit, ParticleSimOutMsg } from './ParticleSim.types.ts'
 import { ParticleSpawnBuffer } from './ParticleSpawnBuffer.ts'
 
 export class ParticleSim {
@@ -15,29 +13,14 @@ export class ParticleSim {
   height = 0
   pool!: ParticlePool
   pendingActivations: number[] = []
-  data: ParticleData
-  private loopRunning = false
+  data!: ParticleData
 
-  init({ tiles, particleBuffers }: ParticleSimInMsgInit) {
+  init({ tiles, particleBuffers }: { tiles: SharedArrayBuffer, particleBuffers: ParticlesBuffers }) {
     this.tiles = new Uint32Array(tiles)
     this.width = particleBuffers.width
     this.height = particleBuffers.height
     this.data = new ParticleData(particleBuffers)
     this.pool = new ParticlePool()
-  }
-
-  private startLoop() {
-    if (this.loopRunning) return
-    this.loopRunning = true
-    const loop = () => {
-      this.step()
-      if (this.pool.isEmpty) {
-        this.loopRunning = false
-      } else {
-        setTimeout(loop, 16)
-      }
-    }
-    setTimeout(loop, 16)
   }
 
   step() {
@@ -55,10 +38,6 @@ export class ParticleSim {
     })
 
     this.data.publish()
-
-    if (this.pendingActivations.length) {
-      postMessage({ type: ParticleSimOutMsg.ACTIVATIONS, indices: this.pendingActivations.slice() })
-    }
   }
 
   spawnBatch(data: Int32Array) {
@@ -75,7 +54,6 @@ export class ParticleSim {
       if (!p) break
       def.init(p, this)
     }
-    this.startLoop()
   }
 
   getTileType(x: number, y: number): MatterType {

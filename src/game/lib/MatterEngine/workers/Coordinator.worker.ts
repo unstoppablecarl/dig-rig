@@ -7,7 +7,7 @@ declare let self: DedicatedWorkerGlobalScope & {
 }
 
 const poolSize = Math.max(1, (navigator.hardwareConcurrency ?? 4) - 2)
-const coordinator = new Coordinator((msg, transfer) => postMessage(msg, transfer ?? []))
+const coordinator = new Coordinator()
 
 self.onmessage = (e: MessageEvent<CoordinatorInMessage>) => {
   const msg = e.data
@@ -24,10 +24,5 @@ self.onmessage = (e: MessageEvent<CoordinatorInMessage>) => {
 
   if (msg.type === CoordinatorInMsg.BRUSH_ADD_MATTER) {
     coordinator.brushAddMatter(msg.value, msg.tx, msg.ty, msg.radius)
-    return
-  }
-
-  if (msg.type === CoordinatorInMsg.ACTIVATE_TILES) {
-    coordinator.activateTiles(msg.indices)
   }
 }

@@ -4,11 +4,7 @@ import type { MatterTankId } from '../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
 import { DataManager } from '../DataManager.ts'
 import { MatterCreditTransferBuffer } from './_helpers/MatterCreditTransferBuffer.ts'
-import {
-  type CoordinatorInMsgBrushEraseMatter,
-  type CoordinatorInMsgInit,
-  type CoordinatorOutMessage,
-} from './Coordinator.types.ts'
+import { type CoordinatorInMsgBrushEraseMatter, type CoordinatorInMsgInit } from './Coordinator.types.ts'
 import { Brush } from './Coordinator/Brush.ts'
 import { Effects } from './Coordinator/Effects.ts'
 import { Physics } from './Coordinator/Physics.ts'
@@ -17,11 +13,9 @@ import { SimMatterTanks } from './Coordinator/SimMatterTanks.ts'
 import { SimWorkerPool } from './Coordinator/SimWorkerPool.ts'
 import { TunnelWeapon } from './Coordinator/TunnelWeapon.ts'
 import { MatterSim } from './MatterSim/MatterSim.ts'
+import { ParticleSim } from './ParticleSim/ParticleSim.ts'
 
 export class Coordinator {
-  constructor(private readonly post: (msg: CoordinatorOutMessage, transfer?: Transferable[]) => void) {
-  }
-
   private data!: DataManager
   private sim!: MatterSim
   private physics!: Physics
@@ -31,6 +25,7 @@ export class Coordinator {
   private workerPool!: SimWorkerPool
   private projectileProcessor!: ProjectileProcessor
   private matterTanks!: SimMatterTanks
+  private particleSim!: ParticleSim
 
   activeSet = new Set<number>()
   private idleSet = new Set<number>()
@@ -50,6 +45,9 @@ export class Coordinator {
 
     const chunkGrid = this.data.chunkGrid
     this.sim.init(buffers.tiles, buffers.chunkGrid, width, height)
+
+    this.particleSim = new ParticleSim()
+    this.particleSim.init({ tiles: buffers.tiles, particleBuffers: buffers.particle })
 
     this.matterTanks = new SimMatterTanks(this.data.matterTankManager)
     this.physics = new Physics(this.sim, chunkGrid, width, height)
@@ -75,20 +73,18 @@ export class Coordinator {
       tilesBuffer: buffers.tiles,
       chunkGridBuffers: buffers.chunkGrid,
       onReady: () => this.startLoop(),
-      onForward: (msg) => this.post(msg),
+      onSpawnParticle: (msg) => {
+        this.particleSim.spawn(msg.particleType, msg.x, msg.y, msg.ownerId)
+      },
     })
   }
 
   brushEraseMatter(req: CoordinatorInMsgBrushEraseMatter) {
-    this.brush.enqueueErase(req)
+    this.brush.queueErase(req)
   }
 
   brushAddMatter(value: MatterType, tx: number, ty: number, radius: number) {
-    this.brush.enqueue(value, tx, ty, radius)
-  }
-
-  activateTiles(indices: number[]) {
-    for (const idx of indices) this.pendingActivations.push(idx)
+    this.brush.queueAdd(value, tx, ty, radius)
   }
 
   private startLoop() {
@@ -113,7 +109,8 @@ export class Coordinator {
       this.activeSet.size === 0 &&
       !this.brush.hasWork() &&
       !this.tunnelWeapon.hasWork() &&
-      !this.projectileProcessor.hasWork()
+      !this.projectileProcessor.hasWork() &&
+      this.particleSim.pool.isEmpty
     ) return
 
     const frame = this.frame++
@@ -173,5 +170,10 @@ export class Coordinator {
 
     for (const idx of this._dirtyChunksThisStep) dirtyChunksThisStep.add(idx)
     this.physics.postStep(dirtyChunksThisStep, structuralDirty)
+
+    this.particleSim.step()
+    for (const idx of this.particleSim.pendingActivations) {
+      this.pendingActivations.push(idx)
+    }
   }
 }

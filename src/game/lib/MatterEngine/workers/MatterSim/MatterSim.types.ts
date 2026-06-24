@@ -1,7 +1,7 @@
 import type { ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
+import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
+import type { ParticleType } from '../../../Particles/_particle-types.ts'
 
-// Values start at 100: MatterSim workers forward CoordinatorOutMessages on the same
-// channel, so SimOutMsg values must not collide with CoordinatorOutMsg values (0+).
 export enum SimInMsg {
   INIT = 100,
   PROCESS = 101,
@@ -10,6 +10,7 @@ export enum SimInMsg {
 export enum SimOutMsg {
   READY = 100,
   DONE = 101,
+  SPAWN_PARTICLE = 102,
 }
 
 export type SimInMsgInit = {
@@ -42,9 +43,18 @@ export type SimOutMsgDone = {
   matterTankTransfers: Int32Array
 }
 
+export type SimOutMsgSpawnParticle = {
+  type: SimOutMsg.SPAWN_PARTICLE
+  particleType: ParticleType
+  x: number
+  y: number
+  ownerId?: MatterTankId
+}
+
 export type SimOutMessage =
   | SimOutMsgReady
   | SimOutMsgDone
+  | SimOutMsgSpawnParticle
 
 export type TypedMatterSimWorker = Omit<Worker, 'postMessage' | 'onmessage'> & {
   postMessage(msg: SimInMessage): void

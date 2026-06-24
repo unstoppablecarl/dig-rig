@@ -1,8 +1,7 @@
 /// <reference lib="webworker" />
 import { CHUNK_SIZE } from '../../../../config.ts'
 import type { ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
-import type { CoordinatorOutMessage } from '../Coordinator.types.ts'
-import { type SimOutMessage, SimOutMsg, type SimOutMsgDone } from '../MatterSim/MatterSim.types.ts'
+import { type SimOutMessage, SimOutMsg, type SimOutMsgDone, type SimOutMsgSpawnParticle } from '../MatterSim/MatterSim.types.ts'
 import { MatterSimController } from '../MatterSim/MatterSimController.ts'
 
 export class SimWorkerPool {
@@ -17,7 +16,7 @@ export class SimWorkerPool {
   private chunksWide: number
   private readonly _dirtyChunksThisStep = new Set<number>()
   private readonly onReady: () => void
-  private readonly onForward: (msg: CoordinatorOutMessage) => void
+  private readonly onForward: (msg: SimOutMsgSpawnParticle) => void
 
   get size(): number {
     return this.pool.length
@@ -30,7 +29,7 @@ export class SimWorkerPool {
       width,
       height,
       onReady,
-      onForward,
+      onSpawnParticle,
       poolSize,
     }: {
       tilesBuffer: SharedArrayBuffer
@@ -38,12 +37,12 @@ export class SimWorkerPool {
       width: number
       height: number
       onReady: () => void,
-      onForward: (msg: CoordinatorOutMessage) => void,
+      onSpawnParticle: (msg: SimOutMsgSpawnParticle) => void,
       poolSize: number,
     },
   ) {
     this.onReady = onReady
-    this.onForward = onForward
+    this.onForward = onSpawnParticle
     this.width = width
     this.chunksWide = chunkGridBuffers.chunksWide
     this.pendingResolvers = new Array(poolSize).fill(null)
@@ -116,7 +115,7 @@ export class SimWorkerPool {
     })
   }
 
-  private _onMessage(workerIdx: number, msg: SimOutMessage | CoordinatorOutMessage,
+  private _onMessage(workerIdx: number, msg: SimOutMessage | SimOutMsgSpawnParticle,
   ) {
     if (msg.type === SimOutMsg.READY) {
       if (++this.readyCount === this.pool.length) this.onReady()
@@ -127,6 +126,6 @@ export class SimWorkerPool {
       this.pendingResolvers[workerIdx] = null
       return
     }
-    this.onForward(msg as CoordinatorOutMessage)
+    this.onForward(msg as SimOutMsgSpawnParticle)
   }
 }

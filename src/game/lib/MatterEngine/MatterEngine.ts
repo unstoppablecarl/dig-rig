@@ -8,13 +8,11 @@ import { VFXSettledTileProcessor } from './processors/VFXSettledTileProcessor.ts
 import type { CoordinatorInMsgBrushEraseMatter } from './workers/Coordinator.types.ts'
 import { VFXTileEffectProcessor } from './workers/Coordinator/VFXTileEffectProcessor.ts'
 import { CoordinatorController } from './workers/CoordinatorController.ts'
-import { ParticleSimController } from './workers/ParticleSim/ParticleSimController.ts'
 
 export type ApplyDestroyParams = Omit<CoordinatorInMsgBrushEraseMatter, 'type'>
 
 export class MatterEngine extends SceneBound {
   private readonly worker: CoordinatorController
-  private readonly particleSim: ParticleSimController
 
   private readonly vfxParticle: VFXParticleProcessor
   private readonly vfxSettled: VFXSettledTileProcessor
@@ -37,18 +35,10 @@ export class MatterEngine extends SceneBound {
     this.vfxSettled = new VFXSettledTileProcessor(scene, this.data.vfxSettledTile)
     this.vfxTileEffect = new VFXTileEffectProcessor(scene, this.data.vfxTileEffect)
 
-    this.particleSim = new ParticleSimController(this.scene, this.data.particle, {
-      onActivations: (indices) => this.worker.activateTiles(indices),
-    })
-
     this.worker = new CoordinatorController({
       ...this.data.buffers,
       width: tilemap.width,
       height: tilemap.height,
-    }, {
-      spawnParticle: (particleType, x, y, ownerId) => {
-        this.particleSim.queueSpawn(particleType, x, y, ownerId)
-      },
     })
   }
 
@@ -67,7 +57,10 @@ export class MatterEngine extends SceneBound {
 
   update() {
     if (this.destroyed) return
-    this.particleSim.update()
+    const pixels = this.data.particle.consumePixels()
+    if (pixels) {
+      this.scene.tilemapRenderer.updateParticlePixels(pixels)
+    }
     this.vfxSettled.drain()
     this.vfxParticle.drain()
     this.vfxTileEffect.drain()

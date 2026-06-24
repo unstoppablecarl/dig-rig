@@ -26,8 +26,7 @@ import { ParticleType } from '../../../Particles/_particle-types.ts'
 import { ChunkGrid, type ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 import type { Tile } from '../../../Tilemap/TileGrid.ts'
 import { MatterCreditTransferBuffer } from '../_helpers/MatterCreditTransferBuffer.ts'
-import { CoordinatorOutMsg, type CoordinatorOutMsgSpawnParticle } from '../Coordinator.types.ts'
-import { type SimInMsgProcess, type SimOutMsgDone } from './MatterSim.types.ts'
+import { type SimInMsgProcess, SimOutMsg, type SimOutMsgDone, type SimOutMsgSpawnParticle } from './MatterSim.types.ts'
 
 const MAX_FLOW = 8
 
@@ -84,8 +83,8 @@ export class MatterSim {
     return out
   }
 
-  private _spawnParticle: CoordinatorOutMsgSpawnParticle = {
-    type: CoordinatorOutMsg.SPAWN_PARTICLE as const,
+  private _spawnParticle: SimOutMsgSpawnParticle = {
+    type: SimOutMsg.SPAWN_PARTICLE as const,
     particleType: ParticleType.NONE,
     x: 0,
     y: 0,
