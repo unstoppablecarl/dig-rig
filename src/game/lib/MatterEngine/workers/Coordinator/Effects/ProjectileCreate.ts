@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
-import { EMPTY, MatterType, setOwner } from '../../../../Matter/_Matter.types.ts'
-import { canHaveOwner, doesSettle } from '../../../../Matter/matter.ts'
+import { EMPTY, MatterType, setOwner, SupportType } from '../../../../Matter/_Matter.types.ts'
+import { canHaveOwner, doesSettle, getSupportType } from '../../../../Matter/matter.ts'
 import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
 import type { PlayerBounds } from '../../../data/PlayerBoundsData.ts'
 import { type ProjectileEffectResult, SimProjectile } from './SimProjectile.ts'
@@ -15,9 +15,15 @@ export class ProjectileCreate extends SimProjectile {
     return x > p.left && x < p.right && y > p.top && y < p.bottom
   }
 
-  protected postApply(candidates: ProjectileEffectResult[], createType: MatterType, activeSet: Set<number>): void {
+  protected postApply(candidates: ProjectileEffectResult[], createType: MatterType, activeSet: Set<number>, dirtyChunks: Set<number>): void {
     if (doesSettle(createType)) {
       this.sim.activateTiles(candidates, activeSet)
+    }
+
+    const structuralTiles = candidates.filter(t => getSupportType(t.newValue) >= SupportType.STRUCTURAL)
+    if (structuralTiles.length > 0) {
+      const islands = this.physics.findIslandTiles(structuralTiles)
+      if (islands.length > 0) this.physics.collapseIslands(islands, activeSet, dirtyChunks)
     }
   }
 }
