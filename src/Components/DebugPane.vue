@@ -12,7 +12,7 @@ import {
   pollingRef,
   VPane,
 } from 'vue-pane/src/index.ts'
-import { ENABLE_BRUSH_MODE_DEBUG } from '../game/config.ts'
+import { ENABLE_BRUSH_MODE_DEBUG, ENABLE_MATTER_TANK_DEBUG } from '../game/config.ts'
 import { launchLevel } from '../game/launcher.ts'
 import type { GameLevel } from '../game/scenes/GameLevel.ts'
 import { type LevelEntry, type LevelId, LEVELS } from '../game/scenes/Levels'
@@ -32,6 +32,7 @@ const matter = {
   universe: pollingComputed(() => level?.matterManager?.universeMatter() ?? 0, 500),
   world: pollingComputed(() => level?.matterManager?.terrainMatter() ?? 0, 500),
   player: pollingComputed(() => level?.matterManager?.playerMatter() ?? 0, 500),
+  playerReservedDestroy: pollingComputed(() => level?.matterManager?.playerReservedDestroy() ?? 0, 500),
 }
 
 const projectiles = {
@@ -86,6 +87,7 @@ const levelEntries = Object.entries(LEVELS) as [LevelId, LevelEntry][]
           <PNumber label="Universe" :poll="matter.universe" readonly />
           <PNumber label="World" :poll="matter.world" readonly />
           <PNumber label="Player" :poll="matter.player" readonly />
+          <PNumber v-if="ENABLE_MATTER_TANK_DEBUG" label="Player Reserved Destroy" :poll="matter.playerReservedDestroy" readonly />
         </PFolder>
         <PFolder title="Projectiles">
           <PNumber label="Count" :poll="projectiles.count" readonly />

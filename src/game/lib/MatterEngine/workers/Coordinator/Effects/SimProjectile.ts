@@ -1,10 +1,11 @@
 /// <reference lib="webworker" />
-import { EMPTY, matterType, MatterType, SupportType } from '../../../../Matter/_Matter.types.ts'
-import { getSupportType } from '../../../../Matter/matter.ts'
+import { EMPTY, getOwner, matterType, MatterType, SupportType } from '../../../../Matter/_Matter.types.ts'
+import { getReserveDestroyAmount, getSupportType, RESERVED_DESTROY_CHARGE } from '../../../../Matter/matter.ts'
 import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
 import type { PlayerBounds } from '../../../data/PlayerBoundsData.ts'
 import type { MatterSim } from '../../MatterSim/MatterSim.ts'
 import type { Physics } from '../Physics.ts'
+import type { SimMatterTanks } from '../SimMatterTanks.ts'
 
 export type ProjectileEffectResult = { x: number, y: number, newValue: MatterType }
 export type EffectResult = { tiles: ProjectileEffectResult[], structuralDirty: boolean }
@@ -13,6 +14,7 @@ export abstract class SimProjectile {
   constructor(
     protected readonly sim: MatterSim,
     protected readonly physics: Physics,
+    protected readonly matterTanks: SimMatterTanks,
     protected readonly width: number,
     protected readonly height: number,
   ) {
@@ -82,8 +84,13 @@ export abstract class SimProjectile {
     let structuralDirty = false
     for (const { x, y, newValue } of candidates) {
       const idx = y * width + x
-      if (!structuralDirty && (getSupportType(tiles[idx]) >= SupportType.STRUCTURAL || getSupportType(newValue) >= SupportType.STRUCTURAL)) {
+      const prevRaw = tiles[idx]
+      if (!structuralDirty && (getSupportType(prevRaw) >= SupportType.STRUCTURAL || getSupportType(newValue) >= SupportType.STRUCTURAL)) {
         structuralDirty = true
+      }
+      const prevType = matterType(prevRaw)
+      if (prevType !== matterType(newValue) && RESERVED_DESTROY_CHARGE.has(prevType)) {
+        this.matterTanks.releaseDestroyCharge(getOwner(prevRaw), getReserveDestroyAmount(prevType), 'external-overwrite')
       }
       tiles[idx] = newValue
       this.sim.markDirty(x, y)

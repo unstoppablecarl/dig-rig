@@ -18,8 +18,8 @@ export class UIScene extends Scene {
     this.toast = new Toaster(this)
   }
 
-  update(_time: number, _delta: number) {
-    this.matterMeter.update()
+  update(_time: number, delta: number) {
+    this.matterMeter.update(delta)
   }
 
   destroy() {

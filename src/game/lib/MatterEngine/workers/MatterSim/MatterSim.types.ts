@@ -41,6 +41,7 @@ export type SimOutMsgDone = {
   next: number[]
   vfxJustSettled: number[]
   matterTankTransfers: Int32Array
+  matterReservationReleases: Int32Array
   structuralRemovals: number[]
 }
 

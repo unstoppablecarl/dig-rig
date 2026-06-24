@@ -13,6 +13,15 @@ type BrushEntry = { value: MatterType; tx: number; ty: number; radius: number }
 export class Brush {
   private readonly queue: BrushEntry[] = []
   private readonly eraseQueue: CoordinatorInMsgBrushEraseMatter[] = []
+  // Net world-tile count change caused by the brush since the last conservation check —
+  // the brush is the one sanctioned source of matter add/removal in the world.
+  private _netDelta = 0
+
+  consumeNetDelta(): number {
+    const delta = this._netDelta
+    this._netDelta = 0
+    return delta
+  }
 
   constructor(
     private readonly width: number,
@@ -42,7 +51,9 @@ export class Brush {
     result.length = 0
     if (this.eraseQueue.length === 0) return result
     for (const req of this.eraseQueue) {
-      result.push(this.effects.applyBrushErase(req, activeSet, dirtyChunks))
+      const erased = this.effects.applyBrushErase(req, activeSet, dirtyChunks)
+      this._netDelta -= erased.tiles.length
+      result.push(erased)
     }
     this.eraseQueue.length = 0
     return result
@@ -92,6 +103,8 @@ export class Brush {
         this.sim.activate(idx, activeSet)
       }
     }
+
+    this._netDelta += placed.length
 
     if (getSupportType(value) >= SupportType.STRUCTURAL) {
       const islands = this.physics.findIslandTiles(placed)

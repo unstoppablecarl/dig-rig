@@ -33,6 +33,7 @@ export const LAVA_DEF = {
   liquid: true as const,
   hasOwnerId: true as const,
   settles: true as const,
+  reserveDestroyAmount: 1,
   action(sim, tx, ty, idx): void {
     const { tiles, width, height } = sim
     const existing = tiles[idx]
@@ -41,6 +42,7 @@ export const LAVA_DEF = {
     // Turn to rock when touching water or salt-water
     let waterLoc = sim.borderingAny(tx, ty, idx, COOLED)
     if (waterLoc !== -1) {
+      sim.queueReservationRelease(ownerId, 1)
       tiles[waterLoc] = STEAM
       tiles[idx] = ROCK
       sim.markDirty(tx, ty)
@@ -55,8 +57,8 @@ export const LAVA_DEF = {
     // Spawn a lava burst particle and self-destruct when adjacent to oil
     if (random() < 14 && sim.bordering(tx, ty, idx, OIL) !== -1) {
       sim.spawnParticle(ParticleType.LAVA_BURST, tx, ty, ownerId)
-      tiles[idx] = EMPTY
-      sim.markDirty(tx, ty)
+      sim.queueMatterCreditFromTile(tx, ty, idx)
+      sim.destroyTile(tx, ty, idx)
       sim.reactivateAround(tx, ty)
       return
     }
@@ -67,6 +69,7 @@ export const LAVA_DEF = {
       if (meltLoc !== -1) {
         const mx = meltLoc % width
         const my = meltLoc / width | 0
+        sim.queueMatterCredit(mx, my, ownerId)
         sim.destroyTile(mx, my, meltLoc)
         sim.reactivateAround(mx, my)
         // Single isolated SOLID neighbors → ROCK so they sink through the lava pool.
@@ -91,9 +94,7 @@ export const LAVA_DEF = {
           }
         }
         sim.queueMatterCreditFromTile(tx, ty, idx)
-        tiles[idx] = EMPTY
-        sim.markDirty(tx, ty)
-        sim.next.add(idx)
+        sim.destroyTile(tx, ty, idx)
         return
       }
     }
@@ -125,11 +126,13 @@ export const LAVA_DEF = {
         if (nidx === -1) continue
         const nt = matterType(tiles[nidx])
         if (!isLavaImmune(nt)) {
+          if (nt !== EMPTY) sim.queueMatterCredit(nx, ny, ownerId)
           tiles[nidx] = setOwner(FIRE, ownerId)
           sim.queueMatterCredit(tx, ty, ownerId)
-          tiles[idx] = EMPTY
+          sim.destroyTile(tx, ty, idx)
           sim.markDirty(nx, ny)
           sim.next.add(nidx)
+          break // lava tile self-destructs once; without this, multiple flammable neighbors would double-credit/double-release
         }
       }
     }

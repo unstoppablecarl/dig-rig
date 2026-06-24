@@ -76,6 +76,11 @@ export class MatterManager extends SceneBound<GameLevel> {
     return this.playerMatterTank.matterContained()
   }
 
+  playerReservedDestroy(): number {
+    if (this.destroyed) return 0
+    return this.playerMatterTank.reservedDestroy
+  }
+
   allTankMatter(): number {
     if (this.destroyed) return 0
     let sum = 0

@@ -1,9 +1,12 @@
 /// <reference lib="webworker" />
-import { matterType, MatterType } from '../../Matter/_Matter.types.ts'
+import { ENABLE_MATTER_CONSERVATION_CHECK, MATTER_CONSERVATION_CHECK_INTERVAL_FRAMES } from '../../../config.ts'
+import { FIRE, matterType, MatterType } from '../../Matter/_Matter.types.ts'
 import type { MatterTankId } from '../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
 import { DataManager } from '../DataManager.ts'
+import { MAX_MATTER_TANKS } from '../data/MatterTankManagerData.ts'
 import { MatterCreditTransferBuffer } from './_helpers/MatterCreditTransferBuffer.ts'
+import { MatterReservationReleaseBuffer } from './_helpers/MatterReservationReleaseBuffer.ts'
 import { type CoordinatorInMsgBrushEraseMatter, type CoordinatorInMsgInit } from './Coordinator.types.ts'
 import { Brush } from './Coordinator/Brush.ts'
 import { Effects } from './Coordinator/Effects.ts'
@@ -35,6 +38,7 @@ export class Coordinator {
   private readonly vfxJustSettled: number[] = []
   private readonly structuralRemovals: number[] = []
   private readonly dirtyChunksThisStep = new Set<number>()
+  private _lastConservationTotal: number | null = null
 
   init(buffers: CoordinatorInMsgInit, poolSize: number) {
 
@@ -52,7 +56,7 @@ export class Coordinator {
 
     this.matterTanks = new SimMatterTanks(this.data.matterTankManager)
     this.physics = new Physics(this.sim, chunkGrid, width, height)
-    this.effects = new Effects(this.sim, this.physics, this.data.playerBounds, width, height)
+    this.effects = new Effects(this.sim, this.physics, this.matterTanks, this.data.playerBounds, width, height)
     this.tunnelWeapon = new TunnelWeapon(
       this.effects, this.data.tunnelWeapon,
       this.data.playerBounds, this.data.vfxParticleDestroy, this.data.vfxTileEffect, this.sim.tiles, width, height,
@@ -116,6 +120,7 @@ export class Coordinator {
 
     const frame = this.frame++
     const leftFirst = (frame % 2) === 0
+    this.matterTanks.setFrame(frame)
 
     // Swap active/idle sets so new activations land in the fresh set.
     const snapshot = this.activeSet
@@ -153,12 +158,19 @@ export class Coordinator {
           this.matterTanks.addCredit(ownerId, 1)
           this.data.vfxParticleDestroy.writeTile(x, y, ownerId)
         })
+        MatterReservationReleaseBuffer.readBuffer(r.matterReservationReleases, (ownerId, amount) => {
+          this.matterTanks.releaseDestroyCharge(ownerId, amount, 'self-destruct')
+        })
       }
     })
 
     if (this.structuralRemovals.length > 0) {
       const w = this.width
-      const xy = this.structuralRemovals.map(idx => ({ x: idx % w, y: (idx / w) | 0 }))
+      const xy: { x: number, y: number }[] = []
+      for (const idx of this.structuralRemovals) {
+        xy.push({ x: idx % w, y: (idx / w) | 0 })
+        dirtyChunksThisStep.add(this.physics.chunkIdxForTile(idx))
+      }
       const islands = this.physics.findNewlyDisconnected(xy, dirtyChunksThisStep)
       if (islands.length > 0) {
         this.physics.collapseIslands(islands, this.activeSet, dirtyChunksThisStep)
@@ -200,5 +212,41 @@ export class Coordinator {
         this.physics.collapseIslands(islands, this.activeSet, dirtyChunksThisStep)
       }
     }
+
+    if (import.meta.env.DEV && ENABLE_MATTER_CONSERVATION_CHECK && frame % MATTER_CONSERVATION_CHECK_INTERVAL_FRAMES === 0) {
+      this.checkMatterConservation()
+    }
+  }
+
+  // Dev-only invariant: total *physical* matter (world tiles, excluding FIRE which carries
+  // no matter weight, plus real matter contained in every tank) should never change except
+  // via the brush. pendingCreate/pendingDestroy/reservedDestroy are capacity reservations,
+  // not physical quantities, and are deliberately excluded from this sum.
+  private checkMatterConservation() {
+    const tiles = this.sim.tiles
+    let tileCount = 0
+    for (let i = 0, n = tiles.length; i < n; i++) {
+      if (tiles[i] !== 0 && matterType(tiles[i]) !== FIRE) tileCount++
+    }
+
+    const tankData = this.data.matterTankManager
+    let tankSum = 0
+    for (let id = 0; id < MAX_MATTER_TANKS; id++) {
+      const tankId = id as MatterTankId
+      if (tankData.getMatterMax(tankId) === 0) continue
+      tankSum += tankData.getMatter(tankId)
+    }
+
+    const total = tileCount + tankSum
+    const brushDelta = this.brush.consumeNetDelta()
+
+    if (this._lastConservationTotal !== null) {
+      const expected = this._lastConservationTotal + brushDelta
+      if (total !== expected) {
+        console.error(`[Coordinator] matter conservation violated: expected ${expected}, got ${total} (drift ${total - expected})`)
+        console.table(this.matterTanks.mutationLog.recent(30))
+      }
+    }
+    this._lastConservationTotal = total
   }
 }

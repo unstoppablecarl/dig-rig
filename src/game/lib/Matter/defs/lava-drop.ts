@@ -18,6 +18,7 @@ export const LAVA_DROP_DEF = {
   lavaImmune: true as const,
   hasOwnerId: true as const,
   alwaysActive: true as const,
+  reserveDestroyAmount: 1,
   action(sim, tx, ty, idx): void {
     const { tiles, width, height } = sim
     const existing = tiles[idx]
@@ -41,8 +42,10 @@ export const LAVA_DROP_DEF = {
           return
         }
 
-        // Blocked going up: burn non-immune tile
+        // Blocked going up: burn non-immune tile (aboveType is neither EMPTY nor FIRE here —
+        // both already returned above)
         if (!isLavaImmune(aboveType)) {
+          sim.queueMatterCredit(tx, ty - 1, ownerId)
           tiles[upIdx] = setOwner(FIRE, ownerId)
           sim.markDirty(tx, ty - 1)
           sim.next.add(upIdx)
@@ -92,6 +95,7 @@ export const LAVA_DROP_DEF = {
       if (nidx === -1) continue
       const nt = matterType(tiles[nidx])
       if (nt !== EMPTY && !isLavaImmune(nt)) {
+        sim.queueMatterCredit(nx, ny, ownerId)
         tiles[nidx] = setOwner(FIRE, ownerId)
         sim.markDirty(nx, ny)
         sim.next.add(nidx)

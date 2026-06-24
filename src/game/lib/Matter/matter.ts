@@ -26,15 +26,14 @@ export type LiquidTypes = {
   [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { liquid: true } ? K : never
 }[keyof MatterMetaRegistry]
 
-// 256-entry lookup: value is the fixed SupportType for that MatterType, or 0xFF = "read from tile bits".
-const SUPPORT_TYPE_LOOKUP = new Uint8Array(256).fill(0xFF)
-
-export function getSupportType(raw: number): SupportType {
-  const override = SUPPORT_TYPE_LOOKUP[raw & 0xFF]
-  return override !== 0xFF ? override : (raw >>> SUPPORT_SHIFT) & 0b11
-}
-
 const IMMUTABLE_SUPPORT_TYPES = new Uint32Array(256)
+
+// IMMUTABLE_SUPPORT_TYPES[type] is SupportType.NONE (0, the array's default) for any type that
+// never registered an immutableSupport override, which doubles as "read from per-tile bits instead".
+export function getSupportType(raw: number): SupportType {
+  const override = IMMUTABLE_SUPPORT_TYPES[raw & 0xFF]
+  return override !== SupportType.NONE ? override : (raw >>> SUPPORT_SHIFT) & 0b11
+}
 
 export function getImmutableSupportType(raw: number): SupportType {
   const type = matterType(raw)
@@ -49,6 +48,11 @@ export function getImmutableSupportType(raw: number): SupportType {
 export const STRUCTURAL_COLLAPSE_TO: Partial<Record<MatterType, MatterType>> = {}
 
 export const SINKS_THROUGH: Partial<Record<MatterType, MatterTypeSet>> = {}
+
+// Types whose creation reserves destroy-charge against the creating tank (lava, acid, ...).
+export const RESERVED_DESTROY_CHARGE = new MatterTypeSet()
+const RESERVE_DESTROY_AMOUNT: Partial<Record<MatterType, number>> = {}
+export const getReserveDestroyAmount = (type: MatterType) => RESERVE_DESTROY_AMOUNT[type] ?? 0
 
 const enum Flag {
   SETTLES = 1 << 0,
@@ -73,7 +77,7 @@ export const isActivatable = (type: MatterType) => (MATTER_FLAGS[type] & (Flag.A
 export const canHaveOwner = (type: MatterType) => (MATTER_FLAGS[type] & Flag.HAS_OWNER_ID) !== 0
 export const alwaysCollides = (type: MatterType) => (MATTER_FLAGS[type] & Flag.ALWAYS_COLLIDES) !== 0
 export const isSupportTypeImmutable = (type: MatterType) => (MATTER_FLAGS[type] & Flag.IMMUTABLE_SUPPORT_TYPE) !== 0
-export const isAlwaysStructural = (type: MatterType) => (IMMUTABLE_SUPPORT_TYPES[type] & SupportType.STRUCTURAL) !== 0
+export const isAlwaysStructural = (type: MatterType) => IMMUTABLE_SUPPORT_TYPES[type] === SupportType.STRUCTURAL
 
 const noop = () => {
 }
@@ -94,6 +98,7 @@ function registerMatterType(
     alwaysCollides = false,
     sinksThrough,
     structuralCollapseType,
+    reserveDestroyAmount,
   }: MatterDef) {
 
   MATTER_ACTIONS[id] = action
@@ -115,6 +120,10 @@ function registerMatterType(
 
   if (sinksThrough) SINKS_THROUGH[id] = new MatterTypeSet(...sinksThrough)
   if (structuralCollapseType !== undefined) STRUCTURAL_COLLAPSE_TO[id] = structuralCollapseType
+  if (reserveDestroyAmount !== undefined) {
+    RESERVE_DESTROY_AMOUNT[id] = reserveDestroyAmount
+    RESERVED_DESTROY_CHARGE.add(id)
+  }
 }
 
 const defs = import.meta.glob('./defs/*.ts', { eager: true }) as Record<string, { default: MatterDef }>

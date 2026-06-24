@@ -45,7 +45,7 @@ export function WeaponAdjustableChargeMixin<TBase extends AbstractMixinConstruct
     protected clampCharge(effect: ProjectileEffect) {
       const charge = this.getCharge()
       if (isMatterTankFireMode(effect.mode)) {
-        return this.scene.player.matterTank.clampToChargeAvailable(charge, effect.mode)
+        return this.scene.player.matterTank.clampToChargeAvailable(charge, effect.mode, effect.createType)
       }
       return charge
     }

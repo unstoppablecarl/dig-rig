@@ -64,7 +64,7 @@ export class ProjectileManager extends SceneBound {
     renderer: null | ProjectileRenderer = this.rendererPool.acquire(),
   ) {
     const player = this.scene.player
-    if (isMatterTankFireMode(effect.mode) && !player.matterTank.hasChargeAvailable(charge, effect.mode)) {
+    if (isMatterTankFireMode(effect.mode) && !player.matterTank.hasChargeAvailable(charge, effect.mode, effect.createType)) {
       return
     }
     const startPos = pos ?? player.getProjectilePosition(0, this._startPos)

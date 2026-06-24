@@ -84,10 +84,10 @@ export const SUPPORT_SHIFT = 25
 export const SUPPORT_MASK = 0b11 << SUPPORT_SHIFT  // 0x6000000
 
 export const enum SupportType {
-  NONE = 1 << 0,
-  AFFIXED = 1 << 1,
-  STRUCTURAL = 1 << 2,
-  ANCHORED = 1 << 3,
+  NONE = 0,
+  AFFIXED = 1,
+  STRUCTURAL = 2,
+  ANCHORED = 3,
 }
 
 // getSupportBits — reads only the raw per-tile bits; does NOT apply ALWAYS_* overrides.
@@ -188,6 +188,9 @@ export type MatterDef = {
   sinksThrough?: MatterType[]
   // what the tile converts to when its structural island collapses (undefined = keep type).
   structuralCollapseType?: MatterType
+  // units of destroy-charge to reserve against the creating tank per tile of this type created —
+  // the amount of matter this type will eventually return to its owner's tank when it self-destructs.
+  reserveDestroyAmount?: number
 }
 
 export type IndexedTile = { x: number, y: number, idx: number }

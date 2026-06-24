@@ -17,10 +17,10 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     super(scene)
 
     const charge = computed(() => {
-      const mode = this.scene.instantWeaponUIState.fireMode
+      const effect = this.scene.instantWeaponUIState.fireModeEffect
       let val = this.scene.weaponUIState.charge
-      if (isMatterTankFireMode(mode) && this.scene.player) {
-        val = this.scene.player.matterTank.clampToChargeAvailable(val, mode)
+      if (isMatterTankFireMode(effect.mode) && this.scene.player) {
+        val = this.scene.player.matterTank.clampToChargeAvailable(val, effect.mode, effect.createType)
       }
       return val
     })

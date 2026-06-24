@@ -31,7 +31,7 @@ export class TorchWeapon extends Mix implements FireGroupWeapon {
     if (value && !this.projectile) {
       let charge = Infinity
       if (isMatterTankFireMode(effect.mode)) {
-        charge = this.scene.player.matterTank.chargeAvailable(effect.mode)
+        charge = this.scene.player.matterTank.chargeAvailable(effect.mode, effect.createType)
       }
       this.projectile = this.scene.projectiles.fireForPlayer(TorchProjectile, charge, effect, 0) ?? null
     }

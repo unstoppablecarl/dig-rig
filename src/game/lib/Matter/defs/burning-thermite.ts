@@ -2,6 +2,7 @@ import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import {
   BURNING_THERMITE,
+  EMPTY,
   FIRE,
   getOwner,
   LAVA,
@@ -42,6 +43,7 @@ export const BURNING_THERMITE_DEF = {
       const neighborRaw = tiles[nidx]
       const nt = matterType(neighborRaw)
       if (!NOT_FIRE_SPREADABLE.has(nt)) {
+        if (nt !== EMPTY) sim.queueMatterCredit(nx, ny, ownerId)
         tiles[nidx] = setOwner(FIRE, ownerId)
         sim.markDirty(nx, ny)
         sim.next.add(nidx)
@@ -62,16 +64,18 @@ export const BURNING_THERMITE_DEF = {
 
       for (const widx of neighbors) {
         if (widx === -1) continue
+        if (matterType(tiles[widx]) === EMPTY) continue
         const wx = widx % width
         const wy = widx / width | 0
-        sim.destroyTile(wx, wy, widx)
         sim.queueMatterCredit(wx, wy, ownerId)
+        sim.destroyTile(wx, wy, widx)
         sim.reactivateAround(wx, wy)
       }
     }
 
     // Slow self-consume
     if (random() < 2) {
+      sim.queueMatterCredit(tx, ty, ownerId)
       tiles[idx] = setOwner(FIRE, ownerId)
       sim.markDirty(tx, ty)
       sim.next.add(idx)
@@ -86,6 +90,7 @@ export const BURNING_THERMITE_DEF = {
     if (random() < 2 && random() < 7) {
       sim.spawnParticle(ParticleType.CHARGED_NITRO, tx, ty, ownerId)
 
+      sim.queueMatterCredit(tx, ty, ownerId)
       tiles[idx] = setOwner(FIRE, ownerId)
       sim.markDirty(tx, ty)
       sim.next.add(idx)

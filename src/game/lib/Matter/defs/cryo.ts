@@ -4,6 +4,7 @@ import {
   CRYO,
   EMPTY,
   getFirstOwnerId,
+  getOwner,
   ICE,
   LAVA,
   type MatterDef,
@@ -28,6 +29,7 @@ export const CRYO_DEF = {
     if (lavaLoc !== -1) {
       const ownerId = getFirstOwnerId(tiles[idx], tiles[lavaLoc])
       sim.queueMatterCredit(tx, ty, ownerId)
+      sim.queueReservationRelease(getOwner(tiles[lavaLoc]), 1)
       tiles[idx] = EMPTY
       tiles[lavaLoc] = ROCK
       sim.markDirty(tx, ty)

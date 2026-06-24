@@ -1,6 +1,7 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import {
+  EMPTY,
   FIRE,
   getFirstOwnerId,
   GUNPOWDER,
@@ -39,7 +40,7 @@ export const GUNPOWDER_DEF = {
             const neighborType = matterType(neighborRaw)
             if (burn) {
               if (neighborType !== PERMANENT) {
-                sim.queueMatterCredit(nx, ny, ownerId)
+                if (neighborType !== EMPTY) sim.queueMatterCredit(nx, ny, ownerId)
                 tiles[nidx] = newFire
                 sim.markDirty(nx, ny)
                 sim.next.add(nidx)

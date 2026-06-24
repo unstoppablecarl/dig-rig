@@ -1,6 +1,6 @@
-import { GameObjects, type Scene, Tweens } from 'phaser'
+import { GameObjects, type Scene } from 'phaser'
 import { watch, type WatchHandle } from 'vue'
-import { CREATE_COLOR, DESTROY_COLOR } from '../../config/colors.ts'
+import { CREATE_COLOR, DESTROY_COLOR, RESERVED_DESTROY_COLOR } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { FireGroupWeapon, Weapon } from '../Input/InputController/WeaponManagerInput.ts'
@@ -8,24 +8,25 @@ import type { MatterTank } from '../Matter/Tank/MatterTank.ts'
 import { FireGroup, FireMode } from '../Player/_FireMode-types'
 import DOMElement = GameObjects.DOMElement
 import Rectangle = GameObjects.Rectangle
-import Tween = Tweens.Tween
 
-// Fraction of tank per second (1.0 = full range in 1 s).
-const TWEEN_RATE = 0.3
-const TWEEN_START_DELAY = 50
-const SHOW_TWEEN = true
+// Continuous exponential follow instead of a discrete tween — a discrete tween restarts its own
+// ease curve from scratch every time the source value changes, which for matter (credited/debited
+// in small increments many times a second) produced visibly choppy, re-triggering motion. This
+// just chases whatever the current target is every frame; rate is "per second" closure speed.
+const MATTER_FILL_SMOOTH_RATE = 10
+const MATTER_FILL_SNAP_EPSILON = 0.0008
+const ANIMATE_MATTER_FILL = true
 
 export class MatterMeter extends SceneBound {
   private matter: Rectangle
   private destroyPending: Rectangle
   private createPending: Rectangle
+  private destroyReserved: Rectangle
 
-  private prevMatter: number
   private prevMatterText = ''
   private destroyCharge: Rectangle
   private createCharge: Rectangle
   private text: DOMElement
-  private tween: Tween | null = null
 
   private matterTank: MatterTank
   private unwatchTank: WatchHandle
@@ -47,6 +48,7 @@ export class MatterMeter extends SceneBound {
     const BORDER_COLOR = 0xffffff
     const METER_COLOR = 0xffffff
     const PENDING_ALPHA = 0.5
+    const RESERVED_ALPHA = 0.75
     const CHARGE_ALPHA = 0.75
     const TEXT_BG_HEIGHT = 30
     const margin = 2
@@ -94,6 +96,11 @@ export class MatterMeter extends SceneBound {
       .setFillStyle(CREATE_COLOR.color, PENDING_ALPHA)
       .setDepth(100)
 
+    this.destroyReserved = scene.add.rectangle(chargeR.x + 1, chargeR.y, 30, chargeR.h)
+      .setOrigin(0.5, 1)
+      .setFillStyle(RESERVED_DESTROY_COLOR.color, RESERVED_ALPHA)
+      .setDepth(100)
+
     this.text = scene.add.dom(border.x, border.getBounds().bottom + TEXT_BG_HEIGHT * 0.5)
       .setW(this.matter.width)
       .createFromHTML('<div/>')
@@ -107,6 +114,7 @@ export class MatterMeter extends SceneBound {
     container.add([
       border,
       this.destroyPending,
+      this.destroyReserved,
       this.matter,
       this.createPending,
       this.destroyCharge,
@@ -114,35 +122,20 @@ export class MatterMeter extends SceneBound {
     ])
   }
 
-  update() {
+  update(delta: number) {
     const matterTank = this.matterTank
     if (!matterTank) return
 
-    let diffY: number
-    if (SHOW_TWEEN) {
-      const matterChanged = this.prevMatter !== matterTank.matterContained()
-      if (matterChanged) {
-        if (this.tween) this.tween.stop()
-
-        const displayedPercent = this.matter.scaleY
-        const distance = Math.abs(displayedPercent - matterTank.percent())
-        const duration = (distance / TWEEN_RATE) * 1000
-
-        this.tween = this.scene.tweens.add({
-          targets: this.matter,
-          scaleY: matterTank.percent(),
-          duration,
-          delay: TWEEN_START_DELAY,
-          ease: 'Linear',
-          onComplete: () => {
-            this.tween = null
-          },
-        })
+    const target = matterTank.percent()
+    if (ANIMATE_MATTER_FILL) {
+      const distance = target - this.matter.scaleY
+      if (Math.abs(distance) < MATTER_FILL_SNAP_EPSILON) {
+        this.matter.scaleY = target
+      } else {
+        this.matter.scaleY += distance * (1 - Math.exp(-MATTER_FILL_SMOOTH_RATE * (delta / 1000)))
       }
-      diffY = this.matter.scaleY - matterTank.percent()
     } else {
-      this.matter.scaleY = matterTank.percent()
-      diffY = 0
+      this.matter.scaleY = target
     }
 
     let matterText = Math.floor(matterTank.matterContained()).toString()
@@ -154,11 +147,14 @@ export class MatterMeter extends SceneBound {
 
     const matterTopY = this.matter.getBounds().y
 
-    this.destroyPending.y = matterTopY
-    this.destroyPending.scaleY = Math.max(matterTank.getPendingChargePercent(FireMode.DESTROY) - diffY, 0)
+   this.destroyReserved.y = matterTopY
+    this.destroyReserved.scaleY = matterTank.getReservedDestroyPercent()
+
+    this.destroyPending.y = this.destroyReserved.getBounds().y
+    this.destroyPending.scaleY = matterTank.getPendingChargePercent(FireMode.DESTROY)
 
     this.createPending.y = matterTopY
-    this.createPending.scaleY = Math.max(matterTank.getPendingChargePercent(FireMode.CREATE) + diffY, 0)
+    this.createPending.scaleY = matterTank.getPendingChargePercent(FireMode.CREATE)
 
     const weapon = this.gameLevel.playerWeaponManager.activeWeapon() as Weapon | FireGroupWeapon
     if ('getFireGroup' in weapon) {
@@ -180,8 +176,6 @@ export class MatterMeter extends SceneBound {
       this.destroyCharge.scaleY = 0
       this.createCharge.scaleY = 0
     }
-
-    this.prevMatter = matterTank.matterContained()
   }
 
   setMatterTank(matterTank: MatterTank): void {
@@ -190,7 +184,6 @@ export class MatterMeter extends SceneBound {
 
   protected onDestroy() {
     this.unwatchTank()
-    this.tween?.stop()
     // @ts-expect-error: destroy
     this.gameLevel = null
   }

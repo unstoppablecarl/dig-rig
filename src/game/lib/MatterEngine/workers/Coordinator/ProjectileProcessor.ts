@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { matterType, type MatterType } from '../../../Matter/_Matter.types.ts'
-import { doesSettle } from '../../../Matter/matter.ts'
+import { doesSettle, getReserveDestroyAmount } from '../../../Matter/matter.ts'
 import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import { type ProjectileManagerData, ProjectileStatus } from '../../data/ProjectileManagerData.ts'
@@ -49,6 +49,10 @@ export class ProjectileProcessor {
       } else if (mode === FireMode.CREATE) {
         this.matterTanks.remove(ownerId, modified)
         const createType = d.createType[i] as MatterType
+        const reserveAmount = getReserveDestroyAmount(matterType(createType))
+        if (reserveAmount > 0) {
+          this.matterTanks.reserveDestroyCharge(ownerId, reserveAmount * modified, 'create')
+        }
         if (!doesSettle(matterType(createType))) {
           this.tileEffectData.writeFireModeTiles(tiles, mode)
           this.vfxParticleCreateData.writeTiles(tiles, ownerId)
@@ -76,6 +80,18 @@ export class ProjectileProcessor {
       if (remaining === 0) continue
       const ownerId = d.ownerId[i] as MatterTankId
       this.matterTanks.addPendingCharge(ownerId, mode, remaining)
+
+      // Future destroy-liability for tiles this CREATE projectile hasn't painted yet — without
+      // this, a beam that travels for several ticks before hitting anything would leave its
+      // eventual lava/acid reservation unaccounted for, letting a second beam fired in the
+      // meantime be cleared against the same unreserved destroy headroom. Tracked as reserved
+      // (not pending) since it's the same liability as reserveDestroyCharge, just not yet settled.
+      if (mode === FireMode.CREATE) {
+        const reserveAmount = getReserveDestroyAmount(matterType(d.createType[i] as MatterType))
+        if (reserveAmount > 0) {
+          this.matterTanks.addReservedDestroyInFlight(ownerId, reserveAmount * remaining)
+        }
+      }
     }
   }
 }

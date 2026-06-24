@@ -21,4 +21,7 @@ export const DRAW_TERRAIN_SETTLED_DEBUG = false
 export const DRAW_ANCHORED_DEBUG = false
 export const DRAW_PARTICLE_DEBUG = false
 export const DRAW_WORLD_BORDER_DEBUG = false
+export const ENABLE_MATTER_TANK_DEBUG = false
+export const ENABLE_MATTER_CONSERVATION_CHECK = false
+export const MATTER_CONSERVATION_CHECK_INTERVAL_FRAMES = 300
 export const AUTO_START_LEVEL_INDEX = 0

@@ -1,5 +1,7 @@
 import type { Position } from '../../../types.ts'
+import type { MatterType } from '../_Matter.types.ts'
 import type { MatterTankManagerData } from '../../MatterEngine/data/MatterTankManagerData.ts'
+import { getReserveDestroyAmount } from '../matter.ts'
 import { FireMode, type MatterTankFireMode } from '../../Player/_FireMode-types'
 import { type MatterTankId, type MatterTankSource, NO_MATTER_TANK_ID } from './_MatterTank.types.ts'
 import type { MatterManager } from './MatterManager.ts'
@@ -36,7 +38,18 @@ export class MatterTank {
   }
 
   private destroyAvailable() {
-    return this.matterMax - this.matterContained() - this.data.getPendingDestroy(this.id)
+    return this.matterMax - this.matterContained() - this.data.getPendingDestroy(this.id) - this.reservedDestroy
+  }
+
+  // Combines the placed reservation (already-painted lava/acid tiles) with the in-flight
+  // reservation (a create-lava/acid beam's not-yet-painted budget) — from the player's
+  // perspective this is one reservation, held from the instant the beam is fired.
+  get reservedDestroy(): number {
+    return this.data.getReservedDestroyPlaced(this.id) + this.data.getReservedDestroyInFlight(this.id)
+  }
+
+  getReservedDestroyPercent(): number {
+    return this.reservedDestroy / this.matterMax
   }
 
   getPendingCharge(mode: MatterTankFireMode): number {
@@ -53,23 +66,31 @@ export class MatterTank {
     return this.chargeAvailable(mode) / this.matterMax
   }
 
-  hasChargeAvailable(charge: number, mode: MatterTankFireMode) {
-    return this.chargeAvailable(mode) >= charge
+  hasChargeAvailable(charge: number, mode: MatterTankFireMode, createType?: MatterType) {
+    return this.chargeAvailable(mode, createType) >= charge
   }
 
-  clampToChargeAvailable(charge: number, mode: MatterTankFireMode) {
+  clampToChargeAvailable(charge: number, mode: MatterTankFireMode, createType?: MatterType) {
     // chargeAvailable might be negative but that is valid.
     // it shouldn't keep going negative here though
-    return Math.max(0, Math.min(charge, this.chargeAvailable(mode)))
+    return Math.max(0, Math.min(charge, this.chargeAvailable(mode, createType)))
   }
 
-  chargeAvailable(mode: MatterTankFireMode) {
+  // createType — when creating a type that reserves destroy-charge (lava, acid), the number of
+  // tiles creatable is also capped by how many reservations the tank's destroy headroom can hold.
+  chargeAvailable(mode: MatterTankFireMode, createType?: MatterType) {
     if (mode === FireMode.DESTROY) {
       return this.destroyAvailable()
     }
 
     // if (mode === FireMode.CREATE) {
-    return this.createAvailable()
+    const available = this.createAvailable()
+    if (createType === undefined) return available
+
+    const reserveAmount = getReserveDestroyAmount(createType)
+    if (reserveAmount === 0) return available
+
+    return Math.min(available, Math.floor(this.destroyAvailable() / reserveAmount))
     // }
   }
 

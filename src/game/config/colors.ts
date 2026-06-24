@@ -45,6 +45,7 @@ export const DESTROY_COLOR = rgbToColor(`rgba(255, 0, 70)`)
 export const CREATE_COLOR = rgbToColor(`rgba(0, 70, 255)`)
 export const MELT_COLOR = rgbToColor(`rgba(255, 70, 0)`)
 export const SOLIDIFY_COLOR = rgbToColor(`rgba(70, 255, 0)`)
+export const RESERVED_DESTROY_COLOR = rgbToColor(`rgb(170 0 255)`)
 
 export const FIRE_MODE_COLORS: Record<FireMode, Color> = {
   [FireMode.DESTROY]: DESTROY_COLOR,

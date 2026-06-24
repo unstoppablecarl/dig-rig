@@ -13,6 +13,7 @@ import { ProjectileMelt } from './Effects/ProjectileMelt.ts'
 import { ProjectileSolidify } from './Effects/ProjectileSolidify.ts'
 import type { EffectResult } from './Effects/SimProjectile.ts'
 import { Physics } from './Physics.ts'
+import type { SimMatterTanks } from './SimMatterTanks.ts'
 
 export type WriteEntry = {
   indices: number[]
@@ -29,14 +30,15 @@ export class Effects {
   constructor(
     private readonly sim: MatterSim,
     private readonly physics: Physics,
+    matterTanks: SimMatterTanks,
     private readonly playerBoundsData: PlayerBoundsDataType,
     private readonly width: number,
     height: number,
   ) {
-    this.createProjectile = new ProjectileCreate(sim, physics, width, height)
-    this.destroyProjectile = new ProjectileDestroy(sim, physics, width, height)
-    this.meltProjectile = new ProjectileMelt(sim, physics, width, height)
-    this.solidifyProjectile = new ProjectileSolidify(sim, physics, width, height)
+    this.createProjectile = new ProjectileCreate(sim, physics, matterTanks, width, height)
+    this.destroyProjectile = new ProjectileDestroy(sim, physics, matterTanks, width, height)
+    this.meltProjectile = new ProjectileMelt(sim, physics, matterTanks, width, height)
+    this.solidifyProjectile = new ProjectileSolidify(sim, physics, matterTanks, width, height)
   }
 
   applyTileWrites(

@@ -16,7 +16,10 @@ const _done: SimOutMsgDone = {
   vfxJustSettled: [],
   structuralRemovals: [],
   matterTankTransfers: new Int32Array(),
+  matterReservationReleases: new Int32Array(),
 }
+
+const transfer: Transferable[] = []
 
 self.onmessage = (e: MessageEvent<SimInMessage>) => {
   const msg = e.data
@@ -28,10 +31,10 @@ self.onmessage = (e: MessageEvent<SimInMessage>) => {
   }
 
   if (msg.type === SimInMsg.PROCESS) {
+    transfer.length = 0
     const result = sim.process(msg.indices, msg.leftFirst, msg.frame, _done)
-    postMessage(
-      result,
-      result.matterTankTransfers.length > 0 ? [result.matterTankTransfers.buffer] : [],
-    )
+    if (result.matterTankTransfers.length > 0) transfer.push(result.matterTankTransfers.buffer)
+    if (result.matterReservationReleases.length > 0) transfer.push(result.matterReservationReleases.buffer)
+    postMessage(result, transfer)
   }
 }

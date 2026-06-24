@@ -84,6 +84,7 @@ export class ProjectileManagerData {
     this.tilesToModify[idx] = p.tilesToModify
     this.ownerId[idx] = p.matterTank.id
     this.mode[idx] = p.effect.mode
+    this.createType[idx] = (p.effect.createType ?? MatterType.SOLID)
     this.status[idx] = ProjectileStatus.PENDING
   }
 

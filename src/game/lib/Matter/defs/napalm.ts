@@ -17,6 +17,7 @@ export const NAPALM_DEF = {
         // napalm owner or fallback to fire owner
         const ownerId = getFirstOwnerId(tiles[idx], tiles[nidx])
 
+        sim.queueMatterCredit(tx, ty, ownerId)
         tiles[idx] = setOwner(FIRE, ownerId)
         sim.markDirty(tx, ty)
         sim.next.add(idx)

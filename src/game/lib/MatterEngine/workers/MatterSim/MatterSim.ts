@@ -3,20 +3,24 @@ import { random } from '../../../../helpers/random.ts'
 import {
   EMPTY,
   FIRE,
+  getOwner,
   isSettled,
   MatterType,
   matterType,
+  PERMANENT,
   setOwner,
   setSettled,
   SupportType,
 } from '../../../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../../../Matter/data/MatterTypeSet.ts'
 import {
+  getReserveDestroyAmount,
   getSupportType,
   isActivatable,
   isAlwaysActive,
   isLiquid,
   MATTER_ACTIONS,
+  RESERVED_DESTROY_CHARGE,
   SINKS_THROUGH,
 } from '../../../Matter/matter.ts'
 import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
@@ -24,6 +28,7 @@ import { ParticleType } from '../../../Particles/_particle-types.ts'
 import { ChunkGrid, type ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 import type { Tile } from '../../../Tilemap/TileGrid.ts'
 import { MatterCreditTransferBuffer } from '../_helpers/MatterCreditTransferBuffer.ts'
+import { MatterReservationReleaseBuffer } from '../_helpers/MatterReservationReleaseBuffer.ts'
 import { type SimInMsgProcess, SimOutMsg, type SimOutMsgDone, type SimOutMsgSpawnParticle } from './MatterSim.types.ts'
 
 const MAX_FLOW = 8
@@ -37,6 +42,7 @@ export class MatterSim {
   chunksWidth = 0
 
   private matterTankCredits: MatterCreditTransferBuffer
+  private matterReservationReleases = new MatterReservationReleaseBuffer()
 
   // Set externally by coordinator/pool before processSubset
   frame = 0
@@ -77,6 +83,7 @@ export class MatterSim {
     out.vfxJustSettled = this.vfxJustSettled
     out.structuralRemovals = this.structuralRemovals
     out.matterTankTransfers = this.matterTankCredits.flush()
+    out.matterReservationReleases = this.matterReservationReleases.flush()
 
     return out
   }
@@ -581,36 +588,30 @@ export class MatterSim {
   }
 
   /**
-   * Set all 4 cardinal neighbours to FIRE and self to FIRE.
+   * Credit and set self + all 4 cardinal neighbours to FIRE (skipping PERMANENT).
    */
   doBorderBurn(tx: number, ty: number, idx: number, ownerId: MatterTankId) {
     const { tiles, width, height } = this
     const ownerFire = setOwner(FIRE, ownerId)
-    if (ty > 0) {
-      tiles[idx - width] = ownerFire
-      this.markDirty(tx, ty - 1)
-      this.next.add(idx - width)
+    const cells: [number, number, number][] = [
+      [tx, ty, idx],
+      [tx, ty - 1, idx - width],
+      [tx, ty + 1, idx + width],
+      [tx - 1, ty, idx - 1],
+      [tx + 1, ty, idx + 1],
+    ]
+    for (const [cx, cy, cidx] of cells) {
+      if (cx < 0 || cx >= width || cy < 0 || cy >= height) continue
+      const t = matterType(tiles[cidx])
+      if (t === PERMANENT) continue
+      if (t !== EMPTY) this.queueMatterCredit(cx, cy, ownerId)
+      tiles[cidx] = ownerFire
+      this.markDirty(cx, cy)
+      this.next.add(cidx)
     }
-    if (ty < height - 1) {
-      tiles[idx + width] = ownerFire
-      this.markDirty(tx, ty + 1)
-      this.next.add(idx + width)
-    }
-    if (tx > 0) {
-      tiles[idx - 1] = ownerFire
-      this.markDirty(tx - 1, ty)
-      this.next.add(idx - 1)
-    }
-    if (tx < width - 1) {
-      tiles[idx + 1] = ownerFire
-      this.markDirty(tx + 1, ty)
-      this.next.add(idx + 1)
-    }
-    tiles[idx] = ownerFire
-    this.markDirty(tx, ty)
-    this.next.add(idx)
     this.reactivateAround(tx, ty)
     if (ty > 0) this.reactivateAround(tx, ty - 1)
+    if (ty < height - 1) this.reactivateAround(tx, ty + 1)
     if (tx > 0) this.reactivateAround(tx - 1, ty)
     if (tx < width - 1) this.reactivateAround(tx + 1, ty)
   }
@@ -619,6 +620,10 @@ export class MatterSim {
   // Call this whenever a simulation rule destroys a tile that could be structural.
   destroyTile(x: number, y: number, idx: number) {
     const raw = this.tiles[idx]
+    const t = matterType(raw)
+    if (RESERVED_DESTROY_CHARGE.has(t)) {
+      this.queueReservationRelease(getOwner(raw), getReserveDestroyAmount(t))
+    }
     this.tiles[idx] = EMPTY
     this.markDirty(x, y)
     this.next.add(idx)
@@ -633,6 +638,11 @@ export class MatterSim {
 
   queueMatterCreditFromTile(tx: number, ty: number, idx: number) {
     this.matterTankCredits.queueCreditFromTile(tx, ty, idx)
+  }
+
+  queueReservationRelease(ownerId: MatterTankId, amount: number) {
+    if (amount === 0) return
+    this.matterReservationReleases.queueRelease(ownerId, amount)
   }
 
   doPowderFall(tx: number, ty: number, idx: number) {
