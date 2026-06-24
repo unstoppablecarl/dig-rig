@@ -1,6 +1,6 @@
 import type { Particle } from '../../Particles/Particle.ts'
 
-export type ParticleBuffers = {
+export type ParticlesBuffers = {
   pixelsA: SharedArrayBuffer
   pixelsB: SharedArrayBuffer
   pendingSlot: SharedArrayBuffer
@@ -20,7 +20,7 @@ export class ParticleData {
   readonly width: number
   readonly height: number
 
-  static makeBuffers(width: number, height: number): ParticleBuffers {
+  static makeBuffers(width: number, height: number): ParticlesBuffers {
     const size = width * height * 4
     return {
       pixelsA: new SharedArrayBuffer(size),
@@ -31,7 +31,7 @@ export class ParticleData {
     }
   }
 
-  constructor(readonly buffers: ParticleBuffers) {
+  constructor(readonly buffers: ParticlesBuffers) {
     this.width = buffers.width
     this.height = buffers.height
     this.viewA = new Uint8ClampedArray(buffers.pixelsA)

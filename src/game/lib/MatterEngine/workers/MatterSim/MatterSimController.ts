@@ -1,4 +1,3 @@
-import type { CoordinatorOutMessage } from '../Coordinator.types.ts'
 import {
   SimInMsg,
   type SimInMsgInit,
@@ -13,7 +12,7 @@ export class MatterSimController {
 
   constructor(
     config: Omit<SimInMsgInit, 'type'>,
-    onMessage: (e: MessageEvent<SimOutMessage | CoordinatorOutMessage>) => void,
+    onMessage: (e: MessageEvent<SimOutMessage>) => void,
   ) {
     this.worker = new MatterSimConstructor()
     this.worker.postMessage({
