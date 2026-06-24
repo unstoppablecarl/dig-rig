@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { matterType, type MatterType } from '../../../Matter/_Matter.types.ts'
-import { SETTLING_TYPES } from '../../../Matter/matter.ts'
+import { doesSettle } from '../../../Matter/matter.ts'
 import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import { type ProjectileManagerData, ProjectileStatus } from '../../data/ProjectileManagerData.ts'
@@ -49,7 +49,7 @@ export class ProjectileProcessor {
       } else if (mode === FireMode.CREATE) {
         this.matterTanks.remove(ownerId, modified)
         const createType = d.createType[i] as MatterType
-        if (!SETTLING_TYPES.has(matterType(createType))) {
+        if (!doesSettle(matterType(createType))) {
           this.tileEffectData.writeFireModeTiles(tiles, mode)
           this.vfxParticleCreateData.writeTiles(tiles, ownerId)
         }

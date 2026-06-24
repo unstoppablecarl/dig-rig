@@ -145,13 +145,13 @@ export class Physics {
     return anchored ? [] : newTiles
   }
 
-  // Returns structural tiles adjacent to destroyedTiles that are no longer connected to anchored terrain.
+  // Returns structural tiles adjacent to structuralRemovals that are no longer connected to anchored terrain.
   // Chunk-level pruning is safe only for chunks that are non-dirty AND FULL (no holes) AND anchored:
   // FULL guarantees every tile in the chunk reaches its border; anchored guarantees the border
   // reaches permanent terrain. PARTIAL chunks may contain isolated tiles even if the chunk is
   // anchored, so they always need tile-level BFS. Dirty chunks have stale solidCount/type so they
   // are also excluded from the fast path.
-  findNewlyDisconnected(destroyedTiles: XY[], dirtyChunks: Set<number>): XY[] {
+  findNewlyDisconnected(structuralRemovals: XY[], dirtyChunks: Set<number>): XY[] {
     // Refresh chunk anchored flags — they reflect the previous step's tile state. Any chunk whose
     // only path to permanent terrain ran through a now-destroyed tile would otherwise read as stale-anchored.
     this.computeAnchored()
@@ -176,7 +176,7 @@ export class Physics {
       return !dirtyChunks.has(id) && chunkGrid.getType(id) === ChunkType.FULL && chunkGrid.isAnchored(id)
     }
 
-    for (const { x: dx, y: dy } of destroyedTiles) {
+    for (const { x: dx, y: dy } of structuralRemovals) {
       for (let d = 0; d < 4; d++) {
         const sx = dx + BFS_DX[d], sy = dy + BFS_DY[d]
         if (sx < 0 || sx >= width || sy < 0 || sy >= height) continue

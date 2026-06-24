@@ -19,9 +19,9 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
+import { isLavaImmune } from '../matter.ts'
 
 const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)
-
 const COOLED = new MatterTypeSet(WATER, SALT_WATER)
 
 export const LAVA_DROP_INITIAL_VEL = 10
@@ -69,6 +69,27 @@ export const LAVA_DEF = {
         const my = meltLoc / width | 0
         sim.destroyTile(mx, my, meltLoc)
         sim.reactivateAround(mx, my)
+        // Single isolated SOLID neighbors → ROCK so they sink through the lava pool.
+        // (The structural BFS converts disconnected islands to SAND, which doesn't sink.)
+        const p1: [number, number, number][] = [
+          [mx - 1, my, mx > 0 ? meltLoc - 1 : -1],
+          [mx + 1, my, mx < width - 1 ? meltLoc + 1 : -1],
+          [mx, my - 1, my > 0 ? meltLoc - width : -1],
+          [mx, my + 1, my < height - 1 ? meltLoc + width : -1],
+        ]
+        for (const [nx, ny, nidx] of p1) {
+          if (nidx === -1 || matterType(tiles[nidx]) !== SOLID) continue
+          let n = 0
+          if (nx > 0 && matterType(tiles[nidx - 1]) === SOLID) n++
+          if (nx < width - 1 && matterType(tiles[nidx + 1]) === SOLID) n++
+          if (ny > 0 && matterType(tiles[nidx - width]) === SOLID) n++
+          if (ny < height - 1 && matterType(tiles[nidx + width]) === SOLID) n++
+          if (n === 0) {
+            tiles[nidx] = ROCK
+            sim.markDirty(nx, ny)
+            sim.next.add(nidx)
+          }
+        }
         sim.queueMatterCreditFromTile(tx, ty, idx)
         tiles[idx] = EMPTY
         sim.markDirty(tx, ty)
@@ -103,7 +124,7 @@ export const LAVA_DEF = {
       for (const [nx, ny, nidx] of burnCandidates) {
         if (nidx === -1) continue
         const nt = matterType(tiles[nidx])
-        if (!sim.LAVA_IMMUNE.has(nt)) {
+        if (!isLavaImmune(nt)) {
           tiles[nidx] = setOwner(FIRE, ownerId)
           sim.queueMatterCredit(tx, ty, ownerId)
           tiles[idx] = EMPTY

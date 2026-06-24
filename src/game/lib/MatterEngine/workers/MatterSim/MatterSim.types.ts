@@ -41,7 +41,7 @@ export type SimOutMsgDone = {
   next: number[]
   vfxJustSettled: number[]
   matterTankTransfers: Int32Array
-  destroyedTiles: number[]
+  structuralRemovals: number[]
 }
 
 export type SimOutMsgSpawnParticle = {

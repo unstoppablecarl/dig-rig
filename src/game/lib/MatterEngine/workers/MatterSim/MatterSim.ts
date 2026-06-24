@@ -12,12 +12,10 @@ import {
 } from '../../../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../../../Matter/data/MatterTypeSet.ts'
 import {
-  ACID_IMMUNE,
-  ACTIVATABLE_TYPES,
-  ALWAYS_ACTIVE_TYPES,
   getSupportType,
-  LAVA_IMMUNE,
-  LIQUID_TYPES,
+  isActivatable,
+  isAlwaysActive,
+  isLiquid,
   MATTER_ACTIONS,
   SINKS_THROUGH,
 } from '../../../Matter/matter.ts'
@@ -40,14 +38,11 @@ export class MatterSim {
 
   private matterTankCredits: MatterCreditTransferBuffer
 
-  readonly LAVA_IMMUNE = LAVA_IMMUNE
-  readonly ACID_IMMUNE = ACID_IMMUNE
-
   // Set externally by coordinator/pool before processSubset
   frame = 0
   leftFirst = false
   vfxJustSettled: number[] = []
-  destroyedTiles: number[] = []
+  structuralRemovals: number[] = []
   next = new Set<number>()
 
   init(
@@ -75,12 +70,12 @@ export class MatterSim {
     this.frame = frame
     this.leftFirst = leftFirst
     this.vfxJustSettled.length = 0
-    this.destroyedTiles.length = 0
+    this.structuralRemovals.length = 0
     this.processSubset(indices)
 
     out.next = Array.from(this.next)
     out.vfxJustSettled = this.vfxJustSettled
-    out.destroyedTiles = this.destroyedTiles
+    out.structuralRemovals = this.structuralRemovals
     out.matterTankTransfers = this.matterTankCredits.flush()
 
     return out
@@ -123,8 +118,8 @@ export class MatterSim {
     const raw = this.tiles[idx]
     const t = matterType(raw)
 
-    if (getSupportType(raw) >= SupportType.STRUCTURAL || !ACTIVATABLE_TYPES.has(t)) return
-    if (!ALWAYS_ACTIVE_TYPES.has(t)) {
+    if (getSupportType(raw) >= SupportType.STRUCTURAL || !isActivatable(t)) return
+    if (!isAlwaysActive(t)) {
       this.tiles[idx] = setSettled(raw, false)
     }
     this.markDirtyRaw(idx)
@@ -163,9 +158,9 @@ export class MatterSim {
     this.chunkGrid.markDirty(idx)
   }
 
-  markDirtyRaw(idx: number) {
-    const tx = idx % this.width
-    const ty = idx / this.width | 0
+  markDirtyRaw(tileIdx: number) {
+    const tx = tileIdx % this.width
+    const ty = tileIdx / this.width | 0
     this.markDirty(tx, ty)
   }
 
@@ -199,7 +194,7 @@ export class MatterSim {
         if (ax < 0 || ax >= width) break
         const sidx = ty * width + ax
         const raw = tiles[sidx]
-        if (!isSettled(raw) || !LIQUID_TYPES.has(matterType(raw))) break
+        if (!isSettled(raw) || !isLiquid(matterType(raw))) break
         tiles[sidx] = setSettled(raw, false)
         dest.add(sidx)
       }
@@ -623,10 +618,13 @@ export class MatterSim {
   // Erase a terrain tile and register it for coordinator-side island-collapse checking.
   // Call this whenever a simulation rule destroys a tile that could be structural.
   destroyTile(x: number, y: number, idx: number) {
+    const raw = this.tiles[idx]
     this.tiles[idx] = EMPTY
     this.markDirty(x, y)
     this.next.add(idx)
-    this.destroyedTiles.push(idx)
+    if (getSupportType(raw) >= SupportType.STRUCTURAL) {
+      this.structuralRemovals.push(idx)
+    }
   }
 
   queueMatterCredit(tx: number, ty: number, ownerId: MatterTankId) {

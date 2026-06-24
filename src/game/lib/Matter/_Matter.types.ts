@@ -84,10 +84,10 @@ export const SUPPORT_SHIFT = 25
 export const SUPPORT_MASK = 0b11 << SUPPORT_SHIFT  // 0x6000000
 
 export const enum SupportType {
-  NONE = 0,
-  AFFIXED = 1,
-  STRUCTURAL = 2,
-  ANCHORED = 3,
+  NONE = 1 << 0,
+  AFFIXED = 1 << 1,
+  STRUCTURAL = 1 << 2,
+  ANCHORED = 1 << 3,
 }
 
 // getSupportBits — reads only the raw per-tile bits; does NOT apply ALWAYS_* overrides.

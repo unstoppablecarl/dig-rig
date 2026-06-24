@@ -2,7 +2,12 @@ import { defineStore, storeToRefs } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, ref } from 'vue'
 import { EMPTY, MatterType, setOwner, SupportType } from '../game/lib/Matter/_Matter.types.ts'
-import { ALWAYS_STRUCTURAL, OWNED_MATTER_TYPES, setSupport, SUPPORT_IMMUTABLE } from '../game/lib/Matter/matter.ts'
+import {
+  canHaveOwner,
+  isAlwaysStructural as matterIsAlwaysStructural,
+  isSupportTypeImmutable,
+  setSupport,
+} from '../game/lib/Matter/matter.ts'
 import { PLAYER_MATTER_TANK_ID } from '../game/lib/Matter/Tank/_MatterTank.types.ts'
 
 export type BrushUIState = ReturnType<typeof useBrushUIState>
@@ -96,16 +101,16 @@ function makeMatterPaint() {
   const matterType = ref<MatterType>(MatterType.SOLID)
   const supportFlag = ref<SupportType>(SupportType.NONE)
 
-  const isAlwaysStructural = computed(() => ALWAYS_STRUCTURAL.has(matterType.value))
+  const isAlwaysStructural = computed(() => matterIsAlwaysStructural(matterType.value))
 
   const matterValue = computed(() => {
     const type = matterType.value
 
     let value: number = type
-    if (value !== EMPTY && !SUPPORT_IMMUTABLE.has(value)) {
+    if (value !== EMPTY && !isSupportTypeImmutable(value)) {
       value = setSupport(value, supportFlag.value)
     }
-    if (OWNED_MATTER_TYPES.has(type)) {
+    if (canHaveOwner(type)) {
       value = setOwner(value, PLAYER_MATTER_TANK_ID)
     }
     return value

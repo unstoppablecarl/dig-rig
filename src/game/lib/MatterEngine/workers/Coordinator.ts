@@ -33,7 +33,7 @@ export class Coordinator {
   private frame = 0
   private width = 0
   private readonly vfxJustSettled: number[] = []
-  private readonly destroyedTiles: number[] = []
+  private readonly structuralRemovals: number[] = []
   private readonly dirtyChunksThisStep = new Set<number>()
 
   init(buffers: CoordinatorInMsgInit, poolSize: number) {
@@ -142,13 +142,13 @@ export class Coordinator {
     // Process active projectile slots — debits/credits tanks, emits VFX, recomputes pending.
     structuralDirty ||= this.projectileProcessor.step(this.activeSet, this.dirtyChunksThisStep)
     this.vfxJustSettled.length = 0
-    this.destroyedTiles.length = 0
+    this.structuralRemovals.length = 0
 
     const dirtyChunksThisStep = await this.workerPool.step(snapshot, leftFirst, frame, (results) => {
       for (const r of results) {
         for (const idx of r.next) this.activeSet.add(idx)
         for (const idx of r.vfxJustSettled) this.vfxJustSettled.push(idx)
-        for (const idx of r.destroyedTiles) this.destroyedTiles.push(idx)
+        for (const idx of r.structuralRemovals) this.structuralRemovals.push(idx)
         MatterCreditTransferBuffer.readBuffer(r.matterTankTransfers, (x, y, ownerId) => {
           this.matterTanks.addCredit(ownerId, 1)
           this.data.vfxParticleDestroy.writeTile(x, y, ownerId)
@@ -156,9 +156,9 @@ export class Coordinator {
       }
     })
 
-    if (this.destroyedTiles.length > 0) {
+    if (this.structuralRemovals.length > 0) {
       const w = this.width
-      const xy = this.destroyedTiles.map(idx => ({ x: idx % w, y: (idx / w) | 0 }))
+      const xy = this.structuralRemovals.map(idx => ({ x: idx % w, y: (idx / w) | 0 }))
       const islands = this.physics.findNewlyDisconnected(xy, dirtyChunksThisStep)
       if (islands.length > 0) {
         this.physics.collapseIslands(islands, this.activeSet, dirtyChunksThisStep)
@@ -187,6 +187,18 @@ export class Coordinator {
     this.particleSim.step()
     for (const idx of this.particleSim.pendingActivations) {
       this.pendingActivations.push(idx)
+    }
+    if (this.particleSim.structuralRemovals.length > 0) {
+      const w = this.width
+      const xy: { x: number, y: number }[] = []
+      for (const idx of this.particleSim.structuralRemovals) {
+        xy.push({ x: idx % w, y: (idx / w) | 0 })
+        dirtyChunksThisStep.add(this.physics.chunkIdxForTile(idx))
+      }
+      const islands = this.physics.findNewlyDisconnected(xy, dirtyChunksThisStep)
+      if (islands.length > 0) {
+        this.physics.collapseIslands(islands, this.activeSet, dirtyChunksThisStep)
+      }
     }
   }
 }

@@ -2,7 +2,6 @@ import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import {
   BURNING_THERMITE,
-  EMPTY,
   FIRE,
   getOwner,
   LAVA,
@@ -63,11 +62,10 @@ export const BURNING_THERMITE_DEF = {
 
       for (const widx of neighbors) {
         if (widx === -1) continue
-        tiles[widx] = EMPTY
         const wx = widx % width
         const wy = widx / width | 0
+        sim.destroyTile(wx, wy, widx)
         sim.queueMatterCredit(wx, wy, ownerId)
-        sim.markDirty(wx, wy)
         sim.reactivateAround(wx, wy)
       }
     }

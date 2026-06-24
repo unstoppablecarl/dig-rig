@@ -11,6 +11,7 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
+import { isAcidImmune } from '../matter.ts'
 
 const IS_SETTLED = new MatterTypeSet(ACID, EMPTY)
 
@@ -41,13 +42,11 @@ export const ACID_DEF = {
         if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue
 
         const nt = matterType(tiles[nidx])
-        if (sim.ACID_IMMUNE.has(nt)) continue
+        if (isAcidImmune(nt)) continue
 
         const ownerId = getOwner(tiles[idx])
         sim.queueMatterCredit(tx, ty, ownerId)
-        tiles[idx] = EMPTY
-        sim.markDirty(tx, ty)
-        sim.next.add(idx)
+        sim.destroyTile(tx, ty, idx)
 
         sim.queueMatterCredit(nx, ny, ownerId)
         sim.destroyTile(nx, ny, nidx)

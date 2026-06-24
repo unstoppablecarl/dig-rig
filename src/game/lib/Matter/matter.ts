@@ -18,56 +18,31 @@ export interface MatterMetaRegistry {
 
 export const MATTER_ACTIONS: MatterAction[] = []
 export const MATTER_NAMES = new Map<MatterType, string>()
-export const SETTLING_TYPES = new MatterTypeSet()
-export const ALWAYS_ACTIVE_TYPES = new MatterTypeSet()
 export type SettlingTypes = {
   [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { settles: true } ? K : never;
 }[keyof MatterMetaRegistry]
 
-export const LAVA_IMMUNE = new MatterTypeSet()
-export type LavaImmune = {
-  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { lavaImmune: true } ? K : never
-}[keyof MatterMetaRegistry]
-
-export const ACID_IMMUNE = new MatterTypeSet()
-export type AcidImmune = {
-  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { acidImmune: true } ? K : never
-}[keyof MatterMetaRegistry]
-
-export const COLLIDES_WHEN_SETTLED = new MatterTypeSet()
-export type CollidesWhenSettled = {
-  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { collidesWhenSettled: true } ? K : never
-}[keyof MatterMetaRegistry]
-
-export const LIQUID_TYPES = new MatterTypeSet()
 export type LiquidTypes = {
   [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { liquid: true } ? K : never
 }[keyof MatterMetaRegistry]
 
-export const ALWAYS_ANCHORED = new MatterTypeSet()
-export const ALWAYS_STRUCTURAL = new MatterTypeSet()
-export const ALWAYS_AFFIXED = new MatterTypeSet()
-export const ALWAYS_COLLIDES = new MatterTypeSet()
-export const SUPPORT_IMMUTABLE = new MatterTypeSet()
-
 // 256-entry lookup: value is the fixed SupportType for that MatterType, or 0xFF = "read from tile bits".
 const SUPPORT_TYPE_LOOKUP = new Uint8Array(256).fill(0xFF)
-
-export type MatterAlwaysStructuralTypes = {
-  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { alwaysSupport: 'structural' } ? K : never
-}[keyof MatterMetaRegistry]
 
 export function getSupportType(raw: number): SupportType {
   const override = SUPPORT_TYPE_LOOKUP[raw & 0xFF]
   return override !== 0xFF ? override : (raw >>> SUPPORT_SHIFT) & 0b11
 }
 
+const IMMUTABLE_SUPPORT_TYPES = new Uint32Array(256)
+
 export function getImmutableSupportType(raw: number): SupportType {
   const type = matterType(raw)
-  if (ALWAYS_ANCHORED.has(type)) return SupportType.ANCHORED
-  if (ALWAYS_STRUCTURAL.has(type)) return SupportType.STRUCTURAL
-  if (ALWAYS_AFFIXED.has(type)) return SupportType.AFFIXED
-  throw new Error(`Matter Type: "${MatterType[type]}" is not immutable"`)
+  const supportType = IMMUTABLE_SUPPORT_TYPES[type]
+  if (supportType === SupportType.NONE) {
+    throw new Error(`Matter Type: "${MatterType[type]}" is not immutable"`)
+  }
+  return supportType
 }
 
 // Maps structural types to the type they convert to on island collapse (undefined = keep same type).
@@ -75,54 +50,71 @@ export const STRUCTURAL_COLLAPSE_TO: Partial<Record<MatterType, MatterType>> = {
 
 export const SINKS_THROUGH: Partial<Record<MatterType, MatterTypeSet>> = {}
 
-export const OWNED_MATTER_TYPES = new MatterTypeSet()
-export type OwnedMatterTypes = {
-  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { hasOwnerId: true } ? K : never
-}[keyof MatterMetaRegistry]
+const enum Flag {
+  SETTLES = 1 << 0,
+  LAVA_IMMUNE = 1 << 1,
+  ACID_IMMUNE = 1 << 2,
+  LIQUID = 1 << 3,
+  COLLIDES_WHEN_SETTLED = 1 << 4,
+  ALWAYS_ACTIVE = 1 << 5,
+  ALWAYS_COLLIDES = 1 << 6,
+  HAS_OWNER_ID = 1 << 7,
+  IMMUTABLE_SUPPORT_TYPE = 1 << 8,
+}
+
+const MATTER_FLAGS = new Uint32Array(256)
+export const isAlwaysActive = (type: MatterType) => (MATTER_FLAGS[type] & Flag.ALWAYS_ACTIVE) !== 0
+export const doesSettle = (type: MatterType) => (MATTER_FLAGS[type] & Flag.SETTLES) !== 0
+export const isLavaImmune = (type: MatterType) => (MATTER_FLAGS[type] & Flag.LAVA_IMMUNE) !== 0
+export const isAcidImmune = (type: MatterType) => (MATTER_FLAGS[type] & Flag.ACID_IMMUNE) !== 0
+export const collidesWhenSettled = (type: MatterType) => (MATTER_FLAGS[type] & Flag.COLLIDES_WHEN_SETTLED) !== 0
+export const isLiquid = (type: MatterType) => (MATTER_FLAGS[type] & Flag.LIQUID) !== 0
+export const isActivatable = (type: MatterType) => (MATTER_FLAGS[type] & (Flag.ALWAYS_ACTIVE | Flag.SETTLES)) !== 0
+export const canHaveOwner = (type: MatterType) => (MATTER_FLAGS[type] & Flag.HAS_OWNER_ID) !== 0
+export const alwaysCollides = (type: MatterType) => (MATTER_FLAGS[type] & Flag.ALWAYS_COLLIDES) !== 0
+export const isSupportTypeImmutable = (type: MatterType) => (MATTER_FLAGS[type] & Flag.IMMUTABLE_SUPPORT_TYPE) !== 0
+export const isAlwaysStructural = (type: MatterType) => (IMMUTABLE_SUPPORT_TYPES[type] & SupportType.STRUCTURAL) !== 0
 
 const noop = () => {
 }
 
-function registerMatterType({
-                              id,
-                              name,
-                              action = noop,
-                              immutableSupport,
-                              lavaImmune = false,
-                              acidImmune = false,
-                              collidesWhenSettled = false,
-                              liquid = false,
-                              hasOwnerId = false,
-                              settles = false,
-                              alwaysActive = false,
-                              alwaysCollides = false,
-                              sinksThrough,
-                              structuralCollapseType,
-                            }: MatterDef) {
+function registerMatterType(
+  {
+    id,
+    name,
+    action = noop,
+    immutableSupport,
+    lavaImmune = false,
+    acidImmune = false,
+    collidesWhenSettled = false,
+    liquid = false,
+    hasOwnerId = false,
+    settles = false,
+    alwaysActive = false,
+    alwaysCollides = false,
+    sinksThrough,
+    structuralCollapseType,
+  }: MatterDef) {
 
   MATTER_ACTIONS[id] = action
   MATTER_NAMES.set(id, name)
-  if (immutableSupport === SupportType.ANCHORED) {
-    ALWAYS_ANCHORED.add(id)
-    SUPPORT_TYPE_LOOKUP[id] = SupportType.ANCHORED
-  } else if (immutableSupport === SupportType.STRUCTURAL) {
-    ALWAYS_STRUCTURAL.add(id)
-    SUPPORT_TYPE_LOOKUP[id] = SupportType.STRUCTURAL
-  } else if (immutableSupport === SupportType.AFFIXED) {
-    ALWAYS_AFFIXED.add(id)
-    SUPPORT_TYPE_LOOKUP[id] = SupportType.AFFIXED
+
+  if (immutableSupport !== undefined) {
+    IMMUTABLE_SUPPORT_TYPES[id] = immutableSupport
+    MATTER_FLAGS[id] |= Flag.IMMUTABLE_SUPPORT_TYPE
   }
-  if (immutableSupport !== undefined) SUPPORT_IMMUTABLE.add(id)
-  if (lavaImmune) LAVA_IMMUNE.add(id)
-  if (acidImmune) ACID_IMMUNE.add(id)
-  if (liquid) LIQUID_TYPES.add(id)
-  if (collidesWhenSettled) COLLIDES_WHEN_SETTLED.add(id)
-  if (settles) SETTLING_TYPES.add(id)
-  if (alwaysActive) ALWAYS_ACTIVE_TYPES.add(id)
-  if (alwaysCollides) ALWAYS_COLLIDES.add(id)
+
+  if (lavaImmune) MATTER_FLAGS[id] |= Flag.LAVA_IMMUNE
+  if (acidImmune) MATTER_FLAGS[id] |= Flag.ACID_IMMUNE
+  if (settles) MATTER_FLAGS[id] |= Flag.SETTLES
+  if (alwaysActive) MATTER_FLAGS[id] |= Flag.ALWAYS_ACTIVE
+  if (liquid) MATTER_FLAGS[id] |= Flag.LIQUID
+  if (collidesWhenSettled) MATTER_FLAGS[id] |= Flag.COLLIDES_WHEN_SETTLED
+  if (alwaysCollides) MATTER_FLAGS[id] |= Flag.ALWAYS_COLLIDES
+  if (hasOwnerId) MATTER_FLAGS[id] |= Flag.HAS_OWNER_ID
+
   if (sinksThrough) SINKS_THROUGH[id] = new MatterTypeSet(...sinksThrough)
   if (structuralCollapseType !== undefined) STRUCTURAL_COLLAPSE_TO[id] = structuralCollapseType
-  if (hasOwnerId) OWNED_MATTER_TYPES.add(id)
 }
 
 const defs = import.meta.glob('./defs/*.ts', { eager: true }) as Record<string, { default: MatterDef }>
@@ -131,12 +123,10 @@ for (const mod of Object.values(defs)) {
   registerMatterType(mod.default)
 }
 
-export const ACTIVATABLE_TYPES = SETTLING_TYPES.merge(ALWAYS_ACTIVE_TYPES)
-
 export function setSupport(target: number, support: SupportType): number {
   if (import.meta.env.DEV) {
     const type = matterType(target)
-    if (type === EMPTY || SUPPORT_IMMUTABLE.has(type)) {
+    if (type === EMPTY || isSupportTypeImmutable(type)) {
       throw new Error(`Cannot set ${MatterType[type]} support bits — support type is immutable.`)
     }
   }
@@ -145,7 +135,7 @@ export function setSupport(target: number, support: SupportType): number {
 
 export function isCollidable(value: number): boolean {
   const type = matterType(value)
-  if (ALWAYS_COLLIDES.has(type)) return true
-  if (isSettled(value)) return COLLIDES_WHEN_SETTLED.has(type)
+  if (alwaysCollides(type)) return true
+  if (isSettled(value)) return collidesWhenSettled(type)
   return false
 }

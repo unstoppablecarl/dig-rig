@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { EMPTY, MatterType, matterType, SOLID, SupportType } from '../../../Matter/_Matter.types.ts'
-import { getSupportType, SETTLING_TYPES } from '../../../Matter/matter.ts'
+import { doesSettle, getSupportType } from '../../../Matter/matter.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import { EMPTY_PLAYER_BOUNDS, type PlayerBoundsDataType } from '../../data/PlayerBoundsData.ts'
@@ -49,7 +49,7 @@ export class Effects {
     let structuralDirty = false
     for (const { indices, tile, reactivateAround } of writes) {
       const t = matterType(tile)
-      const shouldActivate = t !== EMPTY && SETTLING_TYPES.has(t)
+      const shouldActivate = t !== EMPTY && doesSettle(t)
 
       for (const idx of indices) {
         const x = idx % w

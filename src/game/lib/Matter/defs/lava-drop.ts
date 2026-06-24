@@ -10,6 +10,7 @@ import {
   setLavaDropVel,
   setOwner,
 } from '../_Matter.types.ts'
+import { isLavaImmune } from '../matter.ts'
 
 export const LAVA_DROP_DEF = {
   id: LAVA_DROP,
@@ -41,7 +42,7 @@ export const LAVA_DROP_DEF = {
         }
 
         // Blocked going up: burn non-immune tile
-        if (!sim.LAVA_IMMUNE.has(aboveType)) {
+        if (!isLavaImmune(aboveType)) {
           tiles[upIdx] = setOwner(FIRE, ownerId)
           sim.markDirty(tx, ty - 1)
           sim.next.add(upIdx)
@@ -90,7 +91,7 @@ export const LAVA_DROP_DEF = {
     for (const [nx, ny, nidx] of neighbors) {
       if (nidx === -1) continue
       const nt = matterType(tiles[nidx])
-      if (nt !== EMPTY && !sim.LAVA_IMMUNE.has(nt)) {
+      if (nt !== EMPTY && !isLavaImmune(nt)) {
         tiles[nidx] = setOwner(FIRE, ownerId)
         sim.markDirty(nx, ny)
         sim.next.add(nidx)

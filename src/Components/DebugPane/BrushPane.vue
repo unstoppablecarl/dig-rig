@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { PButton, PFolder, PSelect } from 'vue-pane/src/index.ts'
 import { InputMode } from '../../game/lib/Input/_input.types.ts'
 import { EMPTY, SupportType } from '../../game/lib/Matter/_Matter.types.ts'
-import { getImmutableSupportType, MATTER_NAMES, SUPPORT_IMMUTABLE } from '../../game/lib/Matter/matter.ts'
+import { getImmutableSupportType, isSupportTypeImmutable, MATTER_NAMES } from '../../game/lib/Matter/matter.ts'
 import type { GameLevel } from '../../game/scenes/GameLevel.ts'
 import { useBrushUIState } from '../../store/brushUIState.ts'
 import { useUIState } from '../../store/uiState.ts'
@@ -54,7 +54,7 @@ const supportOptions = [
 ]
 
 const primarySupportDisabled = computed(() => {
-  return SUPPORT_IMMUTABLE.has(brushUI.primaryMatterType)
+  return isSupportTypeImmutable(brushUI.primaryMatterType)
 })
 
 const primarySupportTypeValue = computed<SupportType>({
@@ -70,7 +70,7 @@ const primarySupportTypeValue = computed<SupportType>({
 })
 
 const secondarySupportDisabled = computed(() => {
-  return SUPPORT_IMMUTABLE.has(brushUI.secondaryMatterType)
+  return isSupportTypeImmutable(brushUI.secondaryMatterType)
 })
 
 const secondarySupportTypeValue = computed<SupportType>({

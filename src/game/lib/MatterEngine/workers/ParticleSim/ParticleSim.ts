@@ -1,4 +1,5 @@
-import { matterType, MatterType } from '../../../Matter/_Matter.types.ts'
+import { matterType, MatterType, SupportType } from '../../../Matter/_Matter.types.ts'
+import { getSupportType } from '../../../Matter/matter.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import type { ParticleType } from '../../../Particles/_particle-types.ts'
 import type { Particle } from '../../../Particles/Particle.ts'
@@ -13,6 +14,7 @@ export class ParticleSim {
   height = 0
   pool!: ParticlePool
   pendingActivations: number[] = []
+  structuralRemovals: number[] = []
   data!: ParticleData
 
   init({ tiles, particleBuffers }: { tiles: SharedArrayBuffer, particleBuffers: ParticlesBuffers }) {
@@ -26,6 +28,7 @@ export class ParticleSim {
   step() {
     this.data.clear()
     this.pendingActivations.length = 0
+    this.structuralRemovals.length = 0
 
     this.pool.forEachActive((p) => {
       const def = PARTICLE_DEFS[p.particleType]
@@ -77,7 +80,11 @@ export class ParticleSim {
     if (x < 0 || x >= width || y < 0 || y >= this.height) return
     const tiles = this.tiles
     const idx = y * width + x
-    if (matterType(tiles[idx]) === MatterType.PERMANENT) return
+    const raw = tiles[idx]
+    if (matterType(raw) === MatterType.PERMANENT) return
+    if (getSupportType(raw) >= SupportType.STRUCTURAL && getSupportType(type) < SupportType.STRUCTURAL) {
+      this.structuralRemovals.push(idx)
+    }
     tiles[idx] = type
     this.pendingActivations.push(idx)
   }
