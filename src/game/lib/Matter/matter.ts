@@ -64,6 +64,7 @@ const enum Flag {
   ALWAYS_COLLIDES = 1 << 6,
   HAS_OWNER_ID = 1 << 7,
   IMMUTABLE_SUPPORT_TYPE = 1 << 8,
+  NO_CREATE_PROJECTILE_COLLISION = 1 << 9,
 }
 
 const MATTER_FLAGS = new Uint32Array(256)
@@ -77,6 +78,7 @@ export const isActivatable = (type: MatterType) => (MATTER_FLAGS[type] & (Flag.A
 export const canHaveOwner = (type: MatterType) => (MATTER_FLAGS[type] & Flag.HAS_OWNER_ID) !== 0
 export const alwaysCollides = (type: MatterType) => (MATTER_FLAGS[type] & Flag.ALWAYS_COLLIDES) !== 0
 export const isSupportTypeImmutable = (type: MatterType) => (MATTER_FLAGS[type] & Flag.IMMUTABLE_SUPPORT_TYPE) !== 0
+export const collidesWithCreateProjectiles = (type: MatterType) => (MATTER_FLAGS[type] & Flag.NO_CREATE_PROJECTILE_COLLISION) === 0
 export const isAlwaysStructural = (type: MatterType) => IMMUTABLE_SUPPORT_TYPES[type] === SupportType.STRUCTURAL
 
 const noop = () => {
@@ -96,6 +98,7 @@ function registerMatterType(
     settles = false,
     alwaysActive = false,
     alwaysCollides = false,
+    collidesWithCreateProjectiles = true,
     sinksThrough,
     structuralCollapseType,
     reserveDestroyAmount,
@@ -116,6 +119,7 @@ function registerMatterType(
   if (liquid) MATTER_FLAGS[id] |= Flag.LIQUID
   if (collidesWhenSettled) MATTER_FLAGS[id] |= Flag.COLLIDES_WHEN_SETTLED
   if (alwaysCollides) MATTER_FLAGS[id] |= Flag.ALWAYS_COLLIDES
+  if (!collidesWithCreateProjectiles) MATTER_FLAGS[id] |= Flag.NO_CREATE_PROJECTILE_COLLISION
   if (hasOwnerId) MATTER_FLAGS[id] |= Flag.HAS_OWNER_ID
 
   if (sinksThrough) SINKS_THROUGH[id] = new MatterTypeSet(...sinksThrough)

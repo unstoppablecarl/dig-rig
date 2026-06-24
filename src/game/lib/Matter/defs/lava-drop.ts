@@ -18,6 +18,7 @@ export const LAVA_DROP_DEF = {
   lavaImmune: true as const,
   hasOwnerId: true as const,
   alwaysActive: true as const,
+  collidesWithCreateProjectiles: false as const,
   reserveDestroyAmount: 1,
   action(sim, tx, ty, idx): void {
     const { tiles, width, height } = sim

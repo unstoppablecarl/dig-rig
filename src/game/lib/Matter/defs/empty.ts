@@ -5,6 +5,7 @@ export const EMPTY_DEF = {
   name: 'Empty',
   lavaImmune: true as const,
   acidImmune: true as const,
+  collidesWithCreateProjectiles: false as const,
 } satisfies MatterDef
 
 export default EMPTY_DEF

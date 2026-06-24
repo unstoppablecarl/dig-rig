@@ -1,13 +1,16 @@
-import { EMPTY, FIRE, MatterType, PERMANENT, SAND, SOLID, WATER } from '../../Matter/_Matter.types.ts'
+import { EMPTY, FIRE, MatterType, MatterTypeValues, PERMANENT, SAND, SOLID, WATER } from '../../Matter/_Matter.types.ts'
 import { MatterTypeSet, matterTypeSetExcluding } from '../../Matter/data/MatterTypeSet.ts'
+import { collidesWithCreateProjectiles } from '../../Matter/matter.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
 import type { ProjectileEffect } from './_ProjectileEffect.types.ts'
+
+const CREATE_PROJECTILE_PASSTHROUGH = MatterTypeValues.filter(t => !collidesWithCreateProjectiles(t))
 
 export function makeCreateEffect(type: MatterType): ProjectileEffect {
   return {
     mode: FireMode.CREATE,
     createType: type,
-    instantProjectileCollidesWith: matterTypeSetExcluding([EMPTY]),
+    instantProjectileCollidesWith: matterTypeSetExcluding(CREATE_PROJECTILE_PASSTHROUGH),
   }
 }
 

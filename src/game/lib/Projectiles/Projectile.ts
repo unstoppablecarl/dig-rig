@@ -1,6 +1,7 @@
 import { Math as PMath, Time } from 'phaser'
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
-import { MatterType } from '../Matter/_Matter.types.ts'
+import { matterType } from '../Matter/_Matter.types.ts'
+import { collidesWithCreateProjectiles } from '../Matter/matter.ts'
 import { FireMode } from '../Player/_FireMode-types'
 import { BaseProjectile } from './BaseProjectile.ts'
 import { tilesToRadius } from './projectile-radius'
@@ -39,7 +40,8 @@ export class Projectile extends BaseProjectile {
           const stepX = this.x + stepDx * i
           const stepY = this.y + stepDy * i
 
-          const collision = this.scene.tilemap.getTileFromWorld(stepX, stepY) !== MatterType.EMPTY
+          const tile = matterType(this.scene.tilemap.getTileFromWorld(stepX, stepY))
+          const collision = collidesWithCreateProjectiles(tile)
 
           if (collision) {
             this.x = stepX - stepDx

@@ -6,6 +6,7 @@ export const STEAM_DEF = {
   name: 'Steam',
   lavaImmune: true as const,
   alwaysActive: true as const,
+  collidesWithCreateProjectiles: false as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width } = sim
 
