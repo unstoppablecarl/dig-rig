@@ -66,7 +66,7 @@ export const LAVA_DEF = {
     }
 
     // Slowly melt adjacent SOLID (SOLID is lava immune otherwise)
-    if (random() < 1 && random() < 50) {
+    if (random() < 1) {
       const meltLoc = sim.borderingAdjacent(tx, ty, idx, SOLID)
       if (meltLoc !== -1) {
         const mx = meltLoc % width

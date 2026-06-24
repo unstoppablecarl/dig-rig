@@ -16,7 +16,7 @@ export class SimWorkerPool {
   private chunksWide: number
   private readonly _dirtyChunksThisStep = new Set<number>()
   private readonly onReady: () => void
-  private readonly onForward: (msg: SimOutMsgSpawnParticle) => void
+  private readonly onSpawnParticle: (msg: SimOutMsgSpawnParticle) => void
 
   get size(): number {
     return this.pool.length
@@ -42,7 +42,7 @@ export class SimWorkerPool {
     },
   ) {
     this.onReady = onReady
-    this.onForward = onSpawnParticle
+    this.onSpawnParticle = onSpawnParticle
     this.width = width
     this.chunksWide = chunkGridBuffers.chunksWide
     this.pendingResolvers = new Array(poolSize).fill(null)
@@ -126,6 +126,6 @@ export class SimWorkerPool {
       this.pendingResolvers[workerIdx] = null
       return
     }
-    this.onForward(msg as SimOutMsgSpawnParticle)
+    this.onSpawnParticle(msg as SimOutMsgSpawnParticle)
   }
 }
