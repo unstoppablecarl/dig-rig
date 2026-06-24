@@ -29,11 +29,6 @@ export class MatterTankManagerData {
     return makeSOABuffers(SCHEMA, MAX_MATTER_TANKS)
   }
 
-  static make(): MatterTankManagerData {
-    const buffers = MatterTankManagerData.makeBuffer()
-    return new MatterTankManagerData(buffers)
-  }
-
   static fromBuffers(buffers: MatterTankManagerBuffers): MatterTankManagerData {
     return new MatterTankManagerData(buffers)
   }
