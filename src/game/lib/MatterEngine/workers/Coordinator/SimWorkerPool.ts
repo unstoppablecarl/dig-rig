@@ -26,7 +26,6 @@ export class SimWorkerPool {
   constructor(
     {
       tilesBuffer,
-      chunksWide,
       chunkGridBuffers,
       width,
       height,
@@ -38,7 +37,6 @@ export class SimWorkerPool {
       chunkGridBuffers: ChunkGridBuffers
       width: number
       height: number
-      chunksWide: number,
       onReady: () => void,
       onForward: (msg: CoordinatorOutMessage) => void,
       poolSize: number,
@@ -47,7 +45,7 @@ export class SimWorkerPool {
     this.onReady = onReady
     this.onForward = onForward
     this.width = width
-    this.chunksWide = chunksWide
+    this.chunksWide = chunkGridBuffers.chunksWide
     this.pendingResolvers = new Array(poolSize).fill(null)
     this.workerBatches = Array.from({ length: poolSize }, () => [])
 

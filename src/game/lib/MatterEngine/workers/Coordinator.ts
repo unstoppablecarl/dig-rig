@@ -49,11 +49,10 @@ export class Coordinator {
     this.sim = new MatterSim()
 
     const chunkGrid = this.data.chunkGrid
-    const { chunksWide, chunksHigh } = chunkGrid
     this.sim.init(buffers.tiles, buffers.chunkGrid, width, height)
 
     this.matterTanks = new SimMatterTanks(this.data.matterTankManager)
-    this.physics = new Physics(this.sim, chunkGrid, width, height, chunksWide, chunksHigh)
+    this.physics = new Physics(this.sim, chunkGrid, width, height)
     this.effects = new Effects(this.sim, this.physics, this.data.playerBounds, width, height)
     this.tunnelWeapon = new TunnelWeapon(
       this.effects, this.data.tunnelWeapon,
@@ -72,7 +71,6 @@ export class Coordinator {
     this.workerPool = new SimWorkerPool({
       width,
       height,
-      chunksWide,
       poolSize,
       tilesBuffer: buffers.tiles,
       chunkGridBuffers: buffers.chunkGrid,

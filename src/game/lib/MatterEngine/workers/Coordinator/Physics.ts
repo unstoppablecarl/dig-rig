@@ -21,15 +21,19 @@ export class Physics {
   private _bfsComp!: Int32Array
   private _anchoredQueue!: Int32Array
   private _bfsEpoch = 0
+  private readonly chunksWide: number
+  private readonly chunksHigh: number
 
   constructor(
     private readonly sim: MatterSim,
     private readonly chunkGrid: ChunkGrid,
     private readonly width: number,
     private readonly height: number,
-    private readonly chunksWide: number,
-    private readonly chunksHigh: number,
+
   ) {
+    this.chunksWide = chunkGrid.chunksWide
+    this.chunksHigh = chunkGrid.chunksHigh
+
     const n = this.width * this.height
     this._bfsVisited = new Uint32Array(n)
     this._bfsQueue = new Int32Array(n)
