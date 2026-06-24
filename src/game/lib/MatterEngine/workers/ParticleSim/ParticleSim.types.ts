@@ -1,37 +1,38 @@
-import type { ParticleDataBuffers } from '../../data/ParticleData.ts'
+import type { ParticleBuffers } from '../../data/ParticleData.ts'
 
-export enum ParticleWorkerInMsg {
+export enum ParticleSimInMsg {
   INIT,
   SPAWN_BATCH,
 }
 
-export enum ParticleWorkerOutMsg {
+export enum ParticleSimOutMsg {
   ACTIVATIONS,
 }
 
-type InitMessage = {
-  type: ParticleWorkerInMsg.INIT
-  tiles: SharedArrayBuffer
-} & ParticleDataBuffers
+export type ParticleSimInMsgInit = {
+  type: ParticleSimInMsg.INIT
+  tiles: SharedArrayBuffer,
+  particleBuffers: ParticleBuffers
+}
 
-// Packed as [particleType, x, y, ownerId, ...] with 4 ints per entry
-type SpawnBatchMessage = {
-  type: ParticleWorkerInMsg.SPAWN_BATCH
+export type ParticleSimInMsgSpawnBatch = {
+  type: ParticleSimInMsg.SPAWN_BATCH
+  // Packed as [particleType, x, y, ownerId, ...] with 4 ints per entry
   data: Int32Array
 }
 
-export type ParticleWorkerInMessage =
-  | InitMessage
-  | SpawnBatchMessage
+export type ParticleSimInMessage =
+  | ParticleSimInMsgInit
+  | ParticleSimInMsgSpawnBatch
 
 type ActivationsMessage = {
-  type: ParticleWorkerOutMsg.ACTIVATIONS
+  type: ParticleSimOutMsg.ACTIVATIONS
   indices: number[]
 }
-export type ParticleWorkerOutMessage =
+export type ParticleSimOutMessage =
   | ActivationsMessage
 
 export type TypedParticleWorker = Omit<Worker, 'postMessage' | 'onmessage'> & {
-  postMessage(msg: ParticleWorkerInMessage, transfer?: Transferable[]): void
-  onmessage: ((e: MessageEvent<ParticleWorkerOutMessage>) => void) | null
+  postMessage(msg: ParticleSimInMessage, transfer?: Transferable[]): void
+  onmessage: ((e: MessageEvent<ParticleSimOutMessage>) => void) | null
 }

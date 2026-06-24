@@ -4,9 +4,10 @@ import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_Matt
 import type { ParticleType } from '../../../Particles/_particle-types.ts'
 import type { Particle } from '../../../Particles/Particle.ts'
 import { PARTICLE_DEFS } from '../../../Particles/particles.ts'
-import { ParticleData, type ParticleDataBuffers } from '../../data/ParticleData.ts'
+import { ParticleData } from '../../data/ParticleData.ts'
 import { ParticlePool } from './ParticlePool.ts'
-import { ParticleWorkerOutMsg } from './ParticleSim.types.ts'
+import { type ParticleSimInMsgInit, ParticleSimOutMsg } from './ParticleSim.types.ts'
+import { ParticleSpawnBuffer } from './ParticleSpawnBuffer.ts'
 
 export class ParticleSim {
   tiles!: Uint32Array
@@ -17,11 +18,11 @@ export class ParticleSim {
   data: ParticleData
   private loopRunning = false
 
-  init(tiles: Uint32Array, buffers: ParticleDataBuffers) {
-    this.tiles = tiles
-    this.width = buffers.width
-    this.height = buffers.height
-    this.data = new ParticleData(buffers)
+  init({ tiles, particleBuffers }: ParticleSimInMsgInit) {
+    this.tiles = new Uint32Array(tiles)
+    this.width = particleBuffers.width
+    this.height = particleBuffers.height
+    this.data = new ParticleData(particleBuffers)
     this.pool = new ParticlePool()
   }
 
@@ -56,8 +57,14 @@ export class ParticleSim {
     this.data.publish()
 
     if (this.pendingActivations.length) {
-      postMessage({ type: ParticleWorkerOutMsg.ACTIVATIONS, indices: this.pendingActivations.slice() })
+      postMessage({ type: ParticleSimOutMsg.ACTIVATIONS, indices: this.pendingActivations.slice() })
     }
+  }
+
+  spawnBatch(data: Int32Array) {
+    ParticleSpawnBuffer.readBuffer(data, (type, x, y, ownerId) => {
+      this.spawn(type, x, y, ownerId)
+    })
   }
 
   spawn(type: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID) {
@@ -80,19 +87,21 @@ export class ParticleSim {
     const width = this.width
     if (x < 0 || x >= width || y < 0 || y >= this.height) return
     const tiles = this.tiles
-    const cur = matterType(tiles[y * width + x])
+    const idx = y * width + x
+    const cur = matterType(tiles[idx])
     if (cur === MatterType.SOLID || cur === MatterType.PERMANENT) return
-    tiles[y * width + x] = type
-    this.pendingActivations.push(y * width + x)
+    tiles[idx] = type
+    this.pendingActivations.push(idx)
   }
 
   destroyTile(x: number, y: number, type: MatterType) {
     const width = this.width
     if (x < 0 || x >= width || y < 0 || y >= this.height) return
     const tiles = this.tiles
-    if (matterType(tiles[y * width + x]) === MatterType.PERMANENT) return
-    tiles[y * width + x] = type
-    this.pendingActivations.push(y * width + x)
+    const idx = y * width + x
+    if (matterType(tiles[idx]) === MatterType.PERMANENT) return
+    tiles[idx] = type
+    this.pendingActivations.push(idx)
   }
 
   writeTileCircle(cx: number, cy: number, radius: number, type: MatterType) {

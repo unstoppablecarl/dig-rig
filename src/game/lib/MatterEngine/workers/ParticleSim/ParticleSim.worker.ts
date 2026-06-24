@@ -1,32 +1,25 @@
 /// <reference lib="webworker" />
 import { ParticleSim } from './ParticleSim.ts'
-import type { ParticleWorkerInMessage, ParticleWorkerOutMessage } from './ParticleSim.types.ts'
-import { ParticleWorkerInMsg } from './ParticleSim.types.ts'
-import { ParticleSpawnBuffer } from './ParticleSpawnBuffer.ts'
+import type { ParticleSimInMessage, ParticleSimOutMessage } from './ParticleSim.types.ts'
+import { ParticleSimInMsg } from './ParticleSim.types.ts'
 
-declare function postMessage(msg: ParticleWorkerOutMessage): void
+declare function postMessage(msg: ParticleSimOutMessage): void
 
 declare let self: DedicatedWorkerGlobalScope & {
-  onmessage: ((e: MessageEvent<ParticleWorkerInMessage>) => void) | null
+  onmessage: ((e: MessageEvent<ParticleSimInMessage>) => void) | null
 }
 
 const sim = new ParticleSim()
 
-self.onmessage = (e: MessageEvent<ParticleWorkerInMessage>) => {
+self.onmessage = (e: MessageEvent<ParticleSimInMessage>) => {
   const msg = e.data
 
-  if (msg.type === ParticleWorkerInMsg.INIT) {
-    sim.init(
-      new Uint32Array(msg.tiles),
-      msg,
-    )
+  if (msg.type === ParticleSimInMsg.INIT) {
+    sim.init(msg)
     return
   }
 
-  if (msg.type === ParticleWorkerInMsg.SPAWN_BATCH) {
-    const { data } = msg
-    ParticleSpawnBuffer.readBuffer(data, (type, x, y, ownerId) => {
-      sim.spawn(type, x, y, ownerId)
-    })
+  if (msg.type === ParticleSimInMsg.SPAWN_BATCH) {
+    sim.spawnBatch(msg.data)
   }
 }

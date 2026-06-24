@@ -3,7 +3,7 @@ import type { GameLevel } from '../../../../scenes/GameLevel.ts'
 import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import type { ParticleType } from '../../../Particles/_particle-types.ts'
 import type { ParticleData } from '../../data/ParticleData.ts'
-import { ParticleWorkerInMsg, ParticleWorkerOutMsg, type TypedParticleWorker } from './ParticleSim.types.ts'
+import { ParticleSimInMsg, ParticleSimOutMsg, type TypedParticleWorker } from './ParticleSim.types.ts'
 import ParticleWorkerConstructor from './ParticleSim.worker.ts?worker'
 import { ParticleSpawnBuffer } from './ParticleSpawnBuffer.ts'
 
@@ -17,23 +17,18 @@ export class ParticleSimController extends SceneBound<GameLevel> {
     onActivations: (indices: number[]) => void
   }) {
     super(scene)
-    const { width, height } = scene.tilemap
 
     this.data = data
     this.onActivations = responders.onActivations
     this.worker = new ParticleWorkerConstructor() as TypedParticleWorker
     this.worker.postMessage({
-      type: ParticleWorkerInMsg.INIT,
+      type: ParticleSimInMsg.INIT,
       tiles: scene.tilemap.tilesBuffer,
-      pixelsA: data.buffers.pixelsA,
-      pixelsB: data.buffers.pixelsB,
-      pendingSlot: data.buffers.pendingSlot,
-      width,
-      height,
+      particleBuffers: data.buffers,
     })
 
     this.worker.onmessage = (e) => {
-      if (e.data.type === ParticleWorkerOutMsg.ACTIVATIONS) {
+      if (e.data.type === ParticleSimOutMsg.ACTIVATIONS) {
         this.onActivations(e.data.indices)
       }
     }
@@ -46,7 +41,7 @@ export class ParticleSimController extends SceneBound<GameLevel> {
   update() {
     const batch = this.spawnBuffer.flush()
     if (batch) {
-      this.worker.postMessage({ type: ParticleWorkerInMsg.SPAWN_BATCH, data: batch }, [batch.buffer])
+      this.worker.postMessage({ type: ParticleSimInMsg.SPAWN_BATCH, data: batch }, [batch.buffer])
     }
 
     const pixels = this.data.consumePixels()
