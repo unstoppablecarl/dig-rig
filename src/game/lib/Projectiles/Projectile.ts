@@ -48,6 +48,7 @@ export class Projectile extends BaseProjectile {
             this.radius = EXPAND_START_RADIUS
             this.vx = 0
             this.vy = 0
+            this.sync(this.charge())
             this.expandTimer = this.startExpandTimer()
             break
           }
