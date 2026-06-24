@@ -14,7 +14,6 @@ export class UIScene extends Scene {
   }
 
   create({ gameScene }: { gameScene: GameLevel }) {
-    console.log('ui.create')
     this.matterMeter = new MatterMeter(this, gameScene)
     this.toast = new Toaster(this)
   }

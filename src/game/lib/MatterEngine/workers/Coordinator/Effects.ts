@@ -84,10 +84,16 @@ export class Effects {
     dirtyChunks: Set<number>,
   ): EffectResult {
     return this.destroyProjectile.apply(
-      SOLID, req.tileX, req.tileY, req.tileRadius, 0,
-      req.ownerId, Number.MAX_SAFE_INTEGER,
+      SOLID,
+      req.tx,
+      req.ty,
+      req.radius,
+      0,
+      req.ownerId,
+      Number.MAX_SAFE_INTEGER,
       EMPTY_PLAYER_BOUNDS,
-      activeSet, dirtyChunks,
+      activeSet,
+      dirtyChunks,
     )
   }
 

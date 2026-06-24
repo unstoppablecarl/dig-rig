@@ -14,9 +14,9 @@ export type CoordinatorInMsgInit = {
 
 export type CoordinatorInMsgBrushEraseMatter = {
   type: CoordinatorInMsg.BRUSH_ERASE_MATTER
-  tileX: number
-  tileY: number
-  tileRadius: number
+  tx: number
+  ty: number
+  radius: number
   ownerId: MatterTankId
 }
 

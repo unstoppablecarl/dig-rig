@@ -19,12 +19,12 @@ export class CoordinatorController {
   }
 
   brushEraseMatter(
-    tileX: number,
-    tileY: number,
-    tileRadius: number,
+    tx: number,
+    ty: number,
+    radius: number,
     ownerId: MatterTankId,
   ) {
-    this.worker.postMessage({ type: CoordinatorInMsg.BRUSH_ERASE_MATTER, tileX, tileY, tileRadius, ownerId })
+    this.worker.postMessage({ type: CoordinatorInMsg.BRUSH_ERASE_MATTER, tx, ty, radius, ownerId })
   }
 
   brushAddMatter(

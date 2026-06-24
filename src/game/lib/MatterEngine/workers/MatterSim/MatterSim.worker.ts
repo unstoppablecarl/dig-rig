@@ -14,6 +14,7 @@ const _done: SimOutMsgDone = {
   type: SimOutMsg.DONE as const,
   next: [],
   vfxJustSettled: [],
+  destroyedTiles: [],
   matterTankTransfers: new Int32Array(),
 }
 

@@ -19,13 +19,11 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { NO_MATTER_TANK_ID } from '../Tank/_MatterTank.types.ts'
 
 const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)
 
 const COOLED = new MatterTypeSet(WATER, SALT_WATER)
 
-const pass2: [number, number, number][] = []
 export const LAVA_DROP_INITIAL_VEL = 10
 
 export const LAVA_DEF = {
@@ -39,9 +37,7 @@ export const LAVA_DEF = {
     const { tiles, width, height } = sim
     const existing = tiles[idx]
     const ownerId = getOwner(existing)
-    if (ownerId === NO_MATTER_TANK_ID) {
-      console.trace('!!')
-    }
+
     // Turn to rock when touching water or salt-water
     let waterLoc = sim.borderingAny(tx, ty, idx, COOLED)
     if (waterLoc !== -1) {
@@ -71,62 +67,12 @@ export const LAVA_DEF = {
       if (meltLoc !== -1) {
         const mx = meltLoc % width
         const my = meltLoc / width | 0
-        tiles[meltLoc] = EMPTY
-        sim.markDirty(mx, my)
+        sim.destroyTile(mx, my, meltLoc)
         sim.reactivateAround(mx, my)
-
-        // Two-pass island cleanup: isolated SOLID neighbors become ROCK so they
-        // sink through the lava pool rather than floating as unreachable pixels.
-        // Pass 1: direct neighbors of the melted tile.
-        pass2.length = 0
-        const p1: [number, number, number][] = [
-          [mx, my - 1, my > 0 ? meltLoc - width : -1],
-          [mx, my + 1, my < height - 1 ? meltLoc + width : -1],
-          [mx - 1, my, mx > 0 ? meltLoc - 1 : -1],
-          [mx + 1, my, mx < width - 1 ? meltLoc + 1 : -1],
-        ]
-        for (const [nx, ny, nidx] of p1) {
-          if (nidx === -1 || matterType(tiles[nidx]) !== SOLID) continue
-          let n = 0
-          if (nx > 0 && matterType(tiles[nidx - 1]) === SOLID) n++
-          if (nx < width - 1 && matterType(tiles[nidx + 1]) === SOLID) n++
-          if (ny > 0 && matterType(tiles[nidx - width]) === SOLID) n++
-          if (ny < height - 1 && matterType(tiles[nidx + width]) === SOLID) n++
-          if (n === 0) {
-            tiles[nidx] = ROCK
-            sim.markDirty(nx, ny)
-            sim.next.add(nidx)
-            pass2.push([nx, ny, nidx])
-          }
-        }
-        // Pass 2: neighbors of newly-converted tiles (catches 2-pixel islands).
-        for (const [nx, ny] of pass2) {
-          const p2: [number, number, number][] = [
-            [nx, ny - 1, ny > 0 ? (ny - 1) * width + nx : -1],
-            [nx, ny + 1, ny < height - 1 ? (ny + 1) * width + nx : -1],
-            [nx - 1, ny, nx > 0 ? ny * width + (nx - 1) : -1],
-            [nx + 1, ny, nx < width - 1 ? ny * width + (nx + 1) : -1],
-          ]
-          for (const [p2x, p2y, p2idx] of p2) {
-            if (p2idx === -1 || matterType(tiles[p2idx]) !== SOLID) continue
-            let n = 0
-            if (p2x > 0 && matterType(tiles[p2idx - 1]) === SOLID) n++
-            if (p2x < width - 1 && matterType(tiles[p2idx + 1]) === SOLID) n++
-            if (p2y > 0 && matterType(tiles[p2idx - width]) === SOLID) n++
-            if (p2y < height - 1 && matterType(tiles[p2idx + width]) === SOLID) n++
-            if (n === 0) {
-              tiles[p2idx] = ROCK
-              sim.markDirty(p2x, p2y)
-              sim.next.add(p2idx)
-            }
-          }
-        }
-
         sim.queueMatterCreditFromTile(tx, ty, idx)
         tiles[idx] = EMPTY
         sim.markDirty(tx, ty)
         sim.next.add(idx)
-        sim.next.add(meltLoc)
         return
       }
     }
@@ -141,10 +87,6 @@ export const LAVA_DEF = {
       sim.bordering(tx, ty, idx, LAVA)
     ) {
       tiles[idx] = setLavaDropVel(setOwner(LAVA_DROP, ownerId), LAVA_DROP_INITIAL_VEL)
-
-      if (getOwner(tiles[idx]) === NO_MATTER_TANK_ID) {
-        console.trace('asd')
-      }
       sim.markDirty(tx, ty)
       sim.next.add(idx)
       return
@@ -163,9 +105,6 @@ export const LAVA_DEF = {
         const nt = matterType(tiles[nidx])
         if (!sim.LAVA_IMMUNE.has(nt)) {
           tiles[nidx] = setOwner(FIRE, ownerId)
-          if (ownerId === NO_MATTER_TANK_ID) {
-            console.trace('err')
-          }
           sim.queueMatterCredit(tx, ty, ownerId)
           tiles[idx] = EMPTY
           sim.markDirty(nx, ny)

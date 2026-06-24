@@ -33,7 +33,8 @@ export class Coordinator {
   private frame = 0
   private width = 0
   private readonly vfxJustSettled: number[] = []
-  private readonly _dirtyChunksThisStep = new Set<number>()
+  private readonly destroyedTiles: number[] = []
+  private readonly dirtyChunksThisStep = new Set<number>()
 
   init(buffers: CoordinatorInMsgInit, poolSize: number) {
 
@@ -100,7 +101,7 @@ export class Coordinator {
   }
 
   private async step() {
-    this._dirtyChunksThisStep.clear()
+    this.dirtyChunksThisStep.clear()
 
     for (const idx of this.pendingActivations) this.activeSet.add(idx)
     this.pendingActivations.length = 0
@@ -125,10 +126,10 @@ export class Coordinator {
     let structuralDirty = false
 
     // Drain brush add-matter queue.
-    structuralDirty ||= this.brush.stepCreate(this.activeSet, this._dirtyChunksThisStep)
+    structuralDirty ||= this.brush.stepCreate(this.activeSet, this.dirtyChunksThisStep)
 
     // Drain brush erase queue — writes committed before sim rounds so workers see them.
-    const brushErase = this.brush.stepErase(this.activeSet, this._dirtyChunksThisStep)
+    const brushErase = this.brush.stepErase(this.activeSet, this.dirtyChunksThisStep)
     for (const { tiles, structuralDirty: eDirty } of brushErase) {
       structuralDirty ||= eDirty
       if (tiles.length > 0) {
@@ -136,22 +137,34 @@ export class Coordinator {
       }
     }
 
-    structuralDirty ||= this.tunnelWeapon.step(this.activeSet, this._dirtyChunksThisStep)
+    structuralDirty ||= this.tunnelWeapon.step(this.activeSet, this.dirtyChunksThisStep)
 
     // Process active projectile slots — debits/credits tanks, emits VFX, recomputes pending.
-    structuralDirty ||= this.projectileProcessor.step(this.activeSet, this._dirtyChunksThisStep)
+    structuralDirty ||= this.projectileProcessor.step(this.activeSet, this.dirtyChunksThisStep)
     this.vfxJustSettled.length = 0
+    this.destroyedTiles.length = 0
 
     const dirtyChunksThisStep = await this.workerPool.step(snapshot, leftFirst, frame, (results) => {
       for (const r of results) {
         for (const idx of r.next) this.activeSet.add(idx)
         for (const idx of r.vfxJustSettled) this.vfxJustSettled.push(idx)
+        for (const idx of r.destroyedTiles) this.destroyedTiles.push(idx)
         MatterCreditTransferBuffer.readBuffer(r.matterTankTransfers, (x, y, ownerId) => {
           this.matterTanks.addCredit(ownerId, 1)
           this.data.vfxParticleDestroy.writeTile(x, y, ownerId)
         })
       }
     })
+
+    if (this.destroyedTiles.length > 0) {
+      const w = this.width
+      const xy = this.destroyedTiles.map(idx => ({ x: idx % w, y: (idx / w) | 0 }))
+      const islands = this.physics.findNewlyDisconnected(xy, dirtyChunksThisStep)
+      if (islands.length > 0) {
+        this.physics.collapseIslands(islands, this.activeSet, dirtyChunksThisStep)
+        structuralDirty = true
+      }
+    }
 
     for (const idx of this.vfxJustSettled) {
       if (this.activeSet.has(idx)) continue
@@ -168,7 +181,7 @@ export class Coordinator {
       this.data.vfxParticleOverflow.write(from, to, amount)
     }
 
-    for (const idx of this._dirtyChunksThisStep) dirtyChunksThisStep.add(idx)
+    for (const idx of this.dirtyChunksThisStep) dirtyChunksThisStep.add(idx)
     this.physics.postStep(dirtyChunksThisStep, structuralDirty)
 
     this.particleSim.step()

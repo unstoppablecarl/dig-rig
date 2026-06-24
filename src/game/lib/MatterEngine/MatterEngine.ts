@@ -42,13 +42,8 @@ export class MatterEngine extends SceneBound {
     })
   }
 
-  brushEraseMatter(
-    tileX: number,
-    tileY: number,
-    tileRadius: number,
-    ownerId: MatterTankId,
-  ) {
-    this.worker.brushEraseMatter(tileX, tileY, tileRadius, ownerId)
+  brushEraseMatter(tx: number, ty: number, radius: number, ownerId: MatterTankId) {
+    this.worker.brushEraseMatter(tx, ty, radius, ownerId)
   }
 
   brushAddMatter(value: MatterType, tx: number, ty: number, radius = 8) {

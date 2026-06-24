@@ -47,6 +47,7 @@ export class MatterSim {
   frame = 0
   leftFirst = false
   vfxJustSettled: number[] = []
+  destroyedTiles: number[] = []
   next = new Set<number>()
 
   init(
@@ -74,10 +75,12 @@ export class MatterSim {
     this.frame = frame
     this.leftFirst = leftFirst
     this.vfxJustSettled.length = 0
+    this.destroyedTiles.length = 0
     this.processSubset(indices)
 
     out.next = Array.from(this.next)
     out.vfxJustSettled = this.vfxJustSettled
+    out.destroyedTiles = this.destroyedTiles
     out.matterTankTransfers = this.matterTankCredits.flush()
 
     return out
@@ -615,6 +618,15 @@ export class MatterSim {
     if (ty > 0) this.reactivateAround(tx, ty - 1)
     if (tx > 0) this.reactivateAround(tx - 1, ty)
     if (tx < width - 1) this.reactivateAround(tx + 1, ty)
+  }
+
+  // Erase a terrain tile and register it for coordinator-side island-collapse checking.
+  // Call this whenever a simulation rule destroys a tile that could be structural.
+  destroyTile(x: number, y: number, idx: number) {
+    this.tiles[idx] = EMPTY
+    this.markDirty(x, y)
+    this.next.add(idx)
+    this.destroyedTiles.push(idx)
   }
 
   queueMatterCredit(tx: number, ty: number, ownerId: MatterTankId) {

@@ -50,9 +50,7 @@ export const ACID_DEF = {
         sim.next.add(idx)
 
         sim.queueMatterCredit(nx, ny, ownerId)
-        tiles[nidx] = EMPTY
-        sim.markDirty(nx, ny)
-        sim.next.add(nidx)
+        sim.destroyTile(nx, ny, nidx)
         return
       }
     }
