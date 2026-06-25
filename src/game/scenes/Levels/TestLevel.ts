@@ -1,3 +1,4 @@
+import { PhysicsBody } from '../../lib/Collision/PhysicsBody.ts'
 import { Driller } from '../../lib/Entities/Driller.ts'
 import { PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
@@ -60,7 +61,7 @@ export default class TestLevel extends GameLevel {
   }
 
   makeTestCrate(x: number, y: number) {
-    const crate = this.matter.add.rectangle(x, y, 20, 20, {
+    const body = this.matter.add.rectangle(x, y, 20, 20, {
       friction: 10000,
       frictionStatic: 10000,
       restitution: 0,
@@ -68,10 +69,7 @@ export default class TestLevel extends GameLevel {
     })
 
     const sprite = this.add.sprite(x, y, 'crate')
-
+    this.physicsBodyManager.add(PhysicsBody.makeFromSprite(this, sprite, body))
     this.layers.physicsObjects.add(sprite)
-    this.matter.add.gameObject(sprite, crate)
-
-    return crate
   }
 }

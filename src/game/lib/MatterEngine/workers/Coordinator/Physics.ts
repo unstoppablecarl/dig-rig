@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 import { CHUNK_SIZE } from '../../../../config.ts'
 import { getSupport, matterType, PERMANENT, SupportType } from '../../../Matter/_Matter.types.ts'
-import { getSupportType, isCollidable, setSupport, STRUCTURAL_COLLAPSE_TO } from '../../../Matter/matter.ts'
+import { getSupportType, convertsToCollisionBody, setSupport, STRUCTURAL_COLLAPSE_TO } from '../../../Matter/matter.ts'
 import { ChunkGrid, ChunkType } from '../../../Tilemap/ChunkGrid.ts'
 import { MatterSim } from '../MatterSim/MatterSim.ts'
 
@@ -332,7 +332,7 @@ export class Physics {
     let count = 0
     for (let y = y0; y < y1; y++) {
       for (let x = x0; x < x1; x++) {
-        if (isCollidable(tiles[y * width + x])) count++
+        if (convertsToCollisionBody(tiles[y * width + x])) count++
       }
     }
     return count

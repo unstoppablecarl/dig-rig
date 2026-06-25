@@ -9,7 +9,6 @@ import {
   type MatterDef,
   matterType,
   OIL,
-  PERMANENT,
   SALT_WATER,
   setOwner,
   SOLID,
@@ -17,6 +16,7 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
+import { isDestructible } from '../matter.ts'
 
 const NOT_FIRE_SPREADABLE = new MatterTypeSet(THERMITE, BURNING_THERMITE, LAVA, SOLID)
 export const BURNING_THERMITE_DEF = {
@@ -52,9 +52,9 @@ export const BURNING_THERMITE_DEF = {
 
     // Burn through NON-Permanent adjacent horizontally
     if (random() < 8) {
-      const wallLeft = tx > 0 && matterType(tiles[idx - 1]) !== PERMANENT ? idx - 1 : -1
-      const wallRight = tx < width - 1 && matterType(tiles[idx + 1]) !== PERMANENT ? idx + 1 : -1
-      const wallBelow = ty < height - 1 && matterType(tiles[idx + width]) !== PERMANENT ? idx + width : -1
+      const wallLeft = tx > 0 && isDestructible(matterType(tiles[idx - 1])) ? idx - 1 : -1
+      const wallRight = tx < width - 1 && isDestructible(matterType(tiles[idx + 1])) ? idx + 1 : -1
+      const wallBelow = ty < height - 1 && isDestructible(matterType(tiles[idx + width])) ? idx + width : -1
 
       const neighbors: number[] = [
         leftFirst ? wallLeft : wallRight,

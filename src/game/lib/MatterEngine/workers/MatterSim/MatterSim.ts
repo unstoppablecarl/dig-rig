@@ -7,7 +7,6 @@ import {
   isSettled,
   MatterType,
   matterType,
-  PERMANENT,
   setOwner,
   setSettled,
   SupportType,
@@ -18,6 +17,7 @@ import {
   getSupportType,
   isActivatable,
   isAlwaysActive,
+  isDestructible,
   isLiquid,
   MATTER_ACTIONS,
   RESERVED_DESTROY_CHARGE,
@@ -603,7 +603,7 @@ export class MatterSim {
     for (const [cx, cy, cidx] of cells) {
       if (cx < 0 || cx >= width || cy < 0 || cy >= height) continue
       const t = matterType(tiles[cidx])
-      if (t === PERMANENT) continue
+      if (!isDestructible(t)) continue
       if (t !== EMPTY) this.queueMatterCredit(cx, cy, ownerId)
       tiles[cidx] = ownerFire
       this.markDirty(cx, cy)

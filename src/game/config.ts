@@ -21,6 +21,7 @@ export const ICE_TEXTURE_ENABLED = true
 export const ENABLE_PANE_DEBUG = true
 export const ENABLE_BRUSH_MODE_DEBUG = true
 export const DRAW_TERRAIN_SETTLED_DEBUG = false
+export const DRAW_PHYSICS_BODY_TILES_DEBUG = false
 export const DRAW_ANCHORED_DEBUG = false
 export const DRAW_PARTICLE_DEBUG = false
 export const DRAW_WORLD_BORDER_DEBUG = false

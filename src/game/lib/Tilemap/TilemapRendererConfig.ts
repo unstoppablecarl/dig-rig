@@ -1,4 +1,10 @@
-import { DRAW_ANCHORED_DEBUG, DRAW_TERRAIN_SETTLED_DEBUG, GLOW_ENABLED, ICE_TEXTURE_ENABLED } from '../../config'
+import {
+  DRAW_ANCHORED_DEBUG,
+  DRAW_PHYSICS_BODY_TILES_DEBUG,
+  DRAW_TERRAIN_SETTLED_DEBUG,
+  GLOW_ENABLED,
+  ICE_TEXTURE_ENABLED,
+} from '../../config'
 import { DEBUG_ANCHORED_COLOR, DEBUG_SETTLED_COLOR, EDGE_GLOW_COLOR } from '../../config/colors.ts'
 
 export type TilemapRendererConfig = Readonly<typeof TILEMAP_RENDERER_DEFAULTS>
@@ -17,5 +23,7 @@ export const TILEMAP_RENDERER_DEFAULTS = {
   drawDebugAnchoredColor: DEBUG_ANCHORED_COLOR,
   drawDebugAnchoredAlpha: 0.5,
   drawDebugAnchored: DRAW_ANCHORED_DEBUG,
+
+  drawDebugPhysicsBodies: DRAW_PHYSICS_BODY_TILES_DEBUG,
 }
 

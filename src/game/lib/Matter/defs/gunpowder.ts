@@ -7,10 +7,10 @@ import {
   GUNPOWDER,
   type MatterDef,
   matterType,
-  PERMANENT,
   setOwner,
   setSettled,
 } from '../_Matter.types.ts'
+import { isDestructible } from '../matter.ts'
 
 export const GUNPOWDER_DEF = {
   id: GUNPOWDER,
@@ -39,7 +39,7 @@ export const GUNPOWDER_DEF = {
             const neighborRaw = tiles[nidx]
             const neighborType = matterType(neighborRaw)
             if (burn) {
-              if (neighborType !== PERMANENT) {
+              if (isDestructible(neighborType)) {
                 if (neighborType !== EMPTY) sim.queueMatterCredit(nx, ny, ownerId)
                 tiles[nidx] = newFire
                 sim.markDirty(nx, ny)

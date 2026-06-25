@@ -20,6 +20,7 @@ import {
   NITRO,
   OIL,
   PERMANENT,
+  PHYSICS_BODY,
   PLANT,
   ROCK,
   SALT,
@@ -73,6 +74,7 @@ export function makeTilemapFragShader(
       #define DEBUG_SETTLED ${c.drawDebugSettled ? 1 : 0}
       #define DEBUG_ANCHORED ${c.drawDebugAnchored ? 1 : 0}
       #define ICE_TEXTURE_ENABLED ${c.iceTextureEnabled ? 1 : 0}
+      #define DRAW_PHYSICS_BODY_TILES_DEBUG ${c.drawDebugPhysicsBodies ? 1 : 0}
 
       uniform sampler2D uTerrain;
       uniform sampler2D uMask;
@@ -524,6 +526,11 @@ export function makeTilemapFragShader(
           }
           else if (tileType == ${EMPTY}) {
               color = vec4(0.0, 0.0, 0.0, 0.0);
+          }
+          else if (tileType == ${PHYSICS_BODY}) {
+              #if DRAW_PHYSICS_BODY_TILES_DEBUG
+              color = vec4(1.0, 0.0, 1.0, 1.0);
+              #endif
           }
           //unknown type — debug magenta
           else {

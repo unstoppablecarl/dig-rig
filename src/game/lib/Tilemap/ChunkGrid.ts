@@ -120,6 +120,13 @@ export class ChunkGrid {
     this.renderGen[idx]++
   }
 
+  markRenderDirtyTile(tx: number, ty: number): void {
+    const cy = (ty / CHUNK_SIZE) | 0
+    const cx = (tx / CHUNK_SIZE) | 0
+    const chunkIdx = cy * this.chunksWide + cx
+    this.renderGen[chunkIdx]++
+  }
+
   // Init helper — called once from main thread before workers start
   // Stamp renderGen=1 on every chunk so the renderer uploads all tiles on the first frame.
   markAllRenderDirty(): void {

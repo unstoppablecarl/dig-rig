@@ -2,22 +2,22 @@ import { GameObjects } from 'phaser'
 import { MATTER_TANK_TEXT_STYLES } from '../../config/styles.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
+import { PhysicsBody } from '../Collision/PhysicsBody.ts'
 import { MatterTank } from '../Matter/Tank/MatterTank.ts'
 import Container = GameObjects.Container
 import GameObject = GameObjects.GameObject
-import Sprite = Phaser.GameObjects.Sprite
 import Vector2 = Phaser.Math.Vector2
-import Image = Phaser.Physics.Matter.Image
 
 export class PortableMatterTank extends GameObject implements Position {
   static SPRITE_KEY = 'PORTABLE_MATTER_TANK'
   public matterTank: MatterTank
 
-  private container: Container
+  readonly container: Container
   private text: GameObjects.DOMElement
 
   public prevPosition = new Vector2(0, 0)
   public maxVelocity = 0
+  readonly physicsBody: PhysicsBody
 
   constructor(
     public scene: GameLevel,
@@ -39,7 +39,10 @@ export class PortableMatterTank extends GameObject implements Position {
       density: 0.001,
     })
 
-    this.container = scene.matter.add.gameObject(this.scene.add.container(this.x, this.y), body) as unknown as Image & Sprite & Container
+    this.physicsBody = PhysicsBody.makeFromContainer(this.scene, this.scene.add.container(this.x, this.y), body)
+    this.scene.physicsBodyManager.add(this.physicsBody)
+
+    this.container = this.physicsBody.gameObject
 
     const sprite = scene.add.sprite(0, 0, PortableMatterTank.SPRITE_KEY)
     this.container.add(sprite)
@@ -48,8 +51,6 @@ export class PortableMatterTank extends GameObject implements Position {
       .setOrigin(0.5, 1)
 
     this.container.add(this.text)
-
-    scene.layers.physicsObjects.add(this.container)
   }
 
   update(_time: number, _delta: number): void {

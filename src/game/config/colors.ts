@@ -21,6 +21,7 @@ import {
   NITRO,
   OIL,
   PERMANENT,
+  PHYSICS_BODY,
   PLANT,
   ROCK,
   SALT,
@@ -222,7 +223,9 @@ export const MATTER_RENDER_CONFIG_DEFAULTS = {
   [BURNING_THERMITE]: powderMatterConfig({
     color: rgbToColor(`rgb(255, 130, 130)`),
   }),
+
   [EMPTY]: {},
+  [PHYSICS_BODY]: {},
 } satisfies MatterRenderConfigDefaults
 
 export function customConfig<T extends {

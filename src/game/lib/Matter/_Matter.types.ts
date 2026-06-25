@@ -142,6 +142,7 @@ export enum MatterType {
   BURNING_THERMITE = 27,
   GUNPOWDER = 28,
   LAVA_DROP = 29,
+  PHYSICS_BODY = 30
 }
 
 export const EMPTY = MatterType.EMPTY
@@ -173,6 +174,7 @@ export const THERMITE = MatterType.THERMITE
 export const BURNING_THERMITE = MatterType.BURNING_THERMITE
 export const GUNPOWDER = MatterType.GUNPOWDER
 export const LAVA_DROP = MatterType.LAVA_DROP
+export const PHYSICS_BODY = MatterType.PHYSICS_BODY
 
 export const MatterTypeValues = Object.values(MatterType).filter(
   (k) => !isNaN(Number(k)),

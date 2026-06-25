@@ -3,7 +3,7 @@ import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import type { Position } from '../../types.ts'
 import { EMPTY, type MatterType, matterType, PERMANENT } from '../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../Matter/data/MatterTypeSet'
-import { isCollidable } from '../Matter/matter.ts'
+import { convertsToCollisionBody } from '../Matter/matter.ts'
 import { ChunkGrid, type ChunkGridBuffers } from './ChunkGrid.ts'
 
 export type Tile = { x: number, y: number }
@@ -58,7 +58,7 @@ export class TileGrid {
 
   isCollidable(x: number, y: number): boolean {
     const raw = this.getTile(Math.floor(x), Math.floor(y))
-    return isCollidable(raw)
+    return convertsToCollisionBody(raw)
   }
 
   getTileFromWorld(worldX: number, worldY: number): number {
@@ -251,7 +251,7 @@ export class TileGrid {
         let count = 0
         for (let y = y0; y < y1; y++) {
           for (let x = x0; x < x1; x++) {
-            if (isCollidable(this.tiles[y * this.width + x])) count++
+            if (convertsToCollisionBody(this.tiles[y * this.width + x])) count++
           }
         }
         this.chunkGrid.setSolidCount(idx, count)

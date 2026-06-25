@@ -3,7 +3,12 @@ import { computed } from 'vue'
 import { PButton, PFolder, PSelect } from 'vue-pane/src/index.ts'
 import { InputMode } from '../../game/lib/Input/_input.types.ts'
 import { EMPTY, SupportType } from '../../game/lib/Matter/_Matter.types.ts'
-import { getImmutableSupportType, isSupportTypeImmutable, MATTER_NAMES } from '../../game/lib/Matter/matter.ts'
+import {
+  getImmutableSupportType,
+  INDESTRUCTIBLE_TYPES,
+  isSupportTypeImmutable,
+  MATTER_NAMES,
+} from '../../game/lib/Matter/matter.ts'
 import type { GameLevel } from '../../game/scenes/GameLevel.ts'
 import { useBrushUIState } from '../../store/brushUIState.ts'
 import { useUIState } from '../../store/uiState.ts'
@@ -28,7 +33,7 @@ function toggleBrush() {
 }
 
 const brushOptions = [...MATTER_NAMES.entries()]
-  .filter(([key]) => key !== EMPTY)
+  .filter(([key]) => key !== EMPTY && !INDESTRUCTIBLE_TYPES.has(key))
   .map(([key, value]) => ({
     value: key as string | number,
     label: value,

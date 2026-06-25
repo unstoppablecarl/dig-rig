@@ -1,5 +1,6 @@
 import { randomRangeInt } from '../../../helpers/random.ts'
-import { FIRE, PERMANENT, setOwner, SOLID } from '../../Matter/_Matter.types.ts'
+import { FIRE, setOwner, SOLID } from '../../Matter/_Matter.types.ts'
+import { isDestructible } from '../../Matter/matter.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
 export const THERMITE_SPARK: ParticleDef = {
@@ -17,7 +18,7 @@ export const THERMITE_SPARK: ParticleDef = {
     p.minY = -1
     for (let sy = y - step; sy >= 0; sy -= step) {
       const t = world.getTileType(x, sy)
-      if (t === SOLID || t === PERMANENT) {
+      if (t === SOLID || !isDestructible(t)) {
         p.minY = sy
         break
       }

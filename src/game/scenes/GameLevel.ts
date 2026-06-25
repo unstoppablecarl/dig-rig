@@ -14,6 +14,7 @@ import {
   type PartialMatterRenderConfig,
 } from '../config/colors.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
+import { PhysicsBodyManager } from '../lib/Collision/PhysicsBodyManager.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
 import { GAME_LEVEL_LOADED } from '../lib/events.ts'
 import { WeaponManagerInput } from '../lib/Input/InputController/WeaponManagerInput.ts'
@@ -78,6 +79,7 @@ export abstract class GameLevel extends Scene {
   public brushUIState: BrushUIState
   public previewProjectileRenderer: ProjectileRenderer
   public matterRenderConfig: MatterRenderConfig
+  public physicsBodyManager: PhysicsBodyManager
   public io: DataManager
 
   public ui: UIScene
@@ -245,6 +247,7 @@ export abstract class GameLevel extends Scene {
     this.playerWeaponManager = new WeaponManagerInput(this)
     this.vfxParticleManager = new VFXParticleManager(this)
     this.inputManager = new InputManager(this)
+    this.physicsBodyManager = new PhysicsBodyManager(this)
 
     this.entities = this.add.group({
       runChildUpdate: true,
@@ -283,6 +286,7 @@ export abstract class GameLevel extends Scene {
     this.player.update()
     this.projectiles.update(dt)
     this.terrainChunkBodyManager.update()
+    this.physicsBodyManager.update()
 
     this.tilemapRenderer.render()
   }

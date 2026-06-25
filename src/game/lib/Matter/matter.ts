@@ -5,6 +5,8 @@ import {
   type MatterDef,
   matterType,
   MatterType,
+  PERMANENT,
+  PHYSICS_BODY,
   SUPPORT_MASK,
   SUPPORT_SHIFT,
   SupportType,
@@ -67,6 +69,8 @@ const enum Flag {
   NO_CREATE_PROJECTILE_COLLISION = 1 << 9,
 }
 
+export const INDESTRUCTIBLE_TYPES = new MatterTypeSet(PERMANENT, PHYSICS_BODY)
+
 const MATTER_FLAGS = new Uint32Array(256)
 export const isAlwaysActive = (type: MatterType) => (MATTER_FLAGS[type] & Flag.ALWAYS_ACTIVE) !== 0
 export const doesSettle = (type: MatterType) => (MATTER_FLAGS[type] & Flag.SETTLES) !== 0
@@ -81,6 +85,7 @@ export const isSupportTypeImmutable = (type: MatterType) => (MATTER_FLAGS[type] 
 export const collidesWithCreateProjectiles = (type: MatterType) => (MATTER_FLAGS[type] & Flag.NO_CREATE_PROJECTILE_COLLISION) === 0
 export const isAlwaysStructural = (type: MatterType) => IMMUTABLE_SUPPORT_TYPES[type] === SupportType.STRUCTURAL
 
+export const isDestructible = (type: MatterType) => !INDESTRUCTIBLE_TYPES.has(type)
 const noop = () => {
 }
 
@@ -146,7 +151,7 @@ export function setSupport(target: number, support: SupportType): number {
   return (target & ~SUPPORT_MASK) | (support << SUPPORT_SHIFT)
 }
 
-export function isCollidable(value: number): boolean {
+export function convertsToCollisionBody(value: number): boolean {
   const type = matterType(value)
   if (alwaysCollides(type)) return true
   if (isSettled(value)) return collidesWhenSettled(type)

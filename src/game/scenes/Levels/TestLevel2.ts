@@ -1,4 +1,5 @@
 import type { PartialMatterRenderConfig } from '../../config/colors.ts'
+import { PhysicsBody } from '../../lib/Collision/PhysicsBody.ts'
 import { PortableMatterTank } from '../../lib/Entities/PortableMatterTank.ts'
 import { EMPTY, PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
@@ -68,10 +69,21 @@ export default class TestLevel2 extends GameLevel {
   makePlayer() {
     const player = new Player(this, 100, 300)
     const tank = new PortableMatterTank(this, 150, 350, 99)
-
     this.entities.add(tank)
 
     player.matterTank.overflowTank = tank.matterTank
     return player
+  }
+
+  makeTestCrate(x: number, y: number) {
+    const body = this.matter.add.rectangle(x, y, 20, 20, {
+      friction: 10000,
+      frictionStatic: 10000,
+      restitution: 0,
+      density: 0.001,
+    })
+
+    const sprite = this.add.sprite(x, y, 'crate')
+    this.physicsBodyManager.add(PhysicsBody.makeFromSprite(this, sprite, body))
   }
 }
