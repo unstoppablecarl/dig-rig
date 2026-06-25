@@ -14,6 +14,7 @@ import { clampVelocity, PositionOffset } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { Position } from '../../types.ts'
+import type { PhysicsBodyType } from '../Collision/_Collision.types.ts'
 import { MASK_PLAYER, MASK_TERRAIN } from '../Collision/BodyCategories.ts'
 import { MatterTank } from '../Matter/Tank/MatterTank.ts'
 import { EventsBinder } from '../Util/EventsBinder.ts'
@@ -60,7 +61,7 @@ const PLAYER_CREATE_VEL_EXTEND = 8
 
 export class Player extends SceneBound {
   public sprite: Sprite
-  public container: PlayerContainer
+  public container: PhysicsBodyType
   public maxVelocity = 300
   public matterTank: MatterTank
   public isTouching = {
@@ -497,21 +498,6 @@ export class Player extends SceneBound {
     this.jumpCooldownTimer = null
   }
 }
-
-// fixing phaser ts limitations
-export type PlayerContainer = GameObjects.Container &
-  Physics.Matter.Components.Bounce &
-  Physics.Matter.Components.Collision &
-  Physics.Matter.Components.Force &
-  Physics.Matter.Components.Friction &
-  Physics.Matter.Components.Gravity &
-  Physics.Matter.Components.Mass &
-  Physics.Matter.Components.Sensor &
-  Physics.Matter.Components.SetBody &
-  Physics.Matter.Components.Sleep &
-  Physics.Matter.Components.Static &
-  Physics.Matter.Components.Transform &
-  Physics.Matter.Components.Velocity
 
 type PlayerBodySensor = MatterJS.BodyType & { isPlayerBodySensor: true }
 type PlayerBody = MatterJS.BodyType & { isPlayerBody: true }
