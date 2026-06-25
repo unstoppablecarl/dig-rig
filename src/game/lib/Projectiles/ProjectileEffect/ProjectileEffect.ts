@@ -1,7 +1,5 @@
 import {
   ACID,
-  EMPTY,
-  FIRE,
   GUNPOWDER,
   LAVA,
   MatterType,
@@ -11,11 +9,12 @@ import {
   WATER,
 } from '../../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../../Matter/data/MatterTypeSet.ts'
-import { collidesWithCreateProjectiles, INDESTRUCTIBLE_TYPES } from '../../Matter/matter.ts'
+import { collidesWithCreateProjectiles, collidesWithDestroyProjectiles } from '../../Matter/matter.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
 import type { ProjectileEffect } from './_ProjectileEffect.types.ts'
 
 const CREATE_PROJECTILE_PASSTHROUGH = MatterTypeValues.filter(t => !collidesWithCreateProjectiles(t))
+const DESTROY_PROJECTILE_PASSTHROUGH = MatterTypeValues.filter(t => !collidesWithDestroyProjectiles(t))
 
 export function makeCreateEffect(type: MatterType): ProjectileEffect {
   return {
@@ -35,7 +34,7 @@ export const PROJECTILE_EFFECT = {
 
   DESTROY: {
     mode: FireMode.DESTROY,
-    instantProjectileCollidesWith: MatterTypeSet.excluding(INDESTRUCTIBLE_TYPES, EMPTY, WATER, FIRE),
+    instantProjectileCollidesWith: MatterTypeSet.excluding(...DESTROY_PROJECTILE_PASSTHROUGH),
   },
   MELT: {
     mode: FireMode.MELT,

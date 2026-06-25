@@ -4,6 +4,8 @@ export const PHYSICS_BODY_DEF = {
   id: PHYSICS_BODY,
   name: 'Physics Body',
   immutableSupport: SupportType.AFFIXED,
+  collidesWithDestroyProjectiles: false as const,
+  collidesWithCreateProjectiles: false as const,
   action(): void {
 
   },

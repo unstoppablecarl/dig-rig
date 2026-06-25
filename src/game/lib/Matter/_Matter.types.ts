@@ -201,6 +201,9 @@ export type MatterDef = {
   // whether an in-flight CREATE-mode projectile stops on contact with this type. Defaults to
   // true; transient types like lava drops and gases should pass through instead of detonating.
   collidesWithCreateProjectiles?: boolean
+  // whether an in-flight DESTROY-mode projectile stops on contact with this type. Defaults to
+  // true; EMPTY and PHYSICS_BODY pass through.
+  collidesWithDestroyProjectiles?: boolean
   sinksThrough?: MatterType[]
   // what the tile converts to when its structural island collapses (undefined = keep type).
   structuralCollapseType?: MatterType

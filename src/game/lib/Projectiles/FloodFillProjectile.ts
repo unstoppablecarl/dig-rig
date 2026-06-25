@@ -1,6 +1,6 @@
 import { getCollisionSteps } from '../../helpers/_helpers.ts'
 import { matterType } from '../Matter/_Matter.types.ts'
-import { collidesWithCreateProjectiles } from '../Matter/matter.ts'
+import { collidesWithCreateProjectiles, collidesWithDestroyProjectiles } from '../Matter/matter.ts'
 import { ProjectileShape } from '../MatterEngine/data/ProjectileManagerData.ts'
 import { FireMode } from '../Player/_FireMode-types.ts'
 import { BaseProjectile } from './BaseProjectile.ts'
@@ -30,7 +30,9 @@ export class FloodFillProjectile extends BaseProjectile {
         const stepY = this.y + stepDy * i
 
         const tile = matterType(this.scene.tilemap.getTileFromWorld(stepX, stepY))
-        const collision = collidesWithCreateProjectiles(tile)
+        const collision = this.effect.mode === FireMode.DESTROY
+          ? collidesWithDestroyProjectiles(tile)
+          : collidesWithCreateProjectiles(tile)
 
         if (collision) {
           this.settled = true
