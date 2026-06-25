@@ -50,9 +50,7 @@ export class Coordinator {
     const chunkGrid = this.data.chunkGrid
     this.sim.init(buffers.tiles, buffers.chunkGrid, width, height)
 
-    this.particleSim = new ParticleSim()
-    this.particleSim.init({ tiles: buffers.tiles, particleBuffers: buffers.particle })
-
+    this.particleSim = new ParticleSim(buffers.tiles, width, height)
     this.matterTanks = new SimMatterTanks(this.data.matterTankManager)
     this.physics = new Physics(this.sim, chunkGrid, width, height)
     this.effects = new Effects(this.sim, this.physics, this.matterTanks, this.data.playerBounds)

@@ -1,6 +1,6 @@
 import { type ParticleDef, ParticleType } from './_particle-types.ts'
 import { C4_EXPLOSION } from './particles/c4-explosion.ts'
-import { CHARGED_NITRO } from './particles/charged-nitro.ts'
+import { THERMITE_SPARK } from './particles/thermite-spark.ts'
 import { GUNPOWDER_EXPLOSION } from './particles/gunpowder-explosion.ts'
 import { LAVA_BURST } from './particles/lava-burst.ts'
 import { METHANE_EXPLOSION } from './particles/methane-explosion.ts'
@@ -20,6 +20,6 @@ export const PARTICLE_DEFS: Record<ParticleType, ParticleDef> = {
   [ParticleType.NAPALM_EXPLOSION]: NAPALM_EXPLOSION,
   [ParticleType.C4_EXPLOSION]: C4_EXPLOSION,
   [ParticleType.METHANE_EXPLOSION]: METHANE_EXPLOSION,
-  [ParticleType.CHARGED_NITRO]: CHARGED_NITRO,
+  [ParticleType.THERMITE_SPARK]: THERMITE_SPARK,
   [ParticleType.LAVA_BURST]: LAVA_BURST,
 }

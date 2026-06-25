@@ -10,15 +10,11 @@ import { TILEMAP_RENDERER_DEFAULTS, type TilemapRendererConfig } from './Tilemap
 import { makeTilemapFragShader } from './TilemapRendererShader.ts'
 import Shader = GameObjects.Shader
 import Color = Phaser.Display.Color
-import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
-import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
 export class TilemapRenderer extends SceneBound {
   private readonly chunkRenderer: TerrainChunkRenderer
   private readonly effectSystem: TerrainEffectSystem
-  private readonly particleTexture: Phaser.Textures.Texture
-  private readonly particleWrapper: WebGLTextureWrapper
   private readonly _lastRenderGen: Uint8Array
 
   constructor(
@@ -46,10 +42,6 @@ export class TilemapRenderer extends SceneBound {
     const { chunkGrid } = scene.tilemap
     this._lastRenderGen = new Uint8Array(chunkGrid.chunksWide * chunkGrid.chunksHigh)
 
-    const [particleTexture, particleWrapper] = scene.initGLTexture('particle-pixels', width, height)
-    this.particleTexture = particleTexture
-    this.particleWrapper = particleWrapper
-
     const shader: Shader = scene.add.shader(
       {
         name: 'TerrainShader',
@@ -58,7 +50,6 @@ export class TilemapRenderer extends SceneBound {
           setUniform('uTerrain', 0)
           setUniform('uMask', 1)
           setUniform('uEffect', 2)
-          setUniform('uParticles', 3)
           setUniform('uTime', scene.time.now)
           setUniform('uInvTilemapSize', [1.0 / width, 1.0 / height])
         },
@@ -72,21 +63,11 @@ export class TilemapRenderer extends SceneBound {
       terrainTexture,
       this.chunkRenderer.maskTexture,
       this.effectSystem.effectTexture,
-      this.particleTexture,
     ])
     scene.layers.terrain.add(shader)
 
     // Force shader compilation now (during create) to avoid a stall on the first rendered frame.
     ;(shader as any).renderNode?.programManager?.getCurrentProgramSuite?.()
-  }
-
-  updateParticlePixels(buf: Uint8Array) {
-    const { width, height } = this.scene.tilemap
-    const gl = (this.scene.renderer as WebGLRenderer).gl
-    gl.bindTexture(gl.TEXTURE_2D, this.particleWrapper.webGLTexture)
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, buf)
-    gl.bindTexture(gl.TEXTURE_2D, null)
   }
 
   addFireModeEffect(tx: number, ty: number, mode: FireMode, startTime?: number) {

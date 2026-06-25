@@ -1,7 +1,6 @@
 import { ChunkGrid, type ChunkGridBuffers } from '../Tilemap/ChunkGrid.ts'
 import type { Tilemap } from '../Tilemap/Tilemap.ts'
 import { type MatterTankManagerBuffers, MatterTankManagerData } from './data/MatterTankManagerData.ts'
-import { ParticleData, type ParticlesBuffers } from './data/ParticleData.ts'
 import { PlayerBoundsData, type PlayerBoundsDataType } from './data/PlayerBoundsData.ts'
 import { type ProjectileBuffers, ProjectileManagerData } from './data/ProjectileManagerData.ts'
 import { TunnelWeaponData, type TunnelWeaponDataType } from './data/TunnelWeaponData.ts'
@@ -12,7 +11,6 @@ import { VFXTileEffectData } from './data/VFXTileEffectData.ts'
 
 export type DataManagerBuffers = {
   chunkGrid: ChunkGridBuffers
-  particle: ParticlesBuffers
   matterTankManager: MatterTankManagerBuffers
   playerBounds: SharedArrayBuffer
   projectileManager: ProjectileBuffers
@@ -31,7 +29,6 @@ export type DataManagerBuffers = {
 
 export class DataManager {
   readonly chunkGrid: ChunkGrid
-  readonly particle: ParticleData
   readonly matterTankManager: MatterTankManagerData
   readonly playerBounds: PlayerBoundsDataType
   readonly projectileManager: ProjectileManagerData
@@ -45,7 +42,6 @@ export class DataManager {
   static make(tilemap: Tilemap): DataManager {
     const buffers: DataManagerBuffers = {
       chunkGrid: tilemap.chunkGrid.buffers,
-      particle: ParticleData.makeBuffers(tilemap.width, tilemap.height),
       matterTankManager: MatterTankManagerData.makeBuffer(),
       playerBounds: PlayerBoundsData.makeBuffer(),
       projectileManager: ProjectileManagerData.makeBuffer(),
@@ -65,7 +61,6 @@ export class DataManager {
 
   constructor(readonly buffers: DataManagerBuffers) {
     this.chunkGrid = ChunkGrid.fromBuffers(buffers.chunkGrid)
-    this.particle = new ParticleData(buffers.particle)
     this.matterTankManager = MatterTankManagerData.fromBuffers(buffers.matterTankManager)
     this.playerBounds = PlayerBoundsData.fromBuffer(buffers.playerBounds)
     this.projectileManager = new ProjectileManagerData(buffers.projectileManager)

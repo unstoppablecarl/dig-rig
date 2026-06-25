@@ -1,10 +1,9 @@
 import { matterType, MatterType, SupportType } from '../../../Matter/_Matter.types.ts'
 import { getSupportType } from '../../../Matter/matter.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
-import type { ParticleType } from '../../../Particles/_particle-types.ts'
+import { ParticleType } from '../../../Particles/_particle-types.ts'
 import type { Particle } from '../../../Particles/Particle.ts'
 import { PARTICLE_DEFS } from '../../../Particles/particles.ts'
-import { ParticleData, type ParticlesBuffers } from '../../data/ParticleData.ts'
 import { ParticlePool } from './ParticlePool.ts'
 import { ParticleSpawnBuffer } from './ParticleSpawnBuffer.ts'
 
@@ -15,32 +14,29 @@ export class ParticleSim {
   pool!: ParticlePool
   pendingActivations: number[] = []
   structuralRemovals: number[] = []
-  data!: ParticleData
 
-  init({ tiles, particleBuffers }: { tiles: SharedArrayBuffer, particleBuffers: ParticlesBuffers }) {
+  constructor(tiles: SharedArrayBuffer, width: number, height: number) {
     this.tiles = new Uint32Array(tiles)
-    this.width = particleBuffers.width
-    this.height = particleBuffers.height
-    this.data = new ParticleData(particleBuffers)
+    this.width = width
+    this.height = height
     this.pool = new ParticlePool()
   }
 
   step() {
-    this.data.clear()
     this.pendingActivations.length = 0
     this.structuralRemovals.length = 0
 
     this.pool.forEachActive((p) => {
-      const def = PARTICLE_DEFS[p.particleType]
-      if (!def) {
+      if (p.particleType === ParticleType.NONE) {
         this.pool.release(p)
         return
       }
+
+      const def = PARTICLE_DEFS[p.particleType]
       def.action(p, this)
       p.actionIterations++
     })
 
-    this.data.publish()
   }
 
   spawnBatch(data: Int32Array) {
@@ -75,7 +71,7 @@ export class ParticleSim {
     this.pendingActivations.push(idx)
   }
 
-  destroyTile(x: number, y: number, type: MatterType) {
+  fillTile(x: number, y: number, type: MatterType) {
     const width = this.width
     if (x < 0 || x >= width || y < 0 || y >= this.height) return
     const tiles = this.tiles
@@ -87,17 +83,6 @@ export class ParticleSim {
     }
     tiles[idx] = type
     this.pendingActivations.push(idx)
-  }
-
-  writeTileCircle(cx: number, cy: number, radius: number, type: MatterType) {
-    const r = Math.max(1, Math.round(radius))
-    const x0 = Math.round(cx)
-    const y0 = Math.round(cy)
-    for (let dy = -r; dy <= r; dy++) {
-      for (let dx = -r; dx <= r; dx++) {
-        if (dx * dx + dy * dy <= r * r) this.setTileType(x0 + dx, y0 + dy, type)
-      }
-    }
   }
 
   tileAtTip(p: Particle): MatterType {
@@ -112,5 +97,32 @@ export class ParticleSim {
 
   outOfBounds(p: Particle): boolean {
     return p.x < 0 || p.x >= this.width || p.y < 0 || p.y >= this.height
+  }
+
+  fillCircle(x: number, y: number, radius: number, value: number) {
+    const r = Math.max(1, Math.round(radius))
+    const cx = Math.round(x)
+    const cy = Math.round(y)
+    const { width, height } = this
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (dx * dx + dy * dy > r * r) continue
+        const px = cx + dx
+        const py = cy + dy
+        if (px < 0 || px >= width || py < 0 || py >= height) continue
+        this.fillTile(px, py, value)
+      }
+    }
+  }
+
+  fillLine(x1: number, y1: number, x2: number, y2: number, size: number, value: number) {
+    const radius = Math.max(0.5, size / 2)
+    const dx = x2 - x1
+    const dy = y2 - y1
+    const steps = Math.ceil(Math.max(Math.abs(dx), Math.abs(dy), 1))
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps
+      this.fillCircle(x1 + dx * t, y1 + dy * t, radius, value)
+    }
   }
 }

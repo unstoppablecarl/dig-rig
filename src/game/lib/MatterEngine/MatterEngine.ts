@@ -52,10 +52,6 @@ export class MatterEngine extends SceneBound {
 
   update() {
     if (this.destroyed) return
-    const pixels = this.data.particle.consumePixels()
-    if (pixels) {
-      this.scene.tilemapRenderer.updateParticlePixels(pixels)
-    }
     this.vfxSettled.drain()
     this.vfxParticle.drain()
     this.vfxTileEffect.drain()

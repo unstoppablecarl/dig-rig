@@ -5,8 +5,6 @@ export class Particle {
   particleType: ParticleType
   x: number = 0
   y: number = 0
-  // 0xRRGGBB
-  color: number = 0
   velocity: number = 0
   angle: number = 0
   xVelocity: number = 0
@@ -18,20 +16,23 @@ export class Particle {
   prev: Particle | null = null
   ownerId: MatterTankId
 
-  // Generic extra fields used by specific particle types
-  data: Record<string, number> = {}
+  initX: number = 0
+  initY: number = 0
+  minY: number = 0
+  initYVelocity: number = 0
+  yAcceleration: number = 0
+  maxIterations: number = 0
 
   reset() {
     this.particleType = ParticleType.NONE
     this.x = this.y = 0
-    this.color = 0
-    this.velocity = this.angle = 0
+    this.velocity = 0
+    this.angle = 0
     this.xVelocity = this.yVelocity = 0
     this.size = 0
     this.actionIterations = 0
     this.active = false
     this.next = this.prev = null
-    this.data = {}
   }
 
   setVelocity(velocity: number, angle: number) {

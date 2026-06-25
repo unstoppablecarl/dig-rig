@@ -1,27 +1,30 @@
-import { PARTICLE_FIRE_COLOR } from '../../../config/colors.ts'
 import { TWO_PI } from '../../../helpers/_helpers.ts'
+import { randomRange } from '../../../helpers/random.ts'
 import { FIRE, setOwner } from '../../Matter/_Matter.types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
+
+const SIZE_DECAY_RATE = 0.95
 
 export const GUNPOWDER_EXPLOSION: ParticleDef = {
   particlesToSpawn: 12,
   init(p) {
-    p.color = PARTICLE_FIRE_COLOR
-    const velocity = 5 + Math.random() * 10
+    const velocity = randomRange(5, 15)
     const angle = Math.random() * TWO_PI
     p.setVelocity(velocity, angle)
-    p.size = 2 + Math.random() * 7
+    p.size = randomRange(2, 9)
   },
   action(p, sim) {
-    const x2 = p.x + p.xVelocity
-    const y2 = p.y + p.yVelocity
-    sim.data.drawThickLine(p.x, p.y, x2, y2, p.size, p.color)
-    sim.destroyTile(Math.round(x2), Math.round(y2), setOwner(FIRE, p.ownerId))
-    p.x = x2
-    p.y = y2
+    const dx = p.x + p.xVelocity
+    const dy = p.y + p.yVelocity
+    const fire = setOwner(FIRE, p.ownerId)
+    sim.fillLine(p.x, p.y, dx, dy, p.size, fire)
+
+    p.x = dx
+    p.y = dy
     p.yVelocity += 0.3
-    if (p.actionIterations % 5 === 0) p.size /= 1.3
-    if (p.size < 1.75) sim.pool.release(p)
-    else if (sim.outOfBounds(p)) sim.pool.release(p)
+    p.size *= SIZE_DECAY_RATE
+    if (p.size < 1.75 || sim.outOfBounds(p)) {
+      sim.pool.release(p)
+    }
   },
 }

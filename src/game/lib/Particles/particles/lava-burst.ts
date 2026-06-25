@@ -1,4 +1,5 @@
 import { EIGHTEENTH_PI, HALF_PI, QUARTER_PI } from '../../../helpers/_helpers.ts'
+import { randomRange } from '../../../helpers/random.ts'
 import {
   CHILLED_ICE,
   CRYO,
@@ -6,7 +7,6 @@ import {
   ICE,
   LAVA,
   MatterType,
-  PERMANENT,
   ROCK,
   SALT_WATER,
   setOwner,
@@ -15,71 +15,58 @@ import {
 } from '../../Matter/_Matter.types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
-const ROCK_COLOR = 0x442808
-const LAVA_COLOR = 0xF55A0F
-
 export const LAVA_BURST: ParticleDef = {
   particlesToSpawn: 5,
   init(p) {
 
-    p.color = LAVA_COLOR
     // Bias angle away from straight-up to avoid overly vertical trajectories
     let angle = QUARTER_PI + Math.random() * HALF_PI
-    if (Math.random() < 0.75 && Math.abs(HALF_PI - angle) < EIGHTEENTH_PI)
+    if (Math.random() < 0.75 && Math.abs(HALF_PI - angle) < EIGHTEENTH_PI) {
       angle += EIGHTEENTH_PI * (angle > HALF_PI ? 1 : -1)
-    p.xVelocity = (1 + Math.random() * 3) * Math.cos(angle)
-    p.yVelocity = (-4 * Math.random() - 3) * Math.sin(angle)
-    p.data.initY = p.y
-    p.data.initYVelocity = p.yVelocity
-    p.data.yAcceleration = 0.06
-    p.size = 4 + Math.random() * 3
+    }
+    p.xVelocity = randomRange(1, 4) * Math.cos(angle)
+    p.yVelocity = randomRange(-7, -4) * Math.sin(angle)
+    p.initY = p.y
+    p.initYVelocity = p.yVelocity
+    p.yAcceleration = 0.06
+    p.size = randomRange(4, 7)
     p.y -= p.size
   },
   action(p, sim) {
     const x2 = p.x + p.xVelocity
-    const y2 = p.data.initY
-      + p.data.initYVelocity * p.actionIterations
-      + (p.data.yAcceleration * p.actionIterations * p.actionIterations) / 2
-    sim.data.drawThickLine(p.x, p.y, x2, y2, p.size, p.color)
-    // Trail leaves fire in the world
-    sim.destroyTile(Math.round(x2), Math.round(y2), setOwner(FIRE, p.ownerId))
+    const y2 = p.initY
+      + p.initYVelocity * p.actionIterations
+      + (p.yAcceleration * p.actionIterations * p.actionIterations) * 0.5
+    const fire = setOwner(FIRE, p.ownerId)
+    sim.fillLine(p.x, p.y, x2, y2, p.size, fire)
     p.x = x2
     p.y = y2
-
-    // Allow the particle to arc above the canvas top but retire it off the sides or bottom
-    if (p.x < 0 || p.x >= sim.width || p.y >= sim.height) {
-      sim.pool.release(p)
-      return
-    }
 
     // 25% chance per frame: check what matterType the tip is about to hit
     if (Math.random() < 0.25) {
       // Update yVelocity to the current value so tileAtTip uses the right direction
-      p.yVelocity = p.data.initYVelocity + p.data.yAcceleration * p.actionIterations
+      p.yVelocity = p.initYVelocity + p.yAcceleration * p.actionIterations
       const tile = sim.tileAtTip(p)
-      let splatColor = -1
-      let splatTile: MatterType | null = null
+      let replaceType: MatterType | null = null
       if (tile === WATER || tile === SALT_WATER) {
         if (Math.random() < 0.58) {
-          splatColor = ROCK_COLOR
-          splatTile = ROCK
+          replaceType = ROCK
         }
       } else if (tile === LAVA || tile === ROCK) {
         if (Math.random() < 0.75) {
-          splatColor = LAVA_COLOR
-          splatTile = LAVA
+          replaceType = LAVA
         }
       } else if (tile === ICE || tile === CHILLED_ICE || tile === CRYO) {
         if (Math.random() < 0.70) {
-          splatColor = ROCK_COLOR
-          splatTile = ROCK
+          replaceType = ROCK
         }
-      } else if (tile === SOLID || tile === PERMANENT) {
-        if (Math.random() < 0.25) splatColor = LAVA_COLOR  // visual only — don't overwrite structural tiles
+      } else if (tile === SOLID) {
+        if (Math.random() < 0.25) {
+          replaceType = LAVA
+        }
       }
-      if (splatColor !== -1) {
-        sim.data.drawCircleFromParticle(p, p.size / 2, splatColor)
-        if (splatTile !== null) sim.writeTileCircle(p.x, p.y, p.size / 2, setOwner(splatTile, p.ownerId))
+      if (replaceType !== null) {
+        sim.fillCircle(p.x, p.y, p.size * 0.5, replaceType)
         sim.pool.release(p)
         return
       }

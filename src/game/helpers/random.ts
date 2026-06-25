@@ -9,3 +9,15 @@ export function random(): number {
   _rngIdx = (_rngIdx + 1) % RNG_SIZE
   return v
 }
+
+export function randomRange(min: number, max: number): number {
+  if (min > max) {
+    [min, max] = [max, min]
+  }
+
+  return Math.random() * (max - min) + min
+}
+
+export function randomRangeInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min) + min)
+}

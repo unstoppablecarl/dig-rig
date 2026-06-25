@@ -1,4 +1,14 @@
-import { EMPTY, FIRE, MatterType, MatterTypeValues, PERMANENT, SAND, SOLID, WATER } from '../../Matter/_Matter.types.ts'
+import {
+  ACID,
+  EMPTY,
+  FIRE, GUNPOWDER, LAVA,
+  MatterType,
+  MatterTypeValues,
+  PERMANENT,
+  SAND,
+  SOLID,
+  WATER,
+} from '../../Matter/_Matter.types.ts'
 import { MatterTypeSet, matterTypeSetExcluding } from '../../Matter/data/MatterTypeSet.ts'
 import { collidesWithCreateProjectiles } from '../../Matter/matter.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
@@ -15,11 +25,13 @@ export function makeCreateEffect(type: MatterType): ProjectileEffect {
 }
 
 export const PROJECTILE_EFFECT = {
-  CREATE_SOLID: makeCreateEffect(MatterType.SOLID),
-  CREATE_SAND: makeCreateEffect(MatterType.SAND),
-  CREATE_WATER: makeCreateEffect(MatterType.WATER),
-  CREATE_ACID: makeCreateEffect(MatterType.ACID),
-  CREATE_LAVA: makeCreateEffect(MatterType.LAVA),
+  CREATE_SOLID: makeCreateEffect(SOLID),
+  CREATE_SAND: makeCreateEffect(SAND),
+  CREATE_WATER: makeCreateEffect(WATER),
+  CREATE_ACID: makeCreateEffect(ACID),
+  CREATE_LAVA: makeCreateEffect(LAVA),
+  CREATE_GUNPOWDER: makeCreateEffect(GUNPOWDER),
+
   DESTROY: {
     mode: FireMode.DESTROY,
     instantProjectileCollidesWith: matterTypeSetExcluding([PERMANENT, EMPTY, WATER, FIRE]),
@@ -37,11 +49,12 @@ export const PROJECTILE_EFFECT = {
 export type ProjectileEffectType = keyof typeof PROJECTILE_EFFECT
 
 export const PROJECTILE_CREATE_EFFECT = {
-  [MatterType.SOLID]: PROJECTILE_EFFECT.CREATE_SOLID,
-  [MatterType.SAND]: PROJECTILE_EFFECT.CREATE_SAND,
-  [MatterType.WATER]: PROJECTILE_EFFECT.CREATE_WATER,
-  [MatterType.ACID]: PROJECTILE_EFFECT.CREATE_ACID,
-  [MatterType.LAVA]: PROJECTILE_EFFECT.CREATE_LAVA,
+  [SOLID]: PROJECTILE_EFFECT.CREATE_SOLID,
+  [SAND]: PROJECTILE_EFFECT.CREATE_SAND,
+  [WATER]: PROJECTILE_EFFECT.CREATE_WATER,
+  [ACID]: PROJECTILE_EFFECT.CREATE_ACID,
+  [LAVA]: PROJECTILE_EFFECT.CREATE_LAVA,
+  [GUNPOWDER]: PROJECTILE_EFFECT.CREATE_GUNPOWDER,
 } as const satisfies Partial<Record<MatterType, ProjectileEffect>>
 
 export type CreateableMatterType = keyof typeof PROJECTILE_CREATE_EFFECT

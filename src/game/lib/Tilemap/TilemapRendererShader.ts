@@ -77,7 +77,6 @@ export function makeTilemapFragShader(
       uniform sampler2D uTerrain;
       uniform sampler2D uMask;
       uniform sampler2D uEffect;
-      uniform sampler2D uParticles;
       uniform float uTime;
       uniform vec2 uInvTilemapSize;
 
@@ -536,14 +535,6 @@ export function makeTilemapFragShader(
           if (eff.a > 0.004) {
               float effA = pow(eff.a, 2.0);
               color = mix(color, vec4(eff.rgb, 1.0), effA);
-          }
-
-          // uParticles: particle pixel layer written each frame by the particle worker.
-          // Uploaded via texSubImage2D without UNPACK_FLIP_Y, so row 0 lands at GL bottom.
-          // Y-flip corrects world-top=row0 to screen-top.
-          vec4 pt = texture2D(uParticles, vec2(outTexCoord.x, 1.0 - outTexCoord.y));
-          if (pt.a > 0.004) {
-              color = mix(color, vec4(pt.rgb, 1.0), pt.a * 0.5);
           }
 
           #if DEBUG_SETTLED

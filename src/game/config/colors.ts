@@ -59,8 +59,6 @@ export const FIRE_GROUP_COLORS: Record<FireGroup, number> = {
   [FireGroup.SOLIDIFY_MELT]: Interpolate.ColorWithColor(MELT_COLOR, SOLIDIFY_COLOR, 1, 0.5).color,
 }
 
-// 0xRRGGBB color constants matching the GLSL matterType colors
-export const PARTICLE_FIRE_COLOR = 0xff0000
 export const BRUSH_OUTLINE_COLOR = rgbToColor(`rgba(255, 255, 0)`)
 
 export type MatterRenderConfig = typeof MATTER_RENDER_CONFIG_DEFAULTS

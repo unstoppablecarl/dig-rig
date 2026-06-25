@@ -1,21 +1,21 @@
-import { PARTICLE_FIRE_COLOR } from '../../../config/colors.ts'
 import { TWO_PI } from '../../../helpers/_helpers.ts'
+import { randomRange } from '../../../helpers/random.ts'
 import { FIRE, setOwner } from '../../Matter/_Matter.types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
 export const NITRO_EXPLOSION: ParticleDef = {
   particlesToSpawn: 20,
   init(p) {
-    p.color = PARTICLE_FIRE_COLOR
-    const velocity = 8 + Math.random() * 14
+    const velocity = randomRange(8, 22)
     p.setVelocity(velocity, Math.random() * TWO_PI)
-    p.size = 3 + Math.random() * 9
+    p.size = randomRange(3, 12)
   },
   action(p, sim) {
+    const fire = setOwner(FIRE, p.ownerId)
     const x2 = p.x + p.xVelocity
     const y2 = p.y + p.yVelocity
-    sim.data.drawThickLine(p.x, p.y, x2, y2, p.size, p.color)
-    sim.setTileType(Math.round(x2), Math.round(y2), setOwner(FIRE, p.ownerId))
+    sim.fillLine(p.x, p.y, x2, y2, p.size, fire)
+    sim.fillTile(Math.round(x2), Math.round(y2), fire)
     p.x = x2
     p.y = y2
     if (p.actionIterations % 4 === 0) p.size /= 1.35

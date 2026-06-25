@@ -88,7 +88,7 @@ export const BURNING_THERMITE_DEF = {
 
     // Spawn charged particle occasionally
     if (random() < 2 && random() < 7) {
-      sim.spawnParticle(ParticleType.CHARGED_NITRO, tx, ty, ownerId)
+      sim.spawnParticle(ParticleType.THERMITE_SPARK, tx, ty, ownerId)
 
       sim.queueMatterCredit(tx, ty, ownerId)
       tiles[idx] = setOwner(FIRE, ownerId)
