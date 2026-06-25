@@ -7,6 +7,10 @@ const SCHEMA = {
   tileX: Uint32Array,
   tileY: Uint32Array,
   ownerId: Uint32Array,
+  // Source position override for create VFX (e.g. a flood-fill projectile's collision
+  // tile) — sentinel -1 means "no override, use the tank's emit position" instead.
+  srcX: Int32Array,
+  srcY: Int32Array,
 }
 
 const BYTE_LENGTH = ringBufferByteLength(SCHEMA, CAPACITY)
@@ -25,28 +29,33 @@ export class VFXParticleData {
   }
 
   // Coordinator side — sole writer of writeHead.
-  writeTile(tx: number, ty: number, ownerId: number) {
+  writeTile(tx: number, ty: number, ownerId: number, srcPos?: { x: number; y: number }) {
     if (ownerId === NO_MATTER_TANK_ID) console.error('ownerId not found: ' + ownerId)
     this.writer.write((cursor) => {
       cursor.tileX = tx
       cursor.tileY = ty
       cursor.ownerId = ownerId
+      cursor.srcX = srcPos?.x ?? -1
+      cursor.srcY = srcPos?.y ?? -1
     })
   }
 
-  writeTiles(tiles: ReadonlyArray<{ x: number; y: number }>, ownerId: number) {
+  writeTiles(tiles: ReadonlyArray<{ x: number; y: number }>, ownerId: number, srcPos?: { x: number; y: number }) {
     if (ownerId === NO_MATTER_TANK_ID) console.error('ownerId not found: ' + ownerId)
     this.writer.writeMany(tiles, (cursor, tile) => {
       cursor.tileX = tile.x
       cursor.tileY = tile.y
       cursor.ownerId = ownerId
+      cursor.srcX = srcPos?.x ?? -1
+      cursor.srcY = srcPos?.y ?? -1
     })
   }
 
   // Main thread side — sole writer of readHead.
-  drain(callback: (tileX: number, tileY: number, ownerId: number) => void) {
+  drain(callback: (tileX: number, tileY: number, ownerId: number, srcPos?: { x: number; y: number }) => void) {
     this.reader.drain((cursor) => {
-      callback(cursor.tileX, cursor.tileY, cursor.ownerId)
+      const srcPos = cursor.srcX >= 0 && cursor.srcY >= 0 ? { x: cursor.srcX, y: cursor.srcY } : undefined
+      callback(cursor.tileX, cursor.tileY, cursor.ownerId, srcPos)
     })
   }
 }

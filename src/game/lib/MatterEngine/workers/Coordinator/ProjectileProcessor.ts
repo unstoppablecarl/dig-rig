@@ -3,7 +3,7 @@ import { matterType, type MatterType } from '../../../Matter/_Matter.types.ts'
 import { doesSettle, getReserveDestroyAmount } from '../../../Matter/matter.ts'
 import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
-import { type ProjectileManagerData, ProjectileStatus } from '../../data/ProjectileManagerData.ts'
+import { type ProjectileManagerData, ProjectileShape, ProjectileStatus } from '../../data/ProjectileManagerData.ts'
 import type { VFXParticleData } from '../../data/VFXParticleData.ts'
 import type { VFXTileEffectData } from '../../data/VFXTileEffectData.ts'
 import type { Effects } from './Effects.ts'
@@ -55,7 +55,12 @@ export class ProjectileProcessor {
         }
         if (!doesSettle(matterType(createType))) {
           this.tileEffectData.writeFireModeTiles(tiles, mode)
-          this.vfxParticleCreateData.writeTiles(tiles, ownerId)
+          // Flood-fill creates can paint far from the collision point, so anchor the VFX
+          // source on where the projectile hit rather than the tank's emit position.
+          const srcPos = d.shape[i] === ProjectileShape.FLOOD_FILL
+            ? { x: d.tileX[i], y: d.tileY[i] }
+            : undefined
+          this.vfxParticleCreateData.writeTiles(tiles, ownerId, srcPos)
         }
 
       } else {

@@ -22,8 +22,8 @@ export class VFXParticleProcessor {
     this._drainBuffer(this.vfxParticleDestroyData, this._destroyChunks, (chunkPos, tank) => {
       vfxParticleManager.spawnMatter(chunkPos, tank.source, false)
     })
-    this._drainBuffer(this.vfxParticleCreateData, this._createChunks, (chunkPos, tank) => {
-      vfxParticleManager.spawnMatter(tank.getEmitPos(), chunkPos, true)
+    this._drainBuffer(this.vfxParticleCreateData, this._createChunks, (chunkPos, tank, srcPos) => {
+      vfxParticleManager.spawnMatter(srcPos ?? tank.getEmitPos(), chunkPos, true)
     })
     this.overflow.drain((from, to, amount) => {
       const fromTank = matterManager.get(from)
@@ -41,10 +41,10 @@ export class VFXParticleProcessor {
   private _drainBuffer(
     data: VFXParticleData,
     spawnedChunks: Set<number>,
-    spawn: (chunkPos: { x: number; y: number }, tank: MatterTank) => void,
+    spawn: (chunkPos: { x: number; y: number }, tank: MatterTank, srcPos?: { x: number; y: number }) => void,
   ) {
     spawnedChunks.clear()
-    data.drain((tx, ty, ownerId) => {
+    data.drain((tx, ty, ownerId, srcPos) => {
       const tank = this.scene.matterManager.get(ownerId as MatterTankId)
       if (!tank) {
         console.error('vfx particle tank not found: ', ownerId)
@@ -61,6 +61,7 @@ export class VFXParticleProcessor {
           y: (cy + 0.5) * VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE,
         },
         tank,
+        srcPos,
       )
     })
   }
