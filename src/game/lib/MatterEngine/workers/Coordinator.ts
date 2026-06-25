@@ -1,9 +1,12 @@
 /// <reference lib="webworker" />
-import { ENABLE_MATTER_CONSERVATION_CHECK, MATTER_CONSERVATION_CHECK_INTERVAL_FRAMES } from '../../../config.ts'
+import {
+  ENABLE_MATTER_CONSERVATION_CHECK,
+  MATTER_CONSERVATION_CHECK_INTERVAL_FRAMES,
+  MAX_MATTER_TANKS,
+} from '../../../config.ts'
 import { FIRE, matterType, MatterType } from '../../Matter/_Matter.types.ts'
 import type { MatterTankId } from '../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
-import { MAX_MATTER_TANKS } from '../data/MatterTankManagerData.ts'
 import { DataManager } from '../DataManager.ts'
 import { MatterCreditTransferBuffer } from './_helpers/MatterCreditTransferBuffer.ts'
 import { MatterReservationReleaseBuffer } from './_helpers/MatterReservationReleaseBuffer.ts'
