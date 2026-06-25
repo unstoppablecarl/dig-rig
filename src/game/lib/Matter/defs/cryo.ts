@@ -27,9 +27,10 @@ export const CRYO_DEF = {
     // Lava contact: cryo evaporates, lava solidifies
     const lavaLoc = sim.bordering(tx, ty, idx, LAVA)
     if (lavaLoc !== -1) {
-      const ownerId = getFirstOwnerId(tiles[idx], tiles[lavaLoc])
+      const lavaRaw = tiles[lavaLoc]
+      const ownerId = getFirstOwnerId(tiles[idx], lavaRaw)
       sim.queueMatterCredit(tx, ty, ownerId)
-      sim.queueReservationRelease(getOwner(tiles[lavaLoc]), 1)
+      sim.queueReservationRelease(getOwner(lavaRaw), 1)
       tiles[idx] = EMPTY
       tiles[lavaLoc] = ROCK
       sim.markDirty(tx, ty)
