@@ -5,10 +5,13 @@ export const PLAYER_MOVE_SPEED = 3.5
 export const DEFAULT_PLAYER_STARTING_MATTER = 400
 export const DEFAULT_PLAYER_MATTER_TANK_SIZE = 5000
 
+// hard limits
+export const MAX_PROJECTILES = 512
+export const MAX_MATTER_TANKS = 256
+
 // vfx limits
 export const MAX_MATTER_PARTICLES = 1500
 export const VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE = 4
-export const MAX_PROJECTILES = 500
 
 // shaders
 export const GLOW_ENABLED = true

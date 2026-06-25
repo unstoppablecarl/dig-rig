@@ -1,7 +1,6 @@
+import { MAX_MATTER_TANKS } from '../../../config.ts'
 import { type MatterTankId, PLAYER_MATTER_TANK_ID } from '../../Matter/Tank/_MatterTank.types.ts'
 import { makeSOABuffers, type Schema, soaBuffersToViews } from '../../Util/StructOfArrays.ts'
-
-export const MAX_MATTER_TANKS = 64
 
 // reservedDestroyPlaced + reservedDestroyInFlight together hold one reservation (a create-lava/
 // acid beam's eventual destroy-charge liability), split across its two lifecycle phases because
