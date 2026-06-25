@@ -11,13 +11,16 @@ export type ProjectileEffectResult = { x: number, y: number, newValue: MatterTyp
 export type EffectResult = { tiles: ProjectileEffectResult[], structuralDirty: boolean }
 
 export abstract class SimProjectile {
+  protected readonly width: number
+  protected readonly height: number
+
   constructor(
     protected readonly sim: MatterSim,
     protected readonly physics: Physics,
     protected readonly matterTanks: SimMatterTanks,
-    protected readonly width: number,
-    protected readonly height: number,
   ) {
+    this.width = sim.width
+    this.height = sim.height
   }
 
   protected abstract convertTile(existing: MatterType, createType: MatterType, ownerId: MatterTankId): MatterType | null
@@ -79,7 +82,21 @@ export abstract class SimProjectile {
       candidates.length = budget
     }
 
+    return this._writeCandidates(candidates, createType, activeSet, dirtyChunks)
+  }
+
+  // Shared by the radius scan above and the BFS-based flood fill variants — converts
+  // already-gathered candidates to their newValue and runs the mode-specific postApply.
+  protected _writeCandidates(
+    candidates: ProjectileEffectResult[],
+    createType: MatterType,
+    activeSet: Set<number>,
+    dirtyChunks: Set<number>,
+  ): EffectResult {
     if (candidates.length === 0) return { tiles: candidates, structuralDirty: false }
+
+    const { width } = this
+    const tiles = this.sim.tiles
 
     let structuralDirty = false
     for (const { x, y, newValue } of candidates) {

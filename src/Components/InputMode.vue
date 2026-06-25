@@ -18,6 +18,8 @@ const WEAPON_COMPONENTS: Record<PlayerWeapon, Component> = {
   [PlayerWeapon.INSTANT]: InstantWeaponComp,
   [PlayerWeapon.TORCH]: TorchWeaponComp,
   [PlayerWeapon.TUNNEL]: TunnelWeaponComp,
+  // Same controls as Basic: fire group + matter type + charge.
+  [PlayerWeapon.FLOOD_FILL]: BasicWeaponComp,
 }
 
 const uiState = useUIState()

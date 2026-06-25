@@ -6,6 +6,7 @@ import { type Buffers, makeSOABuffers, type Schema, soaBuffersToViews } from '..
 const SCHEMA = {
   status: Uint8Array,
   mode: Uint8Array,
+  shape: Uint8Array,
   tileX: Uint32Array,
   tileY: Uint32Array,
   radius: Uint32Array,
@@ -25,9 +26,18 @@ export enum ProjectileStatus {
   PENDING,
 }
 
+// How a slot's area-of-effect is computed: CIRCLE scans a radius around tileX/tileY;
+// FLOOD_FILL BFS-expands from tileX/tileY along tiles matching the FireMode (see
+// Coordinator/Effects/FloodFillCreate.ts and FloodFillDestroy.ts).
+export enum ProjectileShape {
+  CIRCLE,
+  FLOOD_FILL,
+}
+
 export class ProjectileManagerData {
   readonly status: Uint8Array
   readonly mode: Uint8Array
+  readonly shape: Uint8Array
   readonly tileX: Uint32Array
   readonly tileY: Uint32Array
   readonly radius: Uint32Array
@@ -50,6 +60,7 @@ export class ProjectileManagerData {
 
     this.status = views.status
     this.mode = views.mode
+    this.shape = views.shape
     this.tileX = views.tileX
     this.tileY = views.tileY
     this.radius = views.radius
@@ -84,6 +95,7 @@ export class ProjectileManagerData {
     this.tilesToModify[idx] = p.tilesToModify
     this.ownerId[idx] = p.matterTank.id
     this.mode[idx] = p.effect.mode
+    this.shape[idx] = p.shape
     this.createType[idx] = (p.effect.createType ?? MatterType.SOLID)
     this.status[idx] = ProjectileStatus.PENDING
   }
@@ -97,6 +109,7 @@ export class ProjectileManagerData {
     this.tilesToModify[idx] = tilesToModify ?? p.tilesToModify
     this.ownerId[idx] = p.matterTank.id
     this.mode[idx] = p.effect.mode
+    this.shape[idx] = p.shape
     this.createType[idx] = (p.effect.createType ?? MatterType.SOLID)
     this.status[idx] = ProjectileStatus.ACTIVE
   }

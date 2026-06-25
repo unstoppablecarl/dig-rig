@@ -3,8 +3,8 @@ import { ENABLE_MATTER_CONSERVATION_CHECK, MATTER_CONSERVATION_CHECK_INTERVAL_FR
 import { FIRE, matterType, MatterType } from '../../Matter/_Matter.types.ts'
 import type { MatterTankId } from '../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
-import { DataManager } from '../DataManager.ts'
 import { MAX_MATTER_TANKS } from '../data/MatterTankManagerData.ts'
+import { DataManager } from '../DataManager.ts'
 import { MatterCreditTransferBuffer } from './_helpers/MatterCreditTransferBuffer.ts'
 import { MatterReservationReleaseBuffer } from './_helpers/MatterReservationReleaseBuffer.ts'
 import { type CoordinatorInMsgBrushEraseMatter, type CoordinatorInMsgInit } from './Coordinator.types.ts'
@@ -45,7 +45,6 @@ export class Coordinator {
     this.data = new DataManager(buffers)
     const { width, height } = buffers
     this.width = width
-
     this.sim = new MatterSim()
 
     const chunkGrid = this.data.chunkGrid
@@ -56,10 +55,14 @@ export class Coordinator {
 
     this.matterTanks = new SimMatterTanks(this.data.matterTankManager)
     this.physics = new Physics(this.sim, chunkGrid, width, height)
-    this.effects = new Effects(this.sim, this.physics, this.matterTanks, this.data.playerBounds, width, height)
+    this.effects = new Effects(this.sim, this.physics, this.matterTanks, this.data.playerBounds)
     this.tunnelWeapon = new TunnelWeapon(
-      this.effects, this.data.tunnelWeapon,
-      this.data.playerBounds, this.data.vfxParticleDestroy, this.data.vfxTileEffect, this.sim.tiles, width, height,
+      this.effects,
+      this.data.tunnelWeapon,
+      this.data.playerBounds,
+      this.data.vfxParticleDestroy,
+      this.data.vfxTileEffect,
+      this.sim.tiles,
     )
     this.brush = new Brush(width, height, this.sim, this.physics, this.effects)
 

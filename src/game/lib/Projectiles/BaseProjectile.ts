@@ -1,6 +1,7 @@
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { MatterTank } from '../Matter/Tank/MatterTank.ts'
+import { ProjectileShape } from '../MatterEngine/data/ProjectileManagerData.ts'
 import type { ProjectileEffect } from './ProjectileEffect/_ProjectileEffect.types.ts'
 import type { ProjectileManager } from './ProjectileManager.ts'
 import { ProjectileRenderer } from './ProjectileRenderer.ts'
@@ -12,6 +13,7 @@ export type BaseProjectileConstructor<T extends BaseProjectile> = new (...args: 
 export abstract class BaseProjectile extends SceneBound {
   public tilesToModify: number = -1
   public radius = 0
+  public shape: ProjectileShape = ProjectileShape.CIRCLE
 
   protected vx: number = 0
   protected vy: number = 0
@@ -86,6 +88,27 @@ export abstract class BaseProjectile extends SceneBound {
 
   charge() {
     return this.tilesToModify - this.tilesModified
+  }
+
+  protected updateEnd() {
+    if (this.tilesModified === this.tilesToModify) {
+      this.destroy()
+      return
+    }
+    if (!this.scene.worldBounds.contains(this.x, this.y)) {
+      this.destroy()
+      return
+    }
+
+    if (this.tilesModified > this.tilesToModify) {
+      throw new Error('exceeded matter charge: ' + this.charge())
+    }
+
+    if (this.tilesToModify === -1) {
+      throw new Error('tilesToModify not set before first update')
+    }
+
+    this.lifespanPercent = this.tilesModified / this.tilesToModify
   }
 
   protected onDestroy() {

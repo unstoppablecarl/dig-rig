@@ -4,9 +4,11 @@ import { doesSettle, getSupportType } from '../../../Matter/matter.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import { EMPTY_PLAYER_BOUNDS, type PlayerBoundsDataType } from '../../data/PlayerBoundsData.ts'
-import type { ProjectileManagerData } from '../../data/ProjectileManagerData.ts'
+import { type ProjectileManagerData, ProjectileShape } from '../../data/ProjectileManagerData.ts'
 import type { CoordinatorInMsgBrushEraseMatter } from '../Coordinator.types.ts'
 import type { MatterSim } from '../MatterSim/MatterSim.ts'
+import { FloodFillCreate } from './Effects/FloodFillCreate.ts'
+import { FloodFillDestroy } from './Effects/FloodFillDestroy.ts'
 import { ProjectileCreate } from './Effects/ProjectileCreate.ts'
 import { ProjectileDestroy } from './Effects/ProjectileDestroy.ts'
 import { ProjectileMelt } from './Effects/ProjectileMelt.ts'
@@ -26,19 +28,25 @@ export class Effects {
   private readonly destroyProjectile: ProjectileDestroy
   private readonly meltProjectile: ProjectileMelt
   private readonly solidifyProjectile: ProjectileSolidify
+  private readonly floodFillCreate: FloodFillCreate
+  private readonly floodFillDestroy: FloodFillDestroy
+  readonly width: number
+  readonly height: number
 
   constructor(
     private readonly sim: MatterSim,
     private readonly physics: Physics,
     matterTanks: SimMatterTanks,
     private readonly playerBoundsData: PlayerBoundsDataType,
-    private readonly width: number,
-    height: number,
   ) {
-    this.createProjectile = new ProjectileCreate(sim, physics, matterTanks, width, height)
-    this.destroyProjectile = new ProjectileDestroy(sim, physics, matterTanks, width, height)
-    this.meltProjectile = new ProjectileMelt(sim, physics, matterTanks, width, height)
-    this.solidifyProjectile = new ProjectileSolidify(sim, physics, matterTanks, width, height)
+    this.createProjectile = new ProjectileCreate(sim, physics, matterTanks)
+    this.destroyProjectile = new ProjectileDestroy(sim, physics, matterTanks)
+    this.meltProjectile = new ProjectileMelt(sim, physics, matterTanks)
+    this.solidifyProjectile = new ProjectileSolidify(sim, physics, matterTanks)
+    this.floodFillCreate = new FloodFillCreate(sim, physics, matterTanks)
+    this.floodFillDestroy = new FloodFillDestroy(sim, physics, matterTanks)
+    this.width = sim.width
+    this.height = sim.height
   }
 
   applyTileWrites(
@@ -111,9 +119,27 @@ export class Effects {
     const mode = data.mode[slotIdx] as FireMode
     const tileX = data.tileX[slotIdx]
     const tileY = data.tileY[slotIdx]
-    const radius = data.radius[slotIdx]
     const ownerId = data.ownerId[slotIdx] as MatterTankId
 
+    if (data.shape[slotIdx] === ProjectileShape.FLOOD_FILL) {
+      let result: EffectResult
+      switch (mode) {
+        case FireMode.CREATE: {
+          const createType = data.createType[slotIdx] as MatterType
+          result = this.floodFillCreate.applyFloodFill(tileX, tileY, createType, ownerId, budget, slotIdx, this.playerBoundsData, activeSet, dirtyChunks)
+          break
+        }
+        case FireMode.DESTROY:
+          result = this.floodFillDestroy.applyFloodFill(tileX, tileY, ownerId, budget, slotIdx, activeSet, dirtyChunks)
+          break
+        default:
+          return { tiles: [], structuralDirty: false }
+      }
+      data.tilesModified[slotIdx] += result.tiles.length
+      return result
+    }
+
+    const radius = data.radius[slotIdx]
     let result: EffectResult
     switch (mode) {
       case FireMode.CREATE: {

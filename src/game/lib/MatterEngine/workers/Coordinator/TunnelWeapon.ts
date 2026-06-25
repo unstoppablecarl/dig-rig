@@ -20,6 +20,8 @@ export class TunnelWeapon {
   private _restoreVisited = new Set<number>()
   private _restoreResultTiles: Tile[] = []
   private _restoreResultIndices: number[] = []
+  private readonly width: number
+  private readonly height: number
 
   constructor(
     private readonly effects: Effects,
@@ -28,9 +30,9 @@ export class TunnelWeapon {
     private readonly vfxParticleData: VFXParticleData,
     private readonly vfxTileEffectData: VFXTileEffectData,
     private readonly tiles: Uint32Array,
-    private readonly width: number,
-    private readonly height: number,
   ) {
+    this.width = effects.width
+    this.height = effects.height
   }
 
   hasWork(): boolean {

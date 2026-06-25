@@ -1,6 +1,7 @@
 import type { WeaponDef } from './_weapon.types.ts'
 
 import { BasicWeapon } from './Weapons/BasicWeapon.ts'
+import { FloodFillWeapon } from './Weapons/FloodFillWeapon.ts'
 import { InstantWeapon } from './Weapons/InstantWeapon.ts'
 import { RapidWeapon } from './Weapons/RapidWeapon.ts'
 import { TorchWeapon } from './Weapons/TorchWeapon.ts'
@@ -12,6 +13,7 @@ export enum PlayerWeapon {
   INSTANT = 'INSTANT',
   TORCH = 'TORCH',
   TUNNEL = 'TUNNEL',
+  FLOOD_FILL = 'FLOOD_FILL',
 }
 
 export const WEAPONS = {
@@ -44,6 +46,12 @@ export const WEAPONS = {
     displayName: 'Tunnel',
     constructor: TunnelWeapon,
     slot: 5,
+  },
+  [PlayerWeapon.FLOOD_FILL]: {
+    id: PlayerWeapon.FLOOD_FILL,
+    displayName: 'Flood Fill',
+    constructor: FloodFillWeapon,
+    slot: 6,
   },
 } as const satisfies Record<PlayerWeapon, WeaponDef>
 

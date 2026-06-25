@@ -67,25 +67,7 @@ export class Projectile extends BaseProjectile {
     this.x += this.vx * dt
     this.y += this.vy * dt
 
-    if (this.tilesModified === this.tilesToModify) {
-      this.destroy()
-      return
-    }
-
-    if (!this.scene.worldBounds.contains(this.x, this.y)) {
-      this.destroy()
-      return
-    }
-
-    if (this.tilesModified > this.tilesToModify) {
-      throw new Error('exceeded matter charge: ' + this.charge())
-    }
-
-    if (this.tilesToModify === -1) {
-      throw new Error('tilesToModify not set before first update')
-    }
-
-    this.lifespanPercent = this.tilesModified / this.tilesToModify
+    this.updateEnd()
   }
 
   public startExpandTimer() {
