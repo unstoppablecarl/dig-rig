@@ -1,7 +1,5 @@
-
 import { type MatterAction } from './matter.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from './Tank/_MatterTank.types.ts'
-
 
 /* Matter Value Encoding
  * matter type: int - bits 0-7 = (8 bits, 0–255)
@@ -10,20 +8,16 @@ import { type MatterTankId, NO_MATTER_TANK_ID } from './Tank/_MatterTank.types.t
  * support type: int - bits 25–26 (4 bits, 0-3)
  *
  * matter specific:
- * LAVA_DROP velocity: int - bits 27–30
- * encode remaining upward ticks for in-flight lava drops.
-//   0 = falling, 1–15 = remaining upward steps.
+ * LAVA_DROP velocity: int - bits 27–30 (16 bits, 0-15)
+ * encode remaining upward ticks for in-flight lava drops.  0 = falling, 1–15 = remaining upward steps.
+ *
  * */
-
-
 
 // SETTLED_FLAG — bit 8 of a tile value. Set when an matterType has stopped moving
 // and been removed from the active set. Cleared on disturbance to re-activate it.
 //   tile = SAND | SETTLED_FLAG   → settled sand (0x103)
 //   tile & SETTLED_FLAG !== 0    → is this tile settled?
 //   tile & ~SETTLED_FLAG         → strip settled, get raw tile back
-
-
 export const SETTLED_FLAG = 0x100
 
 // TYPE_MASK — isolates the matterType ID from bits 0–7, ignoring settled and owner bits.
