@@ -4,7 +4,7 @@ import { type MatterTankId, NO_MATTER_TANK_ID } from './Tank/_MatterTank.types.t
 /* Matter Value Encoding
  * matter type: int - bits 0-7 = (8 bits, 0–255)
  * settled: boolean - bit 8 = (1 bit, 0-1)
- * owner id: int - bits 9–24  (16 bits, 1–65535;
+ * owner id: int - bits 9–16  (8 bits, 1–255;
  * support type: int - bits 25–26 (4 bits, 0-3)
  *
  * matter specific:
@@ -28,12 +28,12 @@ export const TYPE_MASK = 0xFF
 //   tile & TILE_STATE_MASK → safe index into a 512-entry type+settled table
 export const TILE_STATE_MASK = TYPE_MASK | SETTLED_FLAG  // 0x1FF
 
-// OWNER_MASK / OWNER_SHIFT — bits 9–24 hold the owner ID (16 bits, 1–65535; 0 = world/unowned).
-//   (tile >>> OWNER_SHIFT) & 0xFFFF            → owner ID as integer
+// OWNER_MASK / OWNER_SHIFT — bits 9–16 hold the owner ID (8 bits, 1–255; 0 = world/unowned).
+//   (tile >>> OWNER_SHIFT) & 0xFF              → owner ID as integer
 //   (tile & ~OWNER_MASK) | (id << OWNER_SHIFT) → write owner ID into a tile
 //   tile & ~OWNER_MASK                         → strip owner, keep type + settled
 export const OWNER_SHIFT = 9
-export const OWNER_MASK = 0xFFFF << OWNER_SHIFT  // 0x1FFFE00
+export const OWNER_MASK = 0xFF << OWNER_SHIFT  // 0x1FE00
 
 // setSettled — sets or clears SETTLED_FLAG, leaving all other bits intact.
 export function setSettled(value: number, settled: boolean): number {
@@ -46,12 +46,12 @@ export function isSettled(value: number): boolean {
 
 // setOwner — writes `owner` into bits 9–24, leaving type and settled bits intact.
 export function setOwner(value: number, owner: MatterTankId): number {
-  return (value & ~OWNER_MASK) | ((owner & 0xFFFF) << OWNER_SHIFT)
+  return (value & ~OWNER_MASK) | ((owner & 0xFF) << OWNER_SHIFT)
 }
 
 // getOwner — extracts the owner ID from bits 9–24 (0 = unowned/world).
 export function getOwner(value: number): MatterTankId {
-  return ((value >>> OWNER_SHIFT) & 0xFFFF) as MatterTankId
+  return ((value >>> OWNER_SHIFT) & 0xFF) as MatterTankId
 }
 
 export function getFirstOwnerId(value1: number, value2: number) {
