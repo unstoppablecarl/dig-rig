@@ -132,7 +132,7 @@ export const LAVA_DEF = {
           sim.destroyTile(tx, ty, idx)
           sim.markDirty(nx, ny)
           sim.next.add(nidx)
-          break // lava tile self-destructs once; without this, multiple flammable neighbors would double-credit/double-release
+          return
         }
       }
     }
