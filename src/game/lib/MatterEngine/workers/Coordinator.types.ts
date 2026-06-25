@@ -6,6 +6,7 @@ export enum CoordinatorInMsg {
   INIT,
   BRUSH_ERASE_MATTER,
   BRUSH_ADD_MATTER,
+  DESTROY,
 }
 
 export type CoordinatorInMsgInit = {
@@ -28,10 +29,15 @@ export type CoordinatorInMsgAddBrushMatter = {
   radius: number
 }
 
+export type CoordinatorInMsgDestroy = {
+  type: CoordinatorInMsg.DESTROY
+}
+
 export type CoordinatorInMessage =
   | CoordinatorInMsgInit
   | CoordinatorInMsgAddBrushMatter
   | CoordinatorInMsgBrushEraseMatter
+  | CoordinatorInMsgDestroy
 
 export type TypedMatterCoordinatorWorker = Omit<Worker, 'postMessage'> & {
   postMessage(msg: CoordinatorInMessage): void

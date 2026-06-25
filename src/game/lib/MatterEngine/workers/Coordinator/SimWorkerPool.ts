@@ -115,6 +115,10 @@ export class SimWorkerPool {
     })
   }
 
+  terminate() {
+    for (const controller of this.pool) controller.terminate()
+  }
+
   private _onMessage(workerIdx: number, msg: SimOutMessage | SimOutMsgSpawnParticle,
   ) {
     if (msg.type === SimOutMsg.READY) {

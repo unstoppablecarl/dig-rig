@@ -46,7 +46,10 @@ export class VFXParticleProcessor {
     spawnedChunks.clear()
     data.drain((tx, ty, ownerId) => {
       const tank = this.scene.matterManager.get(ownerId as MatterTankId)
-      if (!tank) return
+      if (!tank) {
+        console.error('vfx particle tank not found: ', ownerId)
+        return
+      }
       const cx = Math.floor(tx / VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE)
       const cy = Math.floor(ty / VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE)
       const key = (ownerId << 22) | (cy << 11) | cx

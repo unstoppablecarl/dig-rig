@@ -5,7 +5,7 @@ import type { MatterTankId } from '../Matter/Tank/_MatterTank.types.ts'
 import { DataManager } from './DataManager.ts'
 import { VFXParticleProcessor } from './processors/VFXParticleProcessor.ts'
 import { VFXSettledTileProcessor } from './processors/VFXSettledTileProcessor.ts'
-import type { CoordinatorInMsgBrushEraseMatter } from './workers/Coordinator.types.ts'
+import { type CoordinatorInMsgBrushEraseMatter } from './workers/Coordinator.types.ts'
 import { VFXTileEffectProcessor } from './workers/Coordinator/VFXTileEffectProcessor.ts'
 import { CoordinatorController } from './workers/CoordinatorController.ts'
 
@@ -24,7 +24,7 @@ export class MatterEngine extends SceneBound {
     super(scene)
 
     const tilemap = this.scene.tilemap
-    this.data = DataManager.make(tilemap)
+    this.data = scene.io
 
     this.vfxParticle = new VFXParticleProcessor(
       scene,

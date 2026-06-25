@@ -20,7 +20,7 @@ import { WeaponManagerInput } from '../lib/Input/InputController/WeaponManagerIn
 import { InputManager } from '../lib/Input/InputManager.ts'
 import { makePlayerActions, type PlayerActions } from '../lib/Input/PlayerActions.ts'
 import { MatterManager } from '../lib/Matter/Tank/MatterManager.ts'
-import type { DataManager } from '../lib/MatterEngine/DataManager.ts'
+import { DataManager } from '../lib/MatterEngine/DataManager.ts'
 import { MatterEngine } from '../lib/MatterEngine/MatterEngine.ts'
 import { Player } from '../lib/Player/Player.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
@@ -235,6 +235,7 @@ export abstract class GameLevel extends Scene {
     )
 
     this.tilemapRenderer = this.makeTilemapRenderer(this.tilemap)
+    this.io = DataManager.make(this.tilemap)
     this.matterEngine = new MatterEngine(this)
     this.io = this.matterEngine.data
     this.terrainChunkBodyManager = new TerrainChunkBodyManager(this)

@@ -1,3 +1,4 @@
+import { NO_MATTER_TANK_ID } from '../../Matter/Tank/_MatterTank.types.ts'
 import { ringBufferByteLength, RingBufferReader, RingBufferWriter } from '../../Util/RingBuffer.ts'
 
 const CAPACITY = 8192
@@ -25,6 +26,7 @@ export class VFXParticleData {
 
   // Coordinator side — sole writer of writeHead.
   writeTile(tx: number, ty: number, ownerId: number) {
+    if (ownerId === NO_MATTER_TANK_ID) console.error('ownerId not found: ' + ownerId)
     this.writer.write((cursor) => {
       cursor.tileX = tx
       cursor.tileY = ty
@@ -33,6 +35,7 @@ export class VFXParticleData {
   }
 
   writeTiles(tiles: ReadonlyArray<{ x: number; y: number }>, ownerId: number) {
+    if (ownerId === NO_MATTER_TANK_ID) console.error('ownerId not found: ' + ownerId)
     this.writer.writeMany(tiles, (cursor, tile) => {
       cursor.tileX = tile.x
       cursor.tileY = tile.y

@@ -37,6 +37,6 @@ export class CoordinatorController {
   }
 
   terminate() {
-    this.worker.terminate()
+    this.worker.postMessage({ type: CoordinatorInMsg.DESTROY })
   }
 }

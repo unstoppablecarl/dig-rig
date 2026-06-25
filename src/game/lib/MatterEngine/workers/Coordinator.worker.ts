@@ -24,5 +24,11 @@ self.onmessage = (e: MessageEvent<CoordinatorInMessage>) => {
 
   if (msg.type === CoordinatorInMsg.BRUSH_ADD_MATTER) {
     coordinator.brushAddMatter(msg.value, msg.tx, msg.ty, msg.radius)
+    return
+  }
+
+  if (msg.type === CoordinatorInMsg.DESTROY) {
+    coordinator.destroy()
+    self.close()
   }
 }

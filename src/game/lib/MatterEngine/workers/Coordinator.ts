@@ -95,6 +95,10 @@ export class Coordinator {
     this.brush.queueAdd(value, tx, ty, radius)
   }
 
+  destroy() {
+    this.workerPool.terminate()
+  }
+
   private startLoop() {
     const loop = async () => {
       try {
