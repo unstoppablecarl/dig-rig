@@ -228,6 +228,7 @@ export abstract class GameLevel extends Scene {
 
     this.matterManager = new MatterManager(this)
     this.tilemap = this.makeTileMap()
+    this.tilemap.initChunkSolidCounts()
 
     this.worldBounds = new Rectangle(0, 0,
       this.tilemap.width,

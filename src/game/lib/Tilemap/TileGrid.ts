@@ -236,6 +236,29 @@ export class TileGrid {
     return this._collisionPosition
   }
 
+  // Compute and write solidCount for every chunk by scanning the tiles SAB directly.
+  // Must be called from the main thread after tiles are populated, before the coordinator
+  // worker starts — otherwise solidCount is 0 and TerrainChunkBodyManager skips all chunks.
+  initChunkSolidCounts(): void {
+    const { chunksWide, chunksHigh } = this.chunkGrid
+    for (let cy = 0; cy < chunksHigh; cy++) {
+      for (let cx = 0; cx < chunksWide; cx++) {
+        const idx = cy * chunksWide + cx
+        const x0 = cx * CHUNK_SIZE
+        const y0 = cy * CHUNK_SIZE
+        const x1 = Math.min(x0 + CHUNK_SIZE, this.width)
+        const y1 = Math.min(y0 + CHUNK_SIZE, this.height)
+        let count = 0
+        for (let y = y0; y < y1; y++) {
+          for (let x = x0; x < x1; x++) {
+            if (isCollidable(this.tiles[y * this.width + x])) count++
+          }
+        }
+        this.chunkGrid.setSolidCount(idx, count)
+      }
+    }
+  }
+
   setBorder(thickness: number, value: MatterType) {
     const { width, height } = this
     for (let t = 0; t < thickness; t++) {
