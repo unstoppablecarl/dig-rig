@@ -1,11 +1,11 @@
 /// <reference lib="webworker" />
-import { EMPTY, FIRE, MatterType, WATER } from '../../../../Matter/_Matter.types.ts'
+import { EMPTY, FIRE, MatterType } from '../../../../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../../../../Matter/data/MatterTypeSet.ts'
 import { INDESTRUCTIBLE_TYPES } from '../../../../Matter/matter.ts'
 import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
 import { type ProjectileEffectResult, SimProjectile } from './SimProjectile.ts'
 
-const IGNORE = new MatterTypeSet(INDESTRUCTIBLE_TYPES, EMPTY, WATER, FIRE)
+const IGNORE = new MatterTypeSet(INDESTRUCTIBLE_TYPES, EMPTY, FIRE)
 
 export class ProjectileDestroy extends SimProjectile {
   protected convertTile(existing: MatterType, _createType: MatterType, _ownerId: MatterTankId): MatterType | null {

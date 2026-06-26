@@ -29,6 +29,7 @@ export class FloodFillFrontier {
     width: number,
     height: number,
     passes: (idx: number) => boolean,
+    extraSeeds: number[] = [],
   ): number[] {
     let frontier = this.bySlot.get(slotIdx)
     if (!frontier || frontier.seedIdx !== seedIdx) {
@@ -42,6 +43,11 @@ export class FloodFillFrontier {
       }
       this.bySlot.set(slotIdx, frontier)
       if (passes(seedIdx)) this._push(frontier, seedIdx)
+      for (const extra of extraSeeds) {
+        if (extra < 0 || frontier.visited.has(extra)) continue
+        frontier.visited.add(extra)
+        if (passes(extra)) this._push(frontier, extra)
+      }
     }
 
     const result: number[] = []
