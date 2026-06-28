@@ -45,13 +45,13 @@ export class ParticleSim {
     })
   }
 
-  spawn(type: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID) {
+  spawn(type: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID, initArgs: unknown[] = []) {
     const def = PARTICLE_DEFS[type]
     if (!def || !this.pool) return
     for (let i = 0; i < def.particlesToSpawn; i++) {
       const p = this.pool.acquire(type, x, y, ownerId)
       if (!p) break
-      def.init(p, this)
+      ;(def.init as (p: Particle, sim: ParticleSim, ...args: unknown[]) => void)(p, this, ...initArgs)
     }
   }
 

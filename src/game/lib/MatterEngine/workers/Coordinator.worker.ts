@@ -27,6 +27,11 @@ self.onmessage = (e: MessageEvent<CoordinatorInMessage>) => {
     return
   }
 
+  if (msg.type === CoordinatorInMsg.SPAWN_PARTICLE) {
+    coordinator.spawnParticle(msg.particleType, msg.tx, msg.ty, msg.ownerId, msg.initArgs)
+    return
+  }
+
   if (msg.type === CoordinatorInMsg.DESTROY) {
     coordinator.destroy()
     self.close()

@@ -6,6 +6,7 @@ import {
 } from '../../../config.ts'
 import { FIRE, matterType, MatterType } from '../../Matter/_Matter.types.ts'
 import type { MatterTankId } from '../../Matter/Tank/_MatterTank.types.ts'
+import { ParticleType } from '../../Particles/_particle-types.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
 import { DataManager } from '../DataManager.ts'
 import { MatterCreditTransferBuffer } from './_helpers/MatterCreditTransferBuffer.ts'
@@ -256,5 +257,9 @@ export class Coordinator {
       }
     }
     this._lastConservationTotal = total
+  }
+
+  spawnParticle(particleType: ParticleType, tx: number, ty: number, ownerId?: MatterTankId, initArgs?: unknown[]): void {
+    this.particleSim.spawn(particleType, tx, ty, ownerId, initArgs)
   }
 }

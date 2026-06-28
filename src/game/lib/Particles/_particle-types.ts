@@ -10,16 +10,11 @@ export enum ParticleType {
   METHANE_EXPLOSION,
   THERMITE_SPARK,
   LAVA_BURST,
+  FLAMETHROWER_BURST,
 }
 
 export type ParticleDef = {
   particlesToSpawn: number,
-  init: (
-    p: Particle,
-    sim: ParticleSim,
-  ) => void
-  action: (
-    p: Particle,
-    sim: ParticleSim,
-  ) => void
+  init: (p: Particle, sim: ParticleSim, ...args: any[]) => void
+  action: (p: Particle, sim: ParticleSim) => void
 }
