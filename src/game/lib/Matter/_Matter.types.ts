@@ -4,8 +4,8 @@ import { type MatterTankId, NO_MATTER_TANK_ID } from './Tank/_MatterTank.types.t
 /* Matter Value Encoding
  * matter type: int - bits 0-7 = (8 bits, 0–255)
  * settled: boolean - bit 8 = (1 bit, 0-1)
- * owner id: int - bits 9–16  (8 bits, 1–255;
- * support type: int - bits 25–26 (4 bits, 0-3)
+ * owner id: int - bits 9–16  (8 bits, 0–255)
+ * support type: int - bits 17–18 (2 bits, 0-3)
  *
  * matter specific:
  * LAVA_DROP velocity: int - bits 27–30 (16 bits, 0-15)
@@ -80,7 +80,7 @@ export function setLavaDropVel(tile: number, vel: number): number {
   return (tile & ~LAVA_DROP_VEL_MASK) | ((vel & 0xF) << LAVA_DROP_VEL_SHIFT)
 }
 
-// SUPPORT_TYPE — 2-bit field in bits 25–26. Encodes how a tile relates to structural
+// SUPPORT_TYPE — 2-bit field in bits 17–18. Encodes how a tile relates to structural
 // physics. Higher values dominate: anchored > structural > affixed > none.
 //
 //   none (0)       — normal physics; falls, flows, or is empty
@@ -91,8 +91,8 @@ export function setLavaDropVel(tile: number, vel: number): number {
 // Per-tile bits are IGNORED for types registered with alwaysSupport — their support type
 // is enforced at read-time by getSupportType() in matter.ts via ALWAYS_* sets.
 // setAnchored / setSupportBits only manipulate the per-tile bits.
-export const SUPPORT_SHIFT = 25
-export const SUPPORT_MASK = 0b11 << SUPPORT_SHIFT  // 0x6000000
+export const SUPPORT_SHIFT = 17
+export const SUPPORT_MASK = 0b11 << SUPPORT_SHIFT  // 0x60000
 
 export const enum SupportType {
   NONE = 0,

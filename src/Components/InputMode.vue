@@ -2,6 +2,7 @@
 import type { Component } from 'vue'
 import { InputMode } from '../game/lib/Input/_input.types.ts'
 import { PlayerWeapon } from '../game/lib/Player/weapons.ts'
+import { FlamethrowerWeapon } from '../game/lib/Player/Weapons/FlamethrowerWeapon.ts'
 import { useUIState } from '../store/uiState.ts'
 import { useWeaponUIState } from '../store/weaponUIState.ts'
 import BrushInputMode from './InputMode/BrushInputMode.vue'
@@ -18,8 +19,8 @@ const WEAPON_COMPONENTS: Record<PlayerWeapon, Component> = {
   [PlayerWeapon.INSTANT]: InstantWeaponComp,
   [PlayerWeapon.TORCH]: TorchWeaponComp,
   [PlayerWeapon.TUNNEL]: TunnelWeaponComp,
-  // Same controls as Basic: fire group + matter type + charge.
   [PlayerWeapon.FLOOD_FILL]: BasicWeaponComp,
+  [PlayerWeapon.FLAMETHROWER]: FlamethrowerWeapon,
 }
 
 const uiState = useUIState()
