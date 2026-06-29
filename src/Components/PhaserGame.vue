@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Game } from 'phaser'
 import { onMounted, onUnmounted } from 'vue'
-import startGame from '../game/main'
+import startGame from '../game/game'
 import { GameLevel } from '../game/scenes/GameLevel.ts'
 
 const emit = defineEmits<{
