@@ -31,7 +31,7 @@ export class TerrainChunkRenderer extends SceneBound {
     super(scene)
     const { width, height } = scene.tilemap
 
-    const [texture, wrapper] = this.scene.initGLTexture('terrain_mask', width, height)
+    const [texture, wrapper] = this.scene.initGLTexture('terrain_mask', width, height, true)
     this.maskTexture = texture
     this.maskWrapper = wrapper
 
@@ -113,8 +113,8 @@ export class TerrainChunkRenderer extends SceneBound {
       src = this.partialUploadBuf
     }
 
-    const gl = (this.scene.renderer as WebGLRenderer).gl
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, x, glY, uploadW, uploadH, gl.RGBA, gl.UNSIGNED_BYTE, src)
+    const gl = (this.scene.renderer as WebGLRenderer).gl as WebGL2RenderingContext
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, x, glY, uploadW, uploadH, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, src)
   }
 
   protected onDestroy() {

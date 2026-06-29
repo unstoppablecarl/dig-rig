@@ -47,7 +47,19 @@ const config: GameConfig = {
 }
 
 const startGame = (parent: string, onLevelLoaded: (game: Game, scene: GameLevel) => void) => {
-  const game = new Game({ ...config, parent })
+  const canvas = document.createElement('canvas')
+  const context = canvas.getContext('webgl2', {
+    alpha: false,
+    depth: true,
+    antialias: true,
+    premultipliedAlpha: true,
+    stencil: true,
+    preserveDrawingBuffer: false,
+    powerPreference: 'high-performance',
+  })
+  if (!context) throw new Error('WebGL2 not supported')
+
+  const game = new Game({ ...config, parent, canvas, context: context as any })
   setGame(game)
   game.events.on(GAME_LEVEL_LOADED, onLevelLoaded)
 

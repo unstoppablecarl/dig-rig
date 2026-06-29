@@ -300,7 +300,7 @@ export abstract class GameLevel extends Scene {
     return effectTexture
   }
 
-  initGLTexture(key: string, width: number, height: number): [Phaser.Textures.Texture, WebGLTextureWrapper] {
+  initGLTexture(key: string, width: number, height: number, integer = false): [Phaser.Textures.Texture, WebGLTextureWrapper] {
     if (this.textures.exists(key)) this.textures.remove(key)
     const renderer = this.renderer as WebGLRenderer
     const gl = renderer.gl
@@ -308,6 +308,14 @@ export abstract class GameLevel extends Scene {
       0, gl.NEAREST, gl.NEAREST, gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
       gl.RGBA, undefined, width, height, false, true, false,
     )
+    if (integer) {
+      // Phaser's createTexture2D uses the same value for internalFormat and format,
+      // which is wrong for integer textures. Re-initialize with correct formats.
+      const gl2 = gl as WebGL2RenderingContext
+      gl2.bindTexture(gl2.TEXTURE_2D, wrapper.webGLTexture)
+      gl2.texImage2D(gl2.TEXTURE_2D, 0, gl2.RGBA8UI, width, height, 0, gl2.RGBA_INTEGER, gl2.UNSIGNED_BYTE, null)
+      gl2.bindTexture(gl2.TEXTURE_2D, null)
+    }
     const texture = this.textures.addGLTexture(key, wrapper)!
     return [texture, wrapper]
   }

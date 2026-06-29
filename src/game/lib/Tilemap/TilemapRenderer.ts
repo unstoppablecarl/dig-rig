@@ -7,9 +7,10 @@ import type { Tile } from './TileGrid.ts'
 import { TerrainChunkRenderer } from './TilemapRenderer/TerrainChunkRenderer.ts'
 import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'
 import { TILEMAP_RENDERER_DEFAULTS, type TilemapRendererConfig } from './TilemapRendererConfig'
-import { makeTilemapFragShader } from './TilemapRendererShader.ts'
+import { makeTilemapFragShader, makeTilemapVertShader } from './TilemapRendererShader.ts'
 import Shader = GameObjects.Shader
 import Color = Phaser.Display.Color
+import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
 export class TilemapRenderer extends SceneBound {
@@ -42,16 +43,36 @@ export class TilemapRenderer extends SceneBound {
     const { chunkGrid } = scene.tilemap
     this._lastRenderGen = new Uint8Array(chunkGrid.chunksWide * chunkGrid.chunksHigh)
 
+    // Phaser's shader setter registry only knows sampler2D (0x8B5E). Register
+    // usampler2D (UNSIGNED_INT_SAMPLER_2D = 0x8DD2) with the same uniform1i setter.
+    const gl = (scene.renderer as WebGLRenderer).gl as WebGL2RenderingContext
+    const setters = (scene.renderer as any).shaderSetters as Phaser.Renderer.WebGL.Wrappers.WebGLShaderSetterWrapper
+
+    const constants = setters.constants as any
+    const samplerId = gl.UNSIGNED_INT_SAMPLER_2D
+
+    if (!constants[samplerId]) {
+      constants[samplerId] = {
+        constant: samplerId,
+        baseType: gl.INT,
+        size: 1,
+        bytes: 4,
+        set: gl.uniform1i,
+        setV: gl.uniform1iv,
+        isMatrix: false,
+      }
+    }
+
     const shader: Shader = scene.add.shader(
       {
         name: 'TerrainShader',
+        vertexSource: makeTilemapVertShader(),
         fragmentSource: makeTilemapFragShader(_config, _matterRenderConfig),
         setupUniforms: (setUniform: (name: string, value: any) => void) => {
           setUniform('uTerrain', 0)
           setUniform('uMask', 1)
           setUniform('uEffect', 2)
           setUniform('uTime', scene.time.now)
-          setUniform('uInvTilemapSize', [1.0 / width, 1.0 / height])
         },
       },
       0, 0,

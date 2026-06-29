@@ -32,7 +32,7 @@
         "vue-tsc": "^3.3.3"
     },
     "dependencies": {
-        "phaser": "4.1.0",
+        "phaser": "4.2.0",
         "phaser-matter-collision-plugin": "^1.0.0",
         "pinia": "^3.0.4",
         "pinia-simple-persist": "^0.1.0",
