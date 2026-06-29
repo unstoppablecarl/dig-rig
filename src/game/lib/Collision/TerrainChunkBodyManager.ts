@@ -53,6 +53,7 @@ export class TerrainChunkBodyManager extends SceneBound {
   }
 
   untrack(body: MatterJS.BodyType) {
+    if (this.destroyed) return
     const idx = this.trackedBodies.indexOf(body)
     if (idx !== -1) {
       this.trackedBodies.splice(idx, 1)
