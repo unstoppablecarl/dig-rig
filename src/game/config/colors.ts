@@ -212,7 +212,11 @@ export const MATTER_RENDER_CONFIG_DEFAULTS = {
   [STEAM]: powderMatterConfig({ color: rgbToColor(`rgb(194, 214, 235)`), alpha: 0.55 }),
   [METHANE]: powderMatterConfig({ color: rgbToColor(`rgb(140, 140, 140)`), alpha: 0.70 }),
   // other
-  [FIRE]: powderMatterConfig({ color: rgbToColor(`rgb(255, 0, 0)`) }),
+  [FIRE]: {
+    youngColor: rgbToColor(`rgb(255, 200, 50)`),
+    midColor: rgbToColor(`rgb(255, 100, 10)`),
+    oldColor: rgbToColor(`rgb(160, 15, 5)`),
+  },
   [CRYO]: powderMatterConfig({ color: rgbToColor(`rgb(0, 214, 255)`), alpha: 0.8 }),
   [PLANT]: powderMatterConfig({
     color: rgbToColor(`rgb(13, 179, 26)`),

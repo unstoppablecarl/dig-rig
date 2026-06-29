@@ -1,5 +1,18 @@
 import { random } from '../../../helpers/random'
-import { FIRE, getFirstOwnerId, type MatterDef, OIL, setSettled } from '../_Matter.types.ts'
+import {
+  EMPTY,
+  FIRE,
+  getCounter,
+  getFirstOwnerId,
+  getOwner,
+  hasCounter,
+  type MatterDef,
+  OIL,
+  OIL_BURN_TICKS,
+  setCounter,
+  setOwner,
+  setSettled,
+} from '../_Matter.types.ts'
 
 export const OIL_DEF = {
   id: OIL,
@@ -8,20 +21,58 @@ export const OIL_DEF = {
   hasOwnerId: true as const,
   settles: true as const,
   action(sim, tx, ty, idx): void {
-    if (random() < 30) {
-      const nidx = sim.bordering(tx, ty, idx, FIRE)
-      if (nidx !== -1) {
-        const tiles = sim.tiles
+    const { tiles, width } = sim
 
-        // oil owner or fallback to fire owner
-        const ownerId = getFirstOwnerId(tiles[idx], tiles[nidx])
-        sim.doBorderBurn(tx, ty, idx, ownerId)
+    if (hasCounter(tiles[idx])) {
+      const counter = getCounter(tiles[idx])
+      const ownerId = getOwner(tiles[idx])
+
+      const emptyLoc = sim.borderingAdjacent(tx, ty, idx, EMPTY)
+      if (emptyLoc !== -1) {
+        tiles[emptyLoc] = setOwner(FIRE, ownerId)
+        sim.markDirty(emptyLoc % width, emptyLoc / width | 0)
+        sim.next.add(emptyLoc)
+      }
+
+      // Spread burn to an adjacent oil tile that has an empty neighbour (surface oil only).
+      const neighborOilLoc = sim.bordering(tx, ty, idx, OIL)
+      if (neighborOilLoc !== -1 && !hasCounter(tiles[neighborOilLoc])) {
+        const nx = neighborOilLoc % width
+        const ny = neighborOilLoc / width | 0
+        if (sim.bordering(nx, ny, neighborOilLoc, EMPTY) !== -1) {
+          tiles[neighborOilLoc] = setCounter(setOwner(tiles[neighborOilLoc], ownerId), OIL_BURN_TICKS)
+          sim.markDirty(nx, ny)
+          sim.next.add(neighborOilLoc)
+        }
+      }
+
+      if (counter <= 1) {
+        sim.queueMatterCredit(tx, ty, ownerId)
+        tiles[idx] = EMPTY
+        sim.markDirty(tx, ty)
+        sim.reactivateAround(tx, ty)
+      } else {
+        tiles[idx] = setCounter(tiles[idx], counter - 1)
+        sim.markDirty(tx, ty)
+        sim.next.add(idx)
+      }
+      return
+    }
+
+    if (random() < 30) {
+      const nidx = sim.borderingAdjacent(tx, ty, idx, FIRE)
+      if (nidx !== -1) {
+        const ownerId = getFirstOwnerId(tiles[nidx], tiles[idx])
+        tiles[idx] = setCounter(setOwner(tiles[idx], ownerId), OIL_BURN_TICKS)
+        sim.markDirty(tx, ty)
+        sim.next.add(idx)
+        return
       }
     }
 
     const moved = sim.tryLiquidFlow(tx, ty, idx)
     if (!moved) {
-      sim.tiles[idx] = setSettled(OIL, true)
+      tiles[idx] = setSettled(OIL, true)
       sim.markDirty(tx, ty)
     }
   },

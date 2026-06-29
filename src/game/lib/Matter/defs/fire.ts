@@ -4,25 +4,31 @@ import {
   EMPTY,
   FALLING_WAX,
   FIRE,
+  FIRE_INIT_AGE,
   FUSE,
+  getCounter,
+  getOwner,
   GUNPOWDER,
+  hasCounter,
   type MatterDef,
   matterType,
   NAPALM,
   NITRO,
   OIL,
   PLANT,
+  PLANT_BURN_TICKS,
   SALT_WATER,
+  setCounter,
+  setOwner,
+  STEAM,
   THERMITE,
   WATER,
   WAX,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
 
-const KEEP_ALIVE = new MatterTypeSet(PLANT, FUSE, OIL, WAX)
-const WATER_OR_SALT_WATER = new MatterTypeSet(WATER, SALT_WATER)
+const WAKE_SETTLED = new MatterTypeSet(GUNPOWDER, NAPALM, NITRO, THERMITE, OIL)
 
-const WAKE_SETTLED = new MatterTypeSet(GUNPOWDER, NAPALM, NITRO, THERMITE)
 // fire does not represent solid matter so does not follow the preserving matter rule
 export const FIRE_DEF = {
   id: FIRE,
@@ -33,83 +39,107 @@ export const FIRE_DEF = {
   action(sim, tx, ty, idx): void {
     const { tiles, width, height } = sim
 
-    // Wake settled defs that react to fire but won't self-activate
+    let age = getCounter(tiles[idx])
+    if (age === 0) {
+      age = FIRE_INIT_AGE - (random() % 6)
+      tiles[idx] = setCounter(tiles[idx], age)
+    }
+
     sim.wakeSettledNeighborTypes(tx, ty, idx, WAKE_SETTLED)
 
-    const existing = tiles[idx]
+    // Pre-scan all 8 neighbours once — reused by every check below.
+    const atTop = ty === 0
+    const atBot = ty === height - 1
+    const b = atBot ? -1 : idx + width
+    const a = atTop ? -1 : idx - width
+    const l = tx > 0 ? idx - 1 : -1
+    const r = tx < width - 1 ? idx + 1 : -1
+    const bl = b >= 0 && l >= 0 ? b - 1 : -1
+    const br = b >= 0 && r >= 0 ? b + 1 : -1
+    const al = a >= 0 && l >= 0 ? a - 1 : -1
+    const ar = a >= 0 && r >= 0 ? a + 1 : -1
 
-    // Extinguished by water / salt-water
+    const tb = b >= 0 ? matterType(tiles[b]) : -1
+    const ta = a >= 0 ? matterType(tiles[a]) : -1
+    const tl = l >= 0 ? matterType(tiles[l]) : -1
+    const tr = r >= 0 ? matterType(tiles[r]) : -1
+    const tbl = bl >= 0 ? matterType(tiles[bl]) : -1
+    const tbr = br >= 0 ? matterType(tiles[br]) : -1
+    const tal = al >= 0 ? matterType(tiles[al]) : -1
+    const tar = ar >= 0 ? matterType(tiles[ar]) : -1
+
+    // Extinguish: water / salt-water (4-cardinal, matching borderingAny)
     if (random() < 80) {
-      let waterLoc = sim.borderingAny(tx, ty, idx, WATER_OR_SALT_WATER)
+      let waterLoc = -1
+      if (tb === WATER || tb === SALT_WATER) waterLoc = b
+      else if (tl === WATER || tl === SALT_WATER) waterLoc = l
+      else if (tr === WATER || tr === SALT_WATER) waterLoc = r
+      else if (ta === WATER || ta === SALT_WATER) waterLoc = a
       if (waterLoc !== -1) {
-        // move water to matter tank
-        sim.queueMatterCreditFromTile(tx, ty, idx)
-        tiles[waterLoc] = EMPTY
-        // fire never has matter to return
+        tiles[waterLoc] = STEAM
         tiles[idx] = EMPTY
         sim.markDirty(tx, ty)
         sim.reactivateAround(tx, ty)
-        const wx = waterLoc % width
-        const wy = waterLoc / width | 0
-        sim.markDirty(wx, wy)
+        sim.markDirty(waterLoc % width, waterLoc / width | 0)
         sim.next.add(waterLoc)
         return
       }
     }
 
-    // Ignite plant
-    if (random() < 20) {
-      const plantLoc = sim.borderingAdjacent(tx, ty, idx, PLANT)
-      if (plantLoc !== -1) {
-        tiles[plantLoc] = existing
+    // Ignite plant — only if the plant tile has an adjacent empty (air requirement)
+    if (random() < 60) {
+      let plantLoc = -1
+      if (tb === PLANT) plantLoc = b
+      else if (tbl === PLANT) plantLoc = bl
+      else if (tbr === PLANT) plantLoc = br
+      else if (tl === PLANT) plantLoc = l
+      else if (tr === PLANT) plantLoc = r
+      else if (ta === PLANT) plantLoc = a
+      else if (tal === PLANT) plantLoc = al
+      else if (tar === PLANT) plantLoc = ar
+      if (plantLoc !== -1 && !hasCounter(tiles[plantLoc])) {
         const px = plantLoc % width
         const py = plantLoc / width | 0
-        sim.queueMatterCreditFromTile(px, py, plantLoc)
-        sim.markDirty(px, py)
-        sim.next.add(plantLoc)
-        sim.next.add(idx)
-        return
+        if (sim.borderingAdjacent(px, py, plantLoc, EMPTY) !== -1) {
+          const ownerId = getOwner(tiles[idx])
+          tiles[plantLoc] = setCounter(setOwner(tiles[plantLoc], ownerId), PLANT_BURN_TICKS)
+          sim.markDirty(px, py)
+          sim.next.add(plantLoc)
+        }
       }
     }
 
-    // Ignite fuse
+    // Wake fuse so it can self-detect adjacent fire and set its own burn counter
     if (random() < 80) {
-      const fuseLoc = sim.borderingAdjacent(tx, ty, idx, FUSE)
+      let fuseLoc = -1
+      if (tb === FUSE) fuseLoc = b
+      else if (tbl === FUSE) fuseLoc = bl
+      else if (tbr === FUSE) fuseLoc = br
+      else if (tl === FUSE) fuseLoc = l
+      else if (tr === FUSE) fuseLoc = r
+      else if (ta === FUSE) fuseLoc = a
+      else if (tal === FUSE) fuseLoc = al
+      else if (tar === FUSE) fuseLoc = ar
       if (fuseLoc !== -1) {
-        sim.queueMatterCreditFromTile(tx, ty, idx)
-        tiles[fuseLoc] = existing
-        const fx = fuseLoc % width
-        const fy = fuseLoc / width | 0
-        sim.markDirty(fx, fy)
         sim.next.add(fuseLoc)
         sim.next.add(idx)
-        return
-      }
-    }
-
-    // Ignite oil
-    if (random() < 30) {
-      const oilLoc = sim.bordering(tx, ty, idx, OIL)
-      if (oilLoc !== -1) {
-        sim.queueMatterCreditFromTile(tx, ty, idx)
-        tiles[oilLoc] = existing
-        const ox = oilLoc % width
-        const oy = oilLoc / width | 0
-        sim.markDirty(ox, oy)
-        sim.next.add(oilLoc)
-        sim.next.add(idx)
-        return
       }
     }
 
     // Melt wax → falling wax (passive, so fire must handle it directly)
     if (random() < 30) {
-      const waxLoc = sim.borderingAdjacent(tx, ty, idx, WAX)
+      let waxLoc = -1
+      if (tb === WAX) waxLoc = b
+      else if (tbl === WAX) waxLoc = bl
+      else if (tbr === WAX) waxLoc = br
+      else if (tl === WAX) waxLoc = l
+      else if (tr === WAX) waxLoc = r
+      else if (ta === WAX) waxLoc = a
+      else if (tal === WAX) waxLoc = al
+      else if (tar === WAX) waxLoc = ar
       if (waxLoc !== -1) {
         tiles[waxLoc] = FALLING_WAX
-        const wx = waxLoc % width
-        const wy = waxLoc / width | 0
-        sim.markDirty(wx, wy)
+        sim.markDirty(waxLoc % width, waxLoc / width | 0)
         sim.next.add(waxLoc)
         sim.next.add(idx)
       }
@@ -117,41 +147,30 @@ export const FIRE_DEF = {
 
     // Wake C4 — adds it to next so its own explosion action runs (passive, can't self-wake)
     if (random() < 80) {
-      const c4Loc = sim.borderingAdjacent(tx, ty, idx, C4)
+      let c4Loc = -1
+      if (tb === C4) c4Loc = b
+      else if (tbl === C4) c4Loc = bl
+      else if (tbr === C4) c4Loc = br
+      else if (tl === C4) c4Loc = l
+      else if (tr === C4) c4Loc = r
+      else if (ta === C4) c4Loc = a
+      else if (tal === C4) c4Loc = al
+      else if (tar === C4) c4Loc = ar
       if (c4Loc !== -1) {
         sim.next.add(c4Loc)
         sim.next.add(idx)
       }
     }
 
-    // Probabilistic self-extinguish
-    if (random() < 40) {
-      const xStart = Math.max(tx - 1, 0)
-      const yStart = Math.max(ty - 1, 0)
-      const xEnd = Math.min(tx + 2, width)
-      const yEnd = Math.min(ty + 2, height)
-      let flameOut = true
-
-      outer: for (let y = yStart; y < yEnd; y++) {
-        for (let x = xStart; x < xEnd; x++) {
-          if (y === ty && x === tx) continue
-          const bt = matterType(tiles[y * width + x])
-          if (bt === FIRE) continue
-          if (KEEP_ALIVE.has(bt)) {
-            flameOut = false
-            break outer
-          }
-        }
-      }
-
-      if (flameOut) {
-        // fire never has matter to return
-        tiles[idx] = EMPTY
-        sim.markDirty(tx, ty)
-        sim.reactivateAround(tx, ty)
-        return
-      }
+    // Age-based self-extinguish
+    if (age <= 1) {
+      tiles[idx] = EMPTY
+      sim.markDirty(tx, ty)
+      sim.reactivateAround(tx, ty)
+      return
     }
+    tiles[idx] = setCounter(tiles[idx], age - 1)
+    sim.markDirty(tx, ty)
 
     // Rise upward
     if (random() < 50) {

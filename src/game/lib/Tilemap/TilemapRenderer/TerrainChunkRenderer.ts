@@ -1,7 +1,7 @@
 import { CHUNK_SIZE } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { MatterTypeValues, SETTLED_FLAG, SupportType, TILE_STATE_MASK } from '../../Matter/_Matter.types.ts'
+import { FIRE, getCounter, isSettled, matterType, SupportType } from '../../Matter/_Matter.types.ts'
 import { getSupportType } from '../../Matter/matter.ts'
 
 import { Chunk } from '../ChunkMap.ts'
@@ -12,26 +12,10 @@ import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
 // fragment shader can read type, settled state, and anchored state per tile.
 //
 // Mask pixel layout (little-endian Uint32: 0xAABBGGRR):
-//   R = MatterType  (0–255)
-//   G = SETTLED     (0 or 255)
-//   B = ANCHORED    (0 or 255)
-//   A = 255         (always opaque so the texture is never discarded)
-
-// MASK_MAP is a 512-entry lookup table covering every combination of the 9
-// bits in TILE_STATE_MASK (8 type bits + 1 settled bit). Building it once at
-// module load avoids any per-tile branching inside the hot render loop.
-const MASK_MAP = new Uint32Array(512)
-for (const type of MatterTypeValues) {
-  // Unsettled: G=0
-  MASK_MAP[type] = 0xFF000000 | type
-  // Settled: G=255
-  MASK_MAP[type | SETTLED_FLAG] = 0xFF000000 | (0xFF << 8) | type
-}
-
-// ANCHORED lives at bit 25 of the raw tile value — well outside the 9-bit
-// TILE_STATE_MASK range — so it cannot be folded into MASK_MAP. Instead it is
-// ORed into the B channel after the table lookup on each tile.
-const ANCHORED_B = 0xFF << 16  // B=255 in little-endian Uint32
+//   R = MatterType        (0–255)
+//   G = SETTLED           (0 or 255)
+//   B = ANCHORED          (0 or 255)
+//   A = per-type data     (fire age counter for FIRE tiles; 0 otherwise)
 
 const CHUNK_BYTES = CHUNK_SIZE * CHUNK_SIZE * 4
 
@@ -62,10 +46,12 @@ export class TerrainChunkRenderer extends SceneBound {
     const gl = (this.scene.renderer as WebGLRenderer).gl
     gl.bindTexture(gl.TEXTURE_2D, this.maskWrapper.webGLTexture)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0)
   }
 
   endBatch() {
     const gl = (this.scene.renderer as WebGLRenderer).gl
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1)
     gl.bindTexture(gl.TEXTURE_2D, null)
   }
 
@@ -83,9 +69,7 @@ export class TerrainChunkRenderer extends SceneBound {
         const flippedRow = (CHUNK_SIZE - 1 - y) * CHUNK_SIZE
         const srcRow = (offY + y) * mapWidth + offX
         for (let x = 0; x < CHUNK_SIZE; x++) {
-          const raw = tiles[srcRow + x]
-          // Table lookup gives R/G/A; OR in B for anchored flag.
-          pixels[flippedRow + x] = MASK_MAP[raw & TILE_STATE_MASK] | (getSupportType(raw) === SupportType.ANCHORED ? ANCHORED_B : 0)
+          pixels[flippedRow + x] = this.pack(tiles[srcRow + x])
         }
       }
     } else {
@@ -93,13 +77,21 @@ export class TerrainChunkRenderer extends SceneBound {
       for (let y = 0; y < CHUNK_SIZE; y++) {
         const flippedRow = (CHUNK_SIZE - 1 - y) * CHUNK_SIZE
         for (let x = 0; x < CHUNK_SIZE; x++) {
-          const raw = tilemap.getTile(offX + x, offY + y)
-          pixels[flippedRow + x] = MASK_MAP[raw & TILE_STATE_MASK] | (getSupportType(raw) === SupportType.ANCHORED ? ANCHORED_B : 0)
+          pixels[flippedRow + x] = this.pack(tilemap.getTile(offX + x, offY + y))
         }
       }
     }
 
     this.uploadMask(offX, offY)
+  }
+
+  private pack(raw: number): number {
+    const type = matterType(raw)
+    const r = type
+    const g = isSettled(raw) ? 0xFF : 0
+    const b = getSupportType(raw) === SupportType.ANCHORED ? 0xFF : 0
+    const a = type === FIRE ? getCounter(raw) : 0
+    return (a << 24) | (b << 16) | (g << 8) | r
   }
 
   private uploadMask(x: number, y: number) {

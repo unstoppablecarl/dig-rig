@@ -45,6 +45,10 @@ There's no way to know in advance how much a fire will eventually consume before
 
 This is what overflow tanks are for. A tank can chain to an overflow tank, so that matter a tank can't hold spills somewhere else instead of being lost. It exists because fire can hand you a bill you never got to reserve for.
 
+## Ignition and Air
+
+Fire only ignites adjacent fuel if that fuel has at least one empty tile next to it. Buried or fully enclosed matter doesn't catch — combustion requires exposure to air. This applies to all ignition paths: fire spreading to plant, oil spreading its burn to a neighboring oil tile, and so on. A tile with no empty neighbor is shielded from ignition regardless of how much fire surrounds it.
+
 ## Ownership
 
 Plain terrain belongs to no one — it's just there, inert. Matter that *destroys other matter as part of what it does* is different: lava, acid, and fire today, and — as the design grows — anything explosive or corrosive. Every type in that category requires an owner. There's no such thing as ownerless lava; if it can consume other matter and pay it out, something has to be able to receive the payout.

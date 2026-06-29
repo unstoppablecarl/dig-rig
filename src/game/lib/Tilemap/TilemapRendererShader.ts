@@ -10,6 +10,7 @@ import {
   EMPTY,
   FALLING_WAX,
   FIRE,
+  FIRE_INIT_AGE,
   FUSE,
   GUNPOWDER,
   ICE,
@@ -198,9 +199,9 @@ export function makeTilemapFragShader(
           // Tile-space UV: each unit = one tile. Use this for noise so frequency
           // is expressed in tiles rather than normalised [0,1] UV space.
           vec2 tileUV = outTexCoord / uInvTilemapSize;
-          // uMask R = MatterType (0–255), G = SETTLED (0 or 255), B = ANCHORED (0 or 255).
+          // uMask R = MatterType (0–255), G = SETTLED (0 or 255), B = ANCHORED (0 or 255), A = per-type data.
 
-          vec3 mask    = texture2D(uMask, outTexCoord).rgb;
+          vec4 mask = texture2D(uMask, outTexCoord);
           int tileType = int(mask.r * 255.0 + 0.5);
           bool settled  = mask.g > 0.5;
           bool anchored = mask.b > 0.5;
@@ -492,9 +493,19 @@ export function makeTilemapFragShader(
           }
           // other
           else if (tileType == ${FIRE}) {
-              const vec3 fireColor = ${v3(m[FIRE].color)};
+              // mask.a encodes the age counter (0–${FIRE_INIT_AGE}); 0 = freshly placed (one frame only).
+              float ageNorm = clamp(mask.a * (255.0 / ${fl(FIRE_INIT_AGE)}), 0.0, 1.0);
 
-              color = vec4(fireColor, 1.0);
+              const vec3 youngColor = ${v3(m[FIRE].youngColor)};
+              const vec3 midColor   = ${v3(m[FIRE].midColor)};
+              const vec3 oldColor   = ${v3(m[FIRE].oldColor)};
+
+              vec3 fireColor = ageNorm > 0.5
+              ? mix(midColor, youngColor, (ageNorm - 0.5) * 2.0)
+              : mix(oldColor, midColor, ageNorm * 2.0);
+
+              float flicker = noise(tileUV * 0.5 + vec2(0.0, t * 10.0)) * 0.12 - 0.04;
+              color = vec4(clamp(fireColor, 0.0, 1.0), 1.0);
           }
           else if (tileType == ${CRYO}) {
               const vec3 cryoColor = ${v3(m[CRYO].color)};

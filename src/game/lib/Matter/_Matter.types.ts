@@ -80,6 +80,29 @@ export function setLavaDropVel(tile: number, vel: number): number {
   return (tile & ~LAVA_DROP_VEL_MASK) | ((vel & 0xF) << LAVA_DROP_VEL_SHIFT)
 }
 
+// COUNTER — 8-bit field in bits 19–26. Shared by mutually exclusive tile types:
+//   Fuel tiles (PLANT, OIL, FUSE): burn countdown; 0 = not burning, 1–255 = ticks remaining
+//   FIRE tiles: age countdown; 0 = freshly placed (initialized on first tick), 1–255 = ticks remaining
+// Color shift for FIRE based on age is a future rendering unlock (expose bits 19–26 to the shader).
+export const COUNTER_SHIFT = 19
+export const COUNTER_MASK = 0xFF << COUNTER_SHIFT
+
+export function getCounter(tile: number): number {
+  return (tile >>> COUNTER_SHIFT) & 0xFF
+}
+export function setCounter(tile: number, count: number): number {
+  return (tile & ~COUNTER_MASK) | ((count & 0xFF) << COUNTER_SHIFT)
+}
+export function hasCounter(tile: number): boolean {
+  return (tile & COUNTER_MASK) !== 0
+}
+
+// base ticks before fire self-extinguishes (−0 to −5 random)
+export const FIRE_INIT_AGE = 20
+export const PLANT_BURN_TICKS = 10
+export const OIL_BURN_TICKS = 6
+export const FUSE_BURN_TICKS = 3
+
 // SUPPORT_TYPE — 2-bit field in bits 17–18. Encodes how a tile relates to structural
 // physics. Higher values dominate: anchored > structural > affixed > none.
 //
