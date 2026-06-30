@@ -142,7 +142,7 @@ export abstract class GameLevel extends Scene {
     this.weaponUIState = useWeaponUIState()
     this.instantWeaponUIState = useInstantWeaponUIState()
     this.entityFactory = new EntityFactory(this)
-    this.entityFactory.register(this.registerEntities())
+    this.entityFactory.register(this.registerEntities().map(({ SPAWNER }) => SPAWNER))
 
     this.ui = this.registerSubScene(UIScene)
     this.registerSubScene(BgScene)
@@ -151,7 +151,7 @@ export abstract class GameLevel extends Scene {
     mouse.disableContextMenu()
   }
 
-  abstract registerEntities(): EntitySpawner<any>[];
+  abstract registerEntities(): { SPAWNER: EntitySpawner<any> }[];
 
   preload() {
     const { width, height } = this.scale

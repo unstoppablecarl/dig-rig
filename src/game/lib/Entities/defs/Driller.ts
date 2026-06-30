@@ -15,6 +15,20 @@ import TimerEvent = Time.TimerEvent
 export class Driller extends Entity implements ParticleTarget {
   static SPRITE_KEY = 'DRILLER'
 
+  static SPAWNER: EntitySpawner<typeof Driller> = {
+    id: 'driller',
+    constructor: Driller,
+    displayName: 'Driller',
+    size: {
+      w: 18,
+      h: 18,
+    },
+    preload(scene: GameLevel) {
+      scene.load.setPath('assets')
+      scene.loadPixelImage(Driller.SPRITE_KEY, 'enemy.png')
+    },
+  }
+
   public matterTank: MatterTank
 
   public x = 0
@@ -91,18 +105,4 @@ export class Driller extends Entity implements ParticleTarget {
     this.text.destroy()
     this.matterTank.destroy()
   }
-}
-
-export const DrillerSpawner: EntitySpawner<typeof Driller> = {
-  id: 'driller',
-  constructor: Driller,
-  displayName: 'Driller',
-  size: {
-    w: 18,
-    h: 18,
-  },
-  preload(scene: GameLevel) {
-    scene.load.setPath('assets')
-    scene.loadPixelImage(Driller.SPRITE_KEY, 'enemy.png')
-  },
 }

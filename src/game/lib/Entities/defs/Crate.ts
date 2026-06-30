@@ -5,6 +5,19 @@ import { Entity } from '../Entity.ts'
 
 export class Crate extends Entity {
   static SPRITE_KEY = 'CRATE'
+  static SPAWNER: EntitySpawner<typeof Crate> = {
+    id: 'crate',
+    constructor: Crate,
+    displayName: 'Crate',
+    size: {
+      w: 20,
+      h: 20,
+    },
+    preload(scene: GameLevel) {
+      scene.load.setPath('assets')
+      scene.loadPixelImage(Crate.SPRITE_KEY, 'crate.png')
+    },
+  }
 
   readonly physicsBody: PhysicsBody
 
@@ -38,18 +51,4 @@ export class Crate extends Entity {
     super.onDestroy()
     this.physicsBody.destroy()
   }
-}
-
-export const CrateSpawner: EntitySpawner<typeof Crate> = {
-  id: 'crate',
-  constructor: Crate,
-  displayName: 'Crate',
-  size: {
-    w: 20,
-    h: 20,
-  },
-  preload(scene: GameLevel) {
-    scene.load.setPath('assets')
-    scene.loadPixelImage(Crate.SPRITE_KEY, 'crate.png')
-  },
 }

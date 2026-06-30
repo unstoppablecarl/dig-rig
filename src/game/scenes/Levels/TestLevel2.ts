@@ -1,7 +1,6 @@
 import type { PartialMatterRenderConfig } from '../../config/colors.ts'
-import type { EntitySpawner } from '../../lib/Entities/_Entity.types.ts'
-import { Crate, CrateSpawner } from '../../lib/Entities/defs/Crate.ts'
-import { PortableMatterTank, PortableMatterTankSpawner } from '../../lib/Entities/defs/PortableMatterTank.ts'
+import { Crate } from '../../lib/Entities/defs/Crate.ts'
+import { PortableMatterTank } from '../../lib/Entities/defs/PortableMatterTank.ts'
 import { EMPTY, PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
@@ -11,10 +10,10 @@ import terrain from './TestLevel2/TestLevel2.png'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
 export default class TestLevel2 extends GameLevel {
-  registerEntities(): EntitySpawner<any>[] {
+  registerEntities() {
     return [
-      PortableMatterTankSpawner,
-      CrateSpawner,
+      PortableMatterTank,
+      Crate,
     ]
   }
 
@@ -23,7 +22,6 @@ export default class TestLevel2 extends GameLevel {
   preload() {
     this.TERRAIN = this.loadPrefixedPixelImage('terrain', terrain)
     super.preload()
-    this.loadPixelImage('crate', 'crate.png')
 
     this.preloadPlayer()
   }

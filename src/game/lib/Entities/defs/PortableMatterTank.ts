@@ -11,6 +11,19 @@ import Vector2 = Math.Vector2
 export class PortableMatterTank extends Entity implements Position {
   static SPRITE_KEY = 'PORTABLE_MATTER_TANK'
 
+  static SPAWNER: EntitySpawner<typeof PortableMatterTank> = {
+    id: 'portable-matter-tank',
+    constructor: PortableMatterTank,
+    displayName: 'Portable Matter Tank',
+    size: {
+      w: 16,
+      h: 27,
+    },
+    preload(scene: GameLevel) {
+      scene.load.setPath('assets')
+      scene.loadPixelImage(PortableMatterTank.SPRITE_KEY, 'portable-matter-tank.png')
+    },
+  }
   public matterTank: MatterTank
 
   readonly physicsBody: PhysicsBody
@@ -66,18 +79,4 @@ export class PortableMatterTank extends Entity implements Position {
     this.text.destroy()
     this.matterTank.destroy()
   }
-}
-
-export const PortableMatterTankSpawner: EntitySpawner<typeof PortableMatterTank> = {
-  id: 'portable-matter-tank',
-  constructor: PortableMatterTank,
-  displayName: 'Portable Matter Tank',
-  size: {
-    w: 16,
-    h: 27,
-  },
-  preload(scene: GameLevel) {
-    scene.load.setPath('assets')
-    scene.loadPixelImage(PortableMatterTank.SPRITE_KEY, 'portable-matter-tank.png')
-  },
 }

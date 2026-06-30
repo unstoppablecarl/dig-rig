@@ -1,5 +1,5 @@
-import { Crate, CrateSpawner } from '../../lib/Entities/defs/Crate.ts'
-import { Driller, DrillerSpawner } from '../../lib/Entities/defs/Driller.ts'
+import { Crate } from '../../lib/Entities/defs/Crate.ts'
+import { Driller } from '../../lib/Entities/defs/Driller.ts'
 import { PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { ScaleLevelTexture } from '../../lib/Textures/ScaleLevelTexture.ts'
@@ -10,8 +10,8 @@ import CanvasTexture = Phaser.Textures.CanvasTexture
 export default class TestLevel extends GameLevel {
   registerEntities() {
     return [
-      DrillerSpawner,
-      CrateSpawner,
+      Driller,
+      Crate,
     ]
   }
 
