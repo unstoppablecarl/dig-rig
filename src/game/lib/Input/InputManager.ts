@@ -1,14 +1,16 @@
 import { Input } from 'phaser'
 import { type WatchStopHandle } from 'vue'
 import { BROWSER_DISABLED_KEYS } from '../../../input.ts'
-import { ENABLE_BRUSH_MODE_DEBUG } from '../../config.ts'
+import { ENABLE_BRUSH_MODE_DEBUG, ENABLE_SPAWN_OBJ_MODE_DEBUG } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { InputMode } from './_input.types.ts'
 import { BrushInput } from './InputController/BrushInput.ts'
 import type { InputController } from './InputController/InputController.ts'
-import { SetInputModeInput } from './InputController/SetInputModeInput.ts'
+import { SpawnObjInput } from './InputController/SpawnObjInput.ts'
+import { ToggleInputModeController } from './InputController/ToggleInputModeController.ts'
 import { ZoomInput } from './InputController/ZoomInput.ts'
+import { PlayerAction } from './PlayerActions.ts'
 import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
 import Pointer = Phaser.Input.Pointer
 
@@ -24,23 +26,33 @@ export class InputManager extends SceneBound {
 
     const zoomInput = new ZoomInput(scene)
     const brushInput = new BrushInput(scene)
+    const spawnObjInput = new SpawnObjInput(scene)
     const playerWeaponManager = scene.playerWeaponManager
 
-    const brushModeToggle = ENABLE_BRUSH_MODE_DEBUG
-      ? [new SetInputModeInput(scene, InputMode.BRUSH)]
-      : []
+    const debugModes: InputController[] = []
+    if (ENABLE_BRUSH_MODE_DEBUG) {
+      debugModes.push(new ToggleInputModeController(scene, PlayerAction.BRUSH_MODE_TOGGLE, InputMode.BRUSH))
+    }
+    if (ENABLE_SPAWN_OBJ_MODE_DEBUG) {
+      debugModes.push(new ToggleInputModeController(scene, PlayerAction.SPAWN_OBJ_MODE_TOGGLE, InputMode.SPAWN_OBJ))
+    }
 
     this.modeControllers = {
       // order matters for mouse wheel bindings
       [InputMode.WEAPON]: [
         zoomInput,
         playerWeaponManager,
-        ...brushModeToggle,
+        ...debugModes,
       ],
       [InputMode.BRUSH]: [
         zoomInput,
         brushInput,
-        ...brushModeToggle,
+        ...debugModes,
+      ],
+      [InputMode.SPAWN_OBJ]: [
+        zoomInput,
+        spawnObjInput,
+        ...debugModes,
       ],
     }
 

@@ -14,6 +14,7 @@ import {
   type PartialMatterRenderConfig,
 } from '../config/colors.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
+import { PhysicsBody } from '../lib/Collision/PhysicsBody.ts'
 import { PhysicsBodyManager } from '../lib/Collision/PhysicsBodyManager.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
 import { GAME_LEVEL_LOADED } from '../lib/events.ts'
@@ -325,5 +326,18 @@ export abstract class GameLevel extends Scene {
       this.scene.add(Def.ID, Def)
     }
     return this.scene.get(Def.ID) as E
+  }
+
+  makeTestCrate(x: number, y: number) {
+    const body = this.matter.add.rectangle(x, y, 20, 20, {
+      friction: 10000,
+      frictionStatic: 10000,
+      restitution: 0,
+      density: 0.001,
+    })
+
+    const sprite = this.add.sprite(x, y, 'crate')
+    this.physicsBodyManager.add(PhysicsBody.makeFromSprite(this, sprite, body))
+    this.layers.physicsObjects.add(sprite)
   }
 }

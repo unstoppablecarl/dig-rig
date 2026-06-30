@@ -30,6 +30,7 @@ export const INPUT_ACTIONS: Record<PlayerAction, Binding> = {
   [PlayerAction.BRUSH_SECONDARY]: [POINTER_RIGHT],
   [PlayerAction.BRUSH_ERASE_MODIFIER]: ['SHIFT'],
   [PlayerAction.BRUSH_MODE_TOGGLE]: ['b'],
+  [PlayerAction.SPAWN_OBJ_MODE_TOGGLE]: ['n'],
 }
 
 // prevent input when refreshing the page

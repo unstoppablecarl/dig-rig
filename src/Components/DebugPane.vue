@@ -12,11 +12,12 @@ import {
   pollingRef,
   VPane,
 } from 'vue-pane/src/index.ts'
-import { ENABLE_BRUSH_MODE_DEBUG, ENABLE_MATTER_TANK_DEBUG } from '../game/config.ts'
+import { ENABLE_BRUSH_MODE_DEBUG, ENABLE_MATTER_TANK_DEBUG, ENABLE_SPAWN_OBJ_MODE_DEBUG } from '../game/config.ts'
 import { launchLevel } from '../game/launcher.ts'
 import type { GameLevel } from '../game/scenes/GameLevel.ts'
 import { type LevelEntry, type LevelId, LEVELS } from '../game/scenes/Levels'
 import BrushPane from './DebugPane/BrushPane.vue'
+import SpawnObjPane from './DebugPane/SpawnObjPane.vue'
 
 const { game, level } = defineProps<{
   game: Game
@@ -87,7 +88,8 @@ const levelEntries = Object.entries(LEVELS) as [LevelId, LevelEntry][]
           <PNumber label="Universe" :poll="matter.universe" readonly />
           <PNumber label="World" :poll="matter.world" readonly />
           <PNumber label="Player" :poll="matter.player" readonly />
-          <PNumber v-if="ENABLE_MATTER_TANK_DEBUG" label="Player Reserved Destroy" :poll="matter.playerReservedDestroy" readonly />
+          <PNumber v-if="ENABLE_MATTER_TANK_DEBUG" label="Player Reserved Destroy" :poll="matter.playerReservedDestroy"
+                   readonly />
         </PFolder>
         <PFolder title="Projectiles">
           <PNumber label="Count" :poll="projectiles.count" readonly />
@@ -117,6 +119,7 @@ const levelEntries = Object.entries(LEVELS) as [LevelId, LevelEntry][]
           <PCheckbox label="Ground" :poll="player.touchGround" readonly />
         </PFolder>
       </PFolder>
+      <SpawnObjPane v-if="ENABLE_SPAWN_OBJ_MODE_DEBUG" :level="level" />
       <BrushPane v-if="ENABLE_BRUSH_MODE_DEBUG" :level="level" />
       <PFolder title="Controls">
         <PButton label="Clear Local Storage + Refresh" @click="clearStorage" />

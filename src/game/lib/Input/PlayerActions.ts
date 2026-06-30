@@ -22,6 +22,7 @@ export enum PlayerAction {
   BRUSH_SECONDARY = 'BRUSH_SECONDARY',
   BRUSH_ERASE_MODIFIER = 'BRUSH_ERASE_MODIFIER',
   BRUSH_MODE_TOGGLE = 'BRUSH_MODE_TOGGLE',
+  SPAWN_OBJ_MODE_TOGGLE = 'SPAWN_OBJ_MODE_TOGGLE',
 }
 
 export const PLAYER_ACTION_DISPLAY_NAME: Record<PlayerAction, string> = {
@@ -42,6 +43,7 @@ export const PLAYER_ACTION_DISPLAY_NAME: Record<PlayerAction, string> = {
   [PlayerAction.BRUSH_SECONDARY]: 'Paint: Secondary',
   [PlayerAction.BRUSH_ERASE_MODIFIER]: 'Paint: Erase',
   [PlayerAction.BRUSH_MODE_TOGGLE]: 'Paint: Toggle',
+  [PlayerAction.SPAWN_OBJ_MODE_TOGGLE]: 'Spawn Obj: Toggle',
 }
 
 export const POINTER_LEFT = 'LMB' as const
