@@ -68,7 +68,7 @@ export class PortableMatterTank extends Entity implements Position {
   }
 }
 
-export const SpawnPortableMatterTank: EntitySpawner<typeof PortableMatterTank> = {
+export const PortableMatterTankSpawner: EntitySpawner<typeof PortableMatterTank> = {
   id: 'portable-matter-tank',
   constructor: PortableMatterTank,
   displayName: 'Portable Matter Tank',

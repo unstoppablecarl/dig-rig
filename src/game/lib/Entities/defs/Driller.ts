@@ -93,7 +93,7 @@ export class Driller extends Entity implements ParticleTarget {
   }
 }
 
-export const SpawnDriller: EntitySpawner<typeof Driller> = {
+export const DrillerSpawner: EntitySpawner<typeof Driller> = {
   id: 'driller',
   constructor: Driller,
   displayName: 'Driller',

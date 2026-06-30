@@ -40,7 +40,7 @@ export class Crate extends Entity {
   }
 }
 
-export const SpawnCrate: EntitySpawner<typeof Crate> = {
+export const CrateSpawner: EntitySpawner<typeof Crate> = {
   id: 'crate',
   constructor: Crate,
   displayName: 'Crate',

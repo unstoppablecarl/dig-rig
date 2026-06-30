@@ -142,6 +142,7 @@ export abstract class GameLevel extends Scene {
     this.weaponUIState = useWeaponUIState()
     this.instantWeaponUIState = useInstantWeaponUIState()
     this.entityFactory = new EntityFactory(this)
+    this.entityFactory.register(this.registerEntities())
 
     this.ui = this.registerSubScene(UIScene)
     this.registerSubScene(BgScene)
