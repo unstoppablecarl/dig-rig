@@ -7,6 +7,8 @@ export abstract class Entity extends SceneBound<GameLevel> implements ManagerIte
   private parent: EntityManager | null = null
 
   setManager(parent: EntityManager): void {
+    if (this.parent) throw new Error('parent already set')
+
     this.parent = parent
   }
 

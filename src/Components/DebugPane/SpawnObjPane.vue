@@ -24,22 +24,7 @@ function toggleSpawnObj() {
   }
 }
 
-const spawnOptions = [...level.entityFactory.entities.values()].map(ent => ({
-  value: ent.id,
-  label: ent.displayName,
-}))
-
-const selectedSpawnType = computed({
-  get: () => level.entityFactory.entities.get(spawnObjUI.spawnType)?.id ?? '',
-  set: (id: string) => {
-    for (const ent of level.entityFactory.entities.values()) {
-      if (ent.id === id) {
-        spawnObjUI.spawnType = ent.constructor
-        return
-      }
-    }
-  },
-})
+const spawnOptions = level.entityFactory.getOptions()
 
 </script>
 <template>
@@ -48,7 +33,7 @@ const selectedSpawnType = computed({
     <PSelect
       label="Obj"
       :options="spawnOptions"
-      v-model="selectedSpawnType"
+      v-model="spawnObjUI.spawnId"
     />
   </PFolder>
 </template>

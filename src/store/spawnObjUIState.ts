@@ -1,24 +1,24 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
-import { shallowRef } from 'vue'
+import { ref } from 'vue'
 import { Crate } from '../game/lib/Entities/defs/Crate.ts'
-import type { ConcreteEntityConstructor } from '../game/lib/Entities/_Entity.types.ts'
 
 export type SpawnObjUIState = ReturnType<typeof useSpawnObjUIState>
 
 type SerializedData = {
-  spawnType: ConcreteEntityConstructor
+  spawnId: string
 }
 
 export const useSpawnObjUIState = defineStore('spawn-obj-ui-state', () => {
-  const spawnType = shallowRef<ConcreteEntityConstructor>(Crate)
+
+  const spawnId = ref<string>(Crate.SPAWNER.id)
 
   const state = {
-    spawnType,
+    spawnId,
   }
 
   const defaults: SerializedData = {
-    spawnType: spawnType.value,
+    spawnId: spawnId.value,
   }
 
   const {
@@ -35,7 +35,7 @@ export const useSpawnObjUIState = defineStore('spawn-obj-ui-state', () => {
     $serializeState,
     $restoreState,
 
-    spawnType,
+    spawnId,
   }
 }, {
   persist: true,

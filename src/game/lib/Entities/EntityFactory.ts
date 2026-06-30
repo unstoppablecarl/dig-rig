@@ -4,11 +4,14 @@ import type { ConcreteEntityConstructor, EntitySpawner } from './_Entity.types.t
 
 export class EntityFactory extends SceneBound<GameLevel> {
 
-  entities = new Map<ConcreteEntityConstructor, EntitySpawner>()
+  private entities = new Map<ConcreteEntityConstructor, EntitySpawner>()
+
+  private byId = new Map<string, EntitySpawner>()
 
   register(entitySpawners: EntitySpawner[]) {
     for (const entitySpawner of entitySpawners) {
       this.entities.set(entitySpawner.constructor, entitySpawner)
+      this.byId.set(entitySpawner.id, entitySpawner)
     }
   }
 
@@ -28,5 +31,36 @@ export class EntityFactory extends SceneBound<GameLevel> {
       throw new Error(`Entity ${constructor.name} not registered`)
     }
     return new constructor(this.scene, x, y, ...args) as InstanceType<T>
+  }
+
+  spawnById(
+    id: string,
+    x: number,
+    y: number,
+    ...args: any[]
+  ): any {
+    if (!this.byId.has(id)) {
+      throw new Error(`Entity id: ${id} not registered`)
+    }
+    const ctor = this.byId.get(id)?.constructor!
+
+    return this.spawn(ctor, x, y, ...args)
+  }
+
+  get(id: string) {
+    return this.byId.get(id)
+  }
+
+  getOptions() {
+    return [...this.entities.values()].map(ent => ({
+      value: ent.id,
+      label: ent.displayName,
+    }))
+  }
+
+  protected onDestroy() {
+    super.onDestroy()
+    this.entities.clear()
+    this.byId.clear()
   }
 }

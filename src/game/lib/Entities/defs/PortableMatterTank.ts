@@ -62,6 +62,8 @@ export class PortableMatterTank extends Entity implements Position {
 
     this.text = scene.add.dom(0, sprite.height * -0.5, 'div', MATTER_TANK_TEXT_STYLES).setOrigin(0.5, 1)
     this.physicsBody.gameObject.add(this.text)
+
+    scene.entityManager.add(this)
   }
 
   update(_time: number, _delta: number): void {

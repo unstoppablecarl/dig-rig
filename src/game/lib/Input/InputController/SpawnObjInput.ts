@@ -47,7 +47,7 @@ export class SpawnObjInput extends InputController {
     const tx = Math.floor(x)
     const ty = Math.floor(y)
 
-    this.scene.entityFactory.spawn(this.state.spawnType, tx, ty)
+    this.scene.entityFactory.spawnById(this.state.spawnId, tx, ty)
   }
 
   update() {
@@ -58,7 +58,7 @@ export class SpawnObjInput extends InputController {
     const zoom = this.scene.cameras.main.zoom
     this.graphics.setPosition(p.x, p.y)
 
-    const size = this.scene.entityFactory.entities.get(this.state.spawnType)!.size
+    const size = this.scene.entityFactory.get(this.state.spawnId)!.size!
 
     const w = size.w
     const h = size.h

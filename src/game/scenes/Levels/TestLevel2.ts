@@ -72,7 +72,6 @@ export default class TestLevel2 extends GameLevel {
   makePlayer() {
     const player = new Player(this, 100, 300)
     const tank = this.entityFactory.spawn(PortableMatterTank, 150, 350, 99)
-    this.entityManager.add(tank)
 
     player.matterTank.overflowTank = tank.matterTank
     return player
