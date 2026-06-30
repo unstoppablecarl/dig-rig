@@ -6,6 +6,10 @@ import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
 export default class ImageSourceTestLevel extends GameLevel {
+  registerEntities() {
+    return []
+  }
+
   private TERRAIN: string
   private PERMANENT: string
   private SOLID: string

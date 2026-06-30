@@ -1,19 +1,17 @@
 import { defineStore } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
-import { ref } from 'vue'
+import { shallowRef } from 'vue'
+import { Crate } from '../game/lib/Entities/defs/Crate.ts'
+import type { ConcreteEntityConstructor } from '../game/lib/Entities/_Entity.types.ts'
 
 export type SpawnObjUIState = ReturnType<typeof useSpawnObjUIState>
 
-export enum SpawnType {
-  CRATE
-}
-
 type SerializedData = {
-  spawnType: SpawnType
+  spawnType: ConcreteEntityConstructor
 }
 
 export const useSpawnObjUIState = defineStore('spawn-obj-ui-state', () => {
-  const spawnType = ref<SpawnType>(SpawnType.CRATE)
+  const spawnType = shallowRef<ConcreteEntityConstructor>(Crate)
 
   const state = {
     spawnType,

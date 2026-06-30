@@ -1,5 +1,5 @@
-import { PhysicsBody } from '../../lib/Collision/PhysicsBody.ts'
-import { Driller } from '../../lib/Entities/Driller.ts'
+import { Crate, SpawnCrate } from '../../lib/Entities/defs/Crate.ts'
+import { Driller, SpawnDriller } from '../../lib/Entities/defs/Driller.ts'
 import { PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { ScaleLevelTexture } from '../../lib/Textures/ScaleLevelTexture.ts'
@@ -8,15 +8,19 @@ import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
 export default class TestLevel extends GameLevel {
+  registerEntities() {
+    return [
+      SpawnDriller,
+      SpawnCrate,
+    ]
+  }
+
   private scaleLevelTexture: ScaleLevelTexture
 
   preload() {
     super.preload()
     this.scaleLevelTexture = new ScaleLevelTexture(this)
     this.scaleLevelTexture.preload()
-    this.load.setPath('assets')
-    this.loadPixelImage('crate', 'crate.png')
-    this.loadPixelImage('enemy', 'enemy.png')
 
     this.preloadPlayer()
   }
@@ -47,29 +51,10 @@ export default class TestLevel extends GameLevel {
   }
 
   startLevel() {
-
-    const driller = new Driller(this)
-    driller.x = 150
-    driller.y = 350
-
-    this.entities.add(driller)
-    this.makeTestCrate(90, 50)
-    this.makeTestCrate(100, 0)
-
-    this.makeTestCrate(80, 100)
-    this.makeTestCrate(120, 100)
-  }
-
-  makeTestCrate(x: number, y: number) {
-    const body = this.matter.add.rectangle(x, y, 20, 20, {
-      friction: 10000,
-      frictionStatic: 10000,
-      restitution: 0,
-      density: 0.001,
-    })
-
-    const sprite = this.add.sprite(x, y, 'crate')
-    this.physicsBodyManager.add(PhysicsBody.makeFromSprite(this, sprite, body))
-    this.layers.physicsObjects.add(sprite)
+    this.entityFactory.spawn(Driller, 150, 350)
+    this.entityFactory.spawn(Crate, 90, 50)
+    this.entityFactory.spawn(Crate, 100, 0)
+    this.entityFactory.spawn(Crate, 80, 100)
+    this.entityFactory.spawn(Crate, 120, 100)
   }
 }

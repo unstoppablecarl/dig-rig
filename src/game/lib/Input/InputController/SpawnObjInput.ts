@@ -1,5 +1,5 @@
 import { GameObjects, Input, Math as PMath, Scenes } from 'phaser'
-import { SpawnType, useSpawnObjUIState } from '../../../../store/spawnObjUIState.ts'
+import { type SpawnObjUIState, useSpawnObjUIState } from '../../../../store/spawnObjUIState.ts'
 import { BRUSH_OUTLINE_COLOR } from '../../../config/colors.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { InputController } from './InputController.ts'
@@ -10,6 +10,9 @@ import POST_UPDATE = Scenes.Events.POST_UPDATE
 export class SpawnObjInput extends InputController {
   public graphics: GameObjects.Graphics | null = null
   private _drawnZoom = -1
+  private state: SpawnObjUIState
+  private _drawnW: number
+  private _drawnH: number
 
   constructor(
     public scene: GameLevel,
@@ -25,6 +28,8 @@ export class SpawnObjInput extends InputController {
 
       }),
     ])
+
+    this.state = useSpawnObjUIState()
   }
 
   protected onEnable() {
@@ -42,11 +47,7 @@ export class SpawnObjInput extends InputController {
     const tx = Math.floor(x)
     const ty = Math.floor(y)
 
-    const state = useSpawnObjUIState()
-
-    if (state.spawnType === SpawnType.CRATE) {
-      this.scene.makeTestCrate(tx, ty)
-    }
+    this.scene.entityFactory.spawn(this.state.spawnType, tx, ty)
   }
 
   update() {
@@ -56,13 +57,22 @@ export class SpawnObjInput extends InputController {
     const p = this.scene.input.activePointer
     const zoom = this.scene.cameras.main.zoom
     this.graphics.setPosition(p.x, p.y)
-    if (zoom !== this._drawnZoom) {
-      const radius = 20
+
+    const size = this.scene.entityFactory.entities.get(this.state.spawnType)!.size
+
+    const w = size.w
+    const h = size.h
+
+    if (zoom !== this._drawnZoom || w !== this._drawnW || h !== this._drawnH) {
       this._drawnZoom = zoom
+      this._drawnW = w
+      this._drawnH = h
       this.graphics.clear()
       this.graphics.lineStyle(1, BRUSH_OUTLINE_COLOR.color, 1)
-      let size = radius * zoom
-      this.graphics.strokeRect(size * -0.5, size * -0.5, size, size)
+      const width = w * zoom
+      const height = h * zoom
+
+      this.graphics.strokeRect(width * -0.5, height * -0.5, width, height)
     }
   }
 

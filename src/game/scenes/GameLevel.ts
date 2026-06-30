@@ -14,9 +14,11 @@ import {
   type PartialMatterRenderConfig,
 } from '../config/colors.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
-import { PhysicsBody } from '../lib/Collision/PhysicsBody.ts'
 import { PhysicsBodyManager } from '../lib/Collision/PhysicsBodyManager.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
+import type { EntitySpawner } from '../lib/Entities/_Entity.types.ts'
+import { EntityFactory } from '../lib/Entities/entities.ts'
+import { EntityManager } from '../lib/Entities/EntityManager.ts'
 import { GAME_LEVEL_LOADED } from '../lib/events.ts'
 import { WeaponManagerInput } from '../lib/Input/InputController/WeaponManagerInput.ts'
 import { InputManager } from '../lib/Input/InputManager.ts'
@@ -35,7 +37,6 @@ import { VFXParticleManager } from '../lib/VFXParticles/VFXParticleManager.ts'
 import { BgScene } from './Layers/BgScene.ts'
 import { UIScene } from './Layers/UIScene.ts'
 import type { LevelId, LevelInit } from './Levels'
-import Group = GameObjects.Group
 import Layer = GameObjects.Layer
 import Rectangle = Geom.Rectangle
 import MouseManager = Input.Mouse.MouseManager
@@ -61,7 +62,8 @@ export abstract class GameLevel extends Scene {
   public displayName = 'Level Name Not Loaded'
   public layers: Layers
   public cameraController: CameraController
-  public entities: Group
+  public entityManager: EntityManager
+  public entityFactory: EntityFactory
   public matterManager: MatterManager
   public vfxParticleManager: VFXParticleManager
   public player: Player
@@ -139,6 +141,7 @@ export abstract class GameLevel extends Scene {
     this.brushUIState = useBrushUIState()
     this.weaponUIState = useWeaponUIState()
     this.instantWeaponUIState = useInstantWeaponUIState()
+    this.entityFactory = new EntityFactory(this)
 
     this.ui = this.registerSubScene(UIScene)
     this.registerSubScene(BgScene)
@@ -146,6 +149,8 @@ export abstract class GameLevel extends Scene {
     const mouse = this.input.mouse as MouseManager
     mouse.disableContextMenu()
   }
+
+  abstract registerEntities(): EntitySpawner<any>[];
 
   preload() {
     const { width, height } = this.scale
@@ -182,6 +187,7 @@ export abstract class GameLevel extends Scene {
       fill.destroy()
       pct.destroy()
     })
+    this.entityFactory.preload()
   }
 
   preloadPlayer() {
@@ -249,10 +255,7 @@ export abstract class GameLevel extends Scene {
     this.vfxParticleManager = new VFXParticleManager(this)
     this.inputManager = new InputManager(this)
     this.physicsBodyManager = new PhysicsBodyManager(this)
-
-    this.entities = this.add.group({
-      runChildUpdate: true,
-    })
+    this.entityManager = new EntityManager(this)
 
     this.player = this.makePlayer()
     this.weaponUIState.activeMatterTank = this.player.matterTank
@@ -287,7 +290,8 @@ export abstract class GameLevel extends Scene {
     this.player.update()
     this.projectiles.update(dt)
     this.terrainChunkBodyManager.update()
-    this.physicsBodyManager.update()
+    this.physicsBodyManager.update(time, delta)
+    this.entityManager.update(time, delta)
 
     this.tilemapRenderer.render()
   }
@@ -326,18 +330,5 @@ export abstract class GameLevel extends Scene {
       this.scene.add(Def.ID, Def)
     }
     return this.scene.get(Def.ID) as E
-  }
-
-  makeTestCrate(x: number, y: number) {
-    const body = this.matter.add.rectangle(x, y, 20, 20, {
-      friction: 10000,
-      frictionStatic: 10000,
-      restitution: 0,
-      density: 0.001,
-    })
-
-    const sprite = this.add.sprite(x, y, 'crate')
-    this.physicsBodyManager.add(PhysicsBody.makeFromSprite(this, sprite, body))
-    this.layers.physicsObjects.add(sprite)
   }
 }

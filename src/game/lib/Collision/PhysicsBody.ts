@@ -2,13 +2,14 @@ import type { BodyType } from 'matter'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { EMPTY, matterType, PHYSICS_BODY } from '../Matter/_Matter.types.ts'
+import { type ManagerItem } from '../Util/BasicManager.ts'
 import type { PhysicsBodyType } from './_Collision.types.ts'
 import type { PhysicsBodyManager } from './PhysicsBodyManager.ts'
 import Container = Phaser.GameObjects.Container
 import Image = Phaser.GameObjects.Image
 import Sprite = Phaser.GameObjects.Sprite
 
-export class PhysicsBody extends SceneBound<GameLevel> {
+export class PhysicsBody extends SceneBound<GameLevel> implements ManagerItem<PhysicsBodyManager> {
   /** Tile indices stamped as PHYSICS_BODY last step — cleared and re-stamped each step. */
   private readonly prevTiles: number[] = []
 
@@ -28,7 +29,7 @@ export class PhysicsBody extends SceneBound<GameLevel> {
 
   private parent: PhysicsBodyManager | null = null
 
-  setParent(parent: PhysicsBodyManager) {
+  setManager(parent: PhysicsBodyManager) {
     this.parent = parent
   }
 

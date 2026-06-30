@@ -1,6 +1,6 @@
 import type { PartialMatterRenderConfig } from '../../config/colors.ts'
-import { PhysicsBody } from '../../lib/Collision/PhysicsBody.ts'
-import { PortableMatterTank } from '../../lib/Entities/PortableMatterTank.ts'
+import type { EntitySpawner } from '../../lib/Entities/_Entity.types.ts'
+import { PortableMatterTank, SpawnPortableMatterTank } from '../../lib/Entities/defs/PortableMatterTank.ts'
 import { EMPTY, PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
@@ -10,15 +10,17 @@ import terrain from './TestLevel2/TestLevel2.png'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
 export default class TestLevel2 extends GameLevel {
+  registerEntities(): EntitySpawner<any>[] {
+    return [
+      SpawnPortableMatterTank,
+    ]
+  }
+
   private TERRAIN: string
 
   preload() {
-    super.preload()
-
     this.TERRAIN = this.loadPrefixedPixelImage('terrain', terrain)
-
-    this.load.setPath('assets')
-    this.loadPixelImage(PortableMatterTank.SPRITE_KEY, 'portable-matter-tank.png')
+    super.preload()
 
     this.preloadPlayer()
   }
@@ -68,22 +70,10 @@ export default class TestLevel2 extends GameLevel {
 
   makePlayer() {
     const player = new Player(this, 100, 300)
-    const tank = new PortableMatterTank(this, 150, 350, 99)
-    this.entities.add(tank)
+    const tank = this.entityFactory.spawn(PortableMatterTank, 150, 350, 99)
+    this.entityManager.add(tank)
 
     player.matterTank.overflowTank = tank.matterTank
     return player
-  }
-
-  makeTestCrate(x: number, y: number) {
-    const body = this.matter.add.rectangle(x, y, 20, 20, {
-      friction: 10000,
-      frictionStatic: 10000,
-      restitution: 0,
-      density: 0.001,
-    })
-
-    const sprite = this.add.sprite(x, y, 'crate')
-    this.physicsBodyManager.add(PhysicsBody.makeFromSprite(this, sprite, body))
   }
 }
