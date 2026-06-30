@@ -30,7 +30,7 @@ export class Crate extends Entity {
 
     this.scene.entityManager.add(this)
 
-    const body = scene.matter.add.rectangle(x, y, 16, 27, {
+    const body = scene.matter.add.rectangle(x, y, 20, 20, {
       friction: 10000,
       frictionStatic: 10000,
       restitution: 0,
