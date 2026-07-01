@@ -4,7 +4,7 @@ import { PButton, PFolder, PSelect } from 'vue-pane/src/index.ts'
 import { InputMode } from '../../game/lib/Input/_input.types.ts'
 import { EMPTY, SupportType } from '../../game/lib/Matter/_Matter.types.ts'
 import {
-  getImmutableSupportType,
+  getImmutableSupportTypeOrFail,
   INDESTRUCTIBLE_TYPES,
   isSupportTypeImmutable,
   MATTER_NAMES,
@@ -65,7 +65,7 @@ const primarySupportDisabled = computed(() => {
 const primarySupportTypeValue = computed<SupportType>({
   get() {
     if (primarySupportDisabled.value) {
-      return getImmutableSupportType(brushUI.primaryMatterType)
+      return getImmutableSupportTypeOrFail(brushUI.primaryMatterType)
     }
     return brushUI.primarySupportFlag
   },
@@ -81,7 +81,7 @@ const secondarySupportDisabled = computed(() => {
 const secondarySupportTypeValue = computed<SupportType>({
   get() {
     if (secondarySupportDisabled.value) {
-      return getImmutableSupportType(brushUI.secondaryMatterType)
+      return getImmutableSupportTypeOrFail(brushUI.secondaryMatterType)
     }
     return brushUI.secondarySupportFlag
   },

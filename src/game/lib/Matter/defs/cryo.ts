@@ -6,14 +6,18 @@ import {
   getFirstOwnerId,
   getOwner,
   ICE,
+  isSettled,
   LAVA,
   type MatterDef,
+  matterType,
   OIL,
   ROCK,
   SALT_WATER,
+  setOwner,
   setSettled,
   WATER,
 } from '../_Matter.types.ts'
+import { CRYO_STICKS_TO, CRYO_STICKS_TO_IF_SETTLED } from '../matter.ts'
 
 export const CRYO_DEF = {
   id: CRYO,
@@ -23,13 +27,15 @@ export const CRYO_DEF = {
   settles: true as const,
   liquid: true as const,
   action(sim, tx, ty, idx): void {
-    const { tiles, width } = sim
+    const { tiles, width, height } = sim
+    const ownerId = getOwner(tiles[idx])
+
     // Lava contact: cryo evaporates, lava solidifies
     const lavaLoc = sim.bordering(tx, ty, idx, LAVA)
     if (lavaLoc !== -1) {
       const lavaRaw = tiles[lavaLoc]
-      const ownerId = getFirstOwnerId(tiles[idx], lavaRaw)
-      sim.queueMatterCredit(tx, ty, ownerId)
+      const combinedOwner = getFirstOwnerId(tiles[idx], lavaRaw)
+      sim.queueMatterCredit(tx, ty, combinedOwner)
       sim.queueReservationRelease(getOwner(lavaRaw), 1)
       tiles[idx] = EMPTY
       tiles[lavaLoc] = ROCK
@@ -41,15 +47,45 @@ export const CRYO_DEF = {
       return
     }
 
-    // Freeze adjacent ice → CHILLED_ICE (cryo stays alive)
-    if (random() < 50) {
-      const iceLoc = sim.bordering(tx, ty, idx, ICE)
-      if (iceLoc !== -1) {
-        tiles[iceLoc] = CHILLED_ICE
-        const ix = iceLoc % width
-        const iy = iceLoc / width | 0
-        sim.markDirty(ix, iy)
-        sim.next.add(iceLoc)
+    // 3×3 scan: freeze surfaces and water/ice on contact (cryo is consumed)
+    const xStart = Math.max(tx - 1, 0)
+    const yStart = Math.max(ty - 1, 0)
+    const xEnd = Math.min(tx + 2, width)
+    const yEnd = Math.min(ty + 2, height)
+
+    for (let ny = yStart; ny < yEnd; ny++) {
+      for (let nx = xStart; nx < xEnd; nx++) {
+        if (ny === ty && nx === tx) continue
+        const nidx = ny * width + nx
+        const nRaw = tiles[nidx]
+        const nt = matterType(nRaw)
+
+        // Touching CHILLED_ICE: rare self-freeze (1% × 5%)
+        if (nt === CHILLED_ICE && random() < 1 && random() < 5) {
+          tiles[idx] = setOwner(CHILLED_ICE, ownerId)
+          sim.markDirty(tx, ty)
+          sim.reactivateAround(tx, ty)
+          return
+        }
+
+        // Touching a solid surface: cryo freezes onto it
+        if (CRYO_STICKS_TO.has(nt) || (CRYO_STICKS_TO_IF_SETTLED.has(nt) && isSettled(nRaw))) {
+          tiles[idx] = setOwner(CHILLED_ICE, ownerId)
+          sim.markDirty(tx, ty)
+          sim.reactivateAround(tx, ty)
+          return
+        }
+
+        // Touching water or ice: both freeze, cryo is consumed
+        if (nt === WATER || nt === ICE) {
+          tiles[nidx] = CHILLED_ICE
+          sim.markDirty(nx, ny)
+          sim.next.add(nidx)
+          tiles[idx] = setOwner(CHILLED_ICE, ownerId)
+          sim.markDirty(tx, ty)
+          sim.reactivateAround(tx, ty)
+          return
+        }
       }
     }
 
@@ -62,21 +98,17 @@ export const CRYO_DEF = {
       return
     }
 
-    const moved = sim.tryLiquidFlow(tx, ty, idx)
+    const moved = sim.doPowderFall(tx, ty, idx)
     if (!moved) {
-      // Freeze an adjacent water cell when immobile
-      const waterLoc = sim.borderingAdjacent(tx, ty, idx, WATER)
-      if (waterLoc !== -1) {
-        tiles[waterLoc] = CHILLED_ICE
-        const wx = waterLoc % width
-        const wy = waterLoc / width | 0
-        sim.markDirty(wx, wy)
-        sim.next.add(waterLoc)
-        sim.next.add(idx)
+      // Random self-freeze if immobile (~0.5% = 1% × 50%)
+      if (random() < 1 && random() < 50) {
+        tiles[idx] = setOwner(CHILLED_ICE, ownerId)
+        sim.markDirty(tx, ty)
+        sim.reactivateAround(tx, ty)
         return
       }
 
-      tiles[idx] = setSettled(CRYO, true)
+      tiles[idx] = setSettled(tiles[idx], true)
       sim.markDirty(tx, ty)
     }
   },
@@ -89,5 +121,3 @@ declare module '../matter.ts' {
     [CRYO]: typeof CRYO_DEF;
   }
 }
-
-

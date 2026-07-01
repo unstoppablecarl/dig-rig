@@ -5,6 +5,7 @@ import {
   type MatterDef,
   matterType,
   MatterType,
+  MatterTypeValues,
   PERMANENT,
   PHYSICS_BODY,
   SUPPORT_MASK,
@@ -37,13 +38,17 @@ export function getSupportType(raw: number): SupportType {
   return override !== SupportType.NONE ? override : (raw >>> SUPPORT_SHIFT) & 0b11
 }
 
-export function getImmutableSupportType(raw: number): SupportType {
+export function getImmutableSupportTypeOrFail(raw: number): SupportType {
   const type = matterType(raw)
   const supportType = IMMUTABLE_SUPPORT_TYPES[type]
   if (supportType === SupportType.NONE) {
     throw new Error(`Matter Type: "${MatterType[type]}" is not immutable"`)
   }
   return supportType
+}
+
+export function getImmutableSupportType(type: number): SupportType {
+  return IMMUTABLE_SUPPORT_TYPES[type]
 }
 
 // Maps structural types to the type they convert to on island collapse (undefined = keep same type).
@@ -161,3 +166,11 @@ export function convertsToCollisionBody(value: number): boolean {
   if (isSettled(value)) return collidesWhenSettled(type)
   return false
 }
+
+export const CRYO_STICKS_TO = new MatterTypeSet(...MatterTypeValues.filter(v => {
+  return !isLiquid(v) && getImmutableSupportType(v) !== SupportType.NONE
+}))
+
+export const CRYO_STICKS_TO_IF_SETTLED = new MatterTypeSet(...MatterTypeValues.filter(v => {
+  return !isLiquid(v) && doesSettle(v)
+}))
