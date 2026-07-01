@@ -1,3 +1,4 @@
+import { PARTICLE_RENDER_ENABLED } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { MatterType } from '../Matter/_Matter.types.ts'
@@ -64,6 +65,12 @@ export class MatterEngine extends SceneBound {
 
   update() {
     if (this.destroyed) return
+    if (PARTICLE_RENDER_ENABLED) {
+      const pixels = this.data.particle.consumePixels()
+      if (pixels) {
+        this.scene.tilemapRenderer.updateParticlePixels(pixels)
+      }
+    }
     this.vfxSettled.drain()
     this.vfxParticle.drain()
     this.vfxTileEffect.drain()

@@ -17,6 +17,7 @@ export const FLAMETHROWER_BURST = {
     const fire = setOwner(FIRE, p.ownerId)
     sim.fillLine(p.x, p.y, dx, dy, p.size, fire)
 
+    sim.data.drawTile(p.x, p.y, 0xffff00ff)
     p.x = dx
     p.y = dy
     p.yVelocity += 0.3

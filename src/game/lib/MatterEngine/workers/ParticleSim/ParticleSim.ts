@@ -4,6 +4,7 @@ import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_Matt
 import { ParticleType } from '../../../Particles/_particle-types.ts'
 import type { Particle } from '../../../Particles/Particle.ts'
 import { PARTICLE_DEFS } from '../../../Particles/particles.ts'
+import { ParticleData, type ParticlesBuffers } from '../../data/ParticleData.ts'
 import { ParticlePool } from './ParticlePool.ts'
 import { ParticleSpawnBuffer } from './ParticleSpawnBuffer.ts'
 
@@ -14,15 +15,18 @@ export class ParticleSim {
   pool!: ParticlePool
   pendingActivations: number[] = []
   structuralRemovals: number[] = []
+  data!: ParticleData
 
-  constructor(tiles: SharedArrayBuffer, width: number, height: number) {
+  constructor(tiles: SharedArrayBuffer, particleBuffers: ParticlesBuffers) {
     this.tiles = new Uint32Array(tiles)
-    this.width = width
-    this.height = height
+    this.width = particleBuffers.width
+    this.height = particleBuffers.height
+    this.data = new ParticleData(particleBuffers)
     this.pool = new ParticlePool()
   }
 
   step() {
+    this.data.clear()
     this.pendingActivations.length = 0
     this.structuralRemovals.length = 0
 
@@ -37,6 +41,7 @@ export class ParticleSim {
       p.actionIterations++
     })
 
+    this.data.publish()
   }
 
   spawnBatch(data: Int32Array) {
@@ -51,7 +56,8 @@ export class ParticleSim {
     for (let i = 0; i < def.particlesToSpawn; i++) {
       const p = this.pool.acquire(type, x, y, ownerId)
       if (!p) break
-      ;(def.init as (p: Particle, sim: ParticleSim, ...args: unknown[]) => void)(p, this, ...initArgs)
+        ;
+      (def.init as (p: Particle, sim: ParticleSim, ...args: unknown[]) => void)(p, this, ...initArgs)
     }
   }
 
