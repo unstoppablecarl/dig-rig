@@ -1,3 +1,4 @@
+// must be power of 2
 export const CHUNK_SIZE = 64 as const
 export const GRAVITY: number = 1
 export const PLAYER_JUMP_POWER = -7
