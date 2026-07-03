@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
+import { FILL_MAX } from '../../../Matter/_Liquid.constants.ts'
 import { EMPTY, matterType, type MatterType, PLANT, SupportType } from '../../../Matter/_Matter.types.ts'
-import { getSupportType } from '../../../Matter/matter.ts'
+import { getSupportType, isLiquid } from '../../../Matter/matter.ts'
 import type { Tile } from '../../../Tilemap/TileGrid.ts'
 import type { CoordinatorInMsgBrushEraseMatter } from '../Coordinator.types.ts'
 import { MatterSim } from '../MatterSim/MatterSim.ts'
@@ -97,6 +98,9 @@ export class Brush {
         }
 
         tiles[idx] = value
+        if (isLiquid(matterType(value))) {
+          this.sim.fill[idx] = FILL_MAX
+        }
         this.sim.markDirty(x, y)
         dirtyChunks.add(this.physics.chunkIdxForTile(idx))
         placed.push({ x, y })

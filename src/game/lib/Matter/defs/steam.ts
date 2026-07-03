@@ -1,4 +1,5 @@
 import { random } from '../../../helpers/random'
+import { FILL_MAX } from '../_Liquid.constants.ts'
 import { type MatterDef, matterType, STEAM, WATER } from '../_Matter.types.ts'
 
 export const STEAM_DEF = {
@@ -24,6 +25,7 @@ export const STEAM_DEF = {
 
     // Condense near water
     if (random() < 5 && sim.bordering(tx, ty, idx, WATER) !== -1) {
+      sim.fill[idx] = FILL_MAX
       tiles[idx] = WATER
       sim.markDirty(tx, ty)
       sim.next.add(idx)
@@ -34,6 +36,7 @@ export const STEAM_DEF = {
     if (random() < 1 && random() < 5) {
       // Check nothing below
       if (ty < sim.height - 1 && matterType(tiles[(ty + 1) * width + tx]) !== STEAM) {
+        sim.fill[idx] = FILL_MAX
         tiles[idx] = WATER
         sim.markDirty(tx, ty)
         sim.reactivateAround(tx, ty)

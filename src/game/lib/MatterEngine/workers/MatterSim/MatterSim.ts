@@ -1,6 +1,11 @@
 import { CHUNK_SIZE } from '../../../../config.ts'
 import { random } from '../../../../helpers/random.ts'
 import {
+  FILL_COL_SCAN_MAX, FILL_COMPRESSION_FACTOR,
+  FILL_MAX, FILL_MIN, FILL_PRESSURE_DIVISOR, FILL_ROUND_TO_ZERO, FILL_SETTLED_FACTOR,
+  FILL_ROW_SCAN_MAX,
+} from '../../../Matter/_Liquid.constants.ts'
+import {
   EMPTY,
   FIRE,
   getOwner,
@@ -31,10 +36,9 @@ import { MatterCreditTransferBuffer } from '../_helpers/MatterCreditTransferBuff
 import { MatterReservationReleaseBuffer } from '../_helpers/MatterReservationReleaseBuffer.ts'
 import { type SimInMsgProcess, SimOutMsg, type SimOutMsgDone, type SimOutMsgSpawnParticle } from './MatterSim.types.ts'
 
-const MAX_FLOW = 8
-
 export class MatterSim {
   tiles!: Uint32Array
+  fill!: Float32Array
   chunkGrid!: ChunkGrid
   width = 0
   height = 0
@@ -43,6 +47,9 @@ export class MatterSim {
 
   private matterTankCredits: MatterCreditTransferBuffer
   private matterReservationReleases = new MatterReservationReleaseBuffer()
+
+  // Set to true once PBF GPU simulation is confirmed active; disables CA liquid flow
+  pbfActive = false
 
   // Set externally by coordinator/pool before processSubset
   frame = 0
@@ -53,11 +60,14 @@ export class MatterSim {
 
   init(
     tilesBuffer: SharedArrayBuffer,
+    fillBuffer: SharedArrayBuffer,
     chunkBuffers: ChunkGridBuffers,
     width: number,
     height: number,
   ) {
     this.tiles = new Uint32Array(tilesBuffer)
+    this.fill = new Float32Array(fillBuffer)
+
     this.width = width
     this.height = height
     this.chunkShift = Math.log2(CHUNK_SIZE)
@@ -133,10 +143,14 @@ export class MatterSim {
     target.add(idx)
   }
 
-// Runs matterType actions for the given tile indices. Pool workers call this
+  // Runs matterType actions for the given tile indices. Pool workers call this
   // once per round with their assigned subset of the active set.
   processSubset(indices: number[]) {
     const phase = this.frame & 1
+
+    if (this.frame % 2 === 0) {
+      indices.reverse()
+    }
     for (const idx of indices) {
       const tx = idx % this.width
       const ty = idx / this.width | 0
@@ -155,6 +169,7 @@ export class MatterSim {
           throw new Error(`MatterSim: no action registered for type ${tile} — ensure matter.ts is imported before MatterSim is used`)
         }
       }
+
       MATTER_ACTIONS[tile](this, tx, ty, idx)
     }
   }
@@ -194,9 +209,9 @@ export class MatterSim {
       }
     }
 
-    // Wake the horizontal chain of settled liquids so pools level quickly
+    // Wake the horizontal chain of settled liquids so pools level quickly.
     for (const dir of this._reactiveAroundRange) {
-      for (let d = 1; d <= MAX_FLOW; d++) {
+      for (let d = 1; d <= FILL_ROW_SCAN_MAX; d++) {
         const ax = tx + dir * d
         if (ax < 0 || ax >= width) break
         const sidx = ty * width + ax
@@ -209,6 +224,22 @@ export class MatterSim {
   }
 
   // ─── Movement primitives ──────────────────────────────────────────────────
+
+  // Sum of same-type fill levels strictly above (tx, ty), up to FILL_COL_SCAN_MAX cells.
+  // Continues through gaps (empty cells contribute 0) and stops at walls or different types.
+  private colPressureAbove(tx: number, ty: number, type: MatterType): number {
+    const { tiles, fill, width } = this
+    let p = 0
+    for (let dy = 1; dy <= FILL_COL_SCAN_MAX; dy++) {
+      const yy = ty - dy
+      if (yy < 0) break
+      const ii = yy * width + tx
+      const t = matterType(tiles[ii])
+      if (t !== type && t !== EMPTY) break  // wall or different solid — stop
+      if (t === type) p += fill[ii]
+    }
+    return p
+  }
 
   tryMove(
     fromIdx: number, fromTx: number, fromTy: number,
@@ -236,9 +267,14 @@ export class MatterSim {
     this.next.add(toIdx)
 
     if (toType !== EMPTY) {
-      // Displaced liquid now at fromIdx needs to re-flow
+      // Swap fill so the displaced liquid keeps its mass at fromIdx.
+      // Without this, the liquid gets fill=0 and becomes a zombie tile.
+      const tmp = this.fill[fromIdx]
+      this.fill[fromIdx] = this.fill[toIdx]
+      this.fill[toIdx] = tmp
       this.next.add(fromIdx)
     } else {
+      this.fill[toIdx] = 0
       this.reactivateAround(fromTx, fromTy)
     }
 
@@ -323,6 +359,11 @@ export class MatterSim {
     tiles[targetIdx] = selfRaw
     tiles[idx] = displacedAs !== undefined ? displacedAs : lighter
 
+    // swap fill levels between the two tiles
+    const selfFill = this.fill[idx]
+    this.fill[idx] = this.fill[targetIdx]
+    this.fill[targetIdx] = selfFill
+
     const tx2 = targetIdx % width
     const ty2 = (targetIdx / width) | 0
     this.markDirty(tx, ty)
@@ -356,7 +397,7 @@ export class MatterSim {
     const rowBelow = (fromTy + 1) * width
     const hasBelow = fromTy + 1 < height
     let dist = 0
-    for (let d = 1; d <= MAX_FLOW; d++) {
+    for (let d = 1; d <= FILL_ROW_SCAN_MAX; d++) {
       const nx = fromTx + dir * d
       if (nx < 0 || nx >= width) break
       if (matterType(tiles[row + nx]) !== EMPTY) break
@@ -624,6 +665,7 @@ export class MatterSim {
     if (RESERVED_DESTROY_CHARGE.has(t)) {
       this.queueReservationRelease(getOwner(raw), getReserveDestroyAmount(t))
     }
+    this.fill[idx] = 0
     this.tiles[idx] = EMPTY
     this.markDirty(x, y)
     this.next.add(idx)
@@ -688,16 +730,235 @@ export class MatterSim {
     return moved
   }
 
-  tryLiquidFlow(tx: number, ty: number, idx: number) {
-    if (getSupportType(this.tiles[idx]) === SupportType.ANCHORED) return
+  private doFillTransfer(
+    fromIdx: number, fromTx: number, fromTy: number,
+    toIdx: number, toTx: number, toTy: number,
+    amount: number,
+    liquidRaw: number,
+  ): void {
+    const wasEmpty = this.fill[toIdx] === 0
+    this.fill[fromIdx] -= amount
+    this.fill[toIdx] += amount
 
-    const leftFirst = this.leftFirst
+    if (this.fill[fromIdx] < FILL_ROUND_TO_ZERO) {
+      this.fill[fromIdx] = 0
+      this.tiles[fromIdx] = EMPTY
+      this.markDirty(fromTx, fromTy)
+      this.reactivateAround(fromTx, fromTy)
+    } else {
+      this.tiles[fromIdx] = setSettled(this.tiles[fromIdx], false)
+      this.markDirty(fromTx, fromTy)
+      this.next.add(fromIdx)
+      // Wake settled neighbours so they re-equalize against the new lower fill
+      this.reactivateAround(fromTx, fromTy)
+    }
 
-    return this.tryMove(idx, tx, ty, tx, ty + 1) ||
-      this.tryMove(idx, tx, ty, tx + (leftFirst ? -1 : 1), ty + 1) ||
-      this.tryMove(idx, tx, ty, tx + (leftFirst ? 1 : -1), ty + 1) ||
-      this.tryFlowHorizontal(idx, tx, ty, leftFirst ? -1 : 1) ||
-      this.tryFlowHorizontal(idx, tx, ty, leftFirst ? 1 : -1)
+    // Wake settled liquid directly below the sender — it may be pressurized and
+    // waiting to push upward. When the sender loses fill the column above opens up.
+    if (fromTy < this.height - 1) {
+      const belowFromIdx = fromIdx + this.width
+      const belowRaw = this.tiles[belowFromIdx]
+      if (isLiquid(matterType(belowRaw)) && isSettled(belowRaw)) {
+        this.tiles[belowFromIdx] = setSettled(belowRaw, false)
+        this.markDirtyRaw(belowFromIdx)
+        this.next.add(belowFromIdx)
+      }
+    }
+
+    if (wasEmpty) {
+      this.tiles[toIdx] = liquidRaw
+    } else {
+      this.tiles[toIdx] = setSettled(this.tiles[toIdx], false)
+    }
+    this.markDirty(toTx, toTy)
+    this.next.add(toIdx)
+  }
+
+  // Returns how much fill the lower of two stacked cells should hold.
+  // Yields > FILL_MAX when total > FILL_MAX, creating a small compression
+  // that drives upward pressure flow (U-tube equalization).
+  private static getStableState(total: number): number {
+    const compress = FILL_MAX * FILL_COMPRESSION_FACTOR
+    if (total <= FILL_MAX) return FILL_MAX
+    if (total < 2 * FILL_MAX + compress)
+      return (FILL_MAX * FILL_MAX + total * compress) / (FILL_MAX + compress)
+    return (total + compress) / 2
+  }
+
+  tryFillFlow(tx: number, ty: number, idx: number): boolean {
+    const { tiles, fill, width, height } = this
+
+    const mass = fill[idx]
+    if (mass < FILL_MIN) return false
+
+    const type = matterType(tiles[idx])
+    const liquidRaw = setSettled(tiles[idx], false)
+    let remaining = mass
+    let moved = false
+
+    // ── 1. Gravity ───────────────────────────────────────────────────────────
+    let downIdx = -1
+    let downMovable = false
+    if (ty + 1 < height) {
+      downIdx = idx + width
+      const downType = matterType(tiles[downIdx])
+      downMovable = downType === EMPTY || downType === type
+      if (downMovable) {
+        const want = MatterSim.getStableState(mass + fill[downIdx]) - fill[downIdx]
+        if (want > 0) {
+          const flow = Math.min(want, Math.min(FILL_MAX, remaining))
+          this.doFillTransfer(idx, tx, ty, downIdx, tx, ty + 1, flow, liquidRaw)
+          remaining -= flow
+          moved = true
+          if (remaining < FILL_MIN) return true
+        }
+      }
+    }
+
+    // ── Settled check ────────────────────────────────────────────────────────
+    // Only equalize sideways when blocked below or cell below is well-filled.
+    const downWall = !downMovable
+    const settled = downWall || fill[downIdx] >= FILL_MAX * FILL_SETTLED_FACTOR
+    if (!settled) return moved
+
+    // ── 2. Horizontal equalization ───────────────────────────────────────────
+    const ax = tx + (this.leftFirst ? -1 : 1)
+    const bx = tx + (this.leftFirst ? 1 : -1)
+
+    if (downWall) {
+      // Floor cells: column-pressure equalization drives U-tube behavior.
+      // Compute both wants from current myCP, then distribute proportionally.
+      const myCP = remaining + this.colPressureAbove(tx, ty, type)
+
+      let wantA = 0, aIdx = -1
+      if (ax >= 0 && ax < width) {
+        aIdx = ty * width + ax
+        const aType = matterType(tiles[aIdx])
+        if (aType === EMPTY || aType === type)
+          wantA = Math.max(0, (myCP - fill[aIdx] - this.colPressureAbove(ax, ty, type)) / FILL_PRESSURE_DIVISOR)
+      }
+
+      let wantB = 0, bIdx = -1
+      if (bx >= 0 && bx < width) {
+        bIdx = ty * width + bx
+        const bType = matterType(tiles[bIdx])
+        if (bType === EMPTY || bType === type)
+          wantB = Math.max(0, (myCP - fill[bIdx] - this.colPressureAbove(bx, ty, type)) / FILL_PRESSURE_DIVISOR)
+      }
+
+      const total = wantA + wantB
+      if (total > FILL_MIN) {
+        const budget = Math.min(remaining, total)
+        if (wantA > FILL_MIN) {
+          const f = budget * wantA / total
+          this.doFillTransfer(idx, tx, ty, aIdx, ax, ty, f, liquidRaw)
+          remaining -= f
+          moved = true
+        }
+        if (wantB > FILL_MIN && remaining > FILL_MIN) {
+          const f = budget * wantB / total
+          this.doFillTransfer(idx, tx, ty, bIdx, bx, ty, f, liquidRaw)
+          remaining -= f
+          moved = true
+        }
+      }
+    } else {
+      // Non-floor settled: per-cell mass equalization.
+      // Divisors 3 then 2 give an equal three-way split (source keeps 1/3, each
+      // side gets 1/3) when both neighbors are empty. Constraint: B must equal
+      // A-1 to maintain symmetry; only change both together to adjust spread speed.
+      if (ax >= 0 && ax < width) {
+        const aIdx = ty * width + ax
+        const aType = matterType(tiles[aIdx])
+        if (aType === EMPTY || aType === type) {
+          const flow = Math.min(Math.max(0, (remaining - fill[aIdx]) / 3), remaining)
+          if (flow > FILL_MIN) {
+            this.doFillTransfer(idx, tx, ty, aIdx, ax, ty, flow, liquidRaw)
+            remaining -= flow
+            moved = true
+          }
+        }
+      }
+      if (remaining > FILL_MIN && bx >= 0 && bx < width) {
+        const bIdx = ty * width + bx
+        const bType = matterType(tiles[bIdx])
+        if (bType === EMPTY || bType === type) {
+          const flow = Math.min(Math.max(0, (remaining - fill[bIdx]) / 2), remaining)
+          if (flow > FILL_MIN) {
+            this.doFillTransfer(idx, tx, ty, bIdx, bx, ty, flow, liquidRaw)
+            remaining -= flow
+            moved = true
+          }
+        }
+      }
+    }
+
+    if (remaining < FILL_MIN) return true
+
+    // ── 3. Upward pressure ───────────────────────────────────────────────────
+    // Push excess above FILL_MAX upward. Wakeup propagates the cascade over
+    // multiple sub-steps so U-tube arms equalize within a single rendered frame.
+    if (remaining > FILL_MAX && ty > 0) {
+      const upIdx = idx - width
+      const upType = matterType(tiles[upIdx])
+      if (upType === EMPTY || upType === type) {
+        const want = remaining - MatterSim.getStableState(remaining + fill[upIdx])
+        if (want > FILL_MIN) {
+          const flow = Math.min(want, remaining - FILL_MAX)
+          this.doFillTransfer(idx, tx, ty, upIdx, tx, ty - 1, flow, liquidRaw)
+          moved = true
+        }
+      }
+    }
+
+    return moved
+  }
+
+  // Bottom-to-top upward pressure cascade (mirrors test4.html Pass 2).
+  // Takes the current active set, sorts it by y descending (bottommost first),
+  // and for each overfull liquid cell pushes excess upward in-place. Because
+  // we process bottom-to-top, a newly overfull cell at y-1 is already next in
+  // the sorted list, so the full column cascades in a single pass.
+  // Must be called after all worker rounds finish (no concurrent writers).
+  doUpwardPressurePass(activeSet: Set<number>): void {
+    const { tiles, fill, width } = this
+
+    // Sort once by y descending so bottom cells are processed first.
+    const sorted = Array.from(activeSet).sort((a, b) => b - a)
+
+    for (const idx of sorted) {
+      if (idx < width) continue  // top row — no cell above
+      const raw = tiles[idx]
+      if (!isLiquid(matterType(raw))) continue
+      const m = fill[idx]
+      if (m <= FILL_MAX) continue
+
+      const upIdx = idx - width
+      const upType = matterType(tiles[upIdx])
+      const type = matterType(raw)
+      const upValid = upType === EMPTY || upType === type
+      if (!upValid) continue
+
+      const want = m - MatterSim.getStableState(m + fill[upIdx])
+      if (want <= FILL_MIN) continue
+      const flow = Math.min(want, m - FILL_MAX)
+
+      fill[idx] -= flow
+      fill[upIdx] += flow
+
+      if (upType === EMPTY) {
+        tiles[upIdx] = setSettled(raw, false)
+      } else {
+        tiles[upIdx] = setSettled(tiles[upIdx], false)
+      }
+
+      const tx = idx % width
+      const ty = (idx / width) | 0
+      this.markDirty(tx, ty - 1)
+      this.markDirty(tx, ty)
+      activeSet.add(upIdx)
+      activeSet.add(idx)
+    }
   }
 }
 

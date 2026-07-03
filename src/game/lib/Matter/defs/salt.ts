@@ -1,4 +1,5 @@
 import { random } from '../../../helpers/random'
+import { FILL_MAX } from '../_Liquid.constants.ts'
 import { type MatterDef, SALT, SALT_WATER, WATER } from '../_Matter.types.ts'
 
 export const SALT_DEF = {
@@ -12,7 +13,9 @@ export const SALT_DEF = {
     if (random() < 25) {
       const waterLoc = sim.bordering(tx, ty, idx, WATER)
       if (waterLoc !== -1) {
+        sim.fill[idx] = FILL_MAX
         sim.tiles[idx] = SALT_WATER
+        sim.fill[waterLoc] = FILL_MAX
         sim.tiles[waterLoc] = SALT_WATER
         sim.markDirty(tx, ty)
         const wx = waterLoc % sim.width

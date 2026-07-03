@@ -37,6 +37,7 @@ export class Coordinator {
   activeSet = new Set<number>()
   private idleSet = new Set<number>()
   private pendingActivations: number[] = []
+  private readonly _activateTmp = new Set<number>()
   private frame = 0
   private width = 0
   private readonly vfxJustSettled: number[] = []
@@ -52,7 +53,7 @@ export class Coordinator {
     this.sim = new MatterSim()
 
     const chunkGrid = this.data.chunkGrid
-    this.sim.init(buffers.tiles, buffers.chunkGrid, width, height)
+    this.sim.init(buffers.tiles, buffers.fill, buffers.chunkGrid, width, height)
 
     this.particleSim = new ParticleSim(buffers.tiles, buffers.particle)
     this.matterTanks = new SimMatterTanks(this.data.matterTankManager)
@@ -81,6 +82,7 @@ export class Coordinator {
       height,
       poolSize,
       tilesBuffer: buffers.tiles,
+      fillBuffer: buffers.fill,
       chunkGridBuffers: buffers.chunkGrid,
       onReady: () => this.startLoop(),
       onSpawnParticle: (msg) => {
@@ -116,6 +118,11 @@ export class Coordinator {
   private async step() {
     this.dirtyChunksThisStep.clear()
 
+    // Drain physics-body tile activations written to the SAB by the main thread.
+    this.data.activateTiles.drain((idx) => this.sim.activate(idx, this._activateTmp))
+    for (const idx of this._activateTmp) this.pendingActivations.push(idx)
+    this._activateTmp.clear()
+
     for (const idx of this.pendingActivations) this.activeSet.add(idx)
     this.pendingActivations.length = 0
 
@@ -125,7 +132,9 @@ export class Coordinator {
       !this.tunnelWeapon.hasWork() &&
       !this.projectileProcessor.hasWork() &&
       this.particleSim.pool.isEmpty
-    ) return
+    ) {
+      return
+    }
 
     const frame = this.frame++
     const leftFirst = (frame % 2) === 0
@@ -172,6 +181,11 @@ export class Coordinator {
         })
       }
     })
+
+    // Bottom-up upward pressure cascade — runs after all worker rounds so
+    // there are no concurrent writers to tiles/fill. Cascades overfull liquid
+    // columns to their full height in one pass (fixes slow U-tube equalization).
+    this.sim.doUpwardPressurePass(this.activeSet)
 
     if (this.structuralRemovals.length > 0) {
       const w = this.width

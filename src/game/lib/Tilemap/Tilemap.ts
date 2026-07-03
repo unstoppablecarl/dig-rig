@@ -17,6 +17,11 @@ export class Tilemap extends TileGrid {
     return this._destroyed
   }
 
+  readonly fillSab: SharedArrayBuffer
+  readonly fillLevels: Float32Array
+
+  get fillBuffer(): SharedArrayBuffer { return this.fillSab }
+
   constructor(
     readonly scene: GameLevel,
     width: number,
@@ -25,6 +30,9 @@ export class Tilemap extends TileGrid {
     const tilesSab = new SharedArrayBuffer(width * height * Uint32Array.BYTES_PER_ELEMENT)
     const buffers = ChunkGrid.createBuffers(width, height)
     super(tilesSab, buffers, width, height)
+    this.fillSab = new SharedArrayBuffer(width * height * Float32Array.BYTES_PER_ELEMENT)
+    this.fillLevels = new Float32Array(this.fillSab)
+
     this.chunkGrid.markAllRenderDirty()
 
     this.chunkMap = new ChunkMap(width, height)

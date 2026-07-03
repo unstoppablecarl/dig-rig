@@ -16,6 +16,7 @@ export enum SimOutMsg {
 export type SimInMsgInit = {
   type: SimInMsg.INIT
   tilesBuffer: SharedArrayBuffer
+  fillBuffer: SharedArrayBuffer
   chunkBuffers: ChunkGridBuffers
   width: number
   height: number

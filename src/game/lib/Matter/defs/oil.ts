@@ -48,6 +48,7 @@ export const OIL_DEF = {
 
       if (counter <= 1) {
         sim.queueMatterCredit(tx, ty, ownerId)
+        sim.fill[idx] = 0
         tiles[idx] = EMPTY
         sim.markDirty(tx, ty)
         sim.reactivateAround(tx, ty)
@@ -70,7 +71,7 @@ export const OIL_DEF = {
       }
     }
 
-    const moved = sim.tryLiquidFlow(tx, ty, idx)
+    const moved = sim.tryFillFlow(tx, ty, idx)
     if (!moved) {
       tiles[idx] = setSettled(OIL, true)
       sim.markDirty(tx, ty)

@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
+import { FILL_MAX } from '../../../../Matter/_Liquid.constants.ts'
 import { EMPTY, getOwner, matterType, MatterType, SupportType } from '../../../../Matter/_Matter.types.ts'
-import { getReserveDestroyAmount, getSupportType, RESERVED_DESTROY_CHARGE } from '../../../../Matter/matter.ts'
+import { getReserveDestroyAmount, getSupportType, isLiquid, RESERVED_DESTROY_CHARGE } from '../../../../Matter/matter.ts'
 import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
 import type { PlayerBounds } from '../../../data/PlayerBoundsData.ts'
 import type { MatterSim } from '../../MatterSim/MatterSim.ts'
@@ -110,6 +111,11 @@ export abstract class SimProjectile {
         this.matterTanks.releaseDestroyCharge(getOwner(prevRaw), getReserveDestroyAmount(prevType), 'external-overwrite')
       }
       tiles[idx] = newValue
+      if (isLiquid(matterType(newValue))) {
+        this.sim.fill[idx] = FILL_MAX
+      } else {
+        this.sim.fill[idx] = 0
+      }
       this.sim.markDirty(x, y)
       dirtyChunks.add(this.physics.chunkIdxForTile(idx))
       if (newValue === EMPTY) this.sim.reactivateAround(x, y, activeSet)

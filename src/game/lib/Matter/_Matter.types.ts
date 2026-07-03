@@ -83,7 +83,6 @@ export function setLavaDropVel(tile: number, vel: number): number {
 // COUNTER — 8-bit field in bits 19–26. Shared by mutually exclusive tile types:
 //   Fuel tiles (PLANT, OIL, FUSE): burn countdown; 0 = not burning, 1–255 = ticks remaining
 //   FIRE tiles: age countdown; 0 = freshly placed (initialized on first tick), 1–255 = ticks remaining
-// Color shift for FIRE based on age is a future rendering unlock (expose bits 19–26 to the shader).
 export const COUNTER_SHIFT = 19
 export const COUNTER_MASK = 0xFF << COUNTER_SHIFT
 
@@ -235,4 +234,3 @@ export type MatterDef = {
   reserveDestroyAmount?: number
 }
 
-export type IndexedTile = { x: number, y: number, idx: number }

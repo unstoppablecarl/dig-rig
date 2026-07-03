@@ -25,6 +25,7 @@ export class SimWorkerPool {
   constructor(
     {
       tilesBuffer,
+      fillBuffer,
       chunkGridBuffers,
       width,
       height,
@@ -33,6 +34,7 @@ export class SimWorkerPool {
       poolSize,
     }: {
       tilesBuffer: SharedArrayBuffer
+      fillBuffer: SharedArrayBuffer
       chunkGridBuffers: ChunkGridBuffers
       width: number
       height: number
@@ -50,6 +52,7 @@ export class SimWorkerPool {
 
     const simConfig = {
       tilesBuffer: tilesBuffer,
+      fillBuffer: fillBuffer,
       chunkBuffers: chunkGridBuffers,
       width: width,
       height: height,

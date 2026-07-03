@@ -1,6 +1,7 @@
+
+import { FILL_MAX } from '../_Liquid.constants.ts'
 import {
-  EMPTY,
-  FIRE,
+  EMPTY, FIRE,
   getLavaDropVel,
   getOwner,
   LAVA,
@@ -78,6 +79,7 @@ export const LAVA_DROP_DEF = {
 
       if (belowType === LAVA) {
         // Fell directly onto lava: merge into the pool
+        sim.fill[idx] = FILL_MAX
         tiles[idx] = setOwner(LAVA, ownerId)
         sim.markDirty(tx, ty)
         sim.next.add(idx)
@@ -104,6 +106,7 @@ export const LAVA_DROP_DEF = {
     }
 
     // Settle as lava
+    sim.fill[idx] = FILL_MAX
     tiles[idx] = setOwner(LAVA, ownerId)
     sim.next.add(idx)
     sim.markDirty(tx, ty)

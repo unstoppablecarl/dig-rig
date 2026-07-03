@@ -13,7 +13,7 @@ export const SALT_WATER_DEF = {
   action(sim, tx, ty, idx): void {
     sim.wakeSettledNeighborTypes(tx, ty, idx, WAKE_SETTLED)
 
-    const moved = sim.tryLiquidFlow(tx, ty, idx)
+    const moved = sim.tryFillFlow(tx, ty, idx)
     if (moved) return
 
     // Salt water is denser than fresh water and oil — sink through them

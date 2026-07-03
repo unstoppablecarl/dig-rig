@@ -25,7 +25,7 @@ self.onmessage = (e: MessageEvent<SimInMessage>) => {
   const msg = e.data
 
   if (msg.type === SimInMsg.INIT) {
-    sim.init(msg.tilesBuffer, msg.chunkBuffers, msg.width, msg.height)
+    sim.init(msg.tilesBuffer, msg.fillBuffer, msg.chunkBuffers, msg.width, msg.height)
     postMessage({ type: SimOutMsg.READY })
     return
   }

@@ -1,7 +1,7 @@
 import type { PartialMatterRenderConfig } from '../../config/colors.ts'
 import { Crate } from '../../lib/Entities/defs/Crate.ts'
 import { PortableMatterTank } from '../../lib/Entities/defs/PortableMatterTank.ts'
-import { EMPTY, PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
+import { EMPTY, FUSE, PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
 import type { TilemapRendererConfig } from '../../lib/Tilemap/TilemapRendererConfig'
@@ -65,8 +65,23 @@ export default class TestLevel2 extends GameLevel {
 
     tilemap.setRect(200, ref - 100, 60, 60, PERMANENT)
 
+    const centerX = 150
+    const centerY = 400
+    const width = 60
+    const height = 100
+    const thickness = 10
+
+    this.makeUTube(tilemap, centerX, centerY, width, height, thickness)
     tilemap.setBorder(2, PERMANENT)
     return tilemap
+  }
+
+  makeUTube(tilemap: Tilemap, centerX: number, centerY: number, width: number, height: number, thickness: number): void {
+    let startX = centerX - width * 0.5
+    let startY = centerY - height * 0.5
+    tilemap.setRect(startX, startY, width, height, FUSE)
+    tilemap.setRect(centerX - (width - thickness * 2) * 0.5, startY, width - thickness * 2, height - thickness, EMPTY)
+    tilemap.setRect(centerX - thickness * 0.5, startY, thickness, height - thickness * 2, FUSE)
   }
 
   makePlayer() {

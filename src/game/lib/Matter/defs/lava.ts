@@ -1,8 +1,8 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
+import { FILL_MAX } from '../_Liquid.constants.ts'
 import {
-  EMPTY,
-  FIRE,
+  EMPTY, FIRE,
   getOwner,
   LAVA,
   LAVA_DROP,
@@ -43,7 +43,9 @@ export const LAVA_DEF = {
     let waterLoc = sim.borderingAny(tx, ty, idx, COOLED)
     if (waterLoc !== -1) {
       sim.queueReservationRelease(ownerId, 1)
+      sim.fill[waterLoc] = 0
       tiles[waterLoc] = STEAM
+      sim.fill[idx] = 0
       tiles[idx] = ROCK
       sim.markDirty(tx, ty)
       const wx = waterLoc % width
@@ -108,6 +110,7 @@ export const LAVA_DEF = {
       matterType(tiles[upIdx]) === EMPTY &&
       sim.bordering(tx, ty, idx, LAVA)
     ) {
+      sim.fill[idx] = 0
       tiles[idx] = setLavaDropVel(setOwner(LAVA_DROP, ownerId), LAVA_DROP_INITIAL_VEL)
       sim.markDirty(tx, ty)
       sim.next.add(idx)
@@ -147,7 +150,9 @@ export const LAVA_DEF = {
         sim.reactivateAround(tx, ty + 1)
       } else if (belowType === STEAM && random() < 95) {
         // Lava sinks through steam — swap positions
+        sim.fill[downIdx] = FILL_MAX
         tiles[downIdx] = setOwner(LAVA, ownerId)
+        sim.fill[idx] = 0
         tiles[idx] = STEAM
         sim.markDirty(tx, ty)
         sim.markDirty(tx, ty + 1)
@@ -173,7 +178,7 @@ export const LAVA_DEF = {
       }
     }
 
-    const moved = sim.tryLiquidFlow(tx, ty, idx)
+    const moved = sim.tryFillFlow(tx, ty, idx)
 
     if (moved) {
       sim.reactivateAround(tx, ty)

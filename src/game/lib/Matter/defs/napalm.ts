@@ -26,7 +26,7 @@ export const NAPALM_DEF = {
       }
     }
 
-    const moved = sim.tryLiquidFlow(tx, ty, idx)
+    const moved = sim.tryFillFlow(tx, ty, idx)
     if (!moved) {
       sim.tiles[idx] = setSettled(NAPALM, true)
       sim.markDirty(tx, ty)

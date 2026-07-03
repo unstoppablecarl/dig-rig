@@ -70,7 +70,7 @@ export const ACID_DEF = {
       return
     }
 
-    const moved = sim.tryLiquidFlow(tx, ty, idx)
+    const moved = sim.tryFillFlow(tx, ty, idx)
     if (!moved) {
       sim.tiles[idx] = setSettled(sim.tiles[idx], true)
       sim.markDirty(tx, ty)

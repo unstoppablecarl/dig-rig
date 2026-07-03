@@ -1,4 +1,5 @@
 import { random } from '../../../helpers/random'
+import { FILL_MAX } from '../_Liquid.constants.ts'
 import {
   FIRE,
   ICE,
@@ -27,6 +28,7 @@ export const ICE_DEF = {
 
     // Melt from water
     if (random() < 1 && sim.bordering(tx, ty, idx, WATER) !== -1) {
+      sim.fill[idx] = FILL_MAX
       sim.tiles[idx] = WATER
       sim.markDirty(tx, ty)
       sim.next.add(idx)
@@ -35,6 +37,7 @@ export const ICE_DEF = {
 
     // Melt from steam
     if (random() < 70 && sim.bordering(tx, ty, idx, STEAM) !== -1) {
+      sim.fill[idx] = FILL_MAX
       sim.tiles[idx] = WATER
       sim.markDirty(tx, ty)
       sim.next.add(idx)
@@ -44,6 +47,7 @@ export const ICE_DEF = {
     // Melt from salt / salt-water
     if (random() < 10) {
       if (sim.borderingAny(tx, ty, idx, MELT_SLOW) !== -1) {
+        sim.fill[idx] = FILL_MAX
         sim.tiles[idx] = WATER
         sim.markDirty(tx, ty)
         sim.next.add(idx)
@@ -54,6 +58,7 @@ export const ICE_DEF = {
     // Melt from fire / lava
     if (random() < 50) {
       if (sim.borderingAny(tx, ty, idx, MELT_FAST) !== -1) {
+        sim.fill[idx] = FILL_MAX
         sim.tiles[idx] = WATER
         sim.markDirty(tx, ty)
         sim.next.add(idx)

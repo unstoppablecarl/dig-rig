@@ -15,7 +15,7 @@ export const WATER_DEF = {
 
     sim.wakeSettledNeighborTypes(tx, ty, idx, WAKE_SETTLED)
 
-    const moved = sim.tryLiquidFlow(tx, ty, idx)
+    const moved = sim.tryFillFlow(tx, ty, idx)
     if (moved) return
 
     // Water is denser than oil — sink through it

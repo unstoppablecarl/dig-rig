@@ -1,5 +1,6 @@
 import { ChunkGrid, type ChunkGridBuffers } from '../Tilemap/ChunkGrid.ts'
 import type { Tilemap } from '../Tilemap/Tilemap.ts'
+import { ActivateTilesData } from './data/ActivateTilesData.ts'
 import { type MatterTankManagerBuffers, MatterTankManagerData } from './data/MatterTankManagerData.ts'
 import { ParticleData, type ParticlesBuffers } from './data/ParticleData.ts'
 import { PlayerBoundsData, type PlayerBoundsDataType } from './data/PlayerBoundsData.ts'
@@ -22,8 +23,10 @@ export type DataManagerBuffers = {
   vfxParticleOverflow: SharedArrayBuffer
   vfxSettledTile: SharedArrayBuffer
   vfxTileEffect: SharedArrayBuffer
+  activateTiles: SharedArrayBuffer
 
   tiles: SharedArrayBuffer
+  fill: SharedArrayBuffer
 
   width: number
   height: number
@@ -41,6 +44,8 @@ export class DataManager {
   readonly vfxParticleOverflow: VFXParticleOverflowData
   readonly vfxSettledTile: VFXSettledTileData
   readonly vfxTileEffect: VFXTileEffectData
+  readonly activateTiles: ActivateTilesData
+  readonly fill: Float32Array
 
   static make(tilemap: Tilemap): DataManager {
     const buffers: DataManagerBuffers = {
@@ -55,7 +60,9 @@ export class DataManager {
       vfxParticleOverflow: VFXParticleOverflowData.makeBuffer(),
       vfxSettledTile: VFXSettledTileData.makeBuffer(),
       vfxTileEffect: VFXTileEffectData.makeBuffer(),
+      activateTiles: ActivateTilesData.makeBuffer(),
       tiles: tilemap.tilesBuffer,
+      fill: tilemap.fillBuffer,
       width: tilemap.width,
       height: tilemap.height,
     }
@@ -75,5 +82,7 @@ export class DataManager {
     this.vfxParticleOverflow = new VFXParticleOverflowData(buffers.vfxParticleOverflow)
     this.vfxSettledTile = new VFXSettledTileData(buffers.vfxSettledTile)
     this.vfxTileEffect = new VFXTileEffectData(buffers.vfxTileEffect)
+    this.activateTiles = new ActivateTilesData(buffers.activateTiles)
+    this.fill = new Float32Array(buffers.fill)
   }
 }
