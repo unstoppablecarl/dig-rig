@@ -1,9 +1,14 @@
 import { CHUNK_SIZE } from '../../../../config.ts'
 import { random } from '../../../../helpers/random.ts'
 import {
-  FILL_COL_SCAN_MAX, FILL_COMPRESSION_FACTOR,
-  FILL_MAX, FILL_MIN, FILL_PRESSURE_DIVISOR, FILL_ROUND_TO_ZERO, FILL_SETTLED_FACTOR,
+  FILL_COL_SCAN_MAX,
+  FILL_COMPRESSION_FACTOR,
+  FILL_MAX,
+  FILL_MIN,
+  FILL_PRESSURE_DIVISOR,
+  FILL_ROUND_TO_ZERO,
   FILL_ROW_SCAN_MAX,
+  FILL_SETTLED_FACTOR,
 } from '../../../Matter/_Liquid.constants.ts'
 import {
   EMPTY,
@@ -225,8 +230,9 @@ export class MatterSim {
 
   // ─── Movement primitives ──────────────────────────────────────────────────
 
-  // Sum of same-type fill levels strictly above (tx, ty), up to FILL_COL_SCAN_MAX cells.
-  // Continues through gaps (empty cells contribute 0) and stops at walls or different types.
+  // Sum of same-type fill levels in the contiguous column strictly above (tx, ty).
+  // Stops at any non-liquid cell (empty gap, wall, or different type) — a gap breaks
+  // the pressure column so a floating body above does not count as weight below.
   private colPressureAbove(tx: number, ty: number, type: MatterType): number {
     const { tiles, fill, width } = this
     let p = 0
@@ -234,9 +240,8 @@ export class MatterSim {
       const yy = ty - dy
       if (yy < 0) break
       const ii = yy * width + tx
-      const t = matterType(tiles[ii])
-      if (t !== type && t !== EMPTY) break  // wall or different solid — stop
-      if (t === type) p += fill[ii]
+      if (matterType(tiles[ii]) !== type) break
+      p += fill[ii]
     }
     return p
   }
@@ -822,74 +827,44 @@ export class MatterSim {
     if (!settled) return moved
 
     // ── 2. Horizontal equalization ───────────────────────────────────────────
+    // Column-pressure equalization at every settled row, not just the floor.
+    // myCP = fill + weight of same-type liquid above this cell. A taller column
+    // has higher myCP than a shorter neighbour at the same y, so interior tiles
+    // in a pile also drive flow outward — not just the single outermost edge tile.
     const ax = tx + (this.leftFirst ? -1 : 1)
     const bx = tx + (this.leftFirst ? 1 : -1)
+    const myCP = remaining + this.colPressureAbove(tx, ty, type)
 
-    if (downWall) {
-      // Floor cells: column-pressure equalization drives U-tube behavior.
-      // Compute both wants from current myCP, then distribute proportionally.
-      const myCP = remaining + this.colPressureAbove(tx, ty, type)
+    let wantA = 0, aIdx = -1
+    if (ax >= 0 && ax < width) {
+      aIdx = ty * width + ax
+      const aType = matterType(tiles[aIdx])
+      if (aType === EMPTY || aType === type)
+        wantA = Math.max(0, (myCP - fill[aIdx] - this.colPressureAbove(ax, ty, type)) / FILL_PRESSURE_DIVISOR)
+    }
 
-      let wantA = 0, aIdx = -1
-      if (ax >= 0 && ax < width) {
-        aIdx = ty * width + ax
-        const aType = matterType(tiles[aIdx])
-        if (aType === EMPTY || aType === type)
-          wantA = Math.max(0, (myCP - fill[aIdx] - this.colPressureAbove(ax, ty, type)) / FILL_PRESSURE_DIVISOR)
-      }
+    let wantB = 0, bIdx = -1
+    if (bx >= 0 && bx < width) {
+      bIdx = ty * width + bx
+      const bType = matterType(tiles[bIdx])
+      if (bType === EMPTY || bType === type)
+        wantB = Math.max(0, (myCP - fill[bIdx] - this.colPressureAbove(bx, ty, type)) / FILL_PRESSURE_DIVISOR)
+    }
 
-      let wantB = 0, bIdx = -1
-      if (bx >= 0 && bx < width) {
-        bIdx = ty * width + bx
-        const bType = matterType(tiles[bIdx])
-        if (bType === EMPTY || bType === type)
-          wantB = Math.max(0, (myCP - fill[bIdx] - this.colPressureAbove(bx, ty, type)) / FILL_PRESSURE_DIVISOR)
+    const total = wantA + wantB
+    if (total > FILL_MIN) {
+      const budget = Math.min(remaining, total)
+      if (wantA > FILL_MIN) {
+        const f = budget * wantA / total
+        this.doFillTransfer(idx, tx, ty, aIdx, ax, ty, f, liquidRaw)
+        remaining -= f
+        moved = true
       }
-
-      const total = wantA + wantB
-      if (total > FILL_MIN) {
-        const budget = Math.min(remaining, total)
-        if (wantA > FILL_MIN) {
-          const f = budget * wantA / total
-          this.doFillTransfer(idx, tx, ty, aIdx, ax, ty, f, liquidRaw)
-          remaining -= f
-          moved = true
-        }
-        if (wantB > FILL_MIN && remaining > FILL_MIN) {
-          const f = budget * wantB / total
-          this.doFillTransfer(idx, tx, ty, bIdx, bx, ty, f, liquidRaw)
-          remaining -= f
-          moved = true
-        }
-      }
-    } else {
-      // Non-floor settled: per-cell mass equalization.
-      // Divisors 3 then 2 give an equal three-way split (source keeps 1/3, each
-      // side gets 1/3) when both neighbors are empty. Constraint: B must equal
-      // A-1 to maintain symmetry; only change both together to adjust spread speed.
-      if (ax >= 0 && ax < width) {
-        const aIdx = ty * width + ax
-        const aType = matterType(tiles[aIdx])
-        if (aType === EMPTY || aType === type) {
-          const flow = Math.min(Math.max(0, (remaining - fill[aIdx]) / 3), remaining)
-          if (flow > FILL_MIN) {
-            this.doFillTransfer(idx, tx, ty, aIdx, ax, ty, flow, liquidRaw)
-            remaining -= flow
-            moved = true
-          }
-        }
-      }
-      if (remaining > FILL_MIN && bx >= 0 && bx < width) {
-        const bIdx = ty * width + bx
-        const bType = matterType(tiles[bIdx])
-        if (bType === EMPTY || bType === type) {
-          const flow = Math.min(Math.max(0, (remaining - fill[bIdx]) / 2), remaining)
-          if (flow > FILL_MIN) {
-            this.doFillTransfer(idx, tx, ty, bIdx, bx, ty, flow, liquidRaw)
-            remaining -= flow
-            moved = true
-          }
-        }
+      if (wantB > FILL_MIN && remaining > FILL_MIN) {
+        const f = budget * wantB / total
+        this.doFillTransfer(idx, tx, ty, bIdx, bx, ty, f, liquidRaw)
+        remaining -= f
+        moved = true
       }
     }
 
