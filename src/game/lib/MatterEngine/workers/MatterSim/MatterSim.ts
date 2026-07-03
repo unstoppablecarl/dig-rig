@@ -889,7 +889,6 @@ export class MatterSim {
     return moved
   }
 
-  // Bottom-to-top upward pressure cascade (mirrors test4.html Pass 2).
   // Takes the current active set, sorts it by y descending (bottommost first),
   // and for each overfull liquid cell pushes excess upward in-place. Because
   // we process bottom-to-top, a newly overfull cell at y-1 is already next in
