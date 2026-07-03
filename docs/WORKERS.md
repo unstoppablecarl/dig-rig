@@ -51,16 +51,27 @@ Each `step()`:
 
 The active tile set is divided into four rounds based on each tile's chunk position. This is the same pattern used by Noita's "Falling Everything" engine: chunks in the same round are never adjacent, so workers processing them in parallel can never write to the same cell or each other's neighbouring cells.
 
+Every step covers every chunk — each position belongs to exactly one of the four types and is processed in that type's round:
+
 ```
-round 0 (A): cx even, cy even   [ A . A . A . ]
-round 1 (B): cx odd,  cy even   [ . B . B . B ]
-round 2 (C): cx even, cy odd    [ C . C . C . ]
-round 3 (D): cx odd,  cy odd    [ . D . D . D ]
+A B A B A B   ← all processed in one step (rounds A, B, C, D run sequentially)
+C D C D C D
+A B A B A B
+C D C D C D
+```
+
+The per-round diagrams below show which chunks run *in parallel within that round*. The dots are not gaps — they are chunks handled by the other rounds.
+
+```
+round 0 (A): [ A . A . ]   cx even, cy even — processed concurrently
+round 1 (B): [ . B . B ]   cx odd,  cy even — processed concurrently
+round 2 (C): [ C . C . ]   cx even, cy odd  — processed concurrently
+round 3 (D): [ . D . D ]   cx odd,  cy odd  — processed concurrently
 
 formula: (cx & 1) | ((cy & 1) << 1)  →  0=A  1=B  2=C  3=D
 ```
 
-`CHUNK_SIZE = 64`. CA elements move at most 1 tile per step, so a tile can never reach a neighbour chunk of the same type within a single round.
+`CHUNK_SIZE = 64`. CA elements move at most 1 tile per step, so a tile can never reach another chunk of the same type in a single round — the nearest same-type chunk is always 2 chunks (128 tiles) away.
 
 ### Round processing order: C, D, A, B
 
