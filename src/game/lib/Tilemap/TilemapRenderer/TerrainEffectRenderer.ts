@@ -18,9 +18,9 @@ type EffectEntry = {
   blue: number
 }
 
-export class TerrainEffectSystem extends SceneBound {
-  readonly effectTexture: Phaser.Textures.Texture
-  private readonly effectWrapper: WebGLTextureWrapper
+export class TerrainEffectRenderer extends SceneBound {
+  readonly texture: Phaser.Textures.Texture
+  private readonly textureWrapper: WebGLTextureWrapper
 
   private readonly effectBuf: Uint8Array
   private readonly effectUploadBuf: Uint8Array
@@ -31,8 +31,8 @@ export class TerrainEffectSystem extends SceneBound {
     const { width, height } = scene.tilemap
 
     const [texture, wrapper] = this.scene.initGLTexture('terrain_effect_texture', width, height)
-    this.effectTexture = texture
-    this.effectWrapper = wrapper
+    this.texture = texture
+    this.textureWrapper = wrapper
 
     this.effectBuf = new Uint8Array(width * height * 4)
 
@@ -86,15 +86,15 @@ export class TerrainEffectSystem extends SceneBound {
     const gl = (this.scene.renderer as WebGLRenderer).gl
     const glY = this.scene.tilemap.height - minY - bh
 
-    gl.bindTexture(gl.TEXTURE_2D, this.effectWrapper.webGLTexture)
+    gl.bindTexture(gl.TEXTURE_2D, this.textureWrapper.webGLTexture)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0)
     gl.texSubImage2D(gl.TEXTURE_2D, 0, minX, glY, bw, bh, gl.RGBA, gl.UNSIGNED_BYTE, this.effectUploadBuf)
     gl.bindTexture(gl.TEXTURE_2D, null)
   }
 
   protected onDestroy() {
-    if (this.effectTexture.manager) {
-      this.effectTexture.destroy()
+    if (this.texture.manager) {
+      this.texture.destroy()
     }
   }
 }

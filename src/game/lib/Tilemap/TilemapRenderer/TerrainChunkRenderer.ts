@@ -26,10 +26,11 @@ export class TerrainChunkRenderer extends SceneBound {
   private readonly pixels: Uint32Array
   private readonly chunkUploadBuf: Uint8Array
   private readonly partialUploadBuf = new Uint8Array(CHUNK_BYTES)
+  private readonly lastRenderGen: Uint8Array
 
   constructor(public scene: GameLevel) {
     super(scene)
-    const { width, height } = scene.tilemap
+    const { width, height, chunkGrid } = scene.tilemap
 
     const [texture, wrapper] = this.scene.initGLTexture('terrain_mask', width, height, true)
     this.maskTexture = texture
@@ -40,6 +41,8 @@ export class TerrainChunkRenderer extends SceneBound {
     // Plain Uint8Array (not Uint8ClampedArray): Chrome routes texSubImage2D(Uint8ClampedArray)
     // through glCopySubTextureCHROMIUM, which throws INVALID_VALUE at texture boundaries.
     this.chunkUploadBuf = new Uint8Array(buf)
+
+    this.lastRenderGen = new Uint8Array(chunkGrid.chunksWide * chunkGrid.chunksHigh)
   }
 
   beginBatch() {
@@ -120,6 +123,30 @@ export class TerrainChunkRenderer extends SceneBound {
 
     const gl = (this.scene.renderer as WebGLRenderer).gl as WebGL2RenderingContext
     gl.texSubImage2D(gl.TEXTURE_2D, 0, x, glY, uploadW, uploadH, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, src)
+  }
+
+  update() {
+    const { chunkGrid, chunkMap } = this.scene.tilemap
+    let batchStarted = false
+
+    for (let cy = 0; cy < chunkGrid.chunksHigh; cy++) {
+      for (let cx = 0; cx < chunkGrid.chunksWide; cx++) {
+        const idx = chunkGrid.idx(cx, cy)
+        const gen = chunkGrid.getRenderGen(idx)
+        if (gen === this.lastRenderGen[idx]) continue
+        if (!batchStarted) {
+          this.beginBatch()
+          batchStarted = true
+        }
+        const chunk = chunkMap.get(cx, cy)!
+        this.renderChunk(chunk)
+        this.lastRenderGen[idx] = gen
+      }
+    }
+
+    if (batchStarted) {
+      this.endBatch()
+    }
   }
 
   protected onDestroy() {

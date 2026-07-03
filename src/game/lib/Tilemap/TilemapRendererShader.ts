@@ -93,9 +93,10 @@ export function makeTilemapFragShader(
   #define ICE_TEXTURE_ENABLED ${c.iceTextureEnabled ? 1 : 0}
   #define DRAW_PHYSICS_BODY_TILES_DEBUG ${c.drawDebugPhysicsBodies ? 1 : 0}
   #define PARTICLE_RENDER_ENABLED ${c.particleRenderEnabled ? 1 : 0}
+  #define DEBUG_LIQUID_PRESSURE ${c.debugLiquidPressure ? 1 : 0}
 
-
-  uniform sampler2D uTerrain;
+  uniform sampler2D uLiquidDensity;
+  uniform sampler2D uTerrainBg;
   uniform usampler2D uMask;
   uniform sampler2D uEffect;
   uniform sampler2D uParticles;
@@ -266,7 +267,7 @@ export function makeTilemapFragShader(
               const float outlineOpacity = ${fl(m[PERMANENT].outlineOpacity)};
               const float strength = ${fl(m[PERMANENT].blendModeStrength)};
 
-              color = texture(uTerrain, outTexCoord);
+              color = texture(uTerrainBg, outTexCoord);
               color.rgb = ${blendMode(m[PERMANENT].blendMode)}(color.rgb, permanentColor, strength);
               if (outline > 0.5) {
                   color.rgb = mix(color.rgb, outlineColor, outlineOpacity);
@@ -280,7 +281,7 @@ export function makeTilemapFragShader(
               const vec3 outlineColor = ${v3(m[SOLID].outlineColor)};
               const float outlineBlendStrength = ${fl(m[SOLID].outlineBlendModeStrength)};
 
-              color = texture(uTerrain, outTexCoord);
+              color = texture(uTerrainBg, outTexCoord);
               if (outline > 0.5) {
                   color.rgb = ${blendMode(m[SOLID].outlineBlendMode)}(color.rgb, outlineColor, outlineBlendStrength);
                   color.rgb = mix(color.rgb, outlineColor, outlineOpacity);
@@ -468,7 +469,12 @@ export function makeTilemapFragShader(
               const vec3 colorB = ${v3(m[WATER].colorB)};
               const float alpha = ${fl(m[WATER].alpha)};
 
+              #if DEBUG_LIQUID_PRESSURE
+              color = vec4(colorA, alpha);
+              #else
               color = liquid(t, colorA, colorB, alpha);
+              #endif
+              
               break;
           }
           case ${SALT_WATER}: {
@@ -476,7 +482,12 @@ export function makeTilemapFragShader(
               const vec3 colorB = ${v3(m[SALT_WATER].colorB)};
               const float alpha = ${fl(m[SALT_WATER].alpha)};
 
+              #if DEBUG_LIQUID_PRESSURE
+              color = vec4(colorA, alpha);
+              #else
               color = liquid(t, colorA, colorB, alpha);
+              #endif
+              
               break;
           }
           case ${OIL}: {
@@ -484,7 +495,12 @@ export function makeTilemapFragShader(
               const vec3 colorB = ${v3(m[OIL].colorB)};
               const float alpha = ${fl(m[OIL].alpha)};
 
+              #if DEBUG_LIQUID_PRESSURE
+              color = vec4(colorA, alpha);
+              #else
               color = liquid(t, colorA, colorB, alpha);
+              #endif
+              
               break;
           }
           case ${LAVA}: {
@@ -492,7 +508,12 @@ export function makeTilemapFragShader(
               const vec3 colorB = ${v3(m[LAVA].colorB)};
               const float alpha = ${fl(m[LAVA].alpha)};
 
+              #if DEBUG_LIQUID_PRESSURE
+              color = vec4(colorA, alpha);
+              #else
               color = liquid(t, colorA, colorB, alpha);
+              #endif
+              
               break;
           }
           case ${LAVA_DROP}: {
@@ -507,7 +528,12 @@ export function makeTilemapFragShader(
               const vec3 colorB = ${v3(m[NAPALM].colorB)};
               const float alpha = ${fl(m[NAPALM].alpha)};
 
+              #if DEBUG_LIQUID_PRESSURE
+              color = vec4(colorA, alpha);
+              #else
               color = liquid(t, colorA, colorB, alpha);
+              #endif
+              
               break;
           }
           case ${ACID}: {
@@ -515,7 +541,12 @@ export function makeTilemapFragShader(
               const vec3 colorB = ${v3(m[ACID].colorB)};
               const float alpha = ${fl(m[ACID].alpha)};
 
+              #if DEBUG_LIQUID_PRESSURE
+              color = vec4(colorA, alpha);
+              #else
               color = liquid(t, colorA, colorB, alpha);
+              #endif
+              
               break;
           }
           // gases
@@ -593,6 +624,14 @@ export function makeTilemapFragShader(
           color = vec4(1.0, 0.0, 1.0, 1.0);
           break;
       }
+
+      #if DEBUG_LIQUID_PRESSURE
+      if (tileType == ${WATER} || tileType == ${SALT_WATER} || tileType == ${OIL} ||
+      tileType == ${LAVA} || tileType == ${NAPALM} || tileType == ${ACID}) {
+          float density = texture(uLiquidDensity, outTexCoord).r;
+          color.rgb = mix(color.rgb, vec3(1.0), density * 0.3);
+      }
+      #endif
 
       // uEffect carries timed color transitions. RGB = color, A = intensity (1→0).
       vec4 eff = texture(uEffect, outTexCoord);
