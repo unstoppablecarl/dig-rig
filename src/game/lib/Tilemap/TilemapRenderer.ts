@@ -1,9 +1,7 @@
 import { GameObjects } from 'phaser'
-import { FIRE_MODE_COLORS, MATTER_RENDER_CONFIG_DEFAULTS, type MatterRenderConfig } from '../../config/colors.ts'
+import { MATTER_RENDER_CONFIG_DEFAULTS, type MatterRenderConfig } from '../../config/colors.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { FireMode } from '../Player/_FireMode-types'
-import type { Tile } from './TileGrid.ts'
 import { TerrainChunkRenderer } from './TilemapRenderer/TerrainChunkRenderer.ts'
 import { TerrainEffectSystem } from './TilemapRenderer/TerrainEffectSystem.ts'
 import { TILEMAP_RENDERER_DEFAULTS, type TilemapRendererConfig } from './TilemapRendererConfig'
@@ -106,17 +104,6 @@ export class TilemapRenderer extends SceneBound {
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, buf)
     gl.bindTexture(gl.TEXTURE_2D, null)
-  }
-
-  addFireModeEffect(tx: number, ty: number, mode: FireMode, startTime?: number) {
-    const color = FIRE_MODE_COLORS[mode]
-    this.effectSystem.addEffect(tx, ty, color, startTime)
-  }
-
-  addFireModeEffectTiles(tiles: Tile[], mode: FireMode): void {
-    const startTime = this.scene.time.now
-    const color = FIRE_MODE_COLORS[mode]
-    for (const { x, y } of tiles) this.effectSystem.addEffect(x, y, color, startTime)
   }
 
   addColorEffect(tx: number, ty: number, color: Color, startTime?: number) {
