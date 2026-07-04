@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { ENABLE_MATTER_TANK_DEBUG } from '../../../../config.ts'
+import { ENABLE_MATTER_TANK_MUTATION_TRACKING_DEBUG } from '../../../../config.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode, type MatterTankFireMode } from '../../../Player/_FireMode-types.ts'
 import type { MatterTankManagerData } from '../../data/MatterTankManagerData.ts'
@@ -42,7 +42,7 @@ export class SimMatterTanks {
   reserveDestroyCharge(ownerId: MatterTankId, amount: number, label: MatterMutationLabel) {
     if (ownerId === NO_MATTER_TANK_ID || amount === 0) return
     this.data.reservedDestroyPlaced[ownerId] += amount
-    if (ENABLE_MATTER_TANK_DEBUG) {
+    if (ENABLE_MATTER_TANK_MUTATION_TRACKING_DEBUG) {
       this.mutationLog.push({
         frame: this.frame, ownerId, kind: 'reserve', amount,
         resultingValue: this.data.reservedDestroyPlaced[ownerId], label,
@@ -59,7 +59,7 @@ export class SimMatterTanks {
     } else {
       this.data.reservedDestroyPlaced[ownerId] = current - amount
     }
-    if (ENABLE_MATTER_TANK_DEBUG) {
+    if (ENABLE_MATTER_TANK_MUTATION_TRACKING_DEBUG) {
       this.mutationLog.push({
         frame: this.frame, ownerId, kind: 'release', amount,
         resultingValue: this.data.reservedDestroyPlaced[ownerId], label,

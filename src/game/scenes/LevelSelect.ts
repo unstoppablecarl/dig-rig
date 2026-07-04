@@ -1,5 +1,4 @@
 import { Input, Scene } from 'phaser'
-import { AUTO_START_LEVEL_INDEX } from '../config.ts'
 import { launchLevel } from '../launcher.ts'
 import { type LevelEntry, type LevelId, LEVELS } from './Levels'
 import POINTER_DOWN = Input.Events.POINTER_DOWN
@@ -15,11 +14,6 @@ export class LevelSelect extends Scene {
     const lastLevelId = localStorage.getItem('level') as null | LevelId
     if (lastLevelId) {
       launchLevel(lastLevelId)
-      return
-    }
-
-    if (AUTO_START_LEVEL_INDEX > -1) {
-      launchLevel(Object.keys(LEVELS)[AUTO_START_LEVEL_INDEX] as LevelId)
       return
     }
 
