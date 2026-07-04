@@ -151,21 +151,16 @@ export class MatterSim {
   // Runs matterType actions for the given tile indices. Pool workers call this
   // once per round with their assigned subset of the active set.
   processSubset(indices: number[]) {
-    const phase = this.frame & 1
-
-    if (this.frame % 2 === 0) {
-      indices.reverse()
-    }
     for (const idx of indices) {
       const tx = idx % this.width
       const ty = idx / this.width | 0
 
       // Per-cell checkerboard: defer wrong-phase cells to next step to prevent
       // double-processing when an matterType moves into a neighbour's position.
-      if (((tx + ty) & 1) !== phase) {
-        this.next.add(idx)
-        continue
-      }
+      // if (((tx + ty) & 1) !== phase) {
+      //   this.next.add(idx)
+      //   continue
+      // }
 
       const raw = this.tiles[idx]
       const tile = matterType(raw)

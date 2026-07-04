@@ -12,6 +12,7 @@ import { DataManager } from '../DataManager.ts'
 import { MatterCreditTransferBuffer } from './_helpers/MatterCreditTransferBuffer.ts'
 import { MatterReservationReleaseBuffer } from './_helpers/MatterReservationReleaseBuffer.ts'
 import { type CoordinatorInMsgBrushEraseMatter, type CoordinatorInMsgInit } from './Coordinator.types.ts'
+import { ChunkPublisher } from '../data/ChunkPublisher.ts'
 import { Brush } from './Coordinator/Brush.ts'
 import { Effects } from './Coordinator/Effects.ts'
 import { Physics } from './Coordinator/Physics.ts'
@@ -24,6 +25,7 @@ import { ParticleSim } from './ParticleSim/ParticleSim.ts'
 
 export class Coordinator {
   private data!: DataManager
+  private tilePublisher!: ChunkPublisher
   private sim!: MatterSim
   private physics!: Physics
   private effects!: Effects
@@ -48,6 +50,14 @@ export class Coordinator {
   init(buffers: CoordinatorInMsgInit, poolSize: number) {
 
     this.data = new DataManager(buffers)
+    this.tilePublisher = new ChunkPublisher(
+      buffers.tiles,
+      buffers.fill,
+      this.data.tileFront,
+      this.data.chunkGrid,
+      buffers.width,
+      buffers.height,
+    )
     const { width, height } = buffers
     this.width = width
     this.sim = new MatterSim()
@@ -239,6 +249,11 @@ export class Coordinator {
     if (import.meta.env.DEV && ENABLE_MATTER_CONSERVATION_CHECK && frame % MATTER_CONSERVATION_CHECK_INTERVAL_FRAMES === 0) {
       this.checkMatterConservation()
     }
+
+    // Publish all chunks whose renderGen changed this step to the front buffers.
+    // Atomics.add in publish() is the release fence; the renderer's Atomics.load
+    // is the acquire — so the renderer always sees a complete post-step snapshot.
+    this.tilePublisher.publish(this.data.chunkGrid)
   }
 
   // Dev-only invariant: total *physical* matter (world tiles, excluding FIRE which carries

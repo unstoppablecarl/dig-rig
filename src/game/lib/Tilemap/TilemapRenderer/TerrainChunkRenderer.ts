@@ -1,7 +1,7 @@
 import { CHUNK_SIZE } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { FIRE, getCounter, isSettled, matterType, SupportType } from '../../Matter/_Matter.types.ts'
+import { FIRE, getCounter, isSettled, matterType, PERMANENT, SupportType } from '../../Matter/_Matter.types.ts'
 import { getSupportType, isLiquid } from '../../Matter/matter.ts'
 
 import { Chunk } from '../ChunkMap.ts'
@@ -26,7 +26,7 @@ export class TerrainChunkRenderer extends SceneBound {
   private readonly pixels: Uint32Array
   private readonly chunkUploadBuf: Uint8Array
   private readonly partialUploadBuf = new Uint8Array(CHUNK_BYTES)
-  private readonly lastRenderGen: Uint8Array
+  private readonly lastRenderGen: Int32Array
 
   constructor(public scene: GameLevel) {
     super(scene)
@@ -42,7 +42,7 @@ export class TerrainChunkRenderer extends SceneBound {
     // through glCopySubTextureCHROMIUM, which throws INVALID_VALUE at texture boundaries.
     this.chunkUploadBuf = new Uint8Array(buf)
 
-    this.lastRenderGen = new Uint8Array(chunkGrid.chunksWide * chunkGrid.chunksHigh)
+    this.lastRenderGen = new Int32Array(chunkGrid.chunksWide * chunkGrid.chunksHigh)
   }
 
   beginBatch() {
@@ -61,14 +61,15 @@ export class TerrainChunkRenderer extends SceneBound {
   renderChunk(chunk: Chunk) {
     const pixels = this.pixels
     const tilemap = this.scene.tilemap
+    const io = this.scene.io
     const offX = chunk.cx * CHUNK_SIZE
     const offY = chunk.cy * CHUNK_SIZE
     const mapWidth = tilemap.width
 
     if (offX + CHUNK_SIZE <= mapWidth && offY + CHUNK_SIZE <= tilemap.height) {
-      // Interior chunk: no out-of-bounds tiles, skip getTile bounds check entirely.
-      const tiles = tilemap.tiles
-      const fillLevels = tilemap.fillLevels
+      // Interior chunk: no out-of-bounds tiles, read directly from front buffers.
+      const tiles = io.tileFront.tiles
+      const fillLevels = io.tileFront.fill
       for (let y = 0; y < CHUNK_SIZE; y++) {
         const flippedRow = (CHUNK_SIZE - 1 - y) * CHUNK_SIZE
         const srcRow = (offY + y) * mapWidth + offX
@@ -77,15 +78,17 @@ export class TerrainChunkRenderer extends SceneBound {
         }
       }
     } else {
-      // Edge chunk: some coordinates may be out of bounds; getTile returns PERMANENT for those.
-      const fillLevels = tilemap.fillLevels
+      // Edge chunk: some coordinates may be out of bounds; use PERMANENT for those.
+      const tiles = io.tileFront.tiles
+      const fillLevels = io.tileFront.fill
       for (let y = 0; y < CHUNK_SIZE; y++) {
         const flippedRow = (CHUNK_SIZE - 1 - y) * CHUNK_SIZE
         for (let x = 0; x < CHUNK_SIZE; x++) {
           const tileX = offX + x, tileY = offY + y
-          const fill = (tileX >= 0 && tileX < mapWidth && tileY >= 0 && tileY < tilemap.height)
-            ? fillLevels[tileY * mapWidth + tileX] : 0
-          pixels[flippedRow + x] = this.pack(tilemap.getTile(offX + x, offY + y), fill)
+          const inBounds = tileX >= 0 && tileX < mapWidth && tileY >= 0 && tileY < tilemap.height
+          const fill = inBounds ? fillLevels[tileY * mapWidth + tileX] : 0
+          const raw = inBounds ? tiles[tileY * mapWidth + tileX] : PERMANENT
+          pixels[flippedRow + x] = this.pack(raw, fill)
         }
       }
     }
@@ -126,13 +129,18 @@ export class TerrainChunkRenderer extends SceneBound {
   }
 
   update() {
-    const { chunkGrid, chunkMap } = this.scene.tilemap
+    const tilemap = this.scene.tilemap
+    const { chunkGrid, chunkMap } = tilemap
+    // scene.io is set after construction, so read it here rather than caching in the ctor.
+    const frontGenView = this.scene.io.tileFront.genView
     let batchStarted = false
 
     for (let cy = 0; cy < chunkGrid.chunksHigh; cy++) {
       for (let cx = 0; cx < chunkGrid.chunksWide; cx++) {
         const idx = chunkGrid.idx(cx, cy)
-        const gen = chunkGrid.getRenderGen(idx)
+        // Acquire fence: ensures tilesFront/fillFront writes from the coordinator
+        // publish() are visible before we read them in renderChunk().
+        const gen = Atomics.load(frontGenView, idx)
         if (gen === this.lastRenderGen[idx]) continue
         if (!batchStarted) {
           this.beginBatch()

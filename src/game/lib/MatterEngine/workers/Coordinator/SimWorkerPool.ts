@@ -10,8 +10,10 @@ export class SimWorkerPool {
   private readyCount = 0
   private width: number
   private readonly promises: Promise<SimOutMsgDone>[] = []
-  private readonly rounds: number[][] = [[], [], [], []]
-  private readonly chunkMap = new Map<number, number>()
+  // Per-cy-row, per-cx-parity buckets: [cy * 2 + cxParity]
+  private readonly cyBuckets: number[][]
+  private readonly chunksHigh: number
+  private readonly chunkToWorkerId = new Map<number, number>()
   private workerBatches: number[][] = []
   private chunksWide: number
   private readonly _dirtyChunksThisStep = new Set<number>()
@@ -47,8 +49,10 @@ export class SimWorkerPool {
     this.onSpawnParticle = onSpawnParticle
     this.width = width
     this.chunksWide = chunkGridBuffers.chunksWide
+    this.chunksHigh = chunkGridBuffers.chunksHigh
     this.pendingResolvers = new Array(poolSize).fill(null)
     this.workerBatches = Array.from({ length: poolSize }, () => [])
+    this.cyBuckets = Array.from({ length: chunkGridBuffers.chunksHigh * 2 }, () => [])
 
     const simConfig = {
       tilesBuffer: tilesBuffer,
@@ -64,47 +68,59 @@ export class SimWorkerPool {
 
   async step(snapshot: Set<number>, leftFirst: boolean, frame: number, cb: (results: SimOutMsgDone[]) => void) {
     this._dirtyChunksThisStep.clear()
-    const { rounds, width, promises } = this
-    rounds[0].length = 0
-    rounds[1].length = 0
-    rounds[2].length = 0
-    rounds[3].length = 0
+    const { width, chunksWide, chunksHigh, cyBuckets, chunkToWorkerId, workerBatches, promises } = this
 
+    // Clear buckets
+    for (const b of cyBuckets) b.length = 0
+
+    // Bin each active cell into its (cy, cx-parity) bucket
     for (const idx of snapshot) {
       const cx = (idx % width) / CHUNK_SIZE | 0
       const cy = (idx / width | 0) / CHUNK_SIZE | 0
-      rounds[(cx & 1) | ((cy & 1) << 1)].push(idx)
+      cyBuckets[cy * 2 + (cx & 1)].push(idx)
     }
 
-    for (const roundIndices of rounds) {
-      if (roundIndices.length === 0) continue
+    // Sweep bottom-to-top: each cy row vacates before the row above it runs,
+    // so cross-boundary cascade works at every chunk boundary in one step.
+    // Within each cy row, cx-even and cx-odd run sequentially to prevent
+    // horizontal conflicts at cx chunk borders; leftFirst alternates the order.
+    for (let cy = chunksHigh - 1; cy >= 0; cy--) {
+      for (let p = 0; p < 2; p++) {
+        const parity = leftFirst ? p : 1 - p
+        const group = cyBuckets[cy * 2 + parity]
+        if (group.length === 0) continue
 
-      const { chunkMap, workerBatches, chunksWide } = this
-      chunkMap.clear()
-      for (const batch of workerBatches) batch.length = 0
-      let w = 0
-      for (const idx of roundIndices) {
-        const cx = (idx % width) / CHUNK_SIZE | 0
-        const cy = (idx / width | 0) / CHUNK_SIZE | 0
-        const key = cy * chunksWide + cx
-        this._dirtyChunksThisStep.add(key)
-        let workerIdx = chunkMap.get(key)
-        if (workerIdx === undefined) {
-          workerIdx = w
-          chunkMap.set(key, w)
-          w = (w + 1) % this.size
+        // Sort bottom-up within the group so cells near the chunk floor fall
+        // first, cascading upward through the chunk in a single dispatch.
+        group.sort((a, b) => (b / width | 0) - (a / width | 0))
+
+        chunkToWorkerId.clear()
+        for (const batch of workerBatches) batch.length = 0
+        let next = 0
+
+        for (const idx of group) {
+          const cx = (idx % width) / CHUNK_SIZE | 0
+          const cy2 = (idx / width | 0) / CHUNK_SIZE | 0
+          const cIdx = cy2 * chunksWide + cx
+          this._dirtyChunksThisStep.add(cIdx)
+          let workerIdx = chunkToWorkerId.get(cIdx)
+          if (workerIdx === undefined) {
+            chunkToWorkerId.set(cIdx, next)
+            workerIdx = next
+            next = (next + 1) % this.size
+          }
+          workerBatches[workerIdx].push(idx)
         }
-        workerBatches[workerIdx].push(idx)
-      }
 
-      promises.length = 0
-      for (let i = 0; i < this.size; i++) {
-        if (workerBatches[i].length === 0) continue
-        promises.push(this.dispatch(i, workerBatches[i], leftFirst, frame))
-      }
+        promises.length = 0
+        for (let i = 0; i < this.size; i++) {
+          if (workerBatches[i].length === 0) continue
+          promises.push(this.dispatch(i, workerBatches[i], leftFirst, frame))
+        }
 
-      const results = await Promise.all(promises)
-      cb(results)
+        const results = await Promise.all(promises)
+        cb(results)
+      }
     }
 
     return this._dirtyChunksThisStep

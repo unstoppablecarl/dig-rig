@@ -6,6 +6,7 @@ import { ParticleData, type ParticlesBuffers } from './data/ParticleData.ts'
 import { PlayerBoundsData, type PlayerBoundsDataType } from './data/PlayerBoundsData.ts'
 import { type ProjectileBuffers, ProjectileManagerData } from './data/ProjectileManagerData.ts'
 import { TunnelWeaponData, type TunnelWeaponDataType } from './data/TunnelWeaponData.ts'
+import { TileFrontData, type TileFrontBuffers } from './data/TileFrontData.ts'
 import { VFXParticleData } from './data/VFXParticleData.ts'
 import { VFXParticleOverflowData } from './data/VFXParticleOverflowData.ts'
 import { VFXSettledTileData } from './data/VFXSettledTileData.ts'
@@ -27,7 +28,7 @@ export type DataManagerBuffers = {
 
   tiles: SharedArrayBuffer
   fill: SharedArrayBuffer
-
+  tileFront: TileFrontBuffers
   width: number
   height: number
 }
@@ -46,6 +47,7 @@ export class DataManager {
   readonly vfxTileEffect: VFXTileEffectData
   readonly activateTiles: ActivateTilesData
   readonly fill: Float32Array
+  readonly tileFront: TileFrontData
 
   static make(tilemap: Tilemap): DataManager {
     const buffers: DataManagerBuffers = {
@@ -63,6 +65,7 @@ export class DataManager {
       activateTiles: ActivateTilesData.makeBuffer(),
       tiles: tilemap.tilesBuffer,
       fill: tilemap.fillBuffer,
+      tileFront: TileFrontData.makeBuffers(tilemap),
       width: tilemap.width,
       height: tilemap.height,
     }
@@ -84,5 +87,6 @@ export class DataManager {
     this.vfxTileEffect = new VFXTileEffectData(buffers.vfxTileEffect)
     this.activateTiles = new ActivateTilesData(buffers.activateTiles)
     this.fill = new Float32Array(buffers.fill)
+    this.tileFront = new TileFrontData(buffers.tileFront)
   }
 }
