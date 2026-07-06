@@ -1,7 +1,7 @@
 import type { PartialMatterRenderConfig } from '../../config/colors.ts'
 import { Crate } from '../../lib/Entities/defs/Crate.ts'
 import { PortableMatterTank } from '../../lib/Entities/defs/PortableMatterTank.ts'
-import { EMPTY, FUSE, PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
+import { EMPTY, MatterType, PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
 import type { TilemapRendererConfig } from '../../lib/Tilemap/TilemapRendererConfig'
@@ -71,22 +71,22 @@ export default class TestLevel2 extends GameLevel {
     const height = 100
     const thickness = 10
 
-    this.makeUTube(tilemap, centerX, centerY, width, height, thickness)
+    this.makeUTube(tilemap, centerX, centerY, width, height, thickness, PERMANENT)
     tilemap.setBorder(2, PERMANENT)
     return tilemap
   }
 
-  makeUTube(tilemap: Tilemap, centerX: number, centerY: number, width: number, height: number, thickness: number): void {
+  makeUTube(tilemap: Tilemap, centerX: number, centerY: number, width: number, height: number, thickness: number, type: MatterType): void {
     let startX = centerX - width * 0.5
     let startY = centerY - height * 0.5
-    tilemap.setRect(startX, startY, width, height, FUSE)
+    tilemap.setRect(startX, startY, width, height, type)
     tilemap.setRect(centerX - (width - thickness * 2) * 0.5, startY, width - thickness * 2, height - thickness, EMPTY)
-    tilemap.setRect(centerX - thickness * 0.5, startY, thickness, height - thickness * 2, FUSE)
+    tilemap.setRect(centerX - thickness * 0.5, startY, thickness, height - thickness * 2, type)
   }
 
   makePlayer() {
     const player = new Player(this, 100, 300)
-    const tank = this.entityFactory.spawn(PortableMatterTank, 150, 350, 99)
+    const tank = this.entityFactory.spawn(PortableMatterTank, 220, 350, 99)
 
     player.matterTank.overflowTank = tank.matterTank
     return player
