@@ -27,9 +27,11 @@ $padding: 4px 8px;
   align-items: stretch;
   white-space: nowrap;
   gap: 10px;
+  pointer-events: none;
 
   .section {
     padding: $padding;
+    pointer-events: none;
   }
 }
 
@@ -46,6 +48,7 @@ $padding: 4px 8px;
   text-decoration: none;
   border: none;
   cursor: pointer;
+  pointer-events: all;
 
   &:hover {
     color: rgba(255, 255, 255, .95);

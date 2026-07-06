@@ -5,6 +5,7 @@ import DebugPane from './Components/DebugPane.vue'
 import Header from './Components/Header.vue'
 import HelpModal from './Components/HelpModal.vue'
 import InputMode from './Components/InputMode.vue'
+import MatterMeterOverlay from './Components/MatterMeterOverlay.vue'
 import PhaserGame from './Components/PhaserGame.vue'
 import { ENABLE_PANE_DEBUG } from './game/config.ts'
 import { GameLevel } from './game/scenes/GameLevel.ts'
@@ -20,6 +21,7 @@ function onLoaded(newGame: Game, newLevel: GameLevel) {
 </script>
 <template>
   <PhaserGame @game-level-loaded="onLoaded" />
+  <MatterMeterOverlay />
   <Header />
   <InputMode />
   <template v-if="ENABLE_PANE_DEBUG">
