@@ -1,6 +1,6 @@
 import { ChunkGrid, type ChunkGridBuffers } from '../Tilemap/ChunkGrid.ts'
 import type { Tilemap } from '../Tilemap/Tilemap.ts'
-import { ActivateTilesData } from './data/ActivateTilesData.ts'
+import { type ActivateTilesBuffer, ActivateTilesData } from './data/ActivateTilesData.ts'
 import { type MatterTankManagerBuffers, MatterTankManagerData } from './data/MatterTankManagerData.ts'
 import { ParticleData, type ParticlesBuffers } from './data/ParticleData.ts'
 import { PlayerBoundsData, type PlayerBoundsDataType } from './data/PlayerBoundsData.ts'
@@ -24,7 +24,7 @@ export type DataManagerBuffers = {
   vfxParticleOverflow: SharedArrayBuffer
   vfxSettledTile: SharedArrayBuffer
   vfxTileEffect: SharedArrayBuffer
-  activateTiles: SharedArrayBuffer
+  activateTiles: ActivateTilesBuffer
 
   tiles: SharedArrayBuffer
   fill: SharedArrayBuffer
@@ -62,7 +62,7 @@ export class DataManager {
       vfxParticleOverflow: VFXParticleOverflowData.makeBuffer(),
       vfxSettledTile: VFXSettledTileData.makeBuffer(),
       vfxTileEffect: VFXTileEffectData.makeBuffer(),
-      activateTiles: ActivateTilesData.makeBuffer(),
+      activateTiles: ActivateTilesData.makeBuffer(tilemap),
       tiles: tilemap.buffers.tiles,
       fill: tilemap.buffers.fillLevels,
       tileFront: TileFrontData.makeBuffers(tilemap),
@@ -76,7 +76,7 @@ export class DataManager {
   constructor(readonly buffers: DataManagerBuffers) {
     this.chunkGrid = new ChunkGrid(buffers.chunkGrid)
     this.particle = new ParticleData(buffers.particle)
-    this.matterTankManager = MatterTankManagerData.fromBuffers(buffers.matterTankManager)
+    this.matterTankManager = new MatterTankManagerData(buffers.matterTankManager)
     this.playerBounds = PlayerBoundsData.fromBuffer(buffers.playerBounds)
     this.projectileManager = new ProjectileManagerData(buffers.projectileManager)
     this.tunnelWeapon = TunnelWeaponData.fromBuffer(buffers.tunnelWeapon)

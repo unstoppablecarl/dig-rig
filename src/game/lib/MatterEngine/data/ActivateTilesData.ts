@@ -1,22 +1,33 @@
+import { TileGrid } from '../../Tilemap/TileGrid.ts'
 import { ringBufferByteLength, RingBufferReader, RingBufferWriter } from '../../Util/RingBuffer.ts'
-
-const CAPACITY = 16384
 
 const SCHEMA = { idx: Uint32Array }
 
-const BYTE_LENGTH = ringBufferByteLength(SCHEMA, CAPACITY)
+export type ActivateTilesBuffer = {
+  tiles: SharedArrayBuffer,
+  capacity: number,
+}
 
 export class ActivateTilesData {
   private readonly writer: RingBufferWriter<typeof SCHEMA>
   private readonly reader: RingBufferReader<typeof SCHEMA>
 
-  static makeBuffer(): SharedArrayBuffer {
-    return new SharedArrayBuffer(BYTE_LENGTH)
+  static makeBuffer(tileGrid: TileGrid): ActivateTilesBuffer {
+    const capacity = tileGrid.width * tileGrid.height
+
+    const BYTE_LENGTH = ringBufferByteLength(SCHEMA, capacity)
+
+    return {
+      tiles: new SharedArrayBuffer(BYTE_LENGTH),
+      capacity,
+    }
   }
 
-  constructor(readonly buffer: SharedArrayBuffer) {
-    this.writer = new RingBufferWriter(SCHEMA, CAPACITY, buffer)
-    this.reader = new RingBufferReader(SCHEMA, CAPACITY, buffer)
+  readonly buffer: SharedArrayBuffer
+
+  constructor({ tiles, capacity }: ActivateTilesBuffer) {
+    this.writer = new RingBufferWriter(SCHEMA, capacity, tiles)
+    this.reader = new RingBufferReader(SCHEMA, capacity, tiles)
   }
 
   // Main thread side — write tile indices to wake up.

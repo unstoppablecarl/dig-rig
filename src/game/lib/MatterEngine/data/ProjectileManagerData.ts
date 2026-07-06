@@ -18,7 +18,7 @@ const SCHEMA = {
 } as const satisfies Schema
 
 export type ProjectileSchema = typeof SCHEMA
-export type ProjectileBuffers = Record<keyof ProjectileSchema, SharedArrayBuffer>
+export type ProjectileBuffers = Buffers<ProjectileSchema>
 
 export enum ProjectileStatus {
   INACTIVE,

@@ -51,10 +51,6 @@ export class MatterTankManagerData {
     return makeSOABuffers(SCHEMA, MAX_MATTER_TANKS)
   }
 
-  static fromBuffers(buffers: MatterTankManagerBuffers): MatterTankManagerData {
-    return new MatterTankManagerData(buffers)
-  }
-
   constructor(buffers: MatterTankManagerBuffers) {
     const views = soaBuffersToViews(SCHEMA, buffers)
 
