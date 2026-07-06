@@ -69,7 +69,11 @@ export const ACID_DEF = {
 
     // Stickiness — only when acid can actually dissolve (full tile).
     // Partial acid has nothing to react with; don't delay its movement.
-    const touchingSolid = sim.bordering(tx, ty, idx, SOLID) !== -1
+    // Only stick when gravity can't act (below is not empty/passable); a wall to
+    // the side or above must not prevent the tile from falling.
+    const belowType = ty + 1 < height ? matterType(tiles[idx + width]) : SOLID
+    const canFall = belowType === EMPTY || belowType === ACID
+    const touchingSolid = !canFall && sim.bordering(tx, ty, idx, SOLID) !== -1
     if (touchingSolid && fill[idx] >= FILL_MAX && random() < 95) {
       sim.next.add(idx)
       return
@@ -78,7 +82,6 @@ export const ACID_DEF = {
     // On an immune floor, switch to water-like flow: spread outward to find a ledge
     // instead of clumping.  This lets partial acid cascade toward the surface edge
     // and drain off rather than pooling indefinitely.
-    const belowType = ty < height - 1 ? matterType(tiles[idx + width]) : SOLID
     const onImmuneFloor = isAcidImmune(belowType) && !isLiquid(belowType)
     const canExpand = onImmuneFloor || fill[idx] >= FILL_MAX
     const clump = !onImmuneFloor
