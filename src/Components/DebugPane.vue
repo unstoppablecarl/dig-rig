@@ -12,8 +12,13 @@ import {
   pollingRef,
   VPane,
 } from 'vue-pane/src/index.ts'
-import { ENABLE_BRUSH_MODE_DEBUG, ENABLE_MATTER_TANK_MUTATION_TRACKING_DEBUG, ENABLE_SPAWN_OBJ_MODE_DEBUG } from '../game/config.ts'
+import {
+  ENABLE_BRUSH_MODE_DEBUG,
+  ENABLE_MATTER_TANK_MUTATION_TRACKING_DEBUG,
+  ENABLE_SPAWN_OBJ_MODE_DEBUG,
+} from '../game/config.ts'
 import { launchLevel } from '../game/launcher.ts'
+import { matterType, MatterType } from '../game/lib/Matter/_Matter.types.ts'
 import type { GameLevel } from '../game/scenes/GameLevel.ts'
 import { type LevelEntry, type LevelId, LEVELS } from '../game/scenes/Levels'
 import BrushPane from './DebugPane/BrushPane.vue'
@@ -53,12 +58,21 @@ const vfxParticles = {
 }
 
 const input = {
-  mousePos: pollingComputed(() => {
+  mousePosRaw: pollingComputed((): { x: number, y: number } => {
     const ptr = level?.input?.manager?.activePointer
-    if (!ptr) return ''
+    if (!ptr) return { x: 0, y: 0 }
     const r = level?.cameras?.main?.getWorldPoint(ptr.x, ptr.y)
-    if (!r) return ''
+    if (!r) return { x: 0, y: 0 }
+    return { x: Math.round(r.x), y: Math.round(r.y) }
+  }, 50),
+  mousePos: pollingComputed((): string => {
+    const r = input.mousePosRaw.value
     return `${r.x.toFixed(0)}, ${r.y.toFixed(0)}`
+  }, 50),
+  mouseMatterType: pollingComputed((): string => {
+    const r = input.mousePosRaw.value
+    const tile = level.tilemap.getTile(r.x, r.y)
+    return MatterType[matterType(tile)]
   }, 50),
 }
 
@@ -88,7 +102,8 @@ const levelEntries = Object.entries(LEVELS) as [LevelId, LevelEntry][]
           <PNumber label="Universe" :poll="matter.universe" readonly />
           <PNumber label="World" :poll="matter.world" readonly />
           <PNumber label="Player" :poll="matter.player" readonly />
-          <PNumber v-if="ENABLE_MATTER_TANK_MUTATION_TRACKING_DEBUG" label="Player Reserved Destroy" :poll="matter.playerReservedDestroy"
+          <PNumber v-if="ENABLE_MATTER_TANK_MUTATION_TRACKING_DEBUG" label="Player Reserved Destroy"
+                   :poll="matter.playerReservedDestroy"
                    readonly />
         </PFolder>
         <PFolder title="Projectiles">
@@ -109,6 +124,7 @@ const levelEntries = Object.entries(LEVELS) as [LevelId, LevelEntry][]
       <PFolder title="State">
         <PFolder title="Input">
           <PMonitor label="Mouse Pos" :poll="input.mousePos" />
+          <PMonitor label="Matter Type" :poll="input.mouseMatterType" />
         </PFolder>
         <PFolder title="Player">
           <PNumber label="vx" :poll="player.vx" readonly />
