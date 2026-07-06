@@ -65,15 +65,13 @@ export default class TestLevel2 extends GameLevel {
 
     tilemap.setRect(200, ref - 100, 60, 60, PERMANENT)
 
-    const centerX = 100
+    const centerX = 150
     const centerY = 400
     const width = 60
     const height = 100
     const thickness = 10
 
     this.makeUTube(tilemap, centerX, centerY, width, height, thickness, PERMANENT)
-
-    this.makeUTube(tilemap, centerX - 50, centerY, width, height, thickness, PERMANENT)
 
     tilemap.setBorder(2, PERMANENT)
     return tilemap
