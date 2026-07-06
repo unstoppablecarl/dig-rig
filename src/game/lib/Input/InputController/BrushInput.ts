@@ -16,6 +16,7 @@ export class BrushInput extends InputController {
   private _drawnZoom = -1
   private _primaryTimer: RestartableTimerEvent
   private _secondaryTimer: RestartableTimerEvent
+  private _onWindowPointerUp: () => void
 
   constructor(
     public scene: GameLevel,
@@ -37,6 +38,12 @@ export class BrushInput extends InputController {
       loop: true,
       callback: () => this.brushSecondaryDown(this.scene.input.activePointer),
     })
+
+    this._onWindowPointerUp = () => {
+      this._primaryTimer.stop()
+      this._secondaryTimer.stop()
+    }
+    window.addEventListener('pointerup', this._onWindowPointerUp)
 
     const a = this.scene.playerActions
     this.binder.addInput(() => [
@@ -142,6 +149,7 @@ export class BrushInput extends InputController {
 
   protected onDestroy() {
     super.onDestroy()
+    window.removeEventListener('pointerup', this._onWindowPointerUp)
     this._primaryTimer.destroy()
     this._secondaryTimer.destroy()
     this.graphics?.destroy()
