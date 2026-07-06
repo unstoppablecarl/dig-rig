@@ -2,7 +2,7 @@ import { FIRE_MODE_COLORS } from '../../../config/colors.ts'
 import type { FireMode } from '../../Player/_FireMode-types.ts'
 import { ringBufferByteLength, RingBufferReader, RingBufferWriter } from '../../Util/RingBuffer.ts'
 
-const CAPACITY = 8192
+const CAPACITY = 4096 * 2
 
 const SCHEMA = {
   tileX: Uint32Array,

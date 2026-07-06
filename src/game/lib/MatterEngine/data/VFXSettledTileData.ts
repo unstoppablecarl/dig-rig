@@ -1,25 +1,34 @@
 import { ringBufferByteLength, RingBufferReader, RingBufferWriter } from '../../Util/RingBuffer.ts'
 
-const CAPACITY = 2048
-
 const SCHEMA = {
   tileXY: Uint32Array,   // x<<16 | y
   matterType: Uint32Array,
 }
 
-const BYTE_LENGTH = ringBufferByteLength(SCHEMA, CAPACITY)
+export type VFXSettledTilesBuffer = {
+  tiles: SharedArrayBuffer,
+  capacity: number,
+}
 
 export class VFXSettledTileData {
   private readonly writer: RingBufferWriter<typeof SCHEMA>
   private readonly reader: RingBufferReader<typeof SCHEMA>
 
-  static makeBuffer(): SharedArrayBuffer {
-    return new SharedArrayBuffer(BYTE_LENGTH)
+  static makeBuffer(width: number, height: number): VFXSettledTilesBuffer {
+    const tileCount = width * height
+    const capacity = Math.floor(tileCount * 0.25)
+
+    const BYTE_LENGTH = ringBufferByteLength(SCHEMA, capacity)
+
+    return {
+      tiles: new SharedArrayBuffer(BYTE_LENGTH),
+      capacity,
+    }
   }
 
-  constructor(readonly buffer: SharedArrayBuffer) {
-    this.writer = new RingBufferWriter(SCHEMA, CAPACITY, buffer)
-    this.reader = new RingBufferReader(SCHEMA, CAPACITY, buffer)
+  constructor({ tiles, capacity }: VFXSettledTilesBuffer) {
+    this.writer = new RingBufferWriter(SCHEMA, capacity, tiles)
+    this.reader = new RingBufferReader(SCHEMA, capacity, tiles)
   }
 
   // Coordinator side — sole writer of writeHead.

@@ -9,7 +9,7 @@ import { type TileFrontBuffers, TileFrontData } from './data/TileFrontData.ts'
 import { TunnelWeaponData, type TunnelWeaponDataType } from './data/TunnelWeaponData.ts'
 import { VFXParticleData } from './data/VFXParticleData.ts'
 import { VFXParticleOverflowData } from './data/VFXParticleOverflowData.ts'
-import { VFXSettledTileData } from './data/VFXSettledTileData.ts'
+import { VFXSettledTileData, type VFXSettledTilesBuffer } from './data/VFXSettledTileData.ts'
 import { VFXTileEffectData } from './data/VFXTileEffectData.ts'
 
 export type DataManagerBuffers = {
@@ -22,7 +22,7 @@ export type DataManagerBuffers = {
   vfxParticleCreate: SharedArrayBuffer
   vfxParticleDestroy: SharedArrayBuffer
   vfxParticleOverflow: SharedArrayBuffer
-  vfxSettledTile: SharedArrayBuffer
+  vfxSettledTile: VFXSettledTilesBuffer
   vfxTileEffect: SharedArrayBuffer
   activateTiles: ActivateTilesBuffer
 
@@ -62,7 +62,7 @@ export class DataManager {
       vfxParticleCreate: VFXParticleData.makeBuffer(),
       vfxParticleDestroy: VFXParticleData.makeBuffer(),
       vfxParticleOverflow: VFXParticleOverflowData.makeBuffer(),
-      vfxSettledTile: VFXSettledTileData.makeBuffer(),
+      vfxSettledTile: VFXSettledTileData.makeBuffer(width, height),
       vfxTileEffect: VFXTileEffectData.makeBuffer(),
       activateTiles: ActivateTilesData.makeBuffer(width, height),
       tiles: tilemap.buffers.tiles,
