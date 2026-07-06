@@ -36,25 +36,25 @@ export const OWNER_SHIFT = 9
 export const OWNER_MASK = 0xFF << OWNER_SHIFT  // 0x1FE00
 
 // setSettled — sets or clears SETTLED_FLAG, leaving all other bits intact.
-export function setSettled(value: number, settled: boolean): number {
-  return settled ? (value | SETTLED_FLAG) : (value & ~SETTLED_FLAG)
+export function setSettled(value: MatterValue, settled: boolean): MatterRaw {
+  return (settled ? (value | SETTLED_FLAG) : (value & ~SETTLED_FLAG)) as MatterRaw
 }
 
-export function isSettled(value: number): boolean {
+export function isSettled(value: MatterValue): boolean {
   return (value & SETTLED_FLAG) !== 0
 }
 
 // setOwner — writes `owner` into bits 9–24, leaving type and settled bits intact.
-export function setOwner(value: number, owner: MatterTankId): number {
+export function setOwner(value: MatterValue, owner: MatterTankId): number {
   return (value & ~OWNER_MASK) | ((owner & 0xFF) << OWNER_SHIFT)
 }
 
 // getOwner — extracts the owner ID from bits 9–24 (0 = unowned/world).
-export function getOwner(value: number): MatterTankId {
+export function getOwner(value: MatterValue): MatterTankId {
   return ((value >>> OWNER_SHIFT) & 0xFF) as MatterTankId
 }
 
-export function getFirstOwnerId(value1: number, value2: number) {
+export function getFirstOwnerId(value1: MatterValue, value2: MatterValue) {
   const first = getOwner(value1)
   if (first !== NO_MATTER_TANK_ID) {
     return first
@@ -63,7 +63,7 @@ export function getFirstOwnerId(value1: number, value2: number) {
 }
 
 // clearOwner — sets the owner field to 0 (NONE), leaving type and settled bits intact.
-export function clearOwner(value: number): number {
+export function clearOwner(value: MatterRaw): number {
   return value & ~OWNER_MASK
 }
 
@@ -72,12 +72,12 @@ export function clearOwner(value: number): number {
 export const LAVA_DROP_VEL_SHIFT = 27
 export const LAVA_DROP_VEL_MASK = 0xF << 27  // 0x78000000, bits 27–30
 
-export function getLavaDropVel(tile: number): number {
+export function getLavaDropVel(tile: MatterValue): number {
   return (tile >>> LAVA_DROP_VEL_SHIFT) & 0xF
 }
 
-export function setLavaDropVel(tile: number, vel: number): number {
-  return (tile & ~LAVA_DROP_VEL_MASK) | ((vel & 0xF) << LAVA_DROP_VEL_SHIFT)
+export function setLavaDropVel(tile: MatterValue, vel: number): MatterRaw {
+  return ((tile & ~LAVA_DROP_VEL_MASK) | ((vel & 0xF) << LAVA_DROP_VEL_SHIFT)) as MatterRaw
 }
 
 // COUNTER — 8-bit field in bits 19–26. Shared by mutually exclusive tile types:
@@ -86,13 +86,15 @@ export function setLavaDropVel(tile: number, vel: number): number {
 export const COUNTER_SHIFT = 19
 export const COUNTER_MASK = 0xFF << COUNTER_SHIFT
 
-export function getCounter(tile: number): number {
+export function getCounter(tile: MatterValue): number {
   return (tile >>> COUNTER_SHIFT) & 0xFF
 }
-export function setCounter(tile: number, count: number): number {
-  return (tile & ~COUNTER_MASK) | ((count & 0xFF) << COUNTER_SHIFT)
+
+export function setCounter(tile: MatterValue, count: number): MatterRaw {
+  return ((tile & ~COUNTER_MASK) | ((count & 0xFF) << COUNTER_SHIFT)) as MatterRaw
 }
-export function hasCounter(tile: number): boolean {
+
+export function hasCounter(tile: MatterValue): boolean {
   return (tile & COUNTER_MASK) !== 0
 }
 
@@ -125,12 +127,12 @@ export const enum SupportType {
 
 // getSupportBits — reads only the raw per-tile bits; does NOT apply ALWAYS_* overrides.
 // Use getSupportType() from matter.ts for correct type-safe reads.
-export function getSupport(target: number): SupportType {
+export function getSupport(target: MatterValue): SupportType {
   return (target >>> SUPPORT_SHIFT) & 0b11
 }
 
 // extracts MatterType
-export function matterType(value: number): MatterType {
+export function matterType(value: MatterValue): MatterType {
   return (value & TYPE_MASK) as MatterType
 }
 
@@ -236,5 +238,5 @@ export type MatterDef = {
 
 // an encoded number value for a single tile
 export type MatterRaw = number & { readonly __brandMatterRaw: unique symbol; }
-
+export type MatterValue = MatterRaw | number
 
