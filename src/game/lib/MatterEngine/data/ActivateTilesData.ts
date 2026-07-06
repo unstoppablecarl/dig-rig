@@ -1,4 +1,3 @@
-import { TileGrid } from '../../Tilemap/TileGrid.ts'
 import { ringBufferByteLength, RingBufferReader, RingBufferWriter } from '../../Util/RingBuffer.ts'
 
 const SCHEMA = { idx: Uint32Array }
@@ -12,8 +11,8 @@ export class ActivateTilesData {
   private readonly writer: RingBufferWriter<typeof SCHEMA>
   private readonly reader: RingBufferReader<typeof SCHEMA>
 
-  static makeBuffer(tileGrid: TileGrid): ActivateTilesBuffer {
-    const capacity = tileGrid.width * tileGrid.height
+  static makeBuffer(width: number, height: number): ActivateTilesBuffer {
+    const capacity = width * height
 
     const BYTE_LENGTH = ringBufferByteLength(SCHEMA, capacity)
 

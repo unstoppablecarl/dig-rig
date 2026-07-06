@@ -50,9 +50,11 @@ export class DataManager {
   readonly tileFront: TileFrontData
 
   static make(tilemap: Tilemap): DataManager {
+
+    const { width, height } = tilemap
     const buffers: DataManagerBuffers = {
       chunkGrid: tilemap.chunkGrid.buffers,
-      particle: ParticleData.makeBuffers(tilemap.width, tilemap.height),
+      particle: ParticleData.makeBuffers(width, height),
       matterTankManager: MatterTankManagerData.makeBuffer(),
       playerBounds: PlayerBoundsData.makeBuffer(),
       projectileManager: ProjectileManagerData.makeBuffer(),
@@ -62,12 +64,12 @@ export class DataManager {
       vfxParticleOverflow: VFXParticleOverflowData.makeBuffer(),
       vfxSettledTile: VFXSettledTileData.makeBuffer(),
       vfxTileEffect: VFXTileEffectData.makeBuffer(),
-      activateTiles: ActivateTilesData.makeBuffer(tilemap),
+      activateTiles: ActivateTilesData.makeBuffer(width, height),
       tiles: tilemap.buffers.tiles,
       fill: tilemap.buffers.fillLevels,
       tileFront: TileFrontData.makeBuffers(tilemap),
-      width: tilemap.width,
-      height: tilemap.height,
+      width,
+      height,
     }
 
     return new DataManager(buffers)
