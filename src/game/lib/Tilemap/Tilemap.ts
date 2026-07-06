@@ -65,6 +65,11 @@ export class Tilemap extends TileGrid {
     }
   }
 
+  getFill(x: number, y: number): number {
+    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return 0
+    return this.fillLevels[y * this.width + x]
+  }
+
   static makeFromSolidAndPermanentPixelData(
     scene: GameLevel,
     solidData: PixelData,

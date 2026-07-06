@@ -41,6 +41,7 @@ export const GUNPOWDER_DEF = {
             if (burn) {
               if (isDestructible(neighborType)) {
                 if (neighborType !== EMPTY) sim.queueMatterCredit(nx, ny, ownerId)
+                sim.consumeLiquidFill(nidx)
                 tiles[nidx] = newFire
                 sim.markDirty(nx, ny)
                 sim.next.add(nidx)

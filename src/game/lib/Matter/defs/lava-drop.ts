@@ -48,6 +48,7 @@ export const LAVA_DROP_DEF = {
         // both already returned above)
         if (!isLavaImmune(aboveType)) {
           sim.queueMatterCredit(tx, ty - 1, ownerId)
+          sim.consumeLiquidFill(upIdx)
           tiles[upIdx] = setOwner(FIRE, ownerId)
           sim.markDirty(tx, ty - 1)
           sim.next.add(upIdx)
@@ -79,6 +80,8 @@ export const LAVA_DROP_DEF = {
 
       if (belowType === LAVA) {
         // Fell directly onto lava: merge into the pool
+        sim.notifySolidConsumed()
+        sim.notifyLiquidCreated()
         sim.fill[idx] = FILL_MAX
         tiles[idx] = setOwner(LAVA, ownerId)
         sim.markDirty(tx, ty)
@@ -99,6 +102,7 @@ export const LAVA_DROP_DEF = {
       const nt = matterType(tiles[nidx])
       if (nt !== EMPTY && !isLavaImmune(nt)) {
         sim.queueMatterCredit(nx, ny, ownerId)
+        sim.consumeLiquidFill(nidx)
         tiles[nidx] = setOwner(FIRE, ownerId)
         sim.markDirty(nx, ny)
         sim.next.add(nidx)
@@ -106,6 +110,8 @@ export const LAVA_DROP_DEF = {
     }
 
     // Settle as lava
+    sim.notifySolidConsumed()
+    sim.notifyLiquidCreated()
     sim.fill[idx] = FILL_MAX
     tiles[idx] = setOwner(LAVA, ownerId)
     sim.next.add(idx)

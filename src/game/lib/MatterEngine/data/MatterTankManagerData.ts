@@ -20,6 +20,7 @@ import { makeSOABuffers, type Schema, soaBuffersToViews } from '../../Util/Struc
 // — the combined total (see MatterTank.reservedDestroy) never changes across that handoff.
 const SCHEMA = {
   matter: Uint32Array,
+  liquidMatter: Uint32Array,
   pendingCreate: Uint32Array,
   pendingDestroy: Uint32Array,
   reservedDestroyPlaced: Uint32Array,
@@ -32,14 +33,15 @@ type MatterTankManagerSchema = typeof SCHEMA
 export type MatterTankManagerBuffers = Record<keyof MatterTankManagerSchema, SharedArrayBuffer>
 
 export class MatterTankManagerData {
-  readonly matter: Uint32Array
-  readonly pendingCreate: Uint32Array
-  readonly pendingDestroy: Uint32Array
+  private readonly matter: Uint32Array
+  private readonly liquidMatter: Uint32Array
+  private readonly pendingCreate: Uint32Array
+  private readonly pendingDestroy: Uint32Array
   // See the comment above SCHEMA for why this is split across two fields.
-  readonly reservedDestroyPlaced: Uint32Array
-  readonly reservedDestroyInFlight: Uint32Array
-  readonly matterMax: Uint32Array
-  readonly overflow: Uint32Array
+  private readonly reservedDestroyPlaced: Uint32Array
+  private readonly reservedDestroyInFlight: Uint32Array
+  private readonly matterMax: Uint32Array
+  private readonly overflow: Uint32Array
 
   readonly buffers: MatterTankManagerBuffers
   // must start at 0 = no owner, 1 = player
@@ -57,6 +59,7 @@ export class MatterTankManagerData {
     const views = soaBuffersToViews(SCHEMA, buffers)
 
     this.matter = views.matter
+    this.liquidMatter = views.liquidMatter
     this.pendingCreate = views.pendingCreate
     this.pendingDestroy = views.pendingDestroy
     this.reservedDestroyPlaced = views.reservedDestroyPlaced
@@ -90,6 +93,18 @@ export class MatterTankManagerData {
     return this.matter[id]
   }
 
+  getLiquidMatter(id: MatterTankId): number {
+    return this.liquidMatter[id]
+  }
+
+  addLiquidMatter(id: MatterTankId, fill: number): void {
+    this.liquidMatter[id] += fill
+  }
+
+  setLiquidMatter(id: MatterTankId, fill: number): void {
+    this.liquidMatter[id] = fill
+  }
+
   getPendingCreate(id: MatterTankId): number {
     return this.pendingCreate[id]
   }
@@ -118,12 +133,24 @@ export class MatterTankManagerData {
     this.matter[id] = value
   }
 
+  addPendingCreate(id: MatterTankId, value: number): void {
+    this.pendingCreate[id] += value
+  }
+
+  addPendingDestroy(id: MatterTankId, value: number): void {
+    this.pendingDestroy[id] += value
+  }
+
   setPendingCreate(id: MatterTankId, value: number): void {
     this.pendingCreate[id] = value
   }
 
   setPendingDestroy(id: MatterTankId, value: number): void {
     this.pendingDestroy[id] = value
+  }
+
+  addReservedDestroyPlaced(id: MatterTankId, value: number): void {
+    this.reservedDestroyPlaced[id] += value
   }
 
   setReservedDestroyPlaced(id: MatterTankId, value: number): void {
@@ -134,11 +161,21 @@ export class MatterTankManagerData {
     this.reservedDestroyInFlight[id] = value
   }
 
+  addReservedDestroyInFlight(ownerId: MatterTankId, value: number) {
+    this.reservedDestroyInFlight[ownerId] += value
+  }
+
   setMatterMax(id: MatterTankId, value: number): void {
     this.matterMax[id] = value
   }
 
   setOverflow(id: MatterTankId, overflowId: number): void {
     Atomics.store(this.overflow, id, overflowId)
+  }
+
+  clearAllPending() {
+    this.pendingCreate.fill(0)
+    this.pendingDestroy.fill(0)
+    this.reservedDestroyInFlight.fill(0)
   }
 }

@@ -48,7 +48,7 @@ export const OIL_DEF = {
 
       if (counter <= 1) {
         sim.queueMatterCredit(tx, ty, ownerId)
-        sim.fill[idx] = 0
+        sim.consumeLiquidFill(idx)
         tiles[idx] = EMPTY
         sim.markDirty(tx, ty)
         sim.reactivateAround(tx, ty)

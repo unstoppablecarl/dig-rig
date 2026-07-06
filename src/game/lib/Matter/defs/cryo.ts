@@ -37,7 +37,10 @@ export const CRYO_DEF = {
       const combinedOwner = getFirstOwnerId(tiles[idx], lavaRaw)
       sim.queueMatterCredit(tx, ty, combinedOwner)
       sim.queueReservationRelease(getOwner(lavaRaw), 1)
+      sim.consumeLiquidFill(idx)
       tiles[idx] = EMPTY
+      sim.consumeLiquidFill(lavaLoc)
+      sim.notifySolidCreated()
       tiles[lavaLoc] = ROCK
       sim.markDirty(tx, ty)
       const lx = lavaLoc % width
@@ -62,6 +65,8 @@ export const CRYO_DEF = {
 
         // Touching CHILLED_ICE: rare self-freeze (1% × 5%)
         if (nt === CHILLED_ICE && random() < 1 && random() < 5) {
+          sim.consumeLiquidFill(idx)
+          sim.notifySolidCreated()
           tiles[idx] = setOwner(CHILLED_ICE, ownerId)
           sim.markDirty(tx, ty)
           sim.reactivateAround(tx, ty)
@@ -70,6 +75,8 @@ export const CRYO_DEF = {
 
         // Touching a solid surface: cryo freezes onto it
         if (CRYO_STICKS_TO.has(nt) || (CRYO_STICKS_TO_IF_SETTLED.has(nt) && isSettled(nRaw))) {
+          sim.consumeLiquidFill(idx)
+          sim.notifySolidCreated()
           tiles[idx] = setOwner(CHILLED_ICE, ownerId)
           sim.markDirty(tx, ty)
           sim.reactivateAround(tx, ty)
@@ -78,9 +85,13 @@ export const CRYO_DEF = {
 
         // Touching water or ice: both freeze, cryo is consumed
         if (nt === WATER || nt === ICE) {
+          if (nt === WATER) { sim.consumeLiquidFill(nidx); sim.notifySolidCreated() }
+          // ICE → CHILLED_ICE: solid→solid, no domain change
           tiles[nidx] = CHILLED_ICE
           sim.markDirty(nx, ny)
           sim.next.add(nidx)
+          sim.consumeLiquidFill(idx)
+          sim.notifySolidCreated()
           tiles[idx] = setOwner(CHILLED_ICE, ownerId)
           sim.markDirty(tx, ty)
           sim.reactivateAround(tx, ty)
@@ -102,6 +113,8 @@ export const CRYO_DEF = {
     if (!moved) {
       // Random self-freeze if immobile (~0.5% = 1% × 50%)
       if (random() < 1 && random() < 50) {
+        sim.consumeLiquidFill(idx)
+        sim.notifySolidCreated()
         tiles[idx] = setOwner(CHILLED_ICE, ownerId)
         sim.markDirty(tx, ty)
         sim.reactivateAround(tx, ty)

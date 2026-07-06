@@ -17,6 +17,8 @@ const _done: SimOutMsgDone = {
   structuralRemovals: [],
   matterTankTransfers: new Int32Array(),
   matterReservationReleases: new Int32Array(),
+  liquidNetDelta: 0,
+  solidNetDelta: 0,
 }
 
 const transfer: Transferable[] = []

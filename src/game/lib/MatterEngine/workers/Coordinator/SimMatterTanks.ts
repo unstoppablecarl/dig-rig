@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import { FILL_MAX } from '../../../Matter/_Liquid.constants.ts'
 import { ENABLE_MATTER_TANK_MUTATION_TRACKING_DEBUG } from '../../../../config.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode, type MatterTankFireMode } from '../../../Player/_FireMode-types.ts'
@@ -20,49 +21,47 @@ export class SimMatterTanks {
   }
 
   clearPending() {
-    this.data.pendingCreate.fill(0)
-    this.data.pendingDestroy.fill(0)
-    this.data.reservedDestroyInFlight.fill(0)
+    this.data.clearAllPending()
   }
 
   addPendingCharge(ownerId: MatterTankId, mode: MatterTankFireMode, value: number) {
     if (mode === FireMode.CREATE) {
-      this.data.pendingCreate[ownerId] += value
+      this.data.addPendingCreate(ownerId, value)
     } else {
-      this.data.pendingDestroy[ownerId] += value
+      this.data.addPendingDestroy(ownerId, value)
     }
   }
 
   // Recompute-cleared, like addPendingCharge — the not-yet-painted portion of a create-lava/acid
   // beam's eventual reservation. Self-healing, so unlike reserveDestroyCharge it needs no release.
   addReservedDestroyInFlight(ownerId: MatterTankId, value: number) {
-    this.data.reservedDestroyInFlight[ownerId] += value
+    this.data.addReservedDestroyInFlight(ownerId, value)
   }
 
   reserveDestroyCharge(ownerId: MatterTankId, amount: number, label: MatterMutationLabel) {
     if (ownerId === NO_MATTER_TANK_ID || amount === 0) return
-    this.data.reservedDestroyPlaced[ownerId] += amount
+    this.data.addReservedDestroyPlaced(ownerId, amount)
     if (ENABLE_MATTER_TANK_MUTATION_TRACKING_DEBUG) {
       this.mutationLog.push({
         frame: this.frame, ownerId, kind: 'reserve', amount,
-        resultingValue: this.data.reservedDestroyPlaced[ownerId], label,
+        resultingValue: this.data.getReservedDestroyPlaced(ownerId), label,
       })
     }
   }
 
   releaseDestroyCharge(ownerId: MatterTankId, amount: number, label: MatterMutationLabel) {
     if (ownerId === NO_MATTER_TANK_ID || amount === 0) return
-    const current = this.data.reservedDestroyPlaced[ownerId]
+    const current = this.data.getReservedDestroyPlaced(ownerId)
     if (current < amount) {
       console.error(`SimMatterTanks.releaseDestroyCharge: underflow for tank ${ownerId}, releasing ${amount} but only ${current} reserved (label=${label})`)
-      this.data.reservedDestroyPlaced[ownerId] = 0
+      this.data.setReservedDestroyPlaced(ownerId, 0)
     } else {
-      this.data.reservedDestroyPlaced[ownerId] = current - amount
+      this.data.setReservedDestroyPlaced(ownerId, current - amount)
     }
     if (ENABLE_MATTER_TANK_MUTATION_TRACKING_DEBUG) {
       this.mutationLog.push({
         frame: this.frame, ownerId, kind: 'release', amount,
-        resultingValue: this.data.reservedDestroyPlaced[ownerId], label,
+        resultingValue: this.data.getReservedDestroyPlaced(ownerId), label,
       })
     }
   }
@@ -82,6 +81,33 @@ export class SimMatterTanks {
     return this._flushCredit
   }
 
+  getLiquidMatter(id: MatterTankId): number {
+    return this.data.getLiquidMatter(id)
+  }
+
+  addLiquidMatter(id: MatterTankId, fill: number) {
+    this.data.addLiquidMatter(id, fill)
+  }
+
+  // Debit fill units from liquidMatter. If liquidMatter is insufficient, converts from solid tank
+  // at FILL_MAX:1 rate to cover the shortfall. Returns the solid units consumed (0 if liquid covered it).
+  removeLiquidMatter(id: MatterTankId, fill: number): number {
+    const available = this.data.getLiquidMatter(id)
+    if (available >= fill) {
+      this.data.setLiquidMatter(id, available - fill)
+      return 0
+    }
+    const shortfall = fill - available
+    this.data.setLiquidMatter(id, 0)
+    const solidNeeded = Math.ceil(shortfall / FILL_MAX)
+    this.remove(id, solidNeeded)
+    const excess = solidNeeded * FILL_MAX - shortfall
+    if (excess > 0) {
+      this.data.addLiquidMatter(id, excess)
+    }
+    return solidNeeded
+  }
+
   add(id: MatterTankId, value: number, overflowOut?: number[]) {
     let remaining = value
     let prevId = -1
@@ -92,16 +118,16 @@ export class SimMatterTanks {
         break
       }
       visited.add(id)
-      const max = this.data.matterMax[id]
+      const max = this.data.getMatterMax(id)
       if (max === 0) {
         console.error(`SimMatterTank.add: tank ${id} has matterMax=0 (was Infinity stored as Uint32?), dropping ${remaining} matter`)
         break
       }
-      const current = this.data.matter[id]
+      const current = this.data.getMatter(id)
       const space = max - current
       if (space > 0) {
         const gain = Math.min(remaining, space)
-        this.data.matter[id] = current + gain
+        this.data.setMatter(id, current + gain)
         if (prevId !== -1 && overflowOut) overflowOut.push(prevId, id, gain)
         remaining -= gain
       }

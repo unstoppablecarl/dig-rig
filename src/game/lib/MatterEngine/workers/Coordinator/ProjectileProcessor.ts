@@ -1,12 +1,14 @@
 /// <reference lib="webworker" />
 import { matterType, type MatterType } from '../../../Matter/_Matter.types.ts'
-import { doesSettle, getReserveDestroyAmount } from '../../../Matter/matter.ts'
+import { doesSettle, getReserveDestroyAmount, isLiquid } from '../../../Matter/matter.ts'
+import { FILL_MAX } from '../../../Matter/_Liquid.constants.ts'
 import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import { type ProjectileManagerData, ProjectileShape, ProjectileStatus } from '../../data/ProjectileManagerData.ts'
 import type { VFXParticleData } from '../../data/VFXParticleData.ts'
 import type { VFXTileEffectData } from '../../data/VFXTileEffectData.ts'
 import type { Effects } from './Effects.ts'
+import type { ConservationTracker } from './ConservationTracker.ts'
 import type { SimMatterTanks } from './SimMatterTanks.ts'
 
 export class ProjectileProcessor {
@@ -17,6 +19,7 @@ export class ProjectileProcessor {
     private readonly matterTanks: SimMatterTanks,
     private readonly vfxParticleDestroyData: VFXParticleData,
     private readonly vfxParticleCreateData: VFXParticleData,
+    private readonly tracker: ConservationTracker,
   ) {
   }
 
@@ -33,8 +36,11 @@ export class ProjectileProcessor {
 
     for (let i = 0; i < d.status.length; i++) {
       if (!d.isActive(i)) continue
-      const { tiles, structuralDirty: pDirty } = this.effects.processProjectileSlot(i, d, activeSet, dirtyChunks)
-      structuralDirty ||= pDirty
+      const result = this.effects.processProjectileSlot(i, d, activeSet, dirtyChunks)
+      structuralDirty ||= result.structuralDirty
+      // Track tile-domain changes in unified fill units (1 solid = FILL_MAX).
+      this.tracker.addDelta(result.solidDomainDelta * FILL_MAX + result.liquidDomainDelta)
+      const tiles = result.tiles
       const modified = tiles.length
       if (!modified) continue
 
@@ -42,18 +48,45 @@ export class ProjectileProcessor {
 
       const mode = d.mode[i] as FireMode
       if (mode === FireMode.DESTROY) {
-        this.matterTanks.add(ownerId, modified)
+        // Liquid tiles → liquidMatter (fill units). Solid/fire tiles → solid tank (FILL_MAX each).
+        const liquidFill = -result.liquidDomainDelta   // fill units destroyed (non-negative)
+        const nonLiquidCount = modified - result.prevLiquidTiles
+
+        if (liquidFill > 0) {
+          this.matterTanks.addLiquidMatter(ownerId, liquidFill)
+          this.tracker.addDelta(liquidFill)  // cancels top -liquidFill
+        }
+        if (nonLiquidCount > 0) {
+          this.matterTanks.add(ownerId, nonLiquidCount)
+          this.tracker.addDelta(nonLiquidCount * FILL_MAX)  // solid tank grew
+        }
+
         this.vfxParticleDestroyData.writeTiles(tiles, ownerId)
         this.tileEffectData.writeFireModeTiles(tiles, mode)
 
       } else if (mode === FireMode.CREATE) {
-        this.matterTanks.remove(ownerId, modified)
         const createType = d.createType[i] as MatterType
-        const reserveAmount = getReserveDestroyAmount(matterType(createType))
+        const createMatterType = matterType(createType)
+
+        if (isLiquid(createMatterType)) {
+          // Liquid create: debit liquidMatter; falls back to solid tank for any shortfall.
+          const liquidNeeded = result.liquidDomainDelta  // = modified * FILL_MAX (positive)
+          this.matterTanks.removeLiquidMatter(ownerId, liquidNeeded)
+          // In unified fill units, any funding source cancels the top +liquidNeeded exactly.
+          // (solidConsumed solid units = solidConsumed*FILL_MAX fill; the shortfall remainder
+          //  came from liquidMatter — together they sum to liquidNeeded.)
+          this.tracker.addDelta(-liquidNeeded)
+        } else {
+          // Solid create: debit solid tank.
+          this.matterTanks.remove(ownerId, modified)
+          this.tracker.addDelta(-modified * FILL_MAX)
+        }
+
+        const reserveAmount = getReserveDestroyAmount(createMatterType)
         if (reserveAmount > 0) {
           this.matterTanks.reserveDestroyCharge(ownerId, reserveAmount * modified, 'create')
         }
-        if (!doesSettle(matterType(createType))) {
+        if (!doesSettle(createMatterType)) {
           this.tileEffectData.writeFireModeTiles(tiles, mode)
           // Flood-fill creates can paint far from the collision point, so anchor the VFX
           // source on where the projectile hit rather than the tank's emit position.

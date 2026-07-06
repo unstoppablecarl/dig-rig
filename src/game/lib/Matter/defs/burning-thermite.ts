@@ -44,6 +44,7 @@ export const BURNING_THERMITE_DEF = {
       const nt = matterType(neighborRaw)
       if (!NOT_FIRE_SPREADABLE.has(nt)) {
         if (nt !== EMPTY) sim.queueMatterCredit(nx, ny, ownerId)
+        sim.consumeLiquidFill(nidx)
         tiles[nidx] = setOwner(FIRE, ownerId)
         sim.markDirty(nx, ny)
         sim.next.add(nidx)

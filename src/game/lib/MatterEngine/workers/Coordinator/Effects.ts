@@ -114,7 +114,13 @@ export class Effects {
     dirtyChunks: Set<number>,
   ): EffectResult {
     const budget = data.tilesToModify[slotIdx] - data.tilesModified[slotIdx]
-    if (budget <= 0) return { tiles: [], structuralDirty: false }
+    if (budget <= 0) return {
+      tiles: [],
+      structuralDirty: false,
+      liquidDomainDelta: 0,
+      solidDomainDelta: 0,
+      prevLiquidTiles: 0,
+    }
 
     const mode = data.mode[slotIdx] as FireMode
     const tileX = data.tileX[slotIdx]
@@ -133,7 +139,13 @@ export class Effects {
           result = this.floodFillDestroy.applyFloodFill(tileX, tileY, ownerId, budget, slotIdx, activeSet, dirtyChunks)
           break
         default:
-          return { tiles: [], structuralDirty: false }
+          return {
+            tiles: [],
+            structuralDirty: false,
+            liquidDomainDelta: 0,
+          solidDomainDelta: 0,
+          prevLiquidTiles: 0,
+          }
       }
       data.tilesModified[slotIdx] += result.tiles.length
       return result
@@ -160,7 +172,13 @@ export class Effects {
         result = this.solidifyProjectile.apply(EMPTY, tileX, tileY, radius, 0, ownerId, Number.MAX_SAFE_INTEGER, EMPTY_PLAYER_BOUNDS, activeSet, dirtyChunks)
         break
       default:
-        return { tiles: [], structuralDirty: false }
+        return {
+          tiles: [],
+          structuralDirty: false,
+          liquidDomainDelta: 0,
+          solidDomainDelta: 0,
+          prevLiquidTiles: 0,
+        }
     }
 
     return result

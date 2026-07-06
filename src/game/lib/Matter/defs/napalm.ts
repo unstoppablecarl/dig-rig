@@ -18,6 +18,7 @@ export const NAPALM_DEF = {
         const ownerId = getFirstOwnerId(tiles[idx], tiles[nidx])
 
         sim.queueMatterCredit(tx, ty, ownerId)
+        sim.consumeLiquidFill(idx)
         tiles[idx] = setOwner(FIRE, ownerId)
         sim.markDirty(tx, ty)
         sim.next.add(idx)

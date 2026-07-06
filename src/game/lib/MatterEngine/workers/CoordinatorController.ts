@@ -1,4 +1,4 @@
-import { type MatterType } from '../../Matter/_Matter.types.ts'
+import { type MatterRaw } from '../../Matter/_Matter.types.ts'
 import type { MatterTankId } from '../../Matter/Tank/_MatterTank.types.ts'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import type { GetParticleInitArgs } from '../../Particles/particles.ts'
@@ -26,7 +26,7 @@ export class CoordinatorController {
   }
 
   brushAddMatter(
-    value: MatterType,
+    value: MatterRaw,
     tx: number,
     ty: number,
     radius: number,
@@ -40,8 +40,15 @@ export class CoordinatorController {
     ty: number,
     ownerId?: MatterTankId,
     ...initArgs: GetParticleInitArgs<T>
-  ){
-    this.worker.postMessage({ type: CoordinatorInMsg.SPAWN_PARTICLE, particleType, tx, ty, ownerId, initArgs: initArgs})
+  ) {
+    this.worker.postMessage({
+      type: CoordinatorInMsg.SPAWN_PARTICLE,
+      particleType,
+      tx,
+      ty,
+      ownerId,
+      initArgs: initArgs,
+    })
   }
 
   terminate() {

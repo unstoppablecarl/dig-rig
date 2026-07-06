@@ -1,4 +1,5 @@
 import { random } from '../../../helpers/random'
+import { FILL_MAX } from '../_Liquid.constants.ts'
 import {
   ACID,
   EMPTY,
@@ -11,7 +12,7 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { isAcidImmune } from '../matter.ts'
+import { isAcidImmune, isLiquid } from '../matter.ts'
 
 const IS_SETTLED = new MatterTypeSet(ACID, EMPTY)
 
@@ -24,11 +25,11 @@ export const ACID_DEF = {
   settles: true as const,
   reserveDestroyAmount: 2,
   action(sim, tx, ty, idx): void {
-    const { tiles, width, height } = sim
+    const { tiles, fill, width, height } = sim
     const leftFirst = sim.leftFirst
 
     // Dissolve a bordering tile
-    if (random() < 10) {
+    if (random() < 10 && fill[idx] >= FILL_MAX) {
       const leftNeighbor = [tx - 1, ty, idx - 1]
       const rightNeighbor = [tx + 1, ty, idx + 1]
 
@@ -38,6 +39,8 @@ export const ACID_DEF = {
         [tx, ty + 1, idx + width],
         [tx, ty - 1, idx - width],
       ] as [number, number, number][]
+
+      // @TODO if fill > FILL_MAX transfer excess to neighbor ACID or EMPTY
 
       for (const [nx, ny, nidx] of neighbors) {
         if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue
@@ -51,6 +54,7 @@ export const ACID_DEF = {
 
         sim.queueMatterCredit(nx, ny, ownerId)
         sim.destroyTile(nx, ny, nidx)
+
         return
       }
     }
@@ -63,15 +67,41 @@ export const ACID_DEF = {
       return
     }
 
-    // stickiness
+    // Stickiness — only when acid can actually dissolve (full tile).
+    // Partial acid has nothing to react with; don't delay its movement.
     const touchingSolid = sim.bordering(tx, ty, idx, SOLID) !== -1
-    if (touchingSolid && random() < 95) {
+    if (touchingSolid && fill[idx] >= FILL_MAX && random() < 95) {
       sim.next.add(idx)
       return
     }
 
-    const moved = sim.tryFillFlow(tx, ty, idx)
-    if (!moved) {
+    // On an immune floor, switch to water-like flow: spread outward to find a ledge
+    // instead of clumping.  This lets partial acid cascade toward the surface edge
+    // and drain off rather than pooling indefinitely.
+    const belowType = ty < height - 1 ? matterType(tiles[idx + width]) : SOLID
+    const onImmuneFloor = isAcidImmune(belowType) && !isLiquid(belowType)
+    const canExpand = onImmuneFloor || fill[idx] >= FILL_MAX
+    const clump = !onImmuneFloor
+
+    const moved = sim.tryFillFlow(tx, ty, idx, canExpand, clump)
+    if (matterType(tiles[idx]) === EMPTY) return  // tryFillFlow donated all fill and destroyed tile
+
+    if (moved) {
+      sim.reactivateAround(tx, ty)
+    } else {
+      if (fill[idx] < FILL_MAX) {
+        const hasLivingNeighbour =
+          (tx > 0           && matterType(tiles[idx - 1])    === ACID && fill[idx - 1]    > 0) ||
+          (tx < width - 1   && matterType(tiles[idx + 1])    === ACID && fill[idx + 1]    > 0) ||
+          (ty > 0           && matterType(tiles[idx - width]) === ACID && fill[idx - width] > 0) ||
+          (ty < height - 1  && matterType(tiles[idx + width]) === ACID && fill[idx + width] > 0)
+        if (!hasLivingNeighbour) {
+          sim.queueMatterCreditFromTile(tx, ty, idx)
+          sim.destroyTile(tx, ty, idx)
+          sim.reactivateAround(tx, ty)
+          return
+        }
+      }
       sim.tiles[idx] = setSettled(sim.tiles[idx], true)
       sim.markDirty(tx, ty)
 

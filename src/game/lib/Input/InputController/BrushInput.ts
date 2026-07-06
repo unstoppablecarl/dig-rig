@@ -1,7 +1,7 @@
 import { GameObjects, Input, Math as PMath, Scenes } from 'phaser'
 import { BRUSH_OUTLINE_COLOR } from '../../../config/colors.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import { MatterType } from '../../Matter/_Matter.types.ts'
+import { type MatterRaw } from '../../Matter/_Matter.types.ts'
 import { NO_MATTER_TANK_ID } from '../../Matter/Tank/_MatterTank.types.ts'
 import { makeRestartableTimerEvent, RestartableTimerEvent } from '../../Util/RestartableTimerEvent.ts'
 import { InputController } from './InputController.ts'
@@ -130,7 +130,7 @@ export class BrushInput extends InputController {
     }
   }
 
-  brushCreate(tx: number, ty: number, type: MatterType) {
+  brushCreate(tx: number, ty: number, type: MatterRaw) {
     const radius = this.scene.brushUIState.radius
     this.scene.matterEngine.brushAddMatter(type, tx, ty, radius)
   }

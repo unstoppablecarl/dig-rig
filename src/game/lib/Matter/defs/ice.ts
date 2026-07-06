@@ -28,6 +28,8 @@ export const ICE_DEF = {
 
     // Melt from water
     if (random() < 1 && sim.bordering(tx, ty, idx, WATER) !== -1) {
+      sim.notifySolidConsumed()
+      sim.notifyLiquidCreated()
       sim.fill[idx] = FILL_MAX
       sim.tiles[idx] = WATER
       sim.markDirty(tx, ty)
@@ -37,6 +39,8 @@ export const ICE_DEF = {
 
     // Melt from steam
     if (random() < 70 && sim.bordering(tx, ty, idx, STEAM) !== -1) {
+      sim.notifySolidConsumed()
+      sim.notifyLiquidCreated()
       sim.fill[idx] = FILL_MAX
       sim.tiles[idx] = WATER
       sim.markDirty(tx, ty)

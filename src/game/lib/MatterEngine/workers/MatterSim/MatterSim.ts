@@ -4,7 +4,6 @@ import {
   FILL_COL_SCAN_MAX,
   FILL_COMPRESSION_FACTOR,
   FILL_MAX,
-  FILL_MIN,
   FILL_PRESSURE_DIVISOR,
   FILL_ROUND_TO_ZERO,
   FILL_ROW_SCAN_MAX,
@@ -63,6 +62,14 @@ export class MatterSim {
   structuralRemovals: number[] = []
   next = new Set<number>()
 
+  // Tracked across one process() call for conservation accounting.
+  // liquid: fill units created/consumed by matter reactions (not CA flow).
+  // solid: tile-count created/consumed by reactions without corresponding tank credit/debit.
+  private liquidFillConsumed = 0
+  private liquidFillCreated = 0
+  private solidTilesConsumed = 0
+  private solidTilesCreated = 0
+
   init(
     tilesBuffer: SharedArrayBuffer,
     fillBuffer: SharedArrayBuffer,
@@ -92,6 +99,10 @@ export class MatterSim {
     this.leftFirst = leftFirst
     this.vfxJustSettled.length = 0
     this.structuralRemovals.length = 0
+    this.liquidFillConsumed = 0
+    this.liquidFillCreated = 0
+    this.solidTilesConsumed = 0
+    this.solidTilesCreated = 0
     this.processSubset(indices)
 
     out.next = Array.from(this.next)
@@ -99,6 +110,8 @@ export class MatterSim {
     out.structuralRemovals = this.structuralRemovals
     out.matterTankTransfers = this.matterTankCredits.flush()
     out.matterReservationReleases = this.matterReservationReleases.flush()
+    out.liquidNetDelta = this.liquidFillCreated - this.liquidFillConsumed
+    out.solidNetDelta = this.solidTilesCreated - this.solidTilesConsumed
 
     return out
   }
@@ -274,7 +287,8 @@ export class MatterSim {
       this.fill[toIdx] = tmp
       this.next.add(fromIdx)
     } else {
-      this.fill[toIdx] = 0
+      this.fill[toIdx] = this.fill[fromIdx]
+      this.fill[fromIdx] = 0
       this.reactivateAround(fromTx, fromTy)
     }
 
@@ -300,6 +314,8 @@ export class MatterSim {
 
       tiles[toIdx] = tiles[fromIdx]
       tiles[fromIdx] = EMPTY
+      this.fill[toIdx] = this.fill[fromIdx]
+      this.fill[fromIdx] = 0
       this.markDirty(fromTx, fromTy)
       this.markDirty(tx, ty)
       this.next.add(toIdx)
@@ -363,6 +379,14 @@ export class MatterSim {
     const selfFill = this.fill[idx]
     this.fill[idx] = this.fill[targetIdx]
     this.fill[targetIdx] = selfFill
+
+    // When the displaced tile is a non-liquid (e.g. CHILLED_ICE), the lighter
+    // liquid's fill was swapped onto a solid tile — zero it and track the change.
+    if (displacedAs !== undefined && !isLiquid(matterType(displacedAs))) {
+      this.liquidFillConsumed += this.fill[idx]
+      this.fill[idx] = 0
+      this.solidTilesCreated++
+    }
 
     const tx2 = targetIdx % width
     const ty2 = (targetIdx / width) | 0
@@ -620,12 +644,40 @@ export class MatterSim {
     if (random() >= chance) return false
     const loc = this.borderingAdjacent(tx, ty, idx, intoType)
     if (loc === -1) return false
-    this.tiles[loc] = matterType(this.tiles[idx])
+    const selfType = matterType(this.tiles[idx])
+    this.tiles[loc] = selfType
+    if (isLiquid(intoType) && !isLiquid(selfType)) {
+      this.consumeLiquidFill(loc)
+      this.notifySolidCreated()
+    }
     const lx = loc % this.width
     const ly = loc / this.width | 0
     this.markDirty(lx, ly)
     this.next.add(loc)
     return true
+  }
+
+  // Zero liquid fill at idx and track the consumed amount for the conservation check.
+  // Safe to call on non-liquid tiles (fill is already 0, nothing tracked).
+  consumeLiquidFill(idx: number) {
+    const f = this.fill[idx]
+    if (f > 0) this.liquidFillConsumed += f
+    this.fill[idx] = 0
+  }
+
+  // Track that FILL_MAX liquid fill was created at a new liquid tile.
+  notifyLiquidCreated() {
+    this.liquidFillCreated += FILL_MAX
+  }
+
+  // Track that a solid tile was removed from the domain without a tank credit.
+  notifySolidConsumed() {
+    this.solidTilesConsumed++
+  }
+
+  // Track that a solid tile was added to the domain without a tank debit.
+  notifySolidCreated() {
+    this.solidTilesCreated++
   }
 
   /**
@@ -646,6 +698,7 @@ export class MatterSim {
       const t = matterType(tiles[cidx])
       if (!isDestructible(t)) continue
       if (t !== EMPTY) this.queueMatterCredit(cx, cy, ownerId)
+      this.consumeLiquidFill(cidx)
       tiles[cidx] = ownerFire
       this.markDirty(cx, cy)
       this.next.add(cidx)
@@ -665,7 +718,7 @@ export class MatterSim {
     if (RESERVED_DESTROY_CHARGE.has(t)) {
       this.queueReservationRelease(getOwner(raw), getReserveDestroyAmount(t))
     }
-    this.fill[idx] = 0
+    this.consumeLiquidFill(idx)
     this.tiles[idx] = EMPTY
     this.markDirty(x, y)
     this.next.add(idx)
@@ -675,11 +728,15 @@ export class MatterSim {
   }
 
   queueMatterCredit(tx: number, ty: number, ownerId: MatterTankId) {
-    this.matterTankCredits.queueCredit(tx, ty, ownerId)
+    const idx = ty * this.width + tx
+    const fill = isLiquid(matterType(this.tiles[idx])) ? this.fill[idx] : 0
+    this.matterTankCredits.queueCredit(tx, ty, ownerId, fill)
   }
 
   queueMatterCreditFromTile(tx: number, ty: number, idx: number) {
-    this.matterTankCredits.queueCreditFromTile(tx, ty, idx)
+    const raw = this.tiles[idx]
+    const fill = isLiquid(matterType(raw)) ? this.fill[idx] : 0
+    this.matterTankCredits.queueCredit(tx, ty, getOwner(raw), fill)
   }
 
   queueReservationRelease(ownerId: MatterTankId, amount: number) {
@@ -736,11 +793,13 @@ export class MatterSim {
     amount: number,
     liquidRaw: number,
   ): void {
+    const flow = Math.round(amount)
+    if (flow <= 0) return
     const wasEmpty = this.fill[toIdx] === 0
-    this.fill[fromIdx] -= amount
-    this.fill[toIdx] += amount
+    this.fill[fromIdx] -= flow
+    this.fill[toIdx] += flow
 
-    if (this.fill[fromIdx] < FILL_ROUND_TO_ZERO) {
+    if (this.fill[fromIdx] < 1) {
       this.fill[fromIdx] = 0
       this.tiles[fromIdx] = EMPTY
       this.markDirty(fromTx, fromTy)
@@ -777,19 +836,20 @@ export class MatterSim {
   // Returns how much fill the lower of two stacked cells should hold.
   // Yields > FILL_MAX when total > FILL_MAX, creating a small compression
   // that drives upward pressure flow (U-tube equalization).
+  // Result is always rounded to an integer to preserve exact conservation.
   private static getStableState(total: number): number {
     const compress = FILL_MAX * FILL_COMPRESSION_FACTOR
     if (total <= FILL_MAX) return FILL_MAX
     if (total < 2 * FILL_MAX + compress)
-      return (FILL_MAX * FILL_MAX + total * compress) / (FILL_MAX + compress)
-    return (total + compress) / 2
+      return Math.round((FILL_MAX * FILL_MAX + total * compress) / (FILL_MAX + compress))
+    return Math.round((total + compress) / 2)
   }
 
-  tryFillFlow(tx: number, ty: number, idx: number): boolean {
+  tryFillFlow(tx: number, ty: number, idx: number, canExpandToEmpty = true, clump = false): boolean {
     const { tiles, fill, width, height } = this
 
     const mass = fill[idx]
-    if (mass < FILL_MIN) return false
+    if (mass <= 0) return false
 
     const type = matterType(tiles[idx])
     const liquidRaw = setSettled(tiles[idx], false)
@@ -810,7 +870,7 @@ export class MatterSim {
           this.doFillTransfer(idx, tx, ty, downIdx, tx, ty + 1, flow, liquidRaw)
           remaining -= flow
           moved = true
-          if (remaining < FILL_MIN) return true
+          if (remaining <= 0) return true
         }
       }
     }
@@ -824,46 +884,112 @@ export class MatterSim {
     // ── 2. Horizontal equalization ───────────────────────────────────────────
     // Column-pressure equalization at every settled row, not just the floor.
     // myCP = fill + weight of same-type liquid above this cell. A taller column
-    // has higher myCP than a shorter neighbour at the same y, so interior tiles
+    // has higher myCP than a shorter neighbor at the same y, so interior tiles
     // in a pile also drive flow outward — not just the single outermost edge tile.
     const ax = tx + (this.leftFirst ? -1 : 1)
     const bx = tx + (this.leftFirst ? 1 : -1)
     const myCP = remaining + this.colPressureAbove(tx, ty, type)
 
-    let wantA = 0, aIdx = -1
+    // Pre-scan both neighbours so hasDrain is known before computing wants.
+    // Clumping yields entirely to any reachable drain so the full budget flows
+    // off the surface rather than being split with same-type consolidation.
+    let aIdx = -1, aType = EMPTY, aIsLedge = false, aIsSlopeStep = false
     if (ax >= 0 && ax < width) {
       aIdx = ty * width + ax
-      const aType = matterType(tiles[aIdx])
-      if (aType === EMPTY || aType === type)
-        wantA = Math.max(0, (myCP - fill[aIdx] - this.colPressureAbove(ax, ty, type)) / FILL_PRESSURE_DIVISOR)
+      aType = matterType(tiles[aIdx])
+      if (aType === EMPTY) {
+        aIsLedge = (ty + 1 < height) && matterType(tiles[aIdx + width]) === EMPTY
+        if (!aIsLedge) {
+          for (let dy = 2; dy <= 8 && ty + dy < height; dy++) {
+            if (matterType(tiles[aIdx + dy * width]) === EMPTY) { aIsSlopeStep = true; break }
+          }
+        }
+      }
     }
-
-    let wantB = 0, bIdx = -1
+    let bIdx = -1, bType = EMPTY, bIsLedge = false, bIsSlopeStep = false
     if (bx >= 0 && bx < width) {
       bIdx = ty * width + bx
-      const bType = matterType(tiles[bIdx])
-      if (bType === EMPTY || bType === type)
-        wantB = Math.max(0, (myCP - fill[bIdx] - this.colPressureAbove(bx, ty, type)) / FILL_PRESSURE_DIVISOR)
-    }
-
-    const total = wantA + wantB
-    if (total > FILL_MIN) {
-      const budget = Math.min(remaining, total)
-      if (wantA > FILL_MIN) {
-        const f = budget * wantA / total
-        this.doFillTransfer(idx, tx, ty, aIdx, ax, ty, f, liquidRaw)
-        remaining -= f
-        moved = true
-      }
-      if (wantB > FILL_MIN && remaining > FILL_MIN) {
-        const f = budget * wantB / total
-        this.doFillTransfer(idx, tx, ty, bIdx, bx, ty, f, liquidRaw)
-        remaining -= f
-        moved = true
+      bType = matterType(tiles[bIdx])
+      if (bType === EMPTY) {
+        bIsLedge = (ty + 1 < height) && matterType(tiles[bIdx + width]) === EMPTY
+        if (!bIsLedge) {
+          for (let dy = 2; dy <= 8 && ty + dy < height; dy++) {
+            if (matterType(tiles[bIdx + dy * width]) === EMPTY) { bIsSlopeStep = true; break }
+          }
+        }
       }
     }
+    const hasDrain = (aIdx !== -1 && aType === EMPTY && (aIsLedge || aIsSlopeStep))
+                  || (bIdx !== -1 && bType === EMPTY && (bIsLedge || bIsSlopeStep))
 
-    if (remaining < FILL_MIN) return true
+    let wantA = 0
+    if (aIdx !== -1) {
+      if (aType === type) {
+        // Same-type: clump (donate fill) unless a drain is reachable — when draining,
+        // suppress same-type flow entirely so the full budget exits the surface.
+        if (!hasDrain) {
+          wantA = (clump && remaining < FILL_MAX)
+            ? (fill[aIdx] + remaining <= FILL_MAX ? remaining : Math.max(0, FILL_MAX - fill[aIdx]))
+            : Math.round(Math.max(0, (myCP - fill[aIdx] - this.colPressureAbove(ax, ty, type)) / FILL_PRESSURE_DIVISOR))
+        }
+      } else if (aType === EMPTY && (canExpandToEmpty || aIsLedge || aIsSlopeStep)) {
+        wantA = aIsLedge
+          ? remaining
+          : Math.round(Math.max(0, (myCP - this.colPressureAbove(ax, ty, type)) / FILL_PRESSURE_DIVISOR))
+      }
+    }
+
+    let wantB = 0
+    if (bIdx !== -1) {
+      if (bType === type) {
+        if (!hasDrain) {
+          wantB = (clump && remaining < FILL_MAX)
+            ? (fill[bIdx] + remaining <= FILL_MAX ? remaining : Math.max(0, FILL_MAX - fill[bIdx]))
+            : Math.round(Math.max(0, (myCP - fill[bIdx] - this.colPressureAbove(bx, ty, type)) / FILL_PRESSURE_DIVISOR))
+        }
+      } else if (bType === EMPTY && (canExpandToEmpty || bIsLedge || bIsSlopeStep)) {
+        wantB = bIsLedge
+          ? remaining
+          : Math.round(Math.max(0, (myCP - this.colPressureAbove(bx, ty, type)) / FILL_PRESSURE_DIVISOR))
+      }
+    }
+
+    const totalWant = wantA + wantB
+    if (totalWant > 0) {
+      const budget = Math.min(remaining, totalWant)
+      // Compute A's share via floor; B gets the remainder to guarantee fA+fB=budget exactly.
+      const fA = (wantA > 0 && wantB > 0) ? Math.floor(budget * wantA / totalWant) : (wantA > 0 ? budget : 0)
+      const fB = budget - fA
+      if (fA > 0) {
+        this.doFillTransfer(idx, tx, ty, aIdx, ax, ty, fA, liquidRaw)
+        remaining -= fA
+        moved = true
+      }
+      if (fB > 0) {
+        this.doFillTransfer(idx, tx, ty, bIdx, bx, ty, fB, liquidRaw)
+        remaining -= fB
+        moved = true
+      }
+    }
+
+    if (remaining <= 0) {
+      // Donated every fill unit to neighbours — tile is now a zero-fill zombie.
+      // Destroy immediately so adjacent tiles never see it as a living neighbour.
+      this.destroyTile(tx, ty, idx)
+      this.reactivateAround(tx, ty)
+      return true
+    }
+
+    // Zombie cleanup: fill too small to drive flow via the pressure formula gets
+    // stranded on surfaces forever. Consume it via the liquid delta so the
+    // conservation tracker stays balanced (liquidNetDelta -= remaining).
+    if (!moved && remaining <= FILL_ROUND_TO_ZERO) {
+      this.consumeLiquidFill(idx)
+      this.tiles[idx] = EMPTY
+      this.markDirty(tx, ty)
+      this.reactivateAround(tx, ty)
+      return true
+    }
 
     // ── 3. Upward pressure ───────────────────────────────────────────────────
     // Push excess above FILL_MAX upward. Wakeup propagates the cascade over
@@ -873,7 +999,7 @@ export class MatterSim {
       const upType = matterType(tiles[upIdx])
       if (upType === EMPTY || upType === type) {
         const want = remaining - MatterSim.getStableState(remaining + fill[upIdx])
-        if (want > FILL_MIN) {
+        if (want > 0) {
           const flow = Math.min(want, remaining - FILL_MAX)
           this.doFillTransfer(idx, tx, ty, upIdx, tx, ty - 1, flow, liquidRaw)
           moved = true
@@ -909,7 +1035,7 @@ export class MatterSim {
       if (!upValid) continue
 
       const want = m - MatterSim.getStableState(m + fill[upIdx])
-      if (want <= FILL_MIN) continue
+      if (want <= 0) continue
       const flow = Math.min(want, m - FILL_MAX)
 
       fill[idx] -= flow

@@ -2,7 +2,7 @@ import { CHUNK_SIZE } from '../../../config.ts'
 import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import { FIRE, getCounter, isSettled, matterType, PERMANENT, SupportType } from '../../Matter/_Matter.types.ts'
-import { getSupportType, isLiquid } from '../../Matter/matter.ts'
+import { getSupportType } from '../../Matter/matter.ts'
 
 import { Chunk } from '../ChunkMap.ts'
 import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
@@ -69,26 +69,23 @@ export class TerrainChunkRenderer extends SceneBound {
     if (offX + CHUNK_SIZE <= mapWidth && offY + CHUNK_SIZE <= tilemap.height) {
       // Interior chunk: no out-of-bounds tiles, read directly from front buffers.
       const tiles = io.tileFront.tiles
-      const fillLevels = io.tileFront.fill
       for (let y = 0; y < CHUNK_SIZE; y++) {
         const flippedRow = (CHUNK_SIZE - 1 - y) * CHUNK_SIZE
         const srcRow = (offY + y) * mapWidth + offX
         for (let x = 0; x < CHUNK_SIZE; x++) {
-          pixels[flippedRow + x] = this.pack(tiles[srcRow + x], fillLevels[srcRow + x])
+          pixels[flippedRow + x] = this.pack(tiles[srcRow + x])
         }
       }
     } else {
       // Edge chunk: some coordinates may be out of bounds; use PERMANENT for those.
       const tiles = io.tileFront.tiles
-      const fillLevels = io.tileFront.fill
       for (let y = 0; y < CHUNK_SIZE; y++) {
         const flippedRow = (CHUNK_SIZE - 1 - y) * CHUNK_SIZE
         for (let x = 0; x < CHUNK_SIZE; x++) {
           const tileX = offX + x, tileY = offY + y
           const inBounds = tileX >= 0 && tileX < mapWidth && tileY >= 0 && tileY < tilemap.height
-          const fill = inBounds ? fillLevels[tileY * mapWidth + tileX] : 0
           const raw = inBounds ? tiles[tileY * mapWidth + tileX] : PERMANENT
-          pixels[flippedRow + x] = this.pack(raw, fill)
+          pixels[flippedRow + x] = this.pack(raw)
         }
       }
     }
@@ -96,12 +93,12 @@ export class TerrainChunkRenderer extends SceneBound {
     this.uploadMask(offX, offY)
   }
 
-  private pack(raw: number, fill: number): number {
+  private pack(raw: number): number {
     const type = matterType(raw)
     const r = type
     const g = isSettled(raw) ? 0xFF : 0
     const b = getSupportType(raw) === SupportType.ANCHORED ? 0xFF : 0
-    const a = type === FIRE ? getCounter(raw) : isLiquid(type) ? fill : 0
+    const a = type === FIRE ? getCounter(raw) : 0
     return (a << 24) | (b << 16) | (g << 8) | r
   }
 

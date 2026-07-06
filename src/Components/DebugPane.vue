@@ -63,7 +63,7 @@ const input = {
     if (!ptr) return { x: 0, y: 0 }
     const r = level?.cameras?.main?.getWorldPoint(ptr.x, ptr.y)
     if (!r) return { x: 0, y: 0 }
-    return { x: Math.round(r.x), y: Math.round(r.y) }
+    return { x: Math.floor(r.x), y: Math.floor(r.y) }
   }, 50),
   mousePos: pollingComputed((): string => {
     const r = input.mousePosRaw.value
@@ -73,6 +73,10 @@ const input = {
     const r = input.mousePosRaw.value
     const tile = level.tilemap.getTile(r.x, r.y)
     return MatterType[matterType(tile)]
+  }, 50),
+  mouseMatterFill: pollingComputed((): number => {
+    const r = input.mousePosRaw.value
+    return level.tilemap.getFill(r.x, r.y)
   }, 50),
 }
 
@@ -125,6 +129,8 @@ const levelEntries = Object.entries(LEVELS) as [LevelId, LevelEntry][]
         <PFolder title="Input">
           <PMonitor label="Mouse Pos" :poll="input.mousePos" />
           <PMonitor label="Matter Type" :poll="input.mouseMatterType" />
+          <PMonitor label="Fill" :poll="input.mouseMatterFill" />
+
         </PFolder>
         <PFolder title="Player">
           <PNumber label="vx" :poll="player.vx" readonly />

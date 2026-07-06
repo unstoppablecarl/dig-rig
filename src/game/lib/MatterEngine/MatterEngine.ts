@@ -1,7 +1,7 @@
 import { PARTICLE_RENDER_ENABLED } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { MatterType } from '../Matter/_Matter.types.ts'
+import { type MatterRaw } from '../Matter/_Matter.types.ts'
 import type { MatterTankId } from '../Matter/Tank/_MatterTank.types.ts'
 import { ParticleType } from '../Particles/_particle-types.ts'
 import type { GetParticleInitArgs } from '../Particles/particles.ts'
@@ -49,7 +49,7 @@ export class MatterEngine extends SceneBound {
     this.worker.brushEraseMatter(tx, ty, radius, ownerId)
   }
 
-  brushAddMatter(value: MatterType, tx: number, ty: number, radius = 8) {
+  brushAddMatter(value: MatterRaw, tx: number, ty: number, radius = 8) {
     this.worker.brushAddMatter(value, tx, ty, radius)
   }
 

@@ -1,4 +1,4 @@
-import { type MatterType } from '../../Matter/_Matter.types.ts'
+import { type MatterRaw } from '../../Matter/_Matter.types.ts'
 import { type MatterTankId } from '../../Matter/Tank/_MatterTank.types.ts'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import type { DataManagerBuffers } from '../DataManager.ts'
@@ -25,7 +25,7 @@ export type CoordinatorInMsgBrushEraseMatter = {
 
 export type CoordinatorInMsgAddBrushMatter = {
   type: CoordinatorInMsg.BRUSH_ADD_MATTER
-  value: MatterType
+  value: MatterRaw
   tx: number
   ty: number
   radius: number

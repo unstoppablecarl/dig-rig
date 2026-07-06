@@ -44,6 +44,8 @@ export type SimOutMsgDone = {
   matterTankTransfers: Int32Array
   matterReservationReleases: Int32Array
   structuralRemovals: number[]
+  liquidNetDelta: number
+  solidNetDelta: number
 }
 
 export type SimOutMsgSpawnParticle = {

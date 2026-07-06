@@ -1,26 +1,22 @@
 // FILL_MAX — fill value of a completely full liquid cell.
-//   Higher → more granular sub-cell resolution; U-tube pressure head increases
-//            proportionally; float32 conservation drift is larger in absolute terms.
+//   All fill values are kept as integers (0..FILL_MAX) so conservation arithmetic
+//   is exact. Float32 represents integers exactly up to 2^24, far above any cell value.
+//   Higher → more sub-cell resolution; column pressure head scales proportionally.
 //   Lower  → liquid behaves more "blobby"; less precision in partial fills.
-//   Changing this: FILL_MIN and FILL_ROUND_TO_ZERO do NOT scale automatically —
-//   keep them at roughly FILL_MAX * 3e-5 or less to stay above float32 noise.
-//   FILL_COMPRESSION_FACTOR, FILL_SETTLED_FACTOR, and the divisors all scale fine.
-//   base = 32
-export const FILL_MAX = 32 as const
+//   Changing this: FILL_ROUND_TO_ZERO is an integer threshold — update it together.
+//   FILL_COMPRESSION_FACTOR, FILL_SETTLED_FACTOR, and divisors scale
+//   automatically, but verify FILL_MAX * FILL_COMPRESSION_FACTOR stays a useful integer.
+//   base = 256
+export const FILL_MAX = 256 as const
 
-// FILL_MIN — minimum fill below which a cell is skipped for flow.
-//   Higher → larger dead-zone; thin streams can stall or gap visually.
-//   Lower  → more flow work on nearly-empty cells; can cause slow oscillation.
-//   Keep in sync with FILL_ROUND_TO_ZERO; both should be < FILL_MAX * 3e-5.
-//   base = 0.001
-export const FILL_MIN = 0.001 as const
-
-// FILL_ROUND_TO_ZERO — zombie-tile cleanup threshold in doFillTransfer.
-//   If fill drops below this after a transfer the tile is destroyed (fill clamped to 0).
-//   Should match FILL_MIN. If higher than FILL_MIN a tile can be destroyed while
-//   tryFillFlow still considers it active, losing a small amount of mass.
-//   base = 0.001
-export const FILL_ROUND_TO_ZERO = 0.001 as const
+// FILL_ROUND_TO_ZERO — minimum transferable fill threshold in tryFillFlow.
+//   When a tile reaches !moved and has fill at or below this value it is consumed.
+//   Fill=1 with FILL_PRESSURE_DIVISOR=4 produces floor(1/4)=0 — no transfer is
+//   possible, so the tile is permanently stranded. Consuming it prevents micro-fill
+//   puddles from sitting idle forever. Tracked in liquidNetDelta so conservation
+//   accounting stays balanced.
+//   base = 1
+export const FILL_ROUND_TO_ZERO = 1 as const
 
 // FILL_COMPRESSION_FACTOR — fraction of FILL_MAX the column can compress before
 //   upward pressure activates (used in getStableState).

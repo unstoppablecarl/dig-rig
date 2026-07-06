@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import { FILL_MAX } from '../../../Matter/_Liquid.constants.ts'
 import { EMPTY, matterType, SOLID } from '../../../Matter/_Matter.types.ts'
 import { PLAYER_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
@@ -7,6 +8,7 @@ import type { TunnelWeaponDataType } from '../../data/TunnelWeaponData.ts'
 import type { VFXParticleData } from '../../data/VFXParticleData.ts'
 import type { VFXTileEffectData } from '../../data/VFXTileEffectData.ts'
 import type { Effects } from './Effects.ts'
+import type { ConservationTracker } from './ConservationTracker.ts'
 
 type Tile = { x: number; y: number }
 type RestoreRecord = { cx: number; cy: number; radius: number; remaining: Tile[] }
@@ -30,6 +32,7 @@ export class TunnelWeapon {
     private readonly vfxParticleData: VFXParticleData,
     private readonly vfxTileEffectData: VFXTileEffectData,
     private readonly tiles: Uint32Array,
+    private readonly tracker: ConservationTracker,
   ) {
     this.width = effects.width
     this.height = effects.height
@@ -55,7 +58,7 @@ export class TunnelWeapon {
     const cx = b.destroyX
     const cy = b.destroyY
     const radius = b.destroyRadius
-    const { tiles, structuralDirty } = this.effects.processTunnelDestroy(
+    const result = this.effects.processTunnelDestroy(
       Math.round(cx),
       Math.round(cy),
       radius,
@@ -63,12 +66,14 @@ export class TunnelWeapon {
       activeSet,
       dirtyChunks,
     )
+    this.tracker.addDelta(result.solidDomainDelta * FILL_MAX + result.liquidDomainDelta)
+    const { tiles } = result
     if (tiles.length > 0) {
       this.vfxParticleData.writeTiles(tiles, PLAYER_MATTER_TANK_ID)
       this._restoreQueue.push({ cx, cy, radius, remaining: tiles.map(t => ({ x: t.x, y: t.y })) })
       this._pendingRestore += tiles.length
     }
-    return structuralDirty
+    return result.structuralDirty
   }
 
   private _stepRestore(activeSet: Set<number>, dirtyChunks: Set<number>): Tile[] {
@@ -195,6 +200,7 @@ export class TunnelWeapon {
         [{ indices: resultIndices, tile: SOLID, reactivateAround: false }],
         activeSet, dirtyChunks,
       )
+      this.tracker.addDelta(resultIndices.length * FILL_MAX)
       this._pendingRestore -= resultIndices.length
     }
 

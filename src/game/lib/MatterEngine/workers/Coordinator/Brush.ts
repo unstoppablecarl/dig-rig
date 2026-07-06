@@ -1,35 +1,30 @@
 /// <reference lib="webworker" />
 import { FILL_MAX } from '../../../Matter/_Liquid.constants.ts'
-import { EMPTY, matterType, type MatterType, PLANT, SupportType } from '../../../Matter/_Matter.types.ts'
-import { getSupportType, isLiquid } from '../../../Matter/matter.ts'
+import { EMPTY, getOwner, type MatterRaw, matterType, PLANT, SupportType } from '../../../Matter/_Matter.types.ts'
+import { getReserveDestroyAmount, getSupportType, isLiquid } from '../../../Matter/matter.ts'
 import type { Tile } from '../../../Tilemap/TileGrid.ts'
 import type { CoordinatorInMsgBrushEraseMatter } from '../Coordinator.types.ts'
 import { MatterSim } from '../MatterSim/MatterSim.ts'
+import type { ConservationTracker } from './ConservationTracker.ts'
 import type { Effects } from './Effects.ts'
 import type { EffectResult } from './Effects/SimProjectile.ts'
 import type { Physics } from './Physics.ts'
+import { SimMatterTanks } from './SimMatterTanks.ts'
 
-type BrushEntry = { value: MatterType; tx: number; ty: number; radius: number }
+type BrushEntry = { value: MatterRaw; tx: number; ty: number; radius: number }
 
 export class Brush {
   private readonly queue: BrushEntry[] = []
   private readonly eraseQueue: CoordinatorInMsgBrushEraseMatter[] = []
-  // Net world-tile count change caused by the brush since the last conservation check —
-  // the brush is the one sanctioned source of matter add/removal in the world.
-  private _netDelta = 0
-
-  consumeNetDelta(): number {
-    const delta = this._netDelta
-    this._netDelta = 0
-    return delta
-  }
 
   constructor(
     private readonly width: number,
     private readonly height: number,
     private readonly sim: MatterSim,
+    private readonly matterTanks: SimMatterTanks,
     private readonly physics: Physics,
     private readonly effects: Effects,
+    private readonly tracker: ConservationTracker,
   ) {
   }
 
@@ -37,7 +32,7 @@ export class Brush {
     return this.queue.length > 0 || this.eraseQueue.length > 0
   }
 
-  queueAdd(value: MatterType, tx: number, ty: number, radius: number) {
+  queueAdd(value: MatterRaw, tx: number, ty: number, radius: number) {
     this.queue.push({ value, tx, ty, radius })
   }
 
@@ -53,7 +48,7 @@ export class Brush {
     if (this.eraseQueue.length === 0) return result
     for (const req of this.eraseQueue) {
       const erased = this.effects.applyBrushErase(req, activeSet, dirtyChunks)
-      this._netDelta -= erased.tiles.length
+      this.tracker.addDelta(erased.solidDomainDelta * FILL_MAX + erased.liquidDomainDelta)
       result.push(erased)
     }
     this.eraseQueue.length = 0
@@ -66,6 +61,7 @@ export class Brush {
     for (const { value, tx, ty, radius } of this.queue) {
       structuralDirty ||= this.processAddMatter(value, tx, ty, radius, activeSet, dirtyChunks)
     }
+
     this.queue.length = 0
     return structuralDirty
   }
@@ -73,7 +69,7 @@ export class Brush {
   private _processAddMatter: Tile[] = []
 
   private processAddMatter(
-    value: MatterType,
+    value: MatterRaw,
     tx: number, ty: number, radius: number,
     activeSet: Set<number>,
     dirtyChunks: Set<number>,
@@ -84,6 +80,9 @@ export class Brush {
     const placed = this._processAddMatter
     const r2 = radius * radius
 
+    const addingType = matterType(value)
+    const addingLiquid = isLiquid(addingType)
+
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
         if (dx * dx + dy * dy > r2) continue
@@ -93,12 +92,12 @@ export class Brush {
         const idx = y * width + x
         if (matterType(tiles[idx]) !== EMPTY) continue
 
-        if (matterType(value) === PLANT) {
+        if (addingType === PLANT) {
           activeSet.add(idx)
         }
 
         tiles[idx] = value
-        if (isLiquid(matterType(value))) {
+        if (addingLiquid) {
           this.sim.fill[idx] = FILL_MAX
         }
         this.sim.markDirty(x, y)
@@ -108,11 +107,18 @@ export class Brush {
       }
     }
 
-    this._netDelta += placed.length
+    this.tracker.addDelta(placed.length * FILL_MAX)
+    const reserveAmount = getReserveDestroyAmount(addingType)
+    if (reserveAmount > 0) {
+      const ownerId = getOwner(value)
+      this.matterTanks.reserveDestroyCharge(ownerId, reserveAmount * placed.length, 'create')
+    }
 
     if (getSupportType(value) >= SupportType.STRUCTURAL) {
       const islands = this.physics.findIslandTiles(placed)
-      if (islands.length > 0) this.physics.collapseIslands(islands, activeSet, dirtyChunks)
+      if (islands.length > 0) {
+        this.physics.collapseIslands(islands, activeSet, dirtyChunks)
+      }
       return true
     }
     return false

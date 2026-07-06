@@ -1,7 +1,7 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { makeSimplePersistMapper } from 'pinia-simple-persist'
 import { computed, ref } from 'vue'
-import { EMPTY, MatterType, setOwner, SupportType } from '../game/lib/Matter/_Matter.types.ts'
+import { EMPTY, type MatterRaw, MatterType, setOwner, SupportType } from '../game/lib/Matter/_Matter.types.ts'
 import {
   canHaveOwner,
   isAlwaysStructural as matterIsAlwaysStructural,
@@ -113,7 +113,7 @@ function makeMatterPaint() {
     if (canHaveOwner(type)) {
       value = setOwner(value, PLAYER_MATTER_TANK_ID)
     }
-    return value
+    return value as MatterRaw
   })
 
   return {

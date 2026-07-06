@@ -19,7 +19,7 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { isLavaImmune } from '../matter.ts'
+import { isLavaImmune, isLiquid } from '../matter.ts'
 
 const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)
 const COOLED = new MatterTypeSet(WATER, SALT_WATER)
@@ -35,7 +35,8 @@ export const LAVA_DEF = {
   settles: true as const,
   reserveDestroyAmount: 1,
   action(sim, tx, ty, idx): void {
-    const { tiles, width, height } = sim
+    const { tiles, fill, width, height } = sim
+
     const existing = tiles[idx]
     const ownerId = getOwner(existing)
 
@@ -43,9 +44,10 @@ export const LAVA_DEF = {
     let waterLoc = sim.borderingAny(tx, ty, idx, COOLED)
     if (waterLoc !== -1) {
       sim.queueReservationRelease(ownerId, 1)
-      sim.fill[waterLoc] = 0
+      // Water fill stays in the fill slot — STEAM carries it as conserved fill.
       tiles[waterLoc] = STEAM
-      sim.fill[idx] = 0
+      sim.consumeLiquidFill(idx)
+      sim.notifySolidCreated()
       tiles[idx] = ROCK
       sim.markDirty(tx, ty)
       const wx = waterLoc % width
@@ -57,7 +59,7 @@ export const LAVA_DEF = {
     }
 
     // Spawn a lava burst particle and self-destruct when adjacent to oil
-    if (random() < 14 && sim.bordering(tx, ty, idx, OIL) !== -1) {
+    if (sim.fill[idx] >= FILL_MAX && random() < 14 && sim.bordering(tx, ty, idx, OIL) !== -1) {
       sim.spawnParticle(ParticleType.LAVA_BURST, tx, ty, ownerId)
       sim.queueMatterCreditFromTile(tx, ty, idx)
       sim.destroyTile(tx, ty, idx)
@@ -66,7 +68,7 @@ export const LAVA_DEF = {
     }
 
     // Slowly melt adjacent SOLID (SOLID is lava immune otherwise)
-    if (random() < 1) {
+    if (sim.fill[idx] >= FILL_MAX && random() < 1) {
       const meltLoc = sim.borderingAdjacent(tx, ty, idx, SOLID)
       if (meltLoc !== -1) {
         const mx = meltLoc % width
@@ -106,11 +108,13 @@ export const LAVA_DEF = {
     const canMoveUp = upIdx !== -1
     if (
       canMoveUp &&
+      sim.fill[idx] >= FILL_MAX &&
       random() < 6 &&
       matterType(tiles[upIdx]) === EMPTY &&
       sim.bordering(tx, ty, idx, LAVA)
     ) {
-      sim.fill[idx] = 0
+      sim.consumeLiquidFill(idx)
+      sim.notifySolidCreated()
       tiles[idx] = setLavaDropVel(setOwner(LAVA_DROP, ownerId), LAVA_DROP_INITIAL_VEL)
       sim.markDirty(tx, ty)
       sim.next.add(idx)
@@ -118,7 +122,7 @@ export const LAVA_DEF = {
     }
 
     // Burn adjacent non-immune tiles (4-directional, SOLID is lava-immune so skipped)
-    if (random() < 25) {
+    if (sim.fill[idx] >= FILL_MAX && random() < 25) {
       const burnCandidates: [number, number, number][] = [
         [tx, ty - 1, ty > 0 ? idx - width : -1],
         [tx, ty + 1, ty < height - 1 ? idx + width : -1],
@@ -130,6 +134,7 @@ export const LAVA_DEF = {
         const nt = matterType(tiles[nidx])
         if (!isLavaImmune(nt)) {
           if (nt !== EMPTY) sim.queueMatterCredit(nx, ny, ownerId)
+          sim.consumeLiquidFill(nidx)
           tiles[nidx] = setOwner(FIRE, ownerId)
           sim.queueMatterCredit(tx, ty, ownerId)
           sim.destroyTile(tx, ty, idx)
@@ -149,10 +154,13 @@ export const LAVA_DEF = {
         sim.markDirty(tx, ty + 1)
         sim.reactivateAround(tx, ty + 1)
       } else if (belowType === STEAM && random() < 95) {
-        // Lava sinks through steam — swap positions
+        // Lava sinks through steam — swap positions, preserving steam's conserved fill.
+        const steamFill = sim.fill[downIdx]
+        sim.notifyLiquidCreated()
         sim.fill[downIdx] = FILL_MAX
         tiles[downIdx] = setOwner(LAVA, ownerId)
-        sim.fill[idx] = 0
+        sim.consumeLiquidFill(idx)
+        sim.fill[idx] = steamFill
         tiles[idx] = STEAM
         sim.markDirty(tx, ty)
         sim.markDirty(tx, ty + 1)
@@ -178,12 +186,33 @@ export const LAVA_DEF = {
       }
     }
 
-    const moved = sim.tryFillFlow(tx, ty, idx)
+    // On an immune floor, switch to water-like flow: spread outward to find a ledge
+    // instead of clumping.  Lets partial lava cascade toward the surface edge and
+    // drain off rather than pooling on surfaces it can never melt.
+    const belowType = ty < height - 1 ? matterType(tiles[idx + width]) : SOLID
+    const onImmuneFloor = isLavaImmune(belowType) && !isLiquid(belowType)
+    const canExpand = onImmuneFloor || fill[idx] >= FILL_MAX
+    const clump = !onImmuneFloor
+
+    const moved = sim.tryFillFlow(tx, ty, idx, canExpand, clump)
+    if (matterType(tiles[idx]) === EMPTY) return  // tryFillFlow donated all fill and destroyed tile
 
     if (moved) {
       sim.reactivateAround(tx, ty)
-
     } else {
+      if (fill[idx] < FILL_MAX) {
+        const hasLivingNeighbour =
+          (tx > 0           && matterType(tiles[idx - 1])     === LAVA && fill[idx - 1]     > 0) ||
+          (tx < width - 1   && matterType(tiles[idx + 1])     === LAVA && fill[idx + 1]     > 0) ||
+          (ty > 0           && matterType(tiles[idx - width])  === LAVA && fill[idx - width]  > 0) ||
+          (ty < height - 1  && matterType(tiles[idx + width])  === LAVA && fill[idx + width]  > 0)
+        if (!hasLivingNeighbour) {
+          sim.queueMatterCreditFromTile(tx, ty, idx)
+          sim.destroyTile(tx, ty, idx)
+          sim.reactivateAround(tx, ty)
+          return
+        }
+      }
       sim.tiles[idx] = setSettled(existing, true)
       sim.markDirty(tx, ty)
 

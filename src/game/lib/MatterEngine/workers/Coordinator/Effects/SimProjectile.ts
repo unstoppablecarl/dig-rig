@@ -1,7 +1,12 @@
 /// <reference lib="webworker" />
 import { FILL_MAX } from '../../../../Matter/_Liquid.constants.ts'
-import { EMPTY, getOwner, matterType, MatterType, SupportType } from '../../../../Matter/_Matter.types.ts'
-import { getReserveDestroyAmount, getSupportType, isLiquid, RESERVED_DESTROY_CHARGE } from '../../../../Matter/matter.ts'
+import { EMPTY, FIRE, getOwner, matterType, MatterType, SupportType } from '../../../../Matter/_Matter.types.ts'
+import {
+  getReserveDestroyAmount,
+  getSupportType,
+  isLiquid,
+  RESERVED_DESTROY_CHARGE,
+} from '../../../../Matter/matter.ts'
 import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
 import type { PlayerBounds } from '../../../data/PlayerBoundsData.ts'
 import type { MatterSim } from '../../MatterSim/MatterSim.ts'
@@ -9,7 +14,18 @@ import type { Physics } from '../Physics.ts'
 import type { SimMatterTanks } from '../SimMatterTanks.ts'
 
 export type ProjectileEffectResult = { x: number, y: number, newValue: MatterType }
-export type EffectResult = { tiles: ProjectileEffectResult[], structuralDirty: boolean }
+
+export type EffectResult = {
+  tiles: ProjectileEffectResult[]
+  structuralDirty: boolean
+  // Net change to the liquid fill domain (fill units): negative = destroyed, positive = created.
+  liquidDomainDelta: number
+  // Net change to the solid tile-count domain (tile units, tank not included).
+  // Callers that also perform a tank credit/debit must add that separately.
+  solidDomainDelta: number
+  // Count of tiles whose previous type was liquid (used by DESTROY to split tank credits).
+  prevLiquidTiles: number
+}
 
 export abstract class SimProjectile {
   protected readonly width: number
@@ -94,12 +110,21 @@ export abstract class SimProjectile {
     activeSet: Set<number>,
     dirtyChunks: Set<number>,
   ): EffectResult {
-    if (candidates.length === 0) return { tiles: candidates, structuralDirty: false }
+    if (candidates.length === 0) return {
+      tiles: candidates,
+      structuralDirty: false,
+      liquidDomainDelta: 0,
+      solidDomainDelta: 0,
+      prevLiquidTiles: 0,
+    }
 
     const { width } = this
     const tiles = this.sim.tiles
 
     let structuralDirty = false
+    let liquidDomainDelta = 0
+    let solidDomainDelta = 0
+    let prevLiquidTiles = 0
     for (const { x, y, newValue } of candidates) {
       const idx = y * width + x
       const prevRaw = tiles[idx]
@@ -107,11 +132,25 @@ export abstract class SimProjectile {
         structuralDirty = true
       }
       const prevType = matterType(prevRaw)
-      if (prevType !== matterType(newValue) && RESERVED_DESTROY_CHARGE.has(prevType)) {
+      const newType = matterType(newValue)
+      if (prevType !== newType && RESERVED_DESTROY_CHARGE.has(prevType)) {
         this.matterTanks.releaseDestroyCharge(getOwner(prevRaw), getReserveDestroyAmount(prevType), 'external-overwrite')
       }
+      // Track liquid domain change before modifying fill.
+      if (isLiquid(prevType)) {
+        liquidDomainDelta -= this.sim.fill[idx]
+        prevLiquidTiles++
+      }
+      if (isLiquid(newType)) {
+        liquidDomainDelta += FILL_MAX
+      }
+      // Track raw solid tile-count change (callers add tank adjustments separately).
+      const prevSolid = prevType !== EMPTY && prevType !== FIRE && !isLiquid(prevType)
+      const newSolid = newType !== EMPTY && newType !== FIRE && !isLiquid(newType)
+      if (prevSolid && !newSolid) solidDomainDelta -= 1
+      else if (!prevSolid && newSolid) solidDomainDelta += 1
       tiles[idx] = newValue
-      if (isLiquid(matterType(newValue))) {
+      if (isLiquid(newType)) {
         this.sim.fill[idx] = FILL_MAX
       } else {
         this.sim.fill[idx] = 0
@@ -126,6 +165,9 @@ export abstract class SimProjectile {
     return {
       tiles: candidates,
       structuralDirty,
+      liquidDomainDelta,
+      solidDomainDelta,
+      prevLiquidTiles,
     }
   }
 

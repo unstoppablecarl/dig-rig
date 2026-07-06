@@ -13,8 +13,13 @@ export const SALT_DEF = {
     if (random() < 25) {
       const waterLoc = sim.bordering(tx, ty, idx, WATER)
       if (waterLoc !== -1) {
+        sim.notifySolidConsumed()
+        sim.consumeLiquidFill(idx)
+        sim.notifyLiquidCreated()
         sim.fill[idx] = FILL_MAX
         sim.tiles[idx] = SALT_WATER
+        sim.consumeLiquidFill(waterLoc)
+        sim.notifyLiquidCreated()
         sim.fill[waterLoc] = FILL_MAX
         sim.tiles[waterLoc] = SALT_WATER
         sim.markDirty(tx, ty)

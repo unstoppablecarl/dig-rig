@@ -234,3 +234,7 @@ export type MatterDef = {
   reserveDestroyAmount?: number
 }
 
+// an encoded number value for a single tile
+export type MatterRaw = number & { readonly __brandMatterRaw: unique symbol; }
+
+
