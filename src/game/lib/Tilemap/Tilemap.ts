@@ -2,7 +2,6 @@ import { Scenes } from 'phaser'
 import { type Color32, type PixelData, unpackAlpha } from 'pixel-data-js'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { type MatterType, PERMANENT, SOLID } from '../Matter/_Matter.types.ts'
-import { ChunkGrid } from './ChunkGrid.ts'
 import { ChunkMap } from './ChunkMap.ts'
 import { TileGrid } from './TileGrid.ts'
 import DESTROY = Scenes.Events.DESTROY
@@ -17,25 +16,17 @@ export class Tilemap extends TileGrid {
     return this._destroyed
   }
 
-  readonly fillSab: SharedArrayBuffer
-  readonly fillLevels: Float32Array
-
-  get fillBuffer(): SharedArrayBuffer { return this.fillSab }
-
   constructor(
     readonly scene: GameLevel,
     width: number,
     height: number,
   ) {
-    const tilesSab = new SharedArrayBuffer(width * height * Uint32Array.BYTES_PER_ELEMENT)
-    const buffers = ChunkGrid.createBuffers(width, height)
-    super(tilesSab, buffers, width, height)
-    this.fillSab = new SharedArrayBuffer(width * height * Float32Array.BYTES_PER_ELEMENT)
-    this.fillLevels = new Float32Array(this.fillSab)
+    const buffers = TileGrid.makeBuffer(width, height)
+    super(buffers)
 
     this.chunkGrid.markAllRenderDirty()
-
     this.chunkMap = new ChunkMap(width, height)
+
     scene.events.once(DESTROY, this.destroy, this)
     scene.events.once(SHUTDOWN, this.destroy, this)
   }
@@ -63,11 +54,6 @@ export class Tilemap extends TileGrid {
         }
       }
     }
-  }
-
-  getFill(x: number, y: number): number {
-    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return 0
-    return this.fillLevels[y * this.width + x]
   }
 
   static makeFromSolidAndPermanentPixelData(

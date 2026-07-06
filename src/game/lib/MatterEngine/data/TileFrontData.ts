@@ -21,26 +21,26 @@ export type TileFrontBuffers = {
 // terrain before the coordinator has run its first step.
 export class TileFrontData {
   readonly tiles: Uint32Array
-  readonly fill: Float32Array
+  readonly fill: Uint32Array
+  // Int32Array is needed for Atomics.load/add
   readonly genView: Int32Array
 
   static makeBuffers(tilemap: Tilemap): TileFrontBuffers {
     const { chunksWide, chunksHigh } = tilemap.chunkGrid
 
-    const tiles = new SharedArrayBuffer(tilemap.tilesBuffer.byteLength)
-    new Uint32Array(tiles).set(new Uint32Array(tilemap.tilesBuffer))
-
-    const fill = new SharedArrayBuffer(tilemap.fillBuffer.byteLength)
-
     const gen = new SharedArrayBuffer(chunksWide * chunksHigh * Int32Array.BYTES_PER_ELEMENT)
     new Int32Array(gen).fill(1)
 
-    return { tiles, fill, gen }
+    return {
+      tiles: tilemap.buffers.tiles.slice(0),
+      fill: tilemap.buffers.fillLevels.slice(0),
+      gen
+    }
   }
 
   constructor(readonly buffers: TileFrontBuffers) {
     this.tiles = new Uint32Array(buffers.tiles)
-    this.fill = new Float32Array(buffers.fill)
+    this.fill = new Uint32Array(buffers.fill)
     this.genView = new Int32Array(buffers.gen)
   }
 }

@@ -8,26 +8,43 @@ import { ChunkGrid, type ChunkGridBuffers } from './ChunkGrid.ts'
 
 export type Tile = { x: number, y: number }
 
+export type TileGridBuffers = {
+  tiles: SharedArrayBuffer,
+  chunkGrid: ChunkGridBuffers,
+  fillLevels: SharedArrayBuffer,
+  width: number,
+  height: number
+}
+
 export class TileGrid {
   readonly tiles: Uint32Array<SharedArrayBuffer>
+  readonly fillLevels: Uint32Array
+
   readonly chunkGrid: ChunkGrid
   readonly diagonalDistance: number
+  readonly width: number
+  readonly height: number
 
-  constructor(
-    readonly sab: SharedArrayBuffer,
-    chunkGridBuffers: ChunkGridBuffers,
-    readonly width: number,
-    readonly height: number,
-  ) {
-    this.tiles = new Uint32Array(sab)
-    const chunksWide = Math.ceil(width / CHUNK_SIZE)
-    const chunksHigh = Math.ceil(height / CHUNK_SIZE)
-    this.chunkGrid = new ChunkGrid(chunkGridBuffers, chunksWide, chunksHigh)
-    this.diagonalDistance = Math.hypot(width, height)
+  static makeBuffer(width: number, height: number): TileGridBuffers {
+    return {
+      tiles: new SharedArrayBuffer(width * height * Uint32Array.BYTES_PER_ELEMENT),
+      chunkGrid: ChunkGrid.createBuffers(width, height),
+      fillLevels: new SharedArrayBuffer(width * height * Uint32Array.BYTES_PER_ELEMENT),
+      width,
+      height,
+    }
   }
 
-  get tilesBuffer(): SharedArrayBuffer {
-    return this.sab
+  constructor(
+    readonly buffers: TileGridBuffers,
+  ) {
+    this.width = buffers.width
+    this.height = buffers.height
+
+    this.tiles = new Uint32Array(buffers.tiles)
+    this.fillLevels = new Uint32Array(buffers.fillLevels)
+    this.chunkGrid = new ChunkGrid(buffers.chunkGrid)
+    this.diagonalDistance = Math.hypot(this.width, this.height)
   }
 
   totalMatter(): number {
@@ -50,6 +67,11 @@ export class TileGrid {
   getTile(x: number, y: number): number {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return PERMANENT
     return this.tiles[y * this.width + x]
+  }
+
+  getFill(x: number, y: number): number {
+    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return 0
+    return this.fillLevels[y * this.width + x]
   }
 
   outOfBounds(x: number, y: number): boolean {

@@ -11,7 +11,7 @@ import type { TileFrontData } from './TileFrontData.ts'
 // fully consistent post-step snapshot — no gate, no skipped frames.
 export class ChunkPublisher {
   private readonly tiles: Uint32Array
-  private readonly fill: Float32Array
+  private readonly fill: Uint32Array
   private readonly front: TileFrontData
   private readonly lastWorkerGen: Uint8Array
   private readonly chunksWide: number
@@ -28,7 +28,7 @@ export class ChunkPublisher {
     height: number,
   ) {
     this.tiles = new Uint32Array(tilesBack)
-    this.fill = new Float32Array(fillBack)
+    this.fill = new Uint32Array(fillBack)
     this.front = front
     this.chunksWide = chunkGrid.chunksWide
     this.chunksHigh = chunkGrid.chunksHigh

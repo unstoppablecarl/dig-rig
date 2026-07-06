@@ -83,7 +83,7 @@ export class MatterSim {
     this.width = width
     this.height = height
     this.chunkShift = Math.log2(CHUNK_SIZE)
-    this.chunkGrid = ChunkGrid.fromBuffers(chunkBuffers)
+    this.chunkGrid = new ChunkGrid(chunkBuffers)
     this.chunksWidth = this.chunkGrid.chunksWide
     this.matterTankCredits = new MatterCreditTransferBuffer(this.tiles)
   }

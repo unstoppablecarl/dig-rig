@@ -45,20 +45,16 @@ export class ChunkGrid {
     }
   }
 
-  static fromBuffers(buffers: ChunkGridBuffers) {
-    return new ChunkGrid(buffers, buffers.chunksWide, buffers.chunksHigh)
-  }
-
   /** Attach to existing SABs (worker side, after INIT message). */
-  constructor(buffers: ChunkGridBuffers, chunksWide: number, chunksHigh: number) {
+  constructor(buffers: ChunkGridBuffers) {
     const views = soaBuffersToViews(SCHEMA, buffers)
     this.solidCount = views.solidCount
     this.anchored = views.anchored
     this.renderGen = views.renderGen
     this.collGen = views.collGen
 
-    this.chunksWide = chunksWide
-    this.chunksHigh = chunksHigh
+    this.chunksWide = buffers.chunksWide
+    this.chunksHigh = buffers.chunksHigh
 
     this.buffers = buffers
   }

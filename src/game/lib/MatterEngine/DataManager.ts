@@ -63,8 +63,8 @@ export class DataManager {
       vfxSettledTile: VFXSettledTileData.makeBuffer(),
       vfxTileEffect: VFXTileEffectData.makeBuffer(),
       activateTiles: ActivateTilesData.makeBuffer(),
-      tiles: tilemap.tilesBuffer,
-      fill: tilemap.fillBuffer,
+      tiles: tilemap.buffers.tiles,
+      fill: tilemap.buffers.fillLevels,
       tileFront: TileFrontData.makeBuffers(tilemap),
       width: tilemap.width,
       height: tilemap.height,
@@ -74,7 +74,7 @@ export class DataManager {
   }
 
   constructor(readonly buffers: DataManagerBuffers) {
-    this.chunkGrid = ChunkGrid.fromBuffers(buffers.chunkGrid)
+    this.chunkGrid = new ChunkGrid(buffers.chunkGrid)
     this.particle = new ParticleData(buffers.particle)
     this.matterTankManager = MatterTankManagerData.fromBuffers(buffers.matterTankManager)
     this.playerBounds = PlayerBoundsData.fromBuffer(buffers.playerBounds)
