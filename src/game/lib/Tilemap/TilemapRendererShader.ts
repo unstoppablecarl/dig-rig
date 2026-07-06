@@ -474,7 +474,7 @@ export function makeTilemapFragShader(
               #else
               color = liquid(t, colorA, colorB, alpha);
               #endif
-              
+
               break;
           }
           case ${SALT_WATER}: {
@@ -487,7 +487,7 @@ export function makeTilemapFragShader(
               #else
               color = liquid(t, colorA, colorB, alpha);
               #endif
-              
+
               break;
           }
           case ${OIL}: {
@@ -500,7 +500,7 @@ export function makeTilemapFragShader(
               #else
               color = liquid(t, colorA, colorB, alpha);
               #endif
-              
+
               break;
           }
           case ${LAVA}: {
@@ -513,7 +513,7 @@ export function makeTilemapFragShader(
               #else
               color = liquid(t, colorA, colorB, alpha);
               #endif
-              
+
               break;
           }
           case ${LAVA_DROP}: {
@@ -533,7 +533,7 @@ export function makeTilemapFragShader(
               #else
               color = liquid(t, colorA, colorB, alpha);
               #endif
-              
+
               break;
           }
           case ${ACID}: {
@@ -546,7 +546,7 @@ export function makeTilemapFragShader(
               #else
               color = liquid(t, colorA, colorB, alpha);
               #endif
-              
+
               break;
           }
           // gases

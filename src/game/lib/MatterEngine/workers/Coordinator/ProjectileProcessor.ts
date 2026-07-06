@@ -1,14 +1,14 @@
 /// <reference lib="webworker" />
+import { FILL_MAX } from '../../../Matter/_Liquid.constants.ts'
 import { matterType, type MatterType } from '../../../Matter/_Matter.types.ts'
 import { doesSettle, getReserveDestroyAmount, isLiquid } from '../../../Matter/matter.ts'
-import { FILL_MAX } from '../../../Matter/_Liquid.constants.ts'
 import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import { type ProjectileManagerData, ProjectileShape, ProjectileStatus } from '../../data/ProjectileManagerData.ts'
 import type { VFXParticleData } from '../../data/VFXParticleData.ts'
 import type { VFXTileEffectData } from '../../data/VFXTileEffectData.ts'
-import type { Effects } from './Effects.ts'
 import type { ConservationTracker } from './ConservationTracker.ts'
+import type { Effects } from './Effects.ts'
 import type { SimMatterTanks } from './SimMatterTanks.ts'
 
 export class ProjectileProcessor {

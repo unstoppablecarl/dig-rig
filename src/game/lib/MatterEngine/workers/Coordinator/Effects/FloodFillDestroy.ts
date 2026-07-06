@@ -42,7 +42,7 @@ export class FloodFillDestroy extends ProjectileDestroy {
     ]
 
     const indices = this.frontier.collect(slotIdx, seedIdx, budget, width, height, (idx) =>
-      this.convertTile(matterType(tiles[idx]), EMPTY, ownerId) !== null,
+        this.convertTile(matterType(tiles[idx]), EMPTY, ownerId) !== null,
       neighbors8,
     )
 

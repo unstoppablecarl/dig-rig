@@ -91,10 +91,10 @@ export const ACID_DEF = {
     } else {
       if (fill[idx] < FILL_MAX) {
         const hasLivingNeighbour =
-          (tx > 0           && matterType(tiles[idx - 1])    === ACID && fill[idx - 1]    > 0) ||
-          (tx < width - 1   && matterType(tiles[idx + 1])    === ACID && fill[idx + 1]    > 0) ||
-          (ty > 0           && matterType(tiles[idx - width]) === ACID && fill[idx - width] > 0) ||
-          (ty < height - 1  && matterType(tiles[idx + width]) === ACID && fill[idx + width] > 0)
+          (tx > 0 && matterType(tiles[idx - 1]) === ACID && fill[idx - 1] > 0) ||
+          (tx < width - 1 && matterType(tiles[idx + 1]) === ACID && fill[idx + 1] > 0) ||
+          (ty > 0 && matterType(tiles[idx - width]) === ACID && fill[idx - width] > 0) ||
+          (ty < height - 1 && matterType(tiles[idx + width]) === ACID && fill[idx + width] > 0)
         if (!hasLivingNeighbour) {
           sim.queueMatterCreditFromTile(tx, ty, idx)
           sim.destroyTile(tx, ty, idx)

@@ -21,7 +21,9 @@ export class ActivateTilesData {
 
   // Main thread side — write tile indices to wake up.
   write(idx: number) {
-    this.writer.write((cursor) => { cursor.idx = idx })
+    this.writer.write((cursor) => {
+      cursor.idx = idx
+    })
   }
 
   // Coordinator side — drain indices written by main thread.

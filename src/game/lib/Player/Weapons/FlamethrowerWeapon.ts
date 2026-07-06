@@ -28,6 +28,5 @@ export class FlamethrowerWeapon extends WeaponRapidFireInput implements FireGrou
     const vx = Math.cos(angle) * velocity
     const vy = Math.sin(angle) * velocity
     this.scene.matterEngine.spawnParticle(ParticleType.FLAMETHROWER_BURST, pos.x, pos.y, PLAYER_MATTER_TANK_ID, vx, vy)
-    // this.scene.projectiles.fireForPlayer(Projectile, this.clampCharge(effect), effect, RAPID_VELOCITY)
   }
 }

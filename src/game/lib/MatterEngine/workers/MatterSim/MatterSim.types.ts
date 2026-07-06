@@ -1,6 +1,6 @@
-import type { ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import type { ParticleType } from '../../../Particles/_particle-types.ts'
+import type { ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 
 export enum SimInMsg {
   INIT = 100,

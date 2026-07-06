@@ -1,7 +1,12 @@
 /// <reference lib="webworker" />
 import { CHUNK_SIZE } from '../../../../config.ts'
 import type { ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
-import { type SimOutMessage, SimOutMsg, type SimOutMsgDone, type SimOutMsgSpawnParticle } from '../MatterSim/MatterSim.types.ts'
+import {
+  type SimOutMessage,
+  SimOutMsg,
+  type SimOutMsgDone,
+  type SimOutMsgSpawnParticle,
+} from '../MatterSim/MatterSim.types.ts'
 import { MatterSimController } from '../MatterSim/MatterSimController.ts'
 
 export class SimWorkerPool {

@@ -5,8 +5,8 @@ import { type MatterTankManagerBuffers, MatterTankManagerData } from './data/Mat
 import { ParticleData, type ParticlesBuffers } from './data/ParticleData.ts'
 import { PlayerBoundsData, type PlayerBoundsDataType } from './data/PlayerBoundsData.ts'
 import { type ProjectileBuffers, ProjectileManagerData } from './data/ProjectileManagerData.ts'
+import { type TileFrontBuffers, TileFrontData } from './data/TileFrontData.ts'
 import { TunnelWeaponData, type TunnelWeaponDataType } from './data/TunnelWeaponData.ts'
-import { TileFrontData, type TileFrontBuffers } from './data/TileFrontData.ts'
 import { VFXParticleData } from './data/VFXParticleData.ts'
 import { VFXParticleOverflowData } from './data/VFXParticleOverflowData.ts'
 import { VFXSettledTileData } from './data/VFXSettledTileData.ts'
@@ -46,7 +46,7 @@ export class DataManager {
   readonly vfxSettledTile: VFXSettledTileData
   readonly vfxTileEffect: VFXTileEffectData
   readonly activateTiles: ActivateTilesData
-  readonly fill: Float32Array
+  readonly fill: Uint32Array
   readonly tileFront: TileFrontData
 
   static make(tilemap: Tilemap): DataManager {
@@ -86,7 +86,7 @@ export class DataManager {
     this.vfxSettledTile = new VFXSettledTileData(buffers.vfxSettledTile)
     this.vfxTileEffect = new VFXTileEffectData(buffers.vfxTileEffect)
     this.activateTiles = new ActivateTilesData(buffers.activateTiles)
-    this.fill = new Float32Array(buffers.fill)
+    this.fill = new Uint32Array(buffers.fill)
     this.tileFront = new TileFrontData(buffers.tileFront)
   }
 }

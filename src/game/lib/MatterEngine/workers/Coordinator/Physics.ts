@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 import { CHUNK_SIZE } from '../../../../config.ts'
 import { getSupport, matterType, PERMANENT, SupportType } from '../../../Matter/_Matter.types.ts'
-import { getSupportType, convertsToCollisionBody, setSupport, STRUCTURAL_COLLAPSE_TO } from '../../../Matter/matter.ts'
+import { convertsToCollisionBody, getSupportType, setSupport, STRUCTURAL_COLLAPSE_TO } from '../../../Matter/matter.ts'
 import { ChunkGrid, ChunkType } from '../../../Tilemap/ChunkGrid.ts'
 import { MatterSim } from '../MatterSim/MatterSim.ts'
 
@@ -29,7 +29,6 @@ export class Physics {
     private readonly chunkGrid: ChunkGrid,
     private readonly width: number,
     private readonly height: number,
-
   ) {
     this.chunksWide = chunkGrid.chunksWide
     this.chunksHigh = chunkGrid.chunksHigh

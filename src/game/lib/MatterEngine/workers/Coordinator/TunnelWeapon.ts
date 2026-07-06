@@ -7,8 +7,8 @@ import type { PlayerBoundsDataType } from '../../data/PlayerBoundsData.ts'
 import type { TunnelWeaponDataType } from '../../data/TunnelWeaponData.ts'
 import type { VFXParticleData } from '../../data/VFXParticleData.ts'
 import type { VFXTileEffectData } from '../../data/VFXTileEffectData.ts'
-import type { Effects } from './Effects.ts'
 import type { ConservationTracker } from './ConservationTracker.ts'
+import type { Effects } from './Effects.ts'
 
 type Tile = { x: number; y: number }
 type RestoreRecord = { cx: number; cy: number; radius: number; remaining: Tile[] }

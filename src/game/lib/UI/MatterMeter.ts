@@ -147,7 +147,7 @@ export class MatterMeter extends SceneBound {
 
     const matterTopY = this.matter.getBounds().y
 
-   this.destroyReserved.y = matterTopY
+    this.destroyReserved.y = matterTopY
     this.destroyReserved.scaleY = matterTank.getReservedDestroyPercent()
 
     this.destroyPending.y = this.destroyReserved.getBounds().y

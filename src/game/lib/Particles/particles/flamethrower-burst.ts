@@ -3,7 +3,6 @@ import type { ParticleSim } from '../../MatterEngine/workers/ParticleSim/Particl
 import { type ParticleDef } from '../_particle-types.ts'
 import type { Particle } from '../Particle.ts'
 
-
 export const FLAMETHROWER_BURST = {
   particlesToSpawn: 1,
   init(p: Particle, _sim: ParticleSim, velX: number, velY: number) {

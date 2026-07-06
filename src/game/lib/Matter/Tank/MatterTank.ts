@@ -1,8 +1,8 @@
 import type { Position } from '../../../types.ts'
-import type { MatterType } from '../_Matter.types.ts'
 import type { MatterTankManagerData } from '../../MatterEngine/data/MatterTankManagerData.ts'
-import { getReserveDestroyAmount } from '../matter.ts'
 import { FireMode, type MatterTankFireMode } from '../../Player/_FireMode-types'
+import type { MatterType } from '../_Matter.types.ts'
+import { getReserveDestroyAmount } from '../matter.ts'
 import { type MatterTankId, type MatterTankSource, NO_MATTER_TANK_ID } from './_MatterTank.types.ts'
 import type { MatterManager } from './MatterManager.ts'
 

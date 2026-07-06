@@ -85,7 +85,10 @@ export const CRYO_DEF = {
 
         // Touching water or ice: both freeze, cryo is consumed
         if (nt === WATER || nt === ICE) {
-          if (nt === WATER) { sim.consumeLiquidFill(nidx); sim.notifySolidCreated() }
+          if (nt === WATER) {
+            sim.consumeLiquidFill(nidx)
+            sim.notifySolidCreated()
+          }
           // ICE → CHILLED_ICE: solid→solid, no domain change
           tiles[nidx] = CHILLED_ICE
           sim.markDirty(nx, ny)

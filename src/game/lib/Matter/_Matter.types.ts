@@ -63,8 +63,8 @@ export function getFirstOwnerId(value1: MatterValue, value2: MatterValue) {
 }
 
 // clearOwner — sets the owner field to 0 (NONE), leaving type and settled bits intact.
-export function clearOwner(value: MatterRaw): number {
-  return value & ~OWNER_MASK
+export function clearOwner(value: MatterValue): MatterRaw {
+  return (value & ~OWNER_MASK) as MatterRaw
 }
 
 // LAVA_DROP velocity — bits 27–30 encode remaining upward ticks for in-flight lava drops.

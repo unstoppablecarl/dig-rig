@@ -34,7 +34,7 @@ export class TileFrontData {
     return {
       tiles: tilemap.buffers.tiles.slice(0),
       fill: tilemap.buffers.fillLevels.slice(0),
-      gen
+      gen,
     }
   }
 

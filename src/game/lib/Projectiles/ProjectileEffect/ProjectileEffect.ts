@@ -1,13 +1,4 @@
-import {
-  ACID,
-  GUNPOWDER,
-  LAVA,
-  MatterType,
-  MatterTypeValues,
-  SAND,
-  SOLID,
-  WATER,
-} from '../../Matter/_Matter.types.ts'
+import { ACID, GUNPOWDER, LAVA, MatterType, MatterTypeValues, SAND, SOLID, WATER } from '../../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../../Matter/data/MatterTypeSet.ts'
 import { collidesWithCreateProjectiles, collidesWithDestroyProjectiles } from '../../Matter/matter.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'

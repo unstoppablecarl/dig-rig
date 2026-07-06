@@ -1,7 +1,7 @@
-
 import { FILL_MAX } from '../_Liquid.constants.ts'
 import {
-  EMPTY, FIRE,
+  EMPTY,
+  FIRE,
   getLavaDropVel,
   getOwner,
   LAVA,

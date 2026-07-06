@@ -2,7 +2,8 @@ import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
 import { FILL_MAX } from '../_Liquid.constants.ts'
 import {
-  EMPTY, FIRE,
+  EMPTY,
+  FIRE,
   getOwner,
   LAVA,
   LAVA_DROP,
@@ -202,10 +203,10 @@ export const LAVA_DEF = {
     } else {
       if (fill[idx] < FILL_MAX) {
         const hasLivingNeighbour =
-          (tx > 0           && matterType(tiles[idx - 1])     === LAVA && fill[idx - 1]     > 0) ||
-          (tx < width - 1   && matterType(tiles[idx + 1])     === LAVA && fill[idx + 1]     > 0) ||
-          (ty > 0           && matterType(tiles[idx - width])  === LAVA && fill[idx - width]  > 0) ||
-          (ty < height - 1  && matterType(tiles[idx + width])  === LAVA && fill[idx + width]  > 0)
+          (tx > 0 && matterType(tiles[idx - 1]) === LAVA && fill[idx - 1] > 0) ||
+          (tx < width - 1 && matterType(tiles[idx + 1]) === LAVA && fill[idx + 1] > 0) ||
+          (ty > 0 && matterType(tiles[idx - width]) === LAVA && fill[idx - width] > 0) ||
+          (ty < height - 1 && matterType(tiles[idx + width]) === LAVA && fill[idx + width] > 0)
         if (!hasLivingNeighbour) {
           sim.queueMatterCreditFromTile(tx, ty, idx)
           sim.destroyTile(tx, ty, idx)

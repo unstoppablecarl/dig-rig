@@ -21,10 +21,6 @@ export class MatterReservationReleaseBuffer {
     this._data[this._len++] = amount
   }
 
-  hasWork() {
-    return this._len !== 0
-  }
-
   private static _empty = new Int32Array(0)
 
   flush(): Int32Array {

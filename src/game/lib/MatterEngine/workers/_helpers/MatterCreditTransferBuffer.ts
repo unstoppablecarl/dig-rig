@@ -33,10 +33,6 @@ export class MatterCreditTransferBuffer {
     this.queueCredit(tx, ty, ownerId)
   }
 
-  hasWork() {
-    return this._len !== 0
-  }
-
   private static _empty = new Int32Array(0)
 
   flush(): Int32Array {

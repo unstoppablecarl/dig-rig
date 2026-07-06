@@ -6,7 +6,6 @@ import type { Particle } from '../../../Particles/Particle.ts'
 import { PARTICLE_DEFS } from '../../../Particles/particles.ts'
 import { ParticleData, type ParticlesBuffers } from '../../data/ParticleData.ts'
 import { ParticlePool } from './ParticlePool.ts'
-import { ParticleSpawnBuffer } from './ParticleSpawnBuffer.ts'
 
 export class ParticleSim {
   tiles!: Uint32Array
@@ -44,12 +43,6 @@ export class ParticleSim {
     this.data.publish()
   }
 
-  spawnBatch(data: Int32Array) {
-    ParticleSpawnBuffer.readBuffer(data, (type, x, y, ownerId) => {
-      this.spawn(type, x, y, ownerId)
-    })
-  }
-
   spawn(type: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID, initArgs: unknown[] = []) {
     const def = PARTICLE_DEFS[type]
     if (!def || !this.pool) return
@@ -64,17 +57,6 @@ export class ParticleSim {
   getTileType(x: number, y: number): MatterType {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return MatterType.PERMANENT
     return matterType(this.tiles[y * this.width + x])
-  }
-
-  setTileType(x: number, y: number, type: MatterType) {
-    const width = this.width
-    if (x < 0 || x >= width || y < 0 || y >= this.height) return
-    const tiles = this.tiles
-    const idx = y * width + x
-    const cur = matterType(tiles[idx])
-    if (cur === MatterType.SOLID || cur === MatterType.PERMANENT) return
-    tiles[idx] = type
-    this.pendingActivations.push(idx)
   }
 
   fillTile(x: number, y: number, type: MatterType) {

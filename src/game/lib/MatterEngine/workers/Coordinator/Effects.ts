@@ -143,8 +143,8 @@ export class Effects {
             tiles: [],
             structuralDirty: false,
             liquidDomainDelta: 0,
-          solidDomainDelta: 0,
-          prevLiquidTiles: 0,
+            solidDomainDelta: 0,
+            prevLiquidTiles: 0,
           }
       }
       data.tilesModified[slotIdx] += result.tiles.length

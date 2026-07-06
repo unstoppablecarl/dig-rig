@@ -42,7 +42,7 @@ import { type SimInMsgProcess, SimOutMsg, type SimOutMsgDone, type SimOutMsgSpaw
 
 export class MatterSim {
   tiles!: Uint32Array
-  fill!: Float32Array
+  fill!: Uint32Array
   chunkGrid!: ChunkGrid
   width = 0
   height = 0
@@ -51,9 +51,6 @@ export class MatterSim {
 
   private matterTankCredits: MatterCreditTransferBuffer
   private matterReservationReleases = new MatterReservationReleaseBuffer()
-
-  // Set to true once PBF GPU simulation is confirmed active; disables CA liquid flow
-  pbfActive = false
 
   // Set externally by coordinator/pool before processSubset
   frame = 0
@@ -78,7 +75,7 @@ export class MatterSim {
     height: number,
   ) {
     this.tiles = new Uint32Array(tilesBuffer)
-    this.fill = new Float32Array(fillBuffer)
+    this.fill = new Uint32Array(fillBuffer)
 
     this.width = width
     this.height = height
@@ -901,7 +898,10 @@ export class MatterSim {
         aIsLedge = (ty + 1 < height) && matterType(tiles[aIdx + width]) === EMPTY
         if (!aIsLedge) {
           for (let dy = 2; dy <= 8 && ty + dy < height; dy++) {
-            if (matterType(tiles[aIdx + dy * width]) === EMPTY) { aIsSlopeStep = true; break }
+            if (matterType(tiles[aIdx + dy * width]) === EMPTY) {
+              aIsSlopeStep = true
+              break
+            }
           }
         }
       }
@@ -914,13 +914,16 @@ export class MatterSim {
         bIsLedge = (ty + 1 < height) && matterType(tiles[bIdx + width]) === EMPTY
         if (!bIsLedge) {
           for (let dy = 2; dy <= 8 && ty + dy < height; dy++) {
-            if (matterType(tiles[bIdx + dy * width]) === EMPTY) { bIsSlopeStep = true; break }
+            if (matterType(tiles[bIdx + dy * width]) === EMPTY) {
+              bIsSlopeStep = true
+              break
+            }
           }
         }
       }
     }
     const hasDrain = (aIdx !== -1 && aType === EMPTY && (aIsLedge || aIsSlopeStep))
-                  || (bIdx !== -1 && bType === EMPTY && (bIsLedge || bIsSlopeStep))
+      || (bIdx !== -1 && bType === EMPTY && (bIsLedge || bIsSlopeStep))
 
     let wantA = 0
     if (aIdx !== -1) {

@@ -1,5 +1,5 @@
 // FILL_MAX — fill value of a completely full liquid cell.
-//   All fill values are kept as integers (0..FILL_MAX) so conservation arithmetic
+//   All fill values are kept as integers (0...FILL_MAX) so conservation arithmetic
 //   is exact. Float32 represents integers exactly up to 2^24, far above any cell value.
 //   Higher → more sub-cell resolution; column pressure head scales proportionally.
 //   Lower  → liquid behaves more "blobby"; less precision in partial fills.

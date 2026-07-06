@@ -73,7 +73,7 @@ export default class TestLevel2 extends GameLevel {
 
     this.makeUTube(tilemap, centerX, centerY, width, height, thickness, PERMANENT)
 
-    this.makeUTube(tilemap, centerX-50, centerY, width, height, thickness, PERMANENT)
+    this.makeUTube(tilemap, centerX - 50, centerY, width, height, thickness, PERMANENT)
 
     tilemap.setBorder(2, PERMANENT)
     return tilemap

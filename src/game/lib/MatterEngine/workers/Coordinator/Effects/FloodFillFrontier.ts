@@ -86,7 +86,8 @@ export class FloodFillFrontier {
     while (i > 0) {
       const parent = (i - 1) >> 1
       if (this._dist2(frontier, heap[parent]) <= this._dist2(frontier, heap[i])) break
-      ;[heap[parent], heap[i]] = [heap[i], heap[parent]]
+        ;
+      [heap[parent], heap[i]] = [heap[i], heap[parent]]
       i = parent
     }
   }
@@ -99,14 +100,15 @@ export class FloodFillFrontier {
       heap[0] = last
       let i = 0
       const n = heap.length
-      for (;;) {
+      for (; ;) {
         const l = i * 2 + 1
         const r = i * 2 + 2
         let smallest = i
         if (l < n && this._dist2(frontier, heap[l]) < this._dist2(frontier, heap[smallest])) smallest = l
         if (r < n && this._dist2(frontier, heap[r]) < this._dist2(frontier, heap[smallest])) smallest = r
         if (smallest === i) break
-        ;[heap[i], heap[smallest]] = [heap[smallest], heap[i]]
+          ;
+        [heap[i], heap[smallest]] = [heap[smallest], heap[i]]
         i = smallest
       }
     }

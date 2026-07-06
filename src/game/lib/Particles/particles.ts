@@ -1,7 +1,7 @@
 import { type ParticleDef, ParticleType } from './_particle-types.ts'
 import { C4_EXPLOSION } from './particles/c4-explosion.ts'
-import { GUNPOWDER_EXPLOSION } from './particles/gunpowder-explosion.ts'
 import { FLAMETHROWER_BURST } from './particles/flamethrower-burst.ts'
+import { GUNPOWDER_EXPLOSION } from './particles/gunpowder-explosion.ts'
 import { LAVA_BURST } from './particles/lava-burst.ts'
 import { METHANE_EXPLOSION } from './particles/methane-explosion.ts'
 import { NAPALM_EXPLOSION } from './particles/napalm-explosion.ts'

@@ -1,10 +1,10 @@
 /// <reference lib="webworker" />
-import { FILL_MAX } from '../../../Matter/_Liquid.constants.ts'
 import { ENABLE_MATTER_TANK_MUTATION_TRACKING_DEBUG } from '../../../../config.ts'
+import { FILL_MAX } from '../../../Matter/_Liquid.constants.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode, type MatterTankFireMode } from '../../../Player/_FireMode-types.ts'
 import type { MatterTankManagerData } from '../../data/MatterTankManagerData.ts'
-import { MatterMutationLog, type MatterMutationLabel } from './MatterMutationLog.ts'
+import { type MatterMutationLabel, MatterMutationLog } from './MatterMutationLog.ts'
 
 export class SimMatterTanks {
   private readonly credits = new Map<MatterTankId, number>()
