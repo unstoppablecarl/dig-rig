@@ -8,7 +8,6 @@ import { ParticleData, type ParticlesBuffers } from '../../data/ParticleData.ts'
 import { ParticlePool } from './ParticlePool.ts'
 
 export class ParticleSim {
-  tiles!: Uint32Array
   width = 0
   height = 0
   pool!: ParticlePool
@@ -16,8 +15,7 @@ export class ParticleSim {
   structuralRemovals: number[] = []
   data!: ParticleData
 
-  constructor(tiles: SharedArrayBuffer, particleBuffers: ParticlesBuffers) {
-    this.tiles = new Uint32Array(tiles)
+  constructor(readonly tiles: Uint32Array, particleBuffers: ParticlesBuffers) {
     this.width = particleBuffers.width
     this.height = particleBuffers.height
     this.data = new ParticleData(particleBuffers)

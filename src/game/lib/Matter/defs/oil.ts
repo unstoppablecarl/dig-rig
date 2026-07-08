@@ -30,7 +30,7 @@ export const OIL_DEF = {
       const emptyLoc = sim.borderingAdjacent(tx, ty, idx, EMPTY)
       if (emptyLoc !== -1) {
         tiles[emptyLoc] = setOwner(FIRE, ownerId)
-        sim.markDirty(emptyLoc % width, emptyLoc / width | 0)
+        sim.markRenderDirty(emptyLoc % width, emptyLoc / width | 0)
         sim.next.add(emptyLoc)
       }
 
@@ -41,7 +41,7 @@ export const OIL_DEF = {
         const ny = neighborOilLoc / width | 0
         if (sim.bordering(nx, ny, neighborOilLoc, EMPTY) !== -1) {
           tiles[neighborOilLoc] = setCounter(setOwner(tiles[neighborOilLoc], ownerId), OIL_BURN_TICKS)
-          sim.markDirty(nx, ny)
+          sim.markRenderDirty(nx, ny)
           sim.next.add(neighborOilLoc)
         }
       }
@@ -50,11 +50,11 @@ export const OIL_DEF = {
         sim.queueMatterCredit(tx, ty, ownerId)
         sim.consumeLiquidFill(idx)
         tiles[idx] = EMPTY
-        sim.markDirty(tx, ty)
+        sim.markRenderDirty(tx, ty)
         sim.reactivateAround(tx, ty)
       } else {
         tiles[idx] = setCounter(tiles[idx], counter - 1)
-        sim.markDirty(tx, ty)
+        sim.markRenderDirty(tx, ty)
         sim.next.add(idx)
       }
       return
@@ -65,7 +65,7 @@ export const OIL_DEF = {
       if (nidx !== -1) {
         const ownerId = getFirstOwnerId(tiles[nidx], tiles[idx])
         tiles[idx] = setCounter(setOwner(tiles[idx], ownerId), OIL_BURN_TICKS)
-        sim.markDirty(tx, ty)
+        sim.markRenderDirty(tx, ty)
         sim.next.add(idx)
         return
       }
@@ -74,7 +74,7 @@ export const OIL_DEF = {
     const moved = sim.tryFillFlow(tx, ty, idx)
     if (!moved) {
       tiles[idx] = setSettled(OIL, true)
-      sim.markDirty(tx, ty)
+      sim.markRenderDirty(tx, ty)
     }
   },
 } satisfies MatterDef

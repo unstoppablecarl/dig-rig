@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { EMPTY, MatterType, matterType, SOLID, SupportType } from '../../../Matter/_Matter.types.ts'
-import { doesSettle, getSupportType } from '../../../Matter/matter.ts'
+import { convertsToCollisionBody, doesSettle, getSupportType } from '../../../Matter/matter.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import { EMPTY_PLAYER_BOUNDS, type PlayerBoundsDataType } from '../../data/PlayerBoundsData.ts'
@@ -67,8 +67,17 @@ export class Effects {
         if (!structuralDirty && (getSupportType(tiles[idx]) >= SupportType.STRUCTURAL || getSupportType(tile) >= SupportType.STRUCTURAL)) {
           structuralDirty = true
         }
+        // Only bump collGen if the write actually changes whether this tile
+        // contributes to terrain collision (e.g. liquid fills from FloodFillCreate
+        // never do) — otherwise it's a wasted terrain-body rebuild.
+        const wasCollidable = convertsToCollisionBody(tiles[idx])
         tiles[idx] = tile
-        this.sim.markDirty(x, y)
+        const isCollidable = convertsToCollisionBody(tile)
+        if (wasCollidable !== isCollidable) {
+          this.sim.markDirty(x, y)
+        } else {
+          this.sim.markRenderDirty(x, y)
+        }
         dirtyChunks.add(this.physics.chunkIdxForTile(idx))
         if (reactivateAround) {
           this.sim.reactivateAround(x, y, activeSet)

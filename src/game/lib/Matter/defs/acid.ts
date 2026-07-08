@@ -106,7 +106,7 @@ export const ACID_DEF = {
         }
       }
       sim.tiles[idx] = setSettled(sim.tiles[idx], true)
-      sim.markDirty(tx, ty)
+      sim.markRenderDirty(tx, ty)
 
       if (!sim.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
         sim.next.add(idx)

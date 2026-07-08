@@ -37,8 +37,8 @@ export const LAVA_DROP_DEF = {
           // Move up (overwrites fire if present), decrement velocity
           tiles[upIdx] = setLavaDropVel(existing, vel - 1)
           tiles[idx] = EMPTY
-          sim.markDirty(tx, ty)
-          sim.markDirty(tx, ty - 1)
+          sim.markRenderDirty(tx, ty)
+          sim.markRenderDirty(tx, ty - 1)
           sim.next.add(upIdx)
           sim.reactivateAround(tx, ty)
           return
@@ -57,7 +57,7 @@ export const LAVA_DROP_DEF = {
 
       // Hit ceiling or blocked: zero velocity and start falling next tick
       tiles[idx] = setLavaDropVel(existing, 0)
-      sim.markDirty(tx, ty)
+      sim.markRenderDirty(tx, ty)
       sim.next.add(idx)
       return
     }
@@ -71,8 +71,8 @@ export const LAVA_DROP_DEF = {
       if (belowType === EMPTY || belowType === FIRE) {
         tiles[downIdx] = existing
         tiles[idx] = EMPTY
-        sim.markDirty(tx, ty)
-        sim.markDirty(tx, ty + 1)
+        sim.markRenderDirty(tx, ty)
+        sim.markRenderDirty(tx, ty + 1)
         sim.next.add(downIdx)
         sim.reactivateAround(tx, ty)
         return
@@ -84,7 +84,7 @@ export const LAVA_DROP_DEF = {
         sim.notifyLiquidCreated()
         sim.fill[idx] = FILL_MAX
         tiles[idx] = setOwner(LAVA, ownerId)
-        sim.markDirty(tx, ty)
+        sim.markRenderDirty(tx, ty)
         sim.next.add(idx)
         return
       }
@@ -115,7 +115,7 @@ export const LAVA_DROP_DEF = {
     sim.fill[idx] = FILL_MAX
     tiles[idx] = setOwner(LAVA, ownerId)
     sim.next.add(idx)
-    sim.markDirty(tx, ty)
+    sim.markRenderDirty(tx, ty)
     sim.reactivateAround(tx, ty)
   },
 } satisfies MatterDef

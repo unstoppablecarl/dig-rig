@@ -42,7 +42,8 @@ export const CRYO_DEF = {
       sim.consumeLiquidFill(lavaLoc)
       sim.notifySolidCreated()
       tiles[lavaLoc] = ROCK
-      sim.markDirty(tx, ty)
+      // idx becomes EMPTY (was CRYO, non-collidable) — render-only.
+      sim.markRenderDirty(tx, ty)
       const lx = lavaLoc % width
       const ly = lavaLoc / width | 0
       sim.markDirty(lx, ly)
@@ -125,7 +126,7 @@ export const CRYO_DEF = {
       }
 
       tiles[idx] = setSettled(tiles[idx], true)
-      sim.markDirty(tx, ty)
+      sim.markRenderDirty(tx, ty)
     }
   },
 } satisfies MatterDef

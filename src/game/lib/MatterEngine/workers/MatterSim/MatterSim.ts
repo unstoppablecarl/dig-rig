@@ -22,6 +22,8 @@ import {
 } from '../../../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../../../Matter/data/MatterTypeSet.ts'
 import {
+  alwaysCollides,
+  collidesWhenSettled,
   getReserveDestroyAmount,
   getSupportType,
   isActivatable,
@@ -151,10 +153,21 @@ export class MatterSim {
     const t = matterType(raw)
 
     if (getSupportType(raw) >= SupportType.STRUCTURAL || !isActivatable(t)) return
+    // activate() only ever flips the settled flag, never the type — so it can
+    // only change collidability for a collidesWhenSettled type (e.g. SAND)
+    // that was actually settled before this call. alwaysCollides types are
+    // unaffected by the settled flag, and most activated tiles are liquid
+    // (settles: true) which is never collidable — those get a render-only
+    // refresh instead of forcing a terrain-body rebuild.
+    const wasCollidable = collidesWhenSettled(t) && isSettled(raw)
     if (!isAlwaysActive(t)) {
       this.tiles[idx] = setSettled(raw, false)
     }
-    this.markDirtyRaw(idx)
+    if (wasCollidable) {
+      this.markDirtyRaw(idx)
+    } else {
+      this.markRenderDirtyRaw(idx)
+    }
     target.add(idx)
   }
 
@@ -196,6 +209,25 @@ export class MatterSim {
     this.markDirty(tx, ty)
   }
 
+  // Render-only dirty — no collGen bump. Liquid tiles never contribute to
+  // Matter.js collision geometry (no liquid MatterDef sets collidesWhenSettled
+  // or alwaysCollides), so pure liquid-fill movement between liquid/empty
+  // cells can never change collidability. Bumping collGen for it anyway forces
+  // TerrainChunkBodyManager to tear down and rebuild the chunk's static body
+  // on every such change, which is what made rigid bodies resting in water
+  // (or anywhere near flowing/settling liquid in the same chunk) vibrate.
+  markRenderDirty(tx: number, ty: number) {
+    const idx = (ty >>> this.chunkShift) * this.chunksWidth + (tx >>> this.chunkShift)
+
+    this.chunkGrid.markRenderDirty(idx)
+  }
+
+  markRenderDirtyRaw(tileIdx: number) {
+    const tx = tileIdx % this.width
+    const ty = tileIdx / this.width | 0
+    this.markRenderDirty(tx, ty)
+  }
+
   private _reactiveAroundRange = [-1, 1]
 
   // Re-activate settled material that could flow into (tx, ty) now that it is empty.
@@ -213,7 +245,14 @@ export class MatterSim {
         const raw = tiles[idx]
         if (isSettled(raw)) {
           tiles[idx] = setSettled(raw, false)
-          this.markDirty(ax, aboveY)
+          // Only types whose collidability actually depends on the settled
+          // flag (e.g. SAND) need the collision mesh rebuilt. alwaysCollides
+          // types stay collidable regardless, and most wakes here are liquid
+          // (e.g. settled water above a physics body) which never collides —
+          // bumping collGen for those is what forced the terrain body under a
+          // resting object to be torn down and rebuilt every time nearby
+          // water re-settled.
+          this.markDirtyForWake(ax, aboveY, matterType(raw))
           dest.add(idx)
         }
       }
@@ -313,8 +352,9 @@ export class MatterSim {
       tiles[fromIdx] = EMPTY
       this.fill[toIdx] = this.fill[fromIdx]
       this.fill[fromIdx] = 0
-      this.markDirty(fromTx, fromTy)
-      this.markDirty(tx, ty)
+      // Gas/fire only (tryRise's only callers) — never collidable, so render-only.
+      this.markRenderDirty(fromTx, fromTy)
+      this.markRenderDirty(tx, ty)
       this.next.add(toIdx)
       this.reactivateAround(fromTx, fromTy)
       return true
@@ -387,8 +427,17 @@ export class MatterSim {
 
     const tx2 = targetIdx % width
     const ty2 = (targetIdx / width) | 0
-    this.markDirty(tx, ty)
-    this.markDirty(tx2, ty2)
+    // targetIdx always becomes `selfRaw`, which is always a liquid (this is only
+    // ever called from a liquid's own action) — never collidable, render-only.
+    // idx becomes `displacedAs ?? lighter`; both are liquid in the common case
+    // (e.g. water sinking into oil) — only cryo's freeze-to-CHILLED_ICE path
+    // actually creates a collidable solid there and needs the real collGen bump.
+    if (displacedAs !== undefined && !isLiquid(matterType(displacedAs))) {
+      this.markDirty(tx, ty)
+    } else {
+      this.markRenderDirty(tx, ty)
+    }
+    this.markRenderDirty(tx2, ty2)
     this.next.add(targetIdx)
 
     if (displacedAs === undefined) this.next.add(idx)
@@ -481,7 +530,7 @@ export class MatterSim {
       raw = tiles[nidx]
       if (targets.has(matterType(raw)) && isSettled(raw)) {
         tiles[nidx] = setSettled(raw, false)
-        this.markDirty(tx, ty - 1)
+        this.markDirtyForWake(tx, ty - 1, matterType(raw))
         this.next.add(nidx)
       }
     }
@@ -490,7 +539,7 @@ export class MatterSim {
       raw = tiles[nidx]
       if (targets.has(matterType(raw)) && isSettled(raw)) {
         tiles[nidx] = setSettled(raw, false)
-        this.markDirty(tx, ty + 1)
+        this.markDirtyForWake(tx, ty + 1, matterType(raw))
         this.next.add(nidx)
       }
     }
@@ -499,7 +548,7 @@ export class MatterSim {
       raw = tiles[nidx]
       if (targets.has(matterType(raw)) && isSettled(raw)) {
         tiles[nidx] = setSettled(raw, false)
-        this.markDirty(tx - 1, ty)
+        this.markDirtyForWake(tx - 1, ty, matterType(raw))
         this.next.add(nidx)
       }
     }
@@ -508,9 +557,21 @@ export class MatterSim {
       raw = tiles[nidx]
       if (targets.has(matterType(raw)) && isSettled(raw)) {
         tiles[nidx] = setSettled(raw, false)
-        this.markDirty(tx + 1, ty)
+        this.markDirtyForWake(tx + 1, ty, matterType(raw))
         this.next.add(nidx)
       }
+    }
+  }
+
+  // Un-settling a tile only changes its collidability (needs collGen) when its
+  // type's collision status actually depends on the settled flag. alwaysCollides
+  // types stay collidable regardless, and non-collidable types (all liquids)
+  // never were — both only need a render refresh.
+  private markDirtyForWake(tx: number, ty: number, type: MatterType) {
+    if (collidesWhenSettled(type) && !alwaysCollides(type)) {
+      this.markDirty(tx, ty)
+    } else {
+      this.markRenderDirty(tx, ty)
     }
   }
 
@@ -564,6 +625,86 @@ export class MatterSim {
       if (tx < width - 1 && matterType(tiles[a + 1]) === type) return a + 1
     }
     return -1
+  }
+
+  getBorderingAdjacentTypeOrEmpty(tx: number, ty: number, idx: number, type: MatterType, exclude: Set<number>, out: number[]): number[] {
+    const { tiles, width, height } = this
+    const atBottom = ty === height - 1
+    const atTop = ty === 0
+
+    if (!atBottom) {
+      const b = idx + width
+      if (!exclude.has(b)) {
+        const snt = matterType(tiles[b])
+        if (snt === type || snt === EMPTY) {
+          out.push(b)
+        }
+      }
+      if (tx > 0) {
+        const nIdx = b - 1
+        if (!exclude.has(nIdx)) {
+          const nt = matterType(tiles[nIdx])
+          if (nt === type || nt === EMPTY) {
+            out.push(nIdx)
+          }
+        }
+      }
+      if (tx < width - 1) {
+        const nIdx = b + 1
+        if (!exclude.has(nIdx)) {
+          const nt = matterType(tiles[nIdx])
+          if (nt === type || nt === EMPTY) {
+            out.push(nIdx)
+          }
+        }
+      }
+    }
+    if (tx > 0) {
+      const nIdx = idx - 1
+      if (!exclude.has(nIdx)) {
+        const nt = matterType(tiles[nIdx])
+        if (nt === type || nt === EMPTY) {
+          out.push(nIdx)
+        }
+      }
+    }
+    if (tx < width - 1) {
+      const nIdx = idx + 1
+      if (!exclude.has(nIdx)) {
+        const nt = matterType(tiles[nIdx])
+        if (nt === type || nt === EMPTY) {
+          out.push(nIdx)
+        }
+      }
+    }
+    if (!atTop) {
+      const a = idx - width
+      if (!exclude.has(a)) {
+        const nt = matterType(tiles[a])
+        if (nt === type || nt === EMPTY) {
+          out.push(a)
+        }
+      }
+      if (tx > 0) {
+        let nIdx = a - 1
+        if (!exclude.has(nIdx)) {
+          const nt = matterType(tiles[nIdx])
+          if (nt === type || nt === EMPTY) {
+            out.push(nIdx)
+          }
+        }
+      }
+      if (tx < width - 1) {
+        let nIdx = a + 1
+        if (!exclude.has(nIdx)) {
+          const nt = matterType(tiles[nIdx])
+          if (nt === type || nt === EMPTY) {
+            out.push(nIdx)
+          }
+        }
+      }
+    }
+    return out
   }
 
   borderingAdjacentAny(tx: number, ty: number, idx: number, mask: MatterTypeSet): boolean {
@@ -717,7 +858,16 @@ export class MatterSim {
     }
     this.consumeLiquidFill(idx)
     this.tiles[idx] = EMPTY
-    this.markDirty(x, y)
+    // Only bump collGen if the destroyed tile was actually contributing to the
+    // terrain collision mesh. Shared by both solid destruction (projectiles,
+    // brush erase, acid dissolving terrain — needs the real bump) and liquid
+    // cleanup (tryFillFlow's zero-fill zombie tiles — never collidable, was
+    // firing thousands of wasted terrain-body rebuilds per session).
+    if (alwaysCollides(t) || (collidesWhenSettled(t) && isSettled(raw))) {
+      this.markDirty(x, y)
+    } else {
+      this.markRenderDirty(x, y)
+    }
     this.next.add(idx)
     if (getSupportType(raw) >= SupportType.STRUCTURAL) {
       this.structuralRemovals.push(idx)
@@ -799,11 +949,11 @@ export class MatterSim {
     if (this.fill[fromIdx] < 1) {
       this.fill[fromIdx] = 0
       this.tiles[fromIdx] = EMPTY
-      this.markDirty(fromTx, fromTy)
+      this.markRenderDirty(fromTx, fromTy)
       this.reactivateAround(fromTx, fromTy)
     } else {
       this.tiles[fromIdx] = setSettled(this.tiles[fromIdx], false)
-      this.markDirty(fromTx, fromTy)
+      this.markRenderDirty(fromTx, fromTy)
       this.next.add(fromIdx)
       // Wake settled neighbours so they re-equalize against the new lower fill
       this.reactivateAround(fromTx, fromTy)
@@ -816,7 +966,7 @@ export class MatterSim {
       const belowRaw = this.tiles[belowFromIdx]
       if (isLiquid(matterType(belowRaw)) && isSettled(belowRaw)) {
         this.tiles[belowFromIdx] = setSettled(belowRaw, false)
-        this.markDirtyRaw(belowFromIdx)
+        this.markRenderDirtyRaw(belowFromIdx)
         this.next.add(belowFromIdx)
       }
     }
@@ -826,7 +976,26 @@ export class MatterSim {
     } else {
       this.tiles[toIdx] = setSettled(this.tiles[toIdx], false)
     }
-    this.markDirty(toTx, toTy)
+    this.markRenderDirty(toTx, toTy)
+    this.next.add(toIdx)
+  }
+
+  private setFill(
+    toIdx: number, toTx: number, toTy: number,
+    amount: number,
+    liquidRaw: number,
+  ): void {
+    const flow = Math.round(amount)
+    if (flow <= 0) return
+    const wasEmpty = this.fill[toIdx] === 0
+    this.fill[toIdx] += flow
+
+    if (wasEmpty) {
+      this.tiles[toIdx] = liquidRaw
+    } else {
+      this.tiles[toIdx] = setSettled(this.tiles[toIdx], false)
+    }
+    this.markRenderDirty(toTx, toTy)
     this.next.add(toIdx)
   }
 
@@ -989,7 +1158,7 @@ export class MatterSim {
     if (!moved && remaining <= FILL_ROUND_TO_ZERO) {
       this.consumeLiquidFill(idx)
       this.tiles[idx] = EMPTY
-      this.markDirty(tx, ty)
+      this.markRenderDirty(tx, ty)
       this.reactivateAround(tx, ty)
       return true
     }
@@ -1007,6 +1176,70 @@ export class MatterSim {
           this.doFillTransfer(idx, tx, ty, upIdx, tx, ty - 1, flow, liquidRaw)
           moved = true
         }
+      }
+    }
+
+    return moved
+  }
+
+  private _tryFillDisplaceNeighbors: number[] = []
+  private _tryFillDisplaceFillSpread: number[] = []
+
+  doFillDisplace(tx: number, ty: number, idx: number, exclude: Set<number>, activeSet: Set<number>) {
+    const width = this.width
+    const fill = this.fill
+    exclude.add(idx)
+    const mass = fill[idx]
+    if (mass <= 0) return false
+    const tiles = this.tiles
+    let moved = false
+
+    const fromRaw = tiles[idx]
+    const type = matterType(fromRaw)
+    // Unsettle so the destination is re-evaluated on the next sim pass instead
+    // of inheriting a stale settled flag from the source tile.
+    const liquidRaw = setSettled(fromRaw, false)
+
+    this._tryFillDisplaceNeighbors.length = 0
+    const neighbors = this.getBorderingAdjacentTypeOrEmpty(tx, ty, idx, type, exclude, this._tryFillDisplaceNeighbors)
+    if (neighbors.length < 1) {
+      return false
+    }
+    const fillsToSpread = chunkInteger(mass, neighbors.length, this._tryFillDisplaceFillSpread)
+
+    for (let i = 0; i < fillsToSpread.length; i++) {
+      const flow = fillsToSpread[i]
+      const nIdx = neighbors[i]
+      exclude.add(nIdx)
+      if (flow <= 0) continue
+
+      // Coordinates of the destination tile, not the source tile being vacated.
+      const nx = nIdx % width
+      const ny = (nIdx / width) | 0
+
+      this.setFill(nIdx, nx, ny, flow, liquidRaw)
+      // setFill only tracks the tile in this MatterSim's own `next` set, which
+      // the coordinator's local sim instance never drains — add it to the real
+      // active set explicitly so the displaced liquid keeps simulating instead
+      // of freezing in place (e.g. hanging unsupported in the air).
+      activeSet.add(nIdx)
+      moved = true
+    }
+
+    this.fill[idx] = 0
+    this.tiles[idx] = EMPTY
+    this.markRenderDirty(tx, ty)
+    this.reactivateAround(tx, ty, activeSet)
+
+    // Wake settled liquid directly below the sender — it may be pressurized and
+    // waiting to push upward now that this tile has emptied.
+    if (ty < this.height - 1) {
+      const belowFromIdx = idx + width
+      const belowRaw = tiles[belowFromIdx]
+      if (isLiquid(matterType(belowRaw)) && isSettled(belowRaw)) {
+        tiles[belowFromIdx] = setSettled(belowRaw, false)
+        this.markRenderDirtyRaw(belowFromIdx)
+        activeSet.add(belowFromIdx)
       }
     }
 
@@ -1052,8 +1285,8 @@ export class MatterSim {
 
       const tx = idx % width
       const ty = (idx / width) | 0
-      this.markDirty(tx, ty - 1)
-      this.markDirty(tx, ty)
+      this.markRenderDirty(tx, ty - 1)
+      this.markRenderDirty(tx, ty)
       activeSet.add(upIdx)
       activeSet.add(idx)
     }
@@ -1062,4 +1295,22 @@ export class MatterSim {
 
 function isSolid(value: number) {
   return getSupportType(value) > SupportType.NONE || isSettled(value)
+}
+
+function chunkInteger(total: number, numParts: number, out: number[]): number[] {
+  if (numParts <= 0) throw new Error('numParts must be greater than 0')
+
+  const base = (total / numParts) | 0
+  const remainder = total % numParts
+  out.length = numParts
+
+  for (let i = 0; i < remainder; i++) {
+    out[i] = base + 1
+  }
+
+  for (let i = remainder; i < numParts; i++) {
+    out[i] = base
+  }
+
+  return out
 }

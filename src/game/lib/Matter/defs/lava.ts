@@ -53,7 +53,8 @@ export const LAVA_DEF = {
       sim.markDirty(tx, ty)
       const wx = waterLoc % width
       const wy = waterLoc / width | 0
-      sim.markDirty(wx, wy)
+      // waterLoc becomes STEAM — non-collidable, render-only.
+      sim.markRenderDirty(wx, wy)
       sim.next.add(waterLoc)
       sim.next.add(idx)
       return
@@ -117,7 +118,7 @@ export const LAVA_DEF = {
       sim.consumeLiquidFill(idx)
       sim.notifySolidCreated()
       tiles[idx] = setLavaDropVel(setOwner(LAVA_DROP, ownerId), LAVA_DROP_INITIAL_VEL)
-      sim.markDirty(tx, ty)
+      sim.markRenderDirty(tx, ty)
       sim.next.add(idx)
       return
     }
@@ -152,7 +153,7 @@ export const LAVA_DEF = {
       const belowType = matterType(tiles[downIdx])
       if (belowType === FIRE) {
         tiles[downIdx] = EMPTY
-        sim.markDirty(tx, ty + 1)
+        sim.markRenderDirty(tx, ty + 1)
         sim.reactivateAround(tx, ty + 1)
       } else if (belowType === STEAM && random() < 95) {
         // Lava sinks through steam — swap positions, preserving steam's conserved fill.
@@ -163,8 +164,8 @@ export const LAVA_DEF = {
         sim.consumeLiquidFill(idx)
         sim.fill[idx] = steamFill
         tiles[idx] = STEAM
-        sim.markDirty(tx, ty)
-        sim.markDirty(tx, ty + 1)
+        sim.markRenderDirty(tx, ty)
+        sim.markRenderDirty(tx, ty + 1)
         sim.next.add(downIdx)
         sim.next.add(idx)
         return
@@ -177,12 +178,12 @@ export const LAVA_DEF = {
       const rightIdx = tx < width - 1 ? idx + 1 : -1
       if (leftIdx !== -1 && matterType(tiles[leftIdx]) === FIRE) {
         tiles[leftIdx] = EMPTY
-        sim.markDirty(tx - 1, ty)
+        sim.markRenderDirty(tx - 1, ty)
         sim.reactivateAround(tx - 1, ty)
       }
       if (rightIdx !== -1 && matterType(tiles[rightIdx]) === FIRE) {
         tiles[rightIdx] = EMPTY
-        sim.markDirty(tx + 1, ty)
+        sim.markRenderDirty(tx + 1, ty)
         sim.reactivateAround(tx + 1, ty)
       }
     }
@@ -215,7 +216,7 @@ export const LAVA_DEF = {
         }
       }
       sim.tiles[idx] = setSettled(existing, true)
-      sim.markDirty(tx, ty)
+      sim.markRenderDirty(tx, ty)
 
       if (!sim.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
         sim.next.add(idx)

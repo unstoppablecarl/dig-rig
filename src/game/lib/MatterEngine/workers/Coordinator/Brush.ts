@@ -99,8 +99,13 @@ export class Brush {
         tiles[idx] = value
         if (addingLiquid) {
           this.sim.fill[idx] = FILL_MAX
+          // Liquid painted into empty space never affects collidability —
+          // render-only. Solids still get the real bump since freshly-placed
+          // solid matter is the common brush case that needs terrain collision.
+          this.sim.markRenderDirty(x, y)
+        } else {
+          this.sim.markDirty(x, y)
         }
-        this.sim.markDirty(x, y)
         dirtyChunks.add(this.physics.chunkIdxForTile(idx))
         placed.push({ x, y })
         this.sim.activate(idx, activeSet)

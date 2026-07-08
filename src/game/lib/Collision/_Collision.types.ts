@@ -16,3 +16,5 @@ export type PhysicsBodyType =
   Physics.Matter.Components.Transform &
   Physics.Matter.Components.Velocity
 
+type Vert = { x: number, y: number }
+export type RectVerts = [Vert, Vert, Vert, Vert]

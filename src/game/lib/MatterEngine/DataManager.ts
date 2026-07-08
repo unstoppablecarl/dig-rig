@@ -1,8 +1,9 @@
 import { ChunkGrid, type ChunkGridBuffers } from '../Tilemap/ChunkGrid.ts'
 import type { Tilemap } from '../Tilemap/Tilemap.ts'
-import { type ActivateTilesBuffer, ActivateTilesData } from './data/ActivateTilesData.ts'
+import { type BasicTilesBuffer, BasicTilesData } from './data/BasicTilesData.ts'
 import { type MatterTankManagerBuffers, MatterTankManagerData } from './data/MatterTankManagerData.ts'
 import { ParticleData, type ParticlesBuffers } from './data/ParticleData.ts'
+import { type PhysicsBodiesBuffers, PhysicsBodiesData } from './data/PhysicsBodiesData.ts'
 import { PlayerBoundsData, type PlayerBoundsDataType } from './data/PlayerBoundsData.ts'
 import { type ProjectileBuffers, ProjectileManagerData } from './data/ProjectileManagerData.ts'
 import { type TileFrontBuffers, TileFrontData } from './data/TileFrontData.ts'
@@ -24,7 +25,8 @@ export type DataManagerBuffers = {
   vfxParticleOverflow: SharedArrayBuffer
   vfxSettledTile: VFXSettledTilesBuffer
   vfxTileEffect: SharedArrayBuffer
-  activateTiles: ActivateTilesBuffer
+  activateTiles: BasicTilesBuffer
+  physicsBodies: PhysicsBodiesBuffers
 
   tiles: SharedArrayBuffer
   fill: SharedArrayBuffer
@@ -45,9 +47,11 @@ export class DataManager {
   readonly vfxParticleOverflow: VFXParticleOverflowData
   readonly vfxSettledTile: VFXSettledTileData
   readonly vfxTileEffect: VFXTileEffectData
-  readonly activateTiles: ActivateTilesData
+  readonly activateTiles: BasicTilesData
+  readonly tiles: Uint32Array
   readonly fill: Uint32Array
   readonly tileFront: TileFrontData
+  readonly physicsBodies: PhysicsBodiesData
 
   static make(tilemap: Tilemap): DataManager {
 
@@ -64,10 +68,11 @@ export class DataManager {
       vfxParticleOverflow: VFXParticleOverflowData.makeBuffer(),
       vfxSettledTile: VFXSettledTileData.makeBuffer(width, height),
       vfxTileEffect: VFXTileEffectData.makeBuffer(),
-      activateTiles: ActivateTilesData.makeBuffer(width, height),
+      activateTiles: BasicTilesData.makeBuffer(width, height),
       tiles: tilemap.buffers.tiles,
       fill: tilemap.buffers.fillLevels,
       tileFront: TileFrontData.makeBuffers(tilemap),
+      physicsBodies: PhysicsBodiesData.makeBuffers(),
       width,
       height,
     }
@@ -87,8 +92,10 @@ export class DataManager {
     this.vfxParticleOverflow = new VFXParticleOverflowData(buffers.vfxParticleOverflow)
     this.vfxSettledTile = new VFXSettledTileData(buffers.vfxSettledTile)
     this.vfxTileEffect = new VFXTileEffectData(buffers.vfxTileEffect)
-    this.activateTiles = new ActivateTilesData(buffers.activateTiles)
+    this.activateTiles = new BasicTilesData(buffers.activateTiles)
+    this.tiles = new Uint32Array(buffers.tiles)
     this.fill = new Uint32Array(buffers.fill)
     this.tileFront = new TileFrontData(buffers.tileFront)
+    this.physicsBodies = new PhysicsBodiesData(buffers.physicsBodies)
   }
 }

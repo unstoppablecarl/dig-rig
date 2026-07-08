@@ -48,14 +48,13 @@ export class PortableMatterTank extends Entity implements Position {
     this.matterTank = scene.matterManager.makeMatterTank(this, matterMax, startingMatter)
 
     const body = scene.matter.add.rectangle(x, y, 16, 27, {
-      friction: 10000,
-      frictionStatic: 10000,
+      friction: 0.8,
+      frictionStatic: 1,
       restitution: 0,
       density: 0.001,
     })
 
-    this.physicsBody = PhysicsBody.makeFromContainer(scene, scene.add.container(x, y), body)
-    scene.physicsBodyManager.add(this.physicsBody)
+    this.physicsBody = scene.physicsBodyManager.registerFromContainer(scene.add.container(x, y), body)
 
     const sprite = scene.add.sprite(0, 0, PortableMatterTank.SPRITE_KEY)
     this.physicsBody.gameObject.add(sprite)

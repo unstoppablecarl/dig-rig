@@ -105,10 +105,24 @@ export class ChunkGrid {
     this.anchored[idx] = val ? 1 : 0
   }
 
+  // TEMP DEBUG: trace every distinct call site that bumps collGen, and how
+  // often each one fires, to find the remaining source of continuous
+  // "shape UNCHANGED (wasted rebuild)" terrain-collision churn. Remove once found.
+  private _markDirtyStackCounts = new Map<string, number>()
+
   /** Signal both render and collision dirty to the main thread. */
   markDirty(idx: number): void {
     this.renderGen[idx]++
     this.collGen[idx]++
+
+    if (import.meta.env.DEV) {
+      const stack = (new Error().stack ?? '').split('\n').slice(1, 5).join('\n')
+      const count = (this._markDirtyStackCounts.get(stack) ?? 0) + 1
+      this._markDirtyStackCounts.set(stack, count)
+      if (count === 1 || count % 200 === 0) {
+        console.log(`[ChunkGrid] markDirty(chunk=${idx}) x${count} from:\n${stack}`)
+      }
+    }
   }
 
   /** Signal render-only dirty (e.g. neighbor border-pixel refresh). */

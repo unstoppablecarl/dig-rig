@@ -20,7 +20,7 @@ export const NAPALM_DEF = {
         sim.queueMatterCredit(tx, ty, ownerId)
         sim.consumeLiquidFill(idx)
         tiles[idx] = setOwner(FIRE, ownerId)
-        sim.markDirty(tx, ty)
+        sim.markRenderDirty(tx, ty)
         sim.next.add(idx)
         sim.spawnParticle(ParticleType.NAPALM_EXPLOSION, tx, ty, ownerId)
         return
@@ -30,7 +30,7 @@ export const NAPALM_DEF = {
     const moved = sim.tryFillFlow(tx, ty, idx)
     if (!moved) {
       sim.tiles[idx] = setSettled(NAPALM, true)
-      sim.markDirty(tx, ty)
+      sim.markRenderDirty(tx, ty)
     }
   },
 } satisfies MatterDef

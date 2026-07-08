@@ -2,6 +2,7 @@
 import { FILL_MAX } from '../../../../Matter/_Liquid.constants.ts'
 import { EMPTY, FIRE, getOwner, matterType, MatterType, SupportType } from '../../../../Matter/_Matter.types.ts'
 import {
+  convertsToCollisionBody,
   getReserveDestroyAmount,
   getSupportType,
   isLiquid,
@@ -149,13 +150,21 @@ export abstract class SimProjectile {
       const newSolid = newType !== EMPTY && newType !== FIRE && !isLiquid(newType)
       if (prevSolid && !newSolid) solidDomainDelta -= 1
       else if (!prevSolid && newSolid) solidDomainDelta += 1
+      // Only bump collGen if the write actually changes whether this tile
+      // contributes to terrain collision — otherwise it's a wasted rebuild.
+      const wasCollidable = convertsToCollisionBody(prevRaw)
       tiles[idx] = newValue
       if (isLiquid(newType)) {
         this.sim.fill[idx] = FILL_MAX
       } else {
         this.sim.fill[idx] = 0
       }
-      this.sim.markDirty(x, y)
+      const isCollidable = convertsToCollisionBody(newValue)
+      if (wasCollidable !== isCollidable) {
+        this.sim.markDirty(x, y)
+      } else {
+        this.sim.markRenderDirty(x, y)
+      }
       dirtyChunks.add(this.physics.chunkIdxForTile(idx))
       if (newValue === EMPTY) this.sim.reactivateAround(x, y, activeSet)
     }

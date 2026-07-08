@@ -25,7 +25,7 @@ export const SALT_WATER_DEF = {
     }
 
     sim.tiles[idx] = setSettled(SALT_WATER, true)
-    sim.markDirty(tx, ty)
+    sim.markRenderDirty(tx, ty)
   },
 } satisfies MatterDef
 

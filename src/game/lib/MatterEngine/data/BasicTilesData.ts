@@ -2,16 +2,16 @@ import { ringBufferByteLength, RingBufferReader, RingBufferWriter } from '../../
 
 const SCHEMA = { idx: Uint32Array }
 
-export type ActivateTilesBuffer = {
+export type BasicTilesBuffer = {
   tiles: SharedArrayBuffer,
   capacity: number,
 }
 
-export class ActivateTilesData {
+export class BasicTilesData {
   private readonly writer: RingBufferWriter<typeof SCHEMA>
   private readonly reader: RingBufferReader<typeof SCHEMA>
 
-  static makeBuffer(width: number, height: number): ActivateTilesBuffer {
+  static makeBuffer(width: number, height: number): BasicTilesBuffer {
     const capacity = width * height
 
     const BYTE_LENGTH = ringBufferByteLength(SCHEMA, capacity)
@@ -24,7 +24,7 @@ export class ActivateTilesData {
 
   readonly buffer: SharedArrayBuffer
 
-  constructor({ tiles, capacity }: ActivateTilesBuffer) {
+  constructor({ tiles, capacity }: BasicTilesBuffer) {
     this.writer = new RingBufferWriter(SCHEMA, capacity, tiles)
     this.reader = new RingBufferReader(SCHEMA, capacity, tiles)
   }

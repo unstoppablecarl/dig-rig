@@ -47,8 +47,20 @@ export class PhysicsCollapse {
     for (const chunkIdx of dirtyChunks) {
       const cx = chunkIdx % chunksWide
       const cy = chunkIdx / chunksWide | 0
-      chunkGrid.setSolidCount(chunkIdx, this.countSolidInChunk(cx, cy))
-      chunkGrid.markDirty(chunkIdx)
+      // dirtyChunks is "had any active tile processed this step" — mostly
+      // liquid flow, which never touches collidability. Only bump collGen
+      // (forcing TerrainChunkBodyManager to rebuild the chunk's static body)
+      // when the collidable-tile count actually changed; otherwise this was
+      // firing a full terrain-body rebuild on every chunk with any water
+      // activity, every frame, regardless of what actually changed.
+      const prevSolidCount = chunkGrid.getSolidCount(chunkIdx)
+      const solidCount = this.countSolidInChunk(cx, cy)
+      chunkGrid.setSolidCount(chunkIdx, solidCount)
+      if (solidCount !== prevSolidCount) {
+        chunkGrid.markDirty(chunkIdx)
+      } else {
+        chunkGrid.markRenderDirty(chunkIdx)
+      }
       for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
           if (dx === 0 && dy === 0) continue

@@ -5,7 +5,7 @@ import {
   MAX_MATTER_TANKS,
 } from '../../../config.ts'
 import { FILL_MAX } from '../../Matter/_Liquid.constants.ts'
-import { EMPTY, FIRE, type MatterRaw, matterType, STEAM } from '../../Matter/_Matter.types.ts'
+import { EMPTY, FIRE, type MatterRaw, matterType, PHYSICS_BODY, STEAM } from '../../Matter/_Matter.types.ts'
 import { isLiquid } from '../../Matter/matter.ts'
 import type { MatterTankId } from '../../Matter/Tank/_MatterTank.types.ts'
 import { ParticleType } from '../../Particles/_particle-types.ts'
@@ -17,6 +17,7 @@ import { MatterReservationReleaseBuffer } from './_helpers/MatterReservationRele
 import { type CoordinatorInMsgBrushEraseMatter, type CoordinatorInMsgInit } from './Coordinator.types.ts'
 import { Brush } from './Coordinator/Brush.ts'
 import { ConservationTracker } from './Coordinator/ConservationTracker.ts'
+import { PhysicsBodyProcessor } from './Coordinator/PhysicsBodyProcessor.ts'
 import { Effects } from './Coordinator/Effects.ts'
 import { PhysicsCollapse } from './Coordinator/PhysicsCollapse.ts'
 import { ProjectileProcessor } from './Coordinator/ProjectileProcessor.ts'
@@ -39,6 +40,7 @@ export class Coordinator {
   private matterTanks!: SimMatterTanks
   private particleSim!: ParticleSim
   private conservationTracker!: ConservationTracker
+  private physicsBodyProcessor!: PhysicsBodyProcessor
 
   activeSet = new Set<number>()
   private idleSet = new Set<number>()
@@ -69,9 +71,9 @@ export class Coordinator {
     const chunkGrid = this.data.chunkGrid
     this.sim.init(buffers.tiles, buffers.fill, buffers.chunkGrid, width, height)
 
-    this.particleSim = new ParticleSim(buffers.tiles, buffers.particle)
+    this.particleSim = new ParticleSim(this.data.tiles, buffers.particle)
     this.matterTanks = new SimMatterTanks(this.data.matterTankManager)
-    this.physics = new Physics(this.sim, chunkGrid, width, height)
+    this.physics = new PhysicsCollapse(this.sim, chunkGrid, width, height)
     this.effects = new Effects(this.sim, this.physics, this.matterTanks, this.data.playerBounds)
     this.conservationTracker = new ConservationTracker()
     this.brush = new Brush(width, height, this.sim, this.matterTanks, this.physics, this.effects, this.conservationTracker)
@@ -93,6 +95,14 @@ export class Coordinator {
       this.data.vfxParticleDestroy,
       this.data.vfxParticleCreate,
       this.conservationTracker,
+    )
+    this.physicsBodyProcessor = new PhysicsBodyProcessor(
+      this.data.physicsBodies,
+      this.data.tiles,
+      chunkGrid,
+      this.sim,
+      width,
+      height,
     )
     this.workerPool = new SimWorkerPool({
       width,
@@ -142,6 +152,8 @@ export class Coordinator {
 
     for (const idx of this.pendingActivations) this.activeSet.add(idx)
     this.pendingActivations.length = 0
+
+    this.physicsBodyProcessor.process(this.activeSet)
 
     if (
       this.activeSet.size === 0 &&
@@ -271,9 +283,9 @@ export class Coordinator {
     this.tilePublisher.publish(this.data.chunkGrid)
   }
 
-  // Dev-only invariant checker. All matter is measured in fill units: 1 solid tile = FILL_MAX.
+  // All matter is measured in fill units: 1 solid tile = FILL_MAX.
   // Solid tiles, liquid fill, steam fill, and tank reserves all contribute to one total.
-  private checkMatterConservation() {
+  private computeMatterTotal(): number {
     const tiles = this.sim.tiles
     const fill = this.sim.fill
     let total = 0
@@ -282,7 +294,7 @@ export class Coordinator {
       const t = matterType(tiles[i])
       if (isLiquid(t) || t === STEAM) {
         total += fill[i]
-      } else if (t !== FIRE) {
+      } else if (t !== FIRE && t !== PHYSICS_BODY) {
         total += FILL_MAX
       }
     }
@@ -293,7 +305,12 @@ export class Coordinator {
       total += tankData.getMatter(tankId) * FILL_MAX
       total += tankData.getLiquidMatter(tankId)
     }
+    return total
+  }
 
+  // Dev-only invariant checker.
+  private checkMatterConservation() {
+    const total = this.computeMatterTotal()
     const delta = this.conservationTracker.consumeDelta()
 
     if (this._lastConservationTotal !== null) {

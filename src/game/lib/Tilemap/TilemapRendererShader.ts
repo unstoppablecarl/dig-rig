@@ -165,6 +165,16 @@ export function makeTilemapFragShader(
       return mix(base.rgb, multiplied, ratio);
   }
 
+  // Maps t in [0,1] to a full rainbow spectrum (red -> violet), spread over hue
+  // rather than a single-color gradient, so that small differences in t remain
+  // visually distinct even when they land close together.
+  vec3 spectrum(float t) {
+      float hue = clamp(t, 0.0, 1.0) * 0.85;
+      vec4 k = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+      vec3 p = abs(fract(hue + k.xyz) * 6.0 - k.www);
+      return clamp(p - k.xxx, 0.0, 1.0);
+  }
+
   bool randomPercent(float chance, float s1, float s2) {
       vec2 tileUV = outTexCoord * vec2(textureSize(uMask, 0));
       return (hash(floor(tileUV + 0.5), s1, s2, 0.3214432) < chance);
@@ -629,7 +639,7 @@ export function makeTilemapFragShader(
       if (tileType == ${WATER} || tileType == ${SALT_WATER} || tileType == ${OIL} ||
       tileType == ${LAVA} || tileType == ${NAPALM} || tileType == ${ACID}) {
           float density = texture(uLiquidDensity, outTexCoord).r;
-          color.rgb = mix(color.rgb, vec3(1.0), density * 0.3);
+          color.rgb = mix(color.rgb, spectrum(density), 0.85);
       }
       #endif
 

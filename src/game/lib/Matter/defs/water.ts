@@ -1,4 +1,4 @@
-import { CRYO, LAVA, type MatterDef, matterType, OIL, SALT, SAND, setSettled, WATER } from '../_Matter.types.ts'
+import { CRYO, isSettled, LAVA, type MatterDef, matterType, OIL, SALT, SAND, setSettled, WATER } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet.ts'
 
 export const WATER_SETTLED = setSettled(WATER, true)
@@ -27,13 +27,13 @@ export const WATER_DEF = {
     }
 
     sim.tiles[idx] = WATER_SETTLED
-    sim.markDirty(tx, ty)
+    sim.markRenderDirty(tx, ty)
 
     // Wake settled SAND directly above — it should sink through water
     if (ty > 0) {
       const aboveIdx = (ty - 1) * sim.width + tx
       const raw = sim.tiles[aboveIdx]
-      if (matterType(raw) === SAND) {
+      if (matterType(raw) === SAND && isSettled(raw)) {
         // un settle sand
         sim.tiles[aboveIdx] = SAND
         sim.markDirty(tx, ty - 1)

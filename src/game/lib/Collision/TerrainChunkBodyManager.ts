@@ -116,29 +116,53 @@ export class TerrainChunkBodyManager extends SceneBound {
       }
       // update collision body if chunk is dirty AND it has not been synced yet
       else if (collGen !== this._lastCollGen[chunk.id]) {
+        if (import.meta.env.DEV) {
+          console.log(`[TerrainChunkBodyManager] chunk ${chunk.id} collGen ${this._lastCollGen[chunk.id]} -> ${collGen}, rebuilding`)
+        }
         this.updateChunkCollision(chunk)
         this._lastCollGen[chunk.id] = collGen
       }
     }
   }
 
-  private createChunkBodies(chunk: Chunk) {
+  // TEMP DEBUG: hash of the last rectangle set built per chunk, to detect
+  // whether a collGen-triggered rebuild actually changed the collision shape
+  // or was wasted work (collGen bumped without any collidable tile changing).
+  // Remove once the "water still triggers terrain regen" report is resolved.
+  private _lastRectHash = new Map<number, string>()
+
+  private computeRectangles(chunk: Chunk): Rect[] {
     const startTX = chunk.cx * CHUNK_SIZE
     const startTY = chunk.cy * CHUNK_SIZE
     const endTX = Math.min(startTX + CHUNK_SIZE, this.scene.tilemap.width)
     const endTY = Math.min(startTY + CHUNK_SIZE, this.scene.tilemap.height)
 
     // Fast path: fully solid chunk → single rectangle, skip the sweep
-    let rectangles: Rect[]
     if (this.chunkGrid.getType(chunk.id) === ChunkType.FULL) {
-      rectangles = [{
+      return [{
         x: startTX,
         y: startTY,
         w: endTX - startTX,
         h: endTY - startTY,
       }]
-    } else {
-      rectangles = this.findTileRectanglesInChunk(startTX, startTY, endTX, endTY)
+    }
+    return this.findTileRectanglesInChunk(startTX, startTY, endTX, endTY)
+  }
+
+  private createChunkBodies(chunk: Chunk) {
+    const rectangles = this.computeRectangles(chunk)
+
+    if (import.meta.env.DEV) {
+      const hash = rectangles.map(r => `${r.x},${r.y},${r.w},${r.h}`).join('|')
+      const prev = this._lastRectHash.get(chunk.id)
+      if (prev !== undefined) {
+        console.log(
+          prev === hash
+            ? `[TerrainChunkBodyManager] chunk ${chunk.id} rebuilt — shape UNCHANGED (wasted rebuild)`
+            : `[TerrainChunkBodyManager] chunk ${chunk.id} rebuilt — shape changed (${prev.split('|').length} -> ${rectangles.length} rects)`,
+        )
+      }
+      this._lastRectHash.set(chunk.id, hash)
     }
 
     if (rectangles.length === 0) return
