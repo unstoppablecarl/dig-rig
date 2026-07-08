@@ -14,7 +14,7 @@ function isChunkStructural(raw: number): boolean {
   return getSupportType(raw) >= SupportType.STRUCTURAL
 }
 
-export class Physics {
+export class PhysicsCollapse {
   private readonly permanentChunkIds = new Set<number>()
   private _bfsVisited!: Uint32Array  // epoch-tagged; avoids fill(0) between calls
   private _bfsQueue!: Int32Array

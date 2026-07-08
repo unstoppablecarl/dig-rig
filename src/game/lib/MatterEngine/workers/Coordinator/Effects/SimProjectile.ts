@@ -10,7 +10,7 @@ import {
 import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
 import type { PlayerBounds } from '../../../data/PlayerBoundsData.ts'
 import type { MatterSim } from '../../MatterSim/MatterSim.ts'
-import type { Physics } from '../Physics.ts'
+import type { PhysicsCollapse } from '../PhysicsCollapse.ts'
 import type { SimMatterTanks } from '../SimMatterTanks.ts'
 
 export type ProjectileEffectResult = { x: number, y: number, newValue: MatterType }
@@ -33,7 +33,7 @@ export abstract class SimProjectile {
 
   constructor(
     protected readonly sim: MatterSim,
-    protected readonly physics: Physics,
+    protected readonly physics: PhysicsCollapse,
     protected readonly matterTanks: SimMatterTanks,
   ) {
     this.width = sim.width

@@ -18,7 +18,7 @@ import { type CoordinatorInMsgBrushEraseMatter, type CoordinatorInMsgInit } from
 import { Brush } from './Coordinator/Brush.ts'
 import { ConservationTracker } from './Coordinator/ConservationTracker.ts'
 import { Effects } from './Coordinator/Effects.ts'
-import { Physics } from './Coordinator/Physics.ts'
+import { PhysicsCollapse } from './Coordinator/PhysicsCollapse.ts'
 import { ProjectileProcessor } from './Coordinator/ProjectileProcessor.ts'
 import { SimMatterTanks } from './Coordinator/SimMatterTanks.ts'
 import { SimWorkerPool } from './Coordinator/SimWorkerPool.ts'
@@ -30,7 +30,7 @@ export class Coordinator {
   private data!: DataManager
   private tilePublisher!: ChunkPublisher
   private sim!: MatterSim
-  private physics!: Physics
+  private physics!: PhysicsCollapse
   private effects!: Effects
   private tunnelWeapon!: TunnelWeapon
   private brush!: Brush

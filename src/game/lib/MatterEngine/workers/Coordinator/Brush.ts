@@ -8,7 +8,7 @@ import { MatterSim } from '../MatterSim/MatterSim.ts'
 import type { ConservationTracker } from './ConservationTracker.ts'
 import type { Effects } from './Effects.ts'
 import type { EffectResult } from './Effects/SimProjectile.ts'
-import type { Physics } from './Physics.ts'
+import type { PhysicsCollapse } from './PhysicsCollapse.ts'
 import { SimMatterTanks } from './SimMatterTanks.ts'
 
 type BrushEntry = { value: MatterRaw; tx: number; ty: number; radius: number }
@@ -22,7 +22,7 @@ export class Brush {
     private readonly height: number,
     private readonly sim: MatterSim,
     private readonly matterTanks: SimMatterTanks,
-    private readonly physics: Physics,
+    private readonly physics: PhysicsCollapse,
     private readonly effects: Effects,
     private readonly tracker: ConservationTracker,
   ) {

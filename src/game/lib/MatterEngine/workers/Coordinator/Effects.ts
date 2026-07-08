@@ -14,7 +14,7 @@ import { ProjectileDestroy } from './Effects/ProjectileDestroy.ts'
 import { ProjectileMelt } from './Effects/ProjectileMelt.ts'
 import { ProjectileSolidify } from './Effects/ProjectileSolidify.ts'
 import type { EffectResult } from './Effects/SimProjectile.ts'
-import { Physics } from './Physics.ts'
+import { PhysicsCollapse } from './PhysicsCollapse.ts'
 import type { SimMatterTanks } from './SimMatterTanks.ts'
 
 export type WriteEntry = {
@@ -35,7 +35,7 @@ export class Effects {
 
   constructor(
     private readonly sim: MatterSim,
-    private readonly physics: Physics,
+    private readonly physics: PhysicsCollapse,
     matterTanks: SimMatterTanks,
     private readonly playerBoundsData: PlayerBoundsDataType,
   ) {
