@@ -39,13 +39,6 @@ export class VFXSettledTileData {
     })
   }
 
-  writeTilesToTank(tiles: ReadonlyArray<{ x: number; y: number }>, matterType: number) {
-    this.writer.writeMany(tiles, (cursor, tile) => {
-      cursor.tileXY = (tile.x << 16) | (tile.y & 0xffff)
-      cursor.matterType = matterType
-    })
-  }
-
   // Main thread side — sole writer of readHead.
   drain(callback: (tileX: number, tileY: number, matterType: number) => void) {
     this.reader.drain((cursor) => {
