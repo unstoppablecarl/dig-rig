@@ -119,9 +119,6 @@ export class ChunkGrid {
       const stack = (new Error().stack ?? '').split('\n').slice(1, 5).join('\n')
       const count = (this._markDirtyStackCounts.get(stack) ?? 0) + 1
       this._markDirtyStackCounts.set(stack, count)
-      if (count === 1 || count % 200 === 0) {
-        console.log(`[ChunkGrid] markDirty(chunk=${idx}) x${count} from:\n${stack}`)
-      }
     }
   }
 
