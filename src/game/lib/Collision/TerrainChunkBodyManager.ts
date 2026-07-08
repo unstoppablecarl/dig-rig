@@ -1,4 +1,4 @@
-import { CHUNK_SIZE } from '../../config.ts'
+import { CHUNK_SIZE, ENABLE_CHUNK_BODY_DOUBLE_REBUILD_CHECK } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { ChunkGrid, ChunkType } from '../Tilemap/ChunkGrid.ts'
@@ -116,7 +116,7 @@ export class TerrainChunkBodyManager extends SceneBound {
       }
       // update collision body if chunk is dirty AND it has not been synced yet
       else if (collGen !== this._lastCollGen[chunk.id]) {
-        if (import.meta.env.DEV) {
+        if (ENABLE_CHUNK_BODY_DOUBLE_REBUILD_CHECK) {
           console.log(`[TerrainChunkBodyManager] chunk ${chunk.id} collGen ${this._lastCollGen[chunk.id]} -> ${collGen}, rebuilding`)
         }
         this.updateChunkCollision(chunk)
@@ -125,11 +125,11 @@ export class TerrainChunkBodyManager extends SceneBound {
     }
   }
 
-  // TEMP DEBUG: hash of the last rectangle set built per chunk, to detect
+  // hash of the last rectangle set built per chunk, to detect
   // whether a collGen-triggered rebuild actually changed the collision shape
   // or was wasted work (collGen bumped without any collidable tile changing).
   // Remove once the "water still triggers terrain regen" report is resolved.
-  private _lastRectHash = new Map<number, string>()
+  private _lastRectHash = ENABLE_CHUNK_BODY_DOUBLE_REBUILD_CHECK ? new Map<number, string>() : undefined
 
   private computeRectangles(chunk: Chunk): Rect[] {
     const startTX = chunk.cx * CHUNK_SIZE
@@ -152,9 +152,9 @@ export class TerrainChunkBodyManager extends SceneBound {
   private createChunkBodies(chunk: Chunk) {
     const rectangles = this.computeRectangles(chunk)
 
-    if (import.meta.env.DEV) {
+    if (ENABLE_CHUNK_BODY_DOUBLE_REBUILD_CHECK) {
       const hash = rectangles.map(r => `${r.x},${r.y},${r.w},${r.h}`).join('|')
-      const prev = this._lastRectHash.get(chunk.id)
+      const prev = this._lastRectHash!.get(chunk.id)
       if (prev !== undefined) {
         console.log(
           prev === hash
@@ -162,7 +162,7 @@ export class TerrainChunkBodyManager extends SceneBound {
             : `[TerrainChunkBodyManager] chunk ${chunk.id} rebuilt — shape changed (${prev.split('|').length} -> ${rectangles.length} rects)`,
         )
       }
-      this._lastRectHash.set(chunk.id, hash)
+      this._lastRectHash!.set(chunk.id, hash)
     }
 
     if (rectangles.length === 0) return
@@ -204,6 +204,9 @@ export class TerrainChunkBodyManager extends SceneBound {
     this.scene.matter?.world?.remove(body)
     this.chunkBodies.delete(chunk)
     this.activeChunks.delete(chunk)
+    if (ENABLE_CHUNK_BODY_DOUBLE_REBUILD_CHECK) {
+      this._lastRectHash!.delete(chunk.id)
+    }
   }
 
   private updateChunkCollision(chunk: Chunk) {
