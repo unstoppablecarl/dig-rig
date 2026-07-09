@@ -4,6 +4,7 @@ import { INPUT_ACTIONS } from '../../../input.ts'
 import { useInstantWeaponUIState } from '../../../store/weaponUIState/InstantWeaponUIState.ts'
 import KbdArray from './Partials/KbdArray.vue'
 import WeaponInputCharge from './Partials/WeaponInputCharge.vue'
+import WeaponInputMatter from './Partials/WeaponInputMatter.vue'
 
 const state = useInstantWeaponUIState()
 const primary = bindingLabels(INPUT_ACTIONS.FIRE_PRIMARY)
@@ -19,12 +20,13 @@ const next = bindingLabels(INPUT_ACTIONS.NEXT_MODE)
   </span>
 
   <span class="imu-section">
-    <strong>Mode: </strong> {{ state.fireMode }}
+
     <KbdArray :values="prev" />
     /
     <KbdArray :values="next" />
-    = prev / next
+    = Mode: {{ state.fireModeDisplayName }}
   </span>
+  <WeaponInputMatter />
 
   <WeaponInputCharge />
 </template>
