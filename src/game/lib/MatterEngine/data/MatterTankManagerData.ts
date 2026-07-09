@@ -2,29 +2,40 @@ import { MAX_MATTER_TANKS } from '../../../config.ts'
 import { type MatterTankId, PLAYER_MATTER_TANK_ID } from '../../Matter/Tank/_MatterTank.types.ts'
 import { makeSOABuffers, type Schema, soaBuffersToViews } from '../../Util/StructOfArrays.ts'
 
-// reservedDestroyPlaced + reservedDestroyInFlight together hold one reservation (a create-lava/
-// acid beam's eventual destroy-charge liability), split across its two lifecycle phases because
-// each phase is cheapest to track a different way:
-//   - reservedDestroyInFlight covers tiles the beam hasn't painted yet. It's recomputed from
-//     scratch every tick (cleared, then rebuilt from the bounded list of in-flight projectiles —
-//     same mechanism as pendingCreate/pendingDestroy). Cheap because the projectile list is
-//     small and bounded, and self-healing: if a beam is cut short, its contribution just stops
-//     being recomputed, no explicit cleanup needed.
-//   - reservedDestroyPlaced covers tiles that *have* been painted — actual lava/acid sitting on
-//     the map, possibly thousands of ticks after the beam that created them is gone. There's no
-//     bounded list of "live lava/acid tiles" to rescan every tick (that would mean walking the
-//     whole tilemap), so this one has to be tracked incrementally instead: +amount once when a
-//     tile is placed, -amount once when that specific tile is later destroyed.
+// Units: matter/matterMax/pendingCreate/pendingDestroy are solid units (1 = one full tile's
+// worth of tank matter). liquidMatter and the two reservedDestroy* fields below are FILL units
+// instead (1 tile = FILL_MAX fill; see _Liquid.constants.ts) — they need sub-tile resolution
+// because they track partially-filled liquid tiles (acid/lava can fragment across many cells at
+// less than full fill via tryFillFlow). Consumers that need solid units convert at the boundary
+// (MatterTank.reservedDestroy, SimMatterTanks.removeLiquidMatter) rather than storing pre-divided
+// values here, so no precision is ever lost to intermediate rounding.
+//
+// reservedDestroyPlacedFillUnits + reservedDestroyInFlightFillUnits together hold one reservation
+// (a create-lava/acid beam's eventual destroy-charge liability), split across its two lifecycle
+// phases because each phase is cheapest to track a different way:
+//   - InFlight covers tiles the beam hasn't painted yet. It's recomputed from scratch every tick
+//     (cleared, then rebuilt from the bounded list of in-flight projectiles — same mechanism as
+//     pendingCreate/pendingDestroy). Cheap because the projectile list is small and bounded, and
+//     self-healing: if a beam is cut short, its contribution just stops being recomputed, no
+//     explicit cleanup needed.
+//   - Placed covers tiles that *have* been painted — actual lava/acid sitting on the map,
+//     possibly thousands of ticks after the beam that created them is gone. There's no bounded
+//     list of "live lava/acid tiles" to rescan every tick (that would mean walking the whole
+//     tilemap), so this one has to be tracked incrementally instead: +fillUnits once when a
+//     tile is placed (reserveDestroyAmount * FILL_MAX per tile, since painted tiles start full),
+//     -fillUnits as that reservation's fill is later consumed (reserveDestroyAmount * fill
+//     actually destroyed — see MatterSim.consumeLiquidFill, the single choke point that releases
+//     these, so accounting stays exact no matter how fragmented the liquid pool gets).
 // As a beam paints each tile, that tile's liability moves from one field to the other within the
-// same tick (reservedDestroyInFlight shrinks by `amount`, reservedDestroyPlaced grows by `amount`)
-// — the combined total (see MatterTank.reservedDestroy) never changes across that handoff.
+// same tick (InFlight shrinks by `fillUnits`, Placed grows by `fillUnits`) — the combined total
+// (see MatterTank.reservedDestroy) never changes across that handoff.
 const SCHEMA = {
   matter: Uint32Array,
   liquidMatter: Uint32Array,
   pendingCreate: Uint32Array,
   pendingDestroy: Uint32Array,
-  reservedDestroyPlaced: Uint32Array,
-  reservedDestroyInFlight: Uint32Array,
+  reservedDestroyPlacedFillUnits: Uint32Array,
+  reservedDestroyInFlightFillUnits: Uint32Array,
   overflow: Uint32Array,
   matterMax: Uint32Array,
 } as const satisfies Schema
@@ -37,9 +48,9 @@ export class MatterTankManagerData {
   private readonly liquidMatter: Uint32Array
   private readonly pendingCreate: Uint32Array
   private readonly pendingDestroy: Uint32Array
-  // See the comment above SCHEMA for why this is split across two fields.
-  private readonly reservedDestroyPlaced: Uint32Array
-  private readonly reservedDestroyInFlight: Uint32Array
+  // Fill-unit denominated — see the comment above SCHEMA for why this is split across two fields.
+  private readonly reservedDestroyPlacedFillUnits: Uint32Array
+  private readonly reservedDestroyInFlightFillUnits: Uint32Array
   private readonly matterMax: Uint32Array
   private readonly overflow: Uint32Array
 
@@ -57,8 +68,8 @@ export class MatterTankManagerData {
     this.liquidMatter = views.liquidMatter
     this.pendingCreate = views.pendingCreate
     this.pendingDestroy = views.pendingDestroy
-    this.reservedDestroyPlaced = views.reservedDestroyPlaced
-    this.reservedDestroyInFlight = views.reservedDestroyInFlight
+    this.reservedDestroyPlacedFillUnits = views.reservedDestroyPlacedFillUnits
+    this.reservedDestroyInFlightFillUnits = views.reservedDestroyInFlightFillUnits
     this.matterMax = views.matterMax
     this.overflow = views.overflow
   }
@@ -107,12 +118,12 @@ export class MatterTankManagerData {
     return this.pendingDestroy[id]
   }
 
-  getReservedDestroyPlaced(id: MatterTankId): number {
-    return this.reservedDestroyPlaced[id]
+  getReservedDestroyPlacedFillUnits(id: MatterTankId): number {
+    return this.reservedDestroyPlacedFillUnits[id]
   }
 
-  getReservedDestroyInFlight(id: MatterTankId): number {
-    return this.reservedDestroyInFlight[id]
+  getReservedDestroyInFlightFillUnits(id: MatterTankId): number {
+    return this.reservedDestroyInFlightFillUnits[id]
   }
 
   getMatterMax(id: MatterTankId): number {
@@ -143,20 +154,20 @@ export class MatterTankManagerData {
     this.pendingDestroy[id] = value
   }
 
-  addReservedDestroyPlaced(id: MatterTankId, value: number): void {
-    this.reservedDestroyPlaced[id] += value
+  addReservedDestroyPlacedFillUnits(id: MatterTankId, fillUnits: number): void {
+    this.reservedDestroyPlacedFillUnits[id] += fillUnits
   }
 
-  setReservedDestroyPlaced(id: MatterTankId, value: number): void {
-    this.reservedDestroyPlaced[id] = value
+  setReservedDestroyPlacedFillUnits(id: MatterTankId, fillUnits: number): void {
+    this.reservedDestroyPlacedFillUnits[id] = fillUnits
   }
 
-  setReservedDestroyInFlight(id: MatterTankId, value: number): void {
-    this.reservedDestroyInFlight[id] = value
+  setReservedDestroyInFlightFillUnits(id: MatterTankId, fillUnits: number): void {
+    this.reservedDestroyInFlightFillUnits[id] = fillUnits
   }
 
-  addReservedDestroyInFlight(ownerId: MatterTankId, value: number) {
-    this.reservedDestroyInFlight[ownerId] += value
+  addReservedDestroyInFlightFillUnits(ownerId: MatterTankId, fillUnits: number) {
+    this.reservedDestroyInFlightFillUnits[ownerId] += fillUnits
   }
 
   setMatterMax(id: MatterTankId, value: number): void {
@@ -170,6 +181,6 @@ export class MatterTankManagerData {
   clearAllPending() {
     this.pendingCreate.fill(0)
     this.pendingDestroy.fill(0)
-    this.reservedDestroyInFlight.fill(0)
+    this.reservedDestroyInFlightFillUnits.fill(0)
   }
 }

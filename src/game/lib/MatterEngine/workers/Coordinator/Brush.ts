@@ -119,7 +119,8 @@ export class Brush {
     const reserveAmount = getReserveDestroyAmount(addingType)
     if (reserveAmount > 0) {
       const ownerId = getOwner(value)
-      this.matterTanks.reserveDestroyCharge(ownerId, reserveAmount * placed.length, 'create')
+      // Fill-unit denominated (see MatterTank.reservedDestroy) — painted tiles are always full.
+      this.matterTanks.reserveDestroyCharge(ownerId, reserveAmount * FILL_MAX * placed.length, 'create')
     }
 
     if (getSupportType(value) >= SupportType.STRUCTURAL) {

@@ -1,6 +1,7 @@
 import type { Position } from '../../../types.ts'
 import type { MatterTankManagerData } from '../../MatterEngine/data/MatterTankManagerData.ts'
 import { FireMode, type MatterTankFireMode } from '../../Player/_FireMode-types'
+import { FILL_MAX } from '../_Liquid.constants.ts'
 import type { MatterType } from '../_Matter.types.ts'
 import { getReserveDestroyAmount } from '../matter.ts'
 import { type MatterTankId, type MatterTankSource, NO_MATTER_TANK_ID } from './_MatterTank.types.ts'
@@ -44,8 +45,15 @@ export class MatterTank {
   // Combines the placed reservation (already-painted lava/acid tiles) with the in-flight
   // reservation (a create-lava/acid beam's not-yet-painted budget) — from the player's
   // perspective this is one reservation, held from the instant the beam is fired.
+  //
+  // Both underlying fields are tracked in fill units (reserveDestroyAmount * fill, not a flat
+  // per-tile count) so that a liquid tile fragmenting via fill-flow never changes the total
+  // amount reserved — only the actual fill consumed on release matters, not how many physical
+  // cells it happened to be split across. Converted to whole solid units here, rounding up so
+  // fractional remainders can never be exploited as free destroy headroom.
   get reservedDestroy(): number {
-    return this.data.getReservedDestroyPlaced(this.id) + this.data.getReservedDestroyInFlight(this.id)
+    const fillUnits = this.data.getReservedDestroyPlacedFillUnits(this.id) + this.data.getReservedDestroyInFlightFillUnits(this.id)
+    return Math.ceil(fillUnits / FILL_MAX)
   }
 
   getReservedDestroyPercent(): number {

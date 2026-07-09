@@ -119,7 +119,8 @@ export class ProjectileProcessor {
 
         const reserveAmount = getReserveDestroyAmount(createMatterType)
         if (reserveAmount > 0) {
-          this.matterTanks.reserveDestroyCharge(ownerId, reserveAmount * modified, 'create')
+          // Fill-unit denominated (see MatterTank.reservedDestroy) — painted tiles are always full.
+          this.matterTanks.reserveDestroyCharge(ownerId, reserveAmount * FILL_MAX * modified, 'create')
         }
         if (!doesSettle(createMatterType)) {
           this.tileEffectData.writeFireModeTiles(tiles, mode)
@@ -162,7 +163,7 @@ export class ProjectileProcessor {
       if (mode === FireMode.CREATE) {
         const reserveAmount = getReserveDestroyAmount(matterType(d.createType[i] as MatterType))
         if (reserveAmount > 0) {
-          this.matterTanks.addReservedDestroyInFlight(ownerId, reserveAmount * remaining)
+          this.matterTanks.addReservedDestroyInFlight(ownerId, reserveAmount * FILL_MAX * remaining)
         }
       }
     }

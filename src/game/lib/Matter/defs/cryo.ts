@@ -36,7 +36,6 @@ export const CRYO_DEF = {
       const lavaRaw = tiles[lavaLoc]
       const combinedOwner = getFirstOwnerId(tiles[idx], lavaRaw)
       sim.queueMatterCredit(tx, ty, combinedOwner)
-      sim.queueReservationRelease(getOwner(lavaRaw), 1)
       sim.consumeLiquidFill(idx)
       tiles[idx] = EMPTY
       sim.consumeLiquidFill(lavaLoc)

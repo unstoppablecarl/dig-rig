@@ -34,34 +34,40 @@ export class SimMatterTanks {
 
   // Recompute-cleared, like addPendingCharge — the not-yet-painted portion of a create-lava/acid
   // beam's eventual reservation. Self-healing, so unlike reserveDestroyCharge it needs no release.
-  addReservedDestroyInFlight(ownerId: MatterTankId, value: number) {
-    this.data.addReservedDestroyInFlight(ownerId, value)
+  // fillUnits, not a tile count — see the SCHEMA comment in MatterTankManagerData.ts.
+  addReservedDestroyInFlight(ownerId: MatterTankId, fillUnits: number) {
+    this.data.addReservedDestroyInFlightFillUnits(ownerId, fillUnits)
   }
 
-  reserveDestroyCharge(ownerId: MatterTankId, amount: number, label: MatterMutationLabel) {
-    if (ownerId === NO_MATTER_TANK_ID || amount === 0) return
-    this.data.addReservedDestroyPlaced(ownerId, amount)
+  // fillUnits, not a tile count — see the SCHEMA comment in MatterTankManagerData.ts. Callers
+  // pass reserveDestroyAmount * FILL_MAX per tile placed (tiles are always painted full).
+  reserveDestroyCharge(ownerId: MatterTankId, fillUnits: number, label: MatterMutationLabel) {
+    if (ownerId === NO_MATTER_TANK_ID || fillUnits === 0) return
+    this.data.addReservedDestroyPlacedFillUnits(ownerId, fillUnits)
     if (ENABLE_MATTER_TANK_MUTATION_TRACKING_DEBUG) {
       this.mutationLog.push({
-        frame: this.frame, ownerId, kind: 'reserve', amount,
-        resultingValue: this.data.getReservedDestroyPlaced(ownerId), label,
+        frame: this.frame, ownerId, kind: 'reserve', amount: fillUnits,
+        resultingValue: this.data.getReservedDestroyPlacedFillUnits(ownerId), label,
       })
     }
   }
 
-  releaseDestroyCharge(ownerId: MatterTankId, amount: number, label: MatterMutationLabel) {
-    if (ownerId === NO_MATTER_TANK_ID || amount === 0) return
-    const current = this.data.getReservedDestroyPlaced(ownerId)
-    if (current < amount) {
-      console.error(`SimMatterTanks.releaseDestroyCharge: underflow for tank ${ownerId}, releasing ${amount} but only ${current} reserved (label=${label})`)
-      this.data.setReservedDestroyPlaced(ownerId, 0)
+  // fillUnits, not a tile count — see the SCHEMA comment in MatterTankManagerData.ts. Callers
+  // pass reserveDestroyAmount * fillActuallyConsumed (see MatterSim.consumeLiquidFill), so this
+  // stays exact no matter how many physical tiles a reservation's fill fragmented across.
+  releaseDestroyCharge(ownerId: MatterTankId, fillUnits: number, label: MatterMutationLabel) {
+    if (ownerId === NO_MATTER_TANK_ID || fillUnits === 0) return
+    const current = this.data.getReservedDestroyPlacedFillUnits(ownerId)
+    if (current < fillUnits) {
+      console.error(`SimMatterTanks.releaseDestroyCharge: underflow for tank ${ownerId}, releasing ${fillUnits} fill-units but only ${current} reserved (label=${label})`)
+      this.data.setReservedDestroyPlacedFillUnits(ownerId, 0)
     } else {
-      this.data.setReservedDestroyPlaced(ownerId, current - amount)
+      this.data.setReservedDestroyPlacedFillUnits(ownerId, current - fillUnits)
     }
     if (ENABLE_MATTER_TANK_MUTATION_TRACKING_DEBUG) {
       this.mutationLog.push({
-        frame: this.frame, ownerId, kind: 'release', amount,
-        resultingValue: this.data.getReservedDestroyPlaced(ownerId), label,
+        frame: this.frame, ownerId, kind: 'release', amount: fillUnits,
+        resultingValue: this.data.getReservedDestroyPlacedFillUnits(ownerId), label,
       })
     }
   }

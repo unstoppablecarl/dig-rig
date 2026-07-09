@@ -823,11 +823,14 @@ export class MatterSim {
     const loc = this.borderingAdjacent(tx, ty, idx, intoType)
     if (loc === -1) return false
     const selfType = matterType(this.tiles[idx])
-    this.tiles[loc] = selfType
+    // consumeLiquidFill must run before the overwrite below — it reads tiles[loc] to know what's
+    // being destroyed (including releasing any reserved destroy-charge), and once tiles[loc] is
+    // set to selfType that information is gone.
     if (isLiquid(intoType) && !isLiquid(selfType)) {
       this.consumeLiquidFill(loc)
       this.notifySolidCreated()
     }
+    this.tiles[loc] = selfType
     const lx = loc % this.width
     const ly = loc / this.width | 0
     this.markDirty(lx, ly)
@@ -835,9 +838,27 @@ export class MatterSim {
     return true
   }
 
-  // Zero liquid fill at idx and track the consumed amount for the conservation check.
-  // Safe to call on non-liquid tiles (fill is already 0, nothing tracked).
+  // Zero liquid fill at idx and track the consumed amount for the conservation check. Safe to
+  // call on non-liquid tiles (fill is already 0, nothing tracked).
+  //
+  // Also the single choke point for releasing reserved destroy-charge (lava/acid): every code
+  // path that permanently destroys a tile's mass — destroyTile, fire/burn conversions, growth
+  // overwrites, the tryFillFlow zombie-cleanup — funnels through here, so this is the one place
+  // that needs to know about reservations rather than each of those call sites separately. The
+  // release is fill-unit denominated (reserveDestroyAmount * fill, matching how the reservation
+  // was made) so it stays exact regardless of how fill-flow fragmented the original tile across
+  // multiple physical cells — the released total is always exactly the fill actually consumed,
+  // never a fixed per-tile amount. Non-liquid reserved types (lava-drop) have no fill state and
+  // are always destroyed whole, so they use FILL_MAX as their effective fill.
   consumeLiquidFill(idx: number) {
+    const raw = this.tiles[idx]
+    const t = matterType(raw)
+    if (RESERVED_DESTROY_CHARGE.has(t)) {
+      const effectiveFill = isLiquid(t) ? this.fill[idx] : FILL_MAX
+      if (effectiveFill > 0) {
+        this.queueReservationRelease(getOwner(raw), getReserveDestroyAmount(t) * effectiveFill)
+      }
+    }
     const f = this.fill[idx]
     if (f > 0) this.liquidFillConsumed += f
     this.fill[idx] = 0
@@ -893,9 +914,6 @@ export class MatterSim {
   destroyTile(x: number, y: number, idx: number) {
     const raw = this.tiles[idx]
     const t = matterType(raw)
-    if (RESERVED_DESTROY_CHARGE.has(t)) {
-      this.queueReservationRelease(getOwner(raw), getReserveDestroyAmount(t))
-    }
     this.consumeLiquidFill(idx)
     this.tiles[idx] = EMPTY
     // Only bump collGen if the destroyed tile was actually contributing to the

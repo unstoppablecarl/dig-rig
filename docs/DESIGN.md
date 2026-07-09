@@ -6,6 +6,12 @@ Matter is the substance of the world — terrain, sand, liquid, lava, acid, ever
 
 The one exception is the brush — a level-editing tool that sits outside the game's economy entirely.
 
+### Fill: sub-tile matter
+
+A solid tile (rock, sand, terrain) is always either present or gone — one whole unit of matter. A liquid tile (water, acid, lava, oil...) instead holds a **fill** amount from 1 up to a max (`FILL_MAX`), so a liquid pool can drain, split, and re-settle at less than a full tile per cell instead of jumping between all-or-nothing states. A full liquid tile (`fill == FILL_MAX`) is worth exactly the same one unit of matter as a solid tile; a half-full one is worth half.
+
+This matters for anything priced per-tile against lava or acid (see Reserved Capacity below): liquid flow can fragment a single placed tile's mass across several physical cells over time. Anywhere the economy needs to stay exact, it prices by fill, not by how many cells the liquid happens to occupy at the moment — a pool that splits into five thin puddles still totals the same matter, and still owes back the same amount, as the one full tile it came from.
+
 ## Matter Tanks
 
 Every actor that can dig or build owns a matter tank: a quantity of matter, up to a max capacity.
@@ -30,8 +36,10 @@ Lava and acid are unstable. Once placed, they keep eating the world — lava mel
 
 That payout is a promise made the instant the tile is created, so the system reserves for it immediately:
 
-- **Lava** reserves 1 unit of destroy-capacity per tile — it eventually consumes itself and pays that back.
-- **Acid** reserves 2 — it consumes itself *and* whatever it dissolves, and pays back both.
+- **Lava** reserves 1 unit of destroy-capacity per full tile — it eventually consumes itself and pays that back.
+- **Acid** reserves 2 per full tile — it consumes itself *and* whatever it dissolves, and pays back both.
+
+"Per full tile" means per unit of fill, not per grid cell: the reservation is made and released in proportion to fill, so it stays correct no matter how a pool of lava or acid fragments across cells while flowing (see Fill: sub-tile matter above). A tile that's only half full holds half the reservation; two half-full fragments split from one original tile still add up to exactly the one reservation that was made when it was placed.
 
 The reservation lasts as long as the tile is lava or acid, and is dropped the moment that stops being true — whether the promise is kept (it dissolves and the matter lands in the tank) or not (something else destroys it first, or it cools to rock). Either way, the books close.
 

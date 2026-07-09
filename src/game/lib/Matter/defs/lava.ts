@@ -44,7 +44,6 @@ export const LAVA_DEF = {
     // Turn to rock when touching water or salt-water
     let waterLoc = sim.borderingAny(tx, ty, idx, COOLED)
     if (waterLoc !== -1) {
-      sim.queueReservationRelease(ownerId, 1)
       // Water fill stays in the fill slot — STEAM carries it as conserved fill.
       tiles[waterLoc] = STEAM
       sim.consumeLiquidFill(idx)

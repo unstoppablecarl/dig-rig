@@ -30,6 +30,14 @@ All workers attach views to the same SABs on `INIT`:
 
 Workers write directly to these buffers. No message-passing for tile data itself. The main thread does *not* read these buffers directly for rendering — see "Render dirty tracking" below for the separate front-buffer bridge.
 
+### Units: solid vs. fill
+
+Two denominations show up throughout the matter-tank/reservation code and the design doc's "Fill: sub-tile matter" section — worth being explicit about which one a given field uses before touching it:
+
+- **Solid units** — 1 unit = one whole tile's worth of tank matter. `MatterTankManagerData`'s `matter`, `matterMax`, `pendingCreate`, `pendingDestroy` are all solid units.
+- **Fill units** — 1 tile = `FILL_MAX` fill (see `_Liquid.constants.ts`), giving sub-tile resolution for liquids that can be partially filled. `liquidMatter` and the two reservation fields (`reservedDestroyPlacedFillUnits`, `reservedDestroyInFlightFillUnits`) are fill units, *not* pre-divided into solid units, specifically so a liquid tile fragmenting across cells via `tryFillFlow` never loses or duplicates reserved capacity — the reservation tracks total mass, not a per-cell count. `MatterTank.reservedDestroy` and `SimMatterTanks.removeLiquidMatter` are the boundary points that convert back to solid units (rounding up), so nothing outside those two ever needs to care which denomination it's reading.
+- `MatterSim.consumeLiquidFill` is the single choke point on the worker side that releases reserved destroy-charge (lava/acid) — every code path that destroys a liquid tile's fill funnels through it, so reservation accounting stays exact regardless of how many other reaction rules are involved.
+
 Each pool worker additionally gets its own **scratch buffers** (`MatterSimScratchData`, one set of `SharedArrayBuffer`-backed `Int32Array`s per worker — `indices`, `next`, `vfxJustSettled`, `structuralRemovals`, capacity `SIM_SCRATCH_CAPACITY = 262_144` each). These carry the per-round dispatch payload without a `postMessage` structured-clone — see "Worker result messages" below.
 
 ## Coordinator loop
@@ -109,7 +117,7 @@ Indices going in, and results coming out, travel through per-worker `SharedArray
   vfxJustSettledCount: number
   structuralRemovalsCount: number
   matterTankTransfers: Int32Array        // transferable — matter credits to distribute
-  matterReservationReleases: Int32Array  // transferable — reservation releases
+  matterReservationReleases: Int32Array  // transferable — reservation releases, in fill units (see "Units: solid vs. fill" above)
 }
 ```
 
