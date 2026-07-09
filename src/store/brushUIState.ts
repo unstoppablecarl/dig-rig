@@ -21,7 +21,7 @@ type SerializedData = {
 }
 
 const BRUSH_RADIUS_MIN = 2
-const BRUSH_RADIUS_MAX = 300
+const BRUSH_RADIUS_MAX = 100
 
 export const useBrushUIState = defineStore('brush-ui-state', () => {
 

@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import { MAX_PROJECTILES } from '../../../../config.ts'
 import { FILL_MAX } from '../../../Matter/_Liquid.constants.ts'
 import { matterType, type MatterType } from '../../../Matter/_Matter.types.ts'
 import { doesSettle, getReserveDestroyAmount, isLiquid } from '../../../Matter/matter.ts'
@@ -12,6 +13,23 @@ import type { Effects } from './Effects.ts'
 import type { SimMatterTanks } from './SimMatterTanks.ts'
 
 export class ProjectileProcessor {
+  // Coordinator-local bookkeeping of where each slot's effect was last
+  // actually applied — used to sweep from there to the slot's current
+  // position instead of sampling a single point. The main thread writes
+  // tileX/tileY every render frame regardless of how often the coordinator
+  // gets to process a slot (it has no way to know), so under sim lag the
+  // coordinator can see a jump of many tiles since it last looked — sampling
+  // only the current point would silently skip everything the projectile
+  // visually passed through in between. Purely coordinator-side state, never
+  // shared with the main thread — no SharedArrayBuffer needed.
+  private readonly _lastTileX = new Int32Array(MAX_PROJECTILES)
+  private readonly _lastTileY = new Int32Array(MAX_PROJECTILES)
+  // 1 once a slot's anchor has been initialized for its current activation —
+  // cleared when the slot goes inactive so the next reuse starts fresh
+  // (sweeping from a previous, unrelated projectile's last position would be
+  // wrong).
+  private readonly _sweepInitialized = new Uint8Array(MAX_PROJECTILES)
+
   constructor(
     private readonly projectileData: ProjectileManagerData,
     private readonly tileEffectData: VFXTileEffectData,
@@ -35,8 +53,25 @@ export class ProjectileProcessor {
     const d = this.projectileData
 
     for (let i = 0; i < d.status.length; i++) {
-      if (!d.isActive(i)) continue
-      const result = this.effects.processProjectileSlot(i, d, activeSet, dirtyChunks)
+      if (!d.isActive(i)) {
+        this._sweepInitialized[i] = 0
+        continue
+      }
+
+      let fromX: number
+      let fromY: number
+      if (!this._sweepInitialized[i]) {
+        this._sweepInitialized[i] = 1
+        fromX = d.tileX[i]
+        fromY = d.tileY[i]
+      } else {
+        fromX = this._lastTileX[i]
+        fromY = this._lastTileY[i]
+      }
+      this._lastTileX[i] = d.tileX[i]
+      this._lastTileY[i] = d.tileY[i]
+
+      const result = this.effects.processProjectileSlot(i, d, fromX, fromY, activeSet, dirtyChunks)
       structuralDirty ||= result.structuralDirty
       // Track tile-domain changes in unified fill units (1 solid = FILL_MAX).
       this.tracker.addDelta(result.solidDomainDelta * FILL_MAX + result.liquidDomainDelta)

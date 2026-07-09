@@ -40,7 +40,24 @@ import { ChunkGrid, type ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 import type { Tile } from '../../../Tilemap/TileGrid.ts'
 import { MatterCreditTransferBuffer } from '../_helpers/MatterCreditTransferBuffer.ts'
 import { MatterReservationReleaseBuffer } from '../_helpers/MatterReservationReleaseBuffer.ts'
-import { type SimInMsgProcess, SimOutMsg, type SimOutMsgDone, type SimOutMsgSpawnParticle } from './MatterSim.types.ts'
+import { SimOutMsg, type SimOutMsgDoneWire, type SimOutMsgSpawnParticle } from './MatterSim.types.ts'
+import { SIM_SCRATCH_CAPACITY, MatterSimScratchData, type SimScratchBuffers } from './MatterSimScratchData.ts'
+
+// Copies an iterable of tile indices into a shared scratch view, clamped to
+// capacity (dropping and warning on overflow rather than throwing/corrupting
+// memory — an overflow just means those entries wait for the next tick, same
+// as any other blocked/deferred tile).
+function copyIntoView(view: Int32Array, capacity: number, source: Iterable<number>): number {
+  let n = 0
+  for (const v of source) {
+    if (n >= capacity) {
+      console.warn(`MatterSim: scratch buffer overflow (capacity=${capacity}), dropping remaining entries`)
+      break
+    }
+    view[n++] = v
+  }
+  return n
+}
 
 export class MatterSim {
   tiles!: Uint32Array
@@ -61,6 +78,12 @@ export class MatterSim {
   structuralRemovals: number[] = []
   next = new Set<number>()
 
+  // Shared scratch space for cross-thread payloads — coordinator writes
+  // indices in, we write results out via the other three fields, avoiding a
+  // postMessage structured-clone of what can be a many-thousand-entry array
+  // on every round.
+  private scratch!: MatterSimScratchData
+
   // Tracked across one process() call for conservation accounting.
   // liquid: fill units created/consumed by matter reactions (not CA flow).
   // solid: tile-count created/consumed by reactions without corresponding tank credit/debit.
@@ -69,12 +92,18 @@ export class MatterSim {
   private solidTilesConsumed = 0
   private solidTilesCreated = 0
 
+  // The coordinator's own local MatterSim instance (used directly by
+  // Brush/PhysicsBodyProcessor/etc., never dispatched through the worker
+  // pool) never calls .process(), so its scratchBuffers just go unused —
+  // still allocated uniformly here rather than made optional, to keep this
+  // signature simple.
   init(
     tilesBuffer: SharedArrayBuffer,
     fillBuffer: SharedArrayBuffer,
     chunkBuffers: ChunkGridBuffers,
     width: number,
     height: number,
+    scratchBuffers: SimScratchBuffers,
   ) {
     this.tiles = new Uint32Array(tilesBuffer)
     this.fill = new Uint32Array(fillBuffer)
@@ -85,14 +114,16 @@ export class MatterSim {
     this.chunkGrid = new ChunkGrid(chunkBuffers)
     this.chunksWidth = this.chunkGrid.chunksWide
     this.matterTankCredits = new MatterCreditTransferBuffer(this.tiles)
+
+    this.scratch = new MatterSimScratchData(scratchBuffers)
   }
 
   process(
-    indices: SimInMsgProcess['indices'],
-    leftFirst: SimInMsgProcess['leftFirst'],
-    frame: SimInMsgProcess['frame'],
-    out: SimOutMsgDone,
-  ): SimOutMsgDone {
+    indicesCount: number,
+    leftFirst: boolean,
+    frame: number,
+    out: SimOutMsgDoneWire,
+  ): SimOutMsgDoneWire {
     this.next.clear()
     this.frame = frame
     this.leftFirst = leftFirst
@@ -102,11 +133,11 @@ export class MatterSim {
     this.liquidFillCreated = 0
     this.solidTilesConsumed = 0
     this.solidTilesCreated = 0
-    this.processSubset(indices)
+    this.processSubset(this.scratch.indices.subarray(0, indicesCount))
 
-    out.next = Array.from(this.next)
-    out.vfxJustSettled = this.vfxJustSettled
-    out.structuralRemovals = this.structuralRemovals
+    out.nextCount = copyIntoView(this.scratch.next, SIM_SCRATCH_CAPACITY, this.next)
+    out.vfxJustSettledCount = copyIntoView(this.scratch.vfxJustSettled, SIM_SCRATCH_CAPACITY, this.vfxJustSettled)
+    out.structuralRemovalsCount = copyIntoView(this.scratch.structuralRemovals, SIM_SCRATCH_CAPACITY, this.structuralRemovals)
     out.matterTankTransfers = this.matterTankCredits.flush()
     out.matterReservationReleases = this.matterReservationReleases.flush()
     out.liquidNetDelta = this.liquidFillCreated - this.liquidFillConsumed
@@ -173,7 +204,7 @@ export class MatterSim {
 
   // Runs matterType actions for the given tile indices. Pool workers call this
   // once per round with their assigned subset of the active set.
-  processSubset(indices: number[]) {
+  processSubset(indices: Int32Array) {
     for (const idx of indices) {
       const tx = idx % this.width
       const ty = idx / this.width | 0
@@ -631,6 +662,15 @@ export class MatterSim {
     const { tiles, width, height } = this
     const atBottom = ty === height - 1
     const atTop = ty === 0
+    // Alternate which side is favored (and, more importantly, which side
+    // absorbs any indivisible remainder mass in chunkInteger) so displacement
+    // doesn't systematically drift one direction over many ticks — mirrors
+    // the leftFirst convention used by the normal horizontal flow/equalize passes.
+    const leftFirst = this.leftFirst
+    const dx0 = leftFirst ? -1 : 1
+    const dx1 = leftFirst ? 1 : -1
+    const canA = leftFirst ? tx > 0 : tx < width - 1
+    const canB = leftFirst ? tx < width - 1 : tx > 0
 
     if (!atBottom) {
       const b = idx + width
@@ -640,8 +680,8 @@ export class MatterSim {
           out.push(b)
         }
       }
-      if (tx > 0) {
-        const nIdx = b - 1
+      if (canA) {
+        const nIdx = b + dx0
         if (!exclude.has(nIdx)) {
           const nt = matterType(tiles[nIdx])
           if (nt === type || nt === EMPTY) {
@@ -649,8 +689,8 @@ export class MatterSim {
           }
         }
       }
-      if (tx < width - 1) {
-        const nIdx = b + 1
+      if (canB) {
+        const nIdx = b + dx1
         if (!exclude.has(nIdx)) {
           const nt = matterType(tiles[nIdx])
           if (nt === type || nt === EMPTY) {
@@ -659,8 +699,8 @@ export class MatterSim {
         }
       }
     }
-    if (tx > 0) {
-      const nIdx = idx - 1
+    if (canA) {
+      const nIdx = idx + dx0
       if (!exclude.has(nIdx)) {
         const nt = matterType(tiles[nIdx])
         if (nt === type || nt === EMPTY) {
@@ -668,8 +708,8 @@ export class MatterSim {
         }
       }
     }
-    if (tx < width - 1) {
-      const nIdx = idx + 1
+    if (canB) {
+      const nIdx = idx + dx1
       if (!exclude.has(nIdx)) {
         const nt = matterType(tiles[nIdx])
         if (nt === type || nt === EMPTY) {
@@ -685,8 +725,8 @@ export class MatterSim {
           out.push(a)
         }
       }
-      if (tx > 0) {
-        let nIdx = a - 1
+      if (canA) {
+        const nIdx = a + dx0
         if (!exclude.has(nIdx)) {
           const nt = matterType(tiles[nIdx])
           if (nt === type || nt === EMPTY) {
@@ -694,8 +734,8 @@ export class MatterSim {
           }
         }
       }
-      if (tx < width - 1) {
-        let nIdx = a + 1
+      if (canB) {
+        const nIdx = a + dx1
         if (!exclude.has(nIdx)) {
           const nt = matterType(tiles[nIdx])
           if (nt === type || nt === EMPTY) {

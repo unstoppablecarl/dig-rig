@@ -110,8 +110,20 @@ export class PhysicsBodyProcessor {
 
       const points: Set<number> = new Set()
 
+      // Displacement below cascades through `points` in insertion order (each
+      // processed tile excludes itself as a destination for the next one), so
+      // always scanning left-to-right would always push residual water off
+      // the right edge of the body. Alternate scan direction per frame
+      // (mirrors the leftFirst convention the sim uses for horizontal flow)
+      // so the cascade — and the resulting pile-up — flips sides instead of
+      // being permanently biased right.
+      const leftFirst = this.sim.leftFirst
       for (let ty = ty0; ty <= ty1; ty++) {
-        for (let tx = tx0; tx <= tx1; tx++) {
+        for (
+          let tx = leftFirst ? tx0 : tx1;
+          leftFirst ? tx <= tx1 : tx >= tx0;
+          tx += leftFirst ? 1 : -1
+        ) {
           const px = tx + 0.5
           const py = ty + 0.5
           const inConvex = pointInConvex(
@@ -210,6 +222,12 @@ export class PhysicsBodyProcessor {
 
     prevTiles.length = 0
     for (const idx of newFootprint) prevTiles.push(idx)
+
+    // Signal the main thread that this slot's accumulated delta has been
+    // consumed — it resets its position anchor on seeing this change, so the
+    // *next* delta correctly represents distance since now, not since its
+    // last render frame. See PhysicsBodiesData.markConsumed / PhysicsBody.ts.
+    this.data.markConsumed(slotIdx)
   }
 
   getPrevTiles(slotIdx: number) {

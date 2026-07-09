@@ -90,6 +90,7 @@ export class Brush {
         const y = ty + dy
         if (x < 0 || x >= width || y < 0 || y >= height) continue
         const idx = y * width + x
+        if ((x+y) % 2 === 0) continue
         if (matterType(tiles[idx]) !== EMPTY) continue
 
         if (addingType === PLANT) {

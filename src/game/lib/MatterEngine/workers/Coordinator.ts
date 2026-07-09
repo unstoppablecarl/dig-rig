@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import {
   ENABLE_MATTER_CONSERVATION_CHECK,
+  ENABLE_MATTER_SIM_PROFILING,
   MATTER_CONSERVATION_CHECK_INTERVAL_FRAMES,
   MAX_MATTER_TANKS,
 } from '../../../config.ts'
@@ -25,6 +26,7 @@ import { SimMatterTanks } from './Coordinator/SimMatterTanks.ts'
 import { SimWorkerPool } from './Coordinator/SimWorkerPool.ts'
 import { TunnelWeapon } from './Coordinator/TunnelWeapon.ts'
 import { MatterSim } from './MatterSim/MatterSim.ts'
+import { MatterSimScratchData } from './MatterSim/MatterSimScratchData.ts'
 import { ParticleSim } from './ParticleSim/ParticleSim.ts'
 
 export class Coordinator {
@@ -53,6 +55,19 @@ export class Coordinator {
   private readonly dirtyChunksThisStep = new Set<number>()
   private _lastConservationTotal: number | null = null
 
+  // Profiling state, gated by ENABLE_MATTER_SIM_PROFILING. Tracks real
+  // wall-clock time between successive step() invocations (nominal cadence
+  // is the 8ms setTimeout in startLoop) so a slowdown in total tick cadence
+  // can be correlated with activeSet size.
+  private _profLastStepEnd = performance.now()
+  private _profWindowStart = performance.now()
+  private _profStepCount = 0
+  private _profTotalStepDur = 0
+  private _profMaxStepDur = 0
+  private _profTotalInterval = 0
+  private _profMaxInterval = 0
+  private _profMaxActiveSet = 0
+
   init(buffers: CoordinatorInMsgInit, poolSize: number) {
 
     this.data = new DataManager(buffers)
@@ -66,10 +81,10 @@ export class Coordinator {
     )
     const { width, height } = buffers
     this.width = width
-    this.sim = new MatterSim()
-
     const chunkGrid = this.data.chunkGrid
-    this.sim.init(buffers.tiles, buffers.fill, buffers.chunkGrid, width, height)
+
+    this.sim = new MatterSim()
+    this.sim.init(buffers.tiles, buffers.fill, buffers.chunkGrid, width, height, MatterSimScratchData.makeBuffers())
 
     this.particleSim = new ParticleSim(this.data.tiles, buffers.particle)
     this.matterTanks = new SimMatterTanks(this.data.matterTankManager)
@@ -143,6 +158,8 @@ export class Coordinator {
   }
 
   private async step() {
+    const _profT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
+    try {
     this.dirtyChunksThisStep.clear()
 
     // Drain physics-body tile activations written to the SAB by the main thread.
@@ -153,6 +170,12 @@ export class Coordinator {
     for (const idx of this.pendingActivations) this.activeSet.add(idx)
     this.pendingActivations.length = 0
 
+    // physicsBodyProcessor uses this coordinator-local sim instance directly
+    // (not one of the worker-pool's sim instances that get `leftFirst` wired
+    // up via process() below), so it never picks up frame parity unless set
+    // here — without this, displacement always cascaded the same direction
+    // instead of alternating with the frame counter like the rest of the sim.
+    this.sim.leftFirst = (this.frame % 2) === 0
     this.physicsBodyProcessor.process(this.activeSet)
 
     if (
@@ -281,6 +304,42 @@ export class Coordinator {
     // Atomics.add in publish() is the release fence; the renderer's Atomics.load
     // is the acquire — so the renderer always sees a complete post-step snapshot.
     this.tilePublisher.publish(this.data.chunkGrid)
+    } finally {
+      // Logs a 1s-aggregated summary of total step() duration and real
+      // inter-step interval, correlated with activeSet size, so an overall
+      // tick-cadence slowdown can be distinguished from the per-round-trip
+      // cost measured inside SimWorkerPool. Gated behind
+      // ENABLE_MATTER_SIM_PROFILING — no-op (not even a performance.now()
+      // call) when disabled.
+      if (ENABLE_MATTER_SIM_PROFILING) {
+        const _profNow = performance.now()
+        const _profDur = _profNow - _profT0
+        const _profInterval = _profNow - this._profLastStepEnd
+        this._profLastStepEnd = _profNow
+        this._profStepCount++
+        this._profTotalStepDur += _profDur
+        if (_profDur > this._profMaxStepDur) this._profMaxStepDur = _profDur
+        this._profTotalInterval += _profInterval
+        if (_profInterval > this._profMaxInterval) this._profMaxInterval = _profInterval
+        if (this.activeSet.size > this._profMaxActiveSet) this._profMaxActiveSet = this.activeSet.size
+        if (_profNow - this._profWindowStart > 1000) {
+          const n = this._profStepCount || 1
+          console.log(
+            `[PROFILE Coordinator] steps=${this._profStepCount} `
+            + `avgStepDur=${(this._profTotalStepDur / n).toFixed(2)}ms maxStepDur=${this._profMaxStepDur.toFixed(2)}ms `
+            + `avgInterval=${(this._profTotalInterval / n).toFixed(2)}ms maxInterval=${this._profMaxInterval.toFixed(2)}ms `
+            + `maxActiveSetSize=${this._profMaxActiveSet}`,
+          )
+          this._profWindowStart = _profNow
+          this._profStepCount = 0
+          this._profTotalStepDur = 0
+          this._profMaxStepDur = 0
+          this._profTotalInterval = 0
+          this._profMaxInterval = 0
+          this._profMaxActiveSet = 0
+        }
+      }
+    }
   }
 
   // All matter is measured in fill units: 1 solid tile = FILL_MAX.

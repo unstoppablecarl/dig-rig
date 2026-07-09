@@ -25,6 +25,18 @@ export class TunnelWeapon {
   private readonly width: number
   private readonly height: number
 
+  // Where the destroy circle was last actually applied — used to sweep from
+  // there to the current position instead of sampling a single point. The
+  // main thread writes destroyX/destroyY every render frame regardless of
+  // how often the coordinator gets to process this, so under sim lag the gap
+  // between last-processed and current can be many tiles; sampling only the
+  // endpoint would leave an undestroyed gap in the tunnel. Reset whenever
+  // destroyActive transitions from off to on, so a fresh dig doesn't sweep
+  // from wherever the trigger happened to be last time it was released.
+  private _lastDestroyX = 0
+  private _lastDestroyY = 0
+  private _sweepInitialized = false
+
   constructor(
     private readonly effects: Effects,
     private readonly data: TunnelWeaponDataType,
@@ -53,12 +65,31 @@ export class TunnelWeapon {
 
   private _stepDestroy(activeSet: Set<number>, dirtyChunks: Set<number>): boolean {
     const b = this.data
-    if (b.destroyActive === 0) return false
+    if (b.destroyActive === 0) {
+      this._sweepInitialized = false
+      return false
+    }
 
     const cx = b.destroyX
     const cy = b.destroyY
     const radius = b.destroyRadius
+
+    let fromX: number
+    let fromY: number
+    if (!this._sweepInitialized) {
+      this._sweepInitialized = true
+      fromX = cx
+      fromY = cy
+    } else {
+      fromX = this._lastDestroyX
+      fromY = this._lastDestroyY
+    }
+    this._lastDestroyX = cx
+    this._lastDestroyY = cy
+
     const result = this.effects.processTunnelDestroy(
+      Math.round(fromX),
+      Math.round(fromY),
       Math.round(cx),
       Math.round(cy),
       radius,

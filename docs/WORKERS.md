@@ -1,6 +1,6 @@
 # Workers
 
-The matter simulation runs across three thread contexts: the main thread, a coordinator worker, and a pool of sim workers. All three share the same `SharedArrayBuffer` tile data — no copying between threads.
+The matter simulation runs across three thread contexts: the main thread, a coordinator worker, and a pool of sim workers. All three share the same `SharedArrayBuffer` tile data — no copying between threads for tile state itself (tile *changes* reach the renderer through a separate publish step — see "Render dirty tracking" below).
 
 ## Thread layout
 
@@ -12,6 +12,7 @@ Main thread
                                                 │   ├─ MatterSimController → MatterSim worker 0
                                                 │   ├─ MatterSimController → MatterSim worker 1
                                                 │   └─ ... (hardwareConcurrency - 2 workers)
+                                                ├─ PhysicsBodyProcessor (runs on coordinator thread)
                                                 └─ ParticleSim (runs on coordinator thread)
 ```
 
@@ -25,9 +26,11 @@ All workers attach views to the same SABs on `INIT`:
 |-----|-----------|---------|
 | `tilesBuffer` | `Uint32Array` | Per-tile matter state (type, settled bit, owner, counter) |
 | `fillBuffer` | `Float32Array` | Per-tile liquid fill level |
-| `chunkGrid.*` | various | Per-chunk dirty gens, solid counts, anchored flags |
+| `chunkGrid.*` | various | Per-chunk render/collision gens, solid counts, anchored flags |
 
-Workers write directly to these buffers. The main thread reads them for rendering. No message-passing for tile data.
+Workers write directly to these buffers. No message-passing for tile data itself. The main thread does *not* read these buffers directly for rendering — see "Render dirty tracking" below for the separate front-buffer bridge.
+
+Each pool worker additionally gets its own **scratch buffers** (`MatterSimScratchData`, one set of `SharedArrayBuffer`-backed `Int32Array`s per worker — `indices`, `next`, `vfxJustSettled`, `structuralRemovals`, capacity `SIM_SCRATCH_CAPACITY = 262_144` each). These carry the per-round dispatch payload without a `postMessage` structured-clone — see "Worker result messages" below.
 
 ## Coordinator loop
 
@@ -38,50 +41,42 @@ setTimeout(step, 8ms) → step() → setTimeout(step, 8ms) → ...
 ```
 
 Each `step()`:
-1. Drain pending activations from physics/projectiles/brush into the active set.
-2. Snapshot the active set (swap active ↔ idle sets so new activations during the step land in the fresh set).
-3. Run brush and projectile mutations directly (single-threaded, before workers see the tiles).
-4. `await workerPool.step(snapshot, ...)` — dispatches the CA rounds (see below).
-5. Collect `r.next` from all worker results into the new active set.
-6. Run `sim.doUpwardPressurePass()` on the coordinator's own `MatterSim` instance — safe because all worker rounds are done.
-7. Run structural/physics checks.
-8. Run `particleSim.step()` on the coordinator thread.
+1. Drain pending activations from physics-body tile writes into the active set.
+2. Run `PhysicsBodyProcessor.process()` on the coordinator thread (rasterizes rigid-body footprints into the tilemap, handles liquid displacement). Uses the coordinator's own local `MatterSim` instance directly, not one of the worker-pool's instances.
+3. Early-return if there's no active tile, brush/tunnel/projectile work, and no live particles — skips the rest of the step entirely.
+4. Increment the frame counter; swap active/idle sets so new activations during this step land in the fresh set instead of the one about to be dispatched.
+5. Run brush add/erase, tunnel-weapon, and projectile mutations directly (single-threaded, before workers see the tiles).
+6. `await workerPool.step(snapshot, leftFirst, frame, ...)` — dispatches the CA rounds (see below) and folds each round's results (`next`, `vfxJustSettled`, `structuralRemovals`, matter-tank transfers) into coordinator state as they arrive.
+7. Run `sim.doUpwardPressurePass()` on the coordinator's own `MatterSim` instance — safe because all worker rounds are done, so there are no concurrent writers to `tiles`/`fill`.
+8. Run structural/physics-island checks for anything the workers or particle sim removed.
+9. Run `particleSim.step()` on the coordinator thread.
+10. Periodically run the dev-only matter-conservation check.
+11. `tilePublisher.publish()` — copies dirty chunks to the render-front buffers (see "Render dirty tracking").
 
-## 4-round chunk checkerboard
+## 4-group chunk checkerboard
 
-The active tile set is divided into four rounds based on each tile's chunk position. This is the same pattern used by Noita's "Falling Everything" engine: chunks in the same round are never adjacent, so workers processing them in parallel can never write to the same cell or each other's neighbouring cells.
-
-Every step covers every chunk — each position belongs to exactly one of the four types and is processed in that type's round:
+The active tile set is divided into four groups based on each tile's real chunk position (`CHUNK_SIZE = 64` — the same size used for collision/rendering; there is no separate, finer dispatch granularity). Chunks in the same group are never adjacent, so workers processing them in parallel can never write to the same cell or each other's neighbouring cells:
 
 ```
-A B A B A B   ← all processed in one step (rounds A, B, C, D run sequentially)
+A B A B A B   ← all processed in one step (groups A, B, C, D run sequentially, fixed order)
 C D C D C D
 A B A B A B
 C D C D C D
+
+formula: (cy & 1) * 2 + (cx & 1)  →  0=A  1=B  2=C  3=D
 ```
 
-The per-round diagrams below show which chunks run *in parallel within that round*. The dots are not gaps — they are chunks handled by the other rounds.
+Each group spans the *entire* map, not a row-band or region — this is what lets a single worker round use the whole pool regardless of how tall or spatially concentrated the active area is. Groups are dispatched in fixed order (0, 1, 2, 3), with an `await Promise.all` between each — always exactly 4 round trips per coordinator step, no matter how much is active or how the map is shaped.
 
-```
-round 0 (A): [ A . A . ]   cx even, cy even — processed concurrently
-round 1 (B): [ . B . B ]   cx odd,  cy even — processed concurrently
-round 2 (C): [ C . C . ]   cx even, cy odd  — processed concurrently
-round 3 (D): [ . D . D ]   cx odd,  cy odd  — processed concurrently
+### Known cosmetic tradeoff: chunk-boundary banding
 
-formula: (cx & 1) | ((cy & 1) << 1)  →  0=A  1=B  2=C  3=D
-```
+This scheme has a real, structural artifact: continuously falling matter shows visible horizontal banding/gaps at chunk-row boundaries. This is not a bug to be fixed by reordering — it was investigated extensively (alternating which group runs first per frame, staggering the grid origin per frame with various offset patterns, a fully sequential bottom-up row-sweep alternative) and confirmed structurally unavoidable with any small fixed number of dispatch phases per tick; only a true sequential bottom-up sweep removes it, and that scheme was measurably too slow under heavy load. The banding is an accepted performance/cosmetics tradeoff, not an oversight — **do not attempt a "correct ordering" fix** without first checking the project's dispatch-history notes; several plausible-sounding fixes were tried and empirically failed.
 
-`CHUNK_SIZE = 64`. CA elements move at most 1 tile per step, so a tile can never reach another chunk of the same type in a single round — the nearest same-type chunk is always 2 chunks (128 tiles) away.
-
-### Round processing order: C, D, A, B
-
-Rounds run sequentially with `await Promise.all` between each. The order is **C → D → A → B** (rounds 2, 3, 0, 1), not the natural 0–3 order.
-
-C and D chunks have `cy % 2 === 1` — they occupy the lower screen rows. A and B chunks have `cy % 2 === 0` — the upper rows. Gravity means lower tiles must vacate their space before upper tiles can fall into it. Processing lower-row chunks first allows upper-row chunks to cascade naturally into the freed space within the same coordinator step. Without this ordering, a visible gap appears at every chunk-row boundary (every 64 pixels) as matter falls.
+A within-round bottom-up sort (see below) still gives correct, gap-minimizing behavior *within* a single group's dispatch.
 
 ### Within-round worker batching
 
-Each round's tiles are distributed across the pool workers by chunk, round-robin:
+Each group's tiles are distributed across the pool workers by chunk, round-robin:
 
 ```
 chunk (cx, cy) → key = cy * chunksWide + cx
@@ -92,32 +87,33 @@ second new key → worker 1
 
 A single worker may receive tiles from multiple chunks, but all chunks assigned to the same worker are non-adjacent (guaranteed by the checkerboard). Workers run concurrently within a round via `Promise.all`.
 
+Before splitting into per-worker batches, each group's full tile list is sorted **by y descending** (bottom row first, `SimWorkerPool.step()`, not inside the worker). This lets tiles fall into the space just vacated by the tile below them within the same dispatch, and — since a tile only ever moves into a cell that wasn't independently active this round (destinations must be empty or sink-through) — this sort is what prevents a tile from being processed twice within one worker's batch. There's no separate per-tile generation stamp; correctness relies entirely on this sort plus the checkerboard's non-adjacency guarantee.
+
+`leftFirst` is set once per coordinator step (alternates each frame) and controls which horizontal direction each element action tries first — this exists to avoid a permanent left/right bias in horizontal flow/equalize passes, and is unrelated to the checkerboard grouping (which has no frame-dependent offset).
+
 ## MatterSim.processSubset
 
-Each pool worker holds a `MatterSim` instance that processes the tile indices sent to it:
+Each pool worker holds a `MatterSim` instance. `process(indicesCount, leftFirst, frame, out)`:
 
-1. `stepGen++` — advances the generation counter used for double-processing prevention.
-2. Sort indices **by y descending** (bottom row first). This lets tiles fall into the space just vacated by the tile below them within the same pass, producing natural cascade without gaps.
-3. For each index: skip if `movedThisStep[idx] === stepGen` (the cell was a move destination this step). Otherwise run `MATTER_ACTIONS[type](sim, tx, ty, idx)`.
-4. When `tryMove` or `tryRise` succeeds, stamp `movedThisStep[toIdx] = stepGen` on the destination to prevent the arriving tile from being processed again. Gases rise to a lower-y cell that comes later in the sorted order, so the stamp is necessary for them; solid tiles fall to higher-y cells that were already processed, so the stamp is mainly a safety guard there.
-
-`leftFirst` is set once per coordinator step (alternates each frame) and controls which horizontal direction each element action tries first.
+1. Resets per-round scratch state (`next` set, `vfxJustSettled`/`structuralRemovals` arrays, conservation accumulators).
+2. Runs `processSubset()` over its assigned indices (already sorted bottom-up by the coordinator/pool before dispatch — see above): for each index, look up its matter type and run `MATTER_ACTIONS[type](sim, tx, ty, idx)`. No generation/phase gating inside this loop.
+3. Copies results (`next`, `vfxJustSettled`, `structuralRemovals`) into the worker's shared scratch buffers and returns counts (see below).
 
 ## Worker result messages
 
-Each pool worker sends one `DONE` message per round dispatch:
+Indices going in, and results coming out, travel through per-worker `SharedArrayBuffer` scratch space (`MatterSimScratchData`) instead of array payloads in the message body — avoids a `postMessage` structured-clone of what can be a many-thousand-entry array every round. The wire message itself carries only counts:
 
 ```ts
 {
-  next: number[]                      // tile indices to activate next step
-  vfxJustSettled: number[]            // indices of tiles that just settled
-  structuralRemovals: number[]        // indices removed by destruction
-  matterTankTransfers: Int32Array     // transferable — matter credits to distribute
+  nextCount: number
+  vfxJustSettledCount: number
+  structuralRemovalsCount: number
+  matterTankTransfers: Int32Array        // transferable — matter credits to distribute
   matterReservationReleases: Int32Array  // transferable — reservation releases
 }
 ```
 
-`matterTankTransfers` and `matterReservationReleases` use transferable ArrayBuffers to avoid copying.
+`MatterSimController` (coordinator side) hydrates this into `Int32Array.subarray()` views onto the same shared buffers before handing it to `SimWorkerPool`/`Coordinator.ts` — those consumers see `next`/`vfxJustSettled`/`structuralRemovals` as `Int32Array`s (a drop-in for the old `number[]`, `for-of`/`.length` work identically). `matterTankTransfers`/`matterReservationReleases` separately use transferable `ArrayBuffer`s, unrelated to the scratch-buffer mechanism.
 
 ## ParticleSim
 
@@ -125,4 +121,6 @@ Each pool worker sends one `DONE` message per round dispatch:
 
 ## Render dirty tracking
 
-Workers call `chunkGrid.markDirty(chunkIdx)` inside `tryMove` and `reactivateAround`, which increments `renderGen[chunkIdx]` in the chunk grid SAB. The main thread renderer polls `renderGen` each `requestAnimationFrame` and re-uploads any chunk whose gen changed since the last frame.
+Workers (and the coordinator's own local `MatterSim`/`PhysicsBodyProcessor`) call `chunkGrid.markDirty(chunkIdx)` / `markRenderDirty(chunkIdx)`, which bump `renderGen`/`collGen` on the **back** `ChunkGrid` — a plain `renderGen[idx]++`, not atomic, since the checkerboard dispatch guarantees exactly one worker touches a given real chunk per round.
+
+The main thread never reads these back-buffer values directly. At the end of every `Coordinator.step()`, `ChunkPublisher.publish()` (coordinator thread, single-threaded) compares each chunk's back `renderGen` against its own last-seen value; for anything changed, it copies that chunk's tile/fill data from the back SABs to a separate set of **front** SABs (`TileFrontData`), then does `Atomics.add` on the front's own `genView` for that chunk (release fence). The main-thread renderer reads `genView` with `Atomics.load` (acquire fence) each frame and re-uploads any chunk whose front gen changed — so it always sees a fully consistent post-step snapshot, never a partial one.

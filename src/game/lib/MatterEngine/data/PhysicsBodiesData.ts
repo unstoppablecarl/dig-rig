@@ -19,6 +19,17 @@ const SCHEMA = {
 
   deltaX: Float32Array,
   deltaY: Float32Array,
+
+  // Monotonic counter, coordinator-only writer (Atomics.add), bumped once
+  // per slot each time PhysicsBodyProcessor.rasterize() finishes consuming
+  // that slot's accumulated delta. The main thread (PhysicsBody.ts) reads
+  // this with Atomics.load and, when it sees a change, resets its position
+  // anchor to "now" — that's what makes deltaX/deltaY represent cumulative
+  // displacement since the coordinator last looked, rather than just the
+  // most recent main-thread frame's motion (which would silently lose
+  // whatever happened during any frames the coordinator was too far behind
+  // to see individually). See PhysicsBody.ts for the read side.
+  consumedGen: Uint8Array,
 } as const satisfies Schema
 
 export type PhysicsBodiesSchema = typeof SCHEMA
@@ -51,6 +62,7 @@ export class PhysicsBodiesData {
 
   readonly deltaX: Float32Array
   readonly deltaY: Float32Array
+  readonly consumedGen: Uint8Array
 
   private readonly _freeSlots: number[] = Array.from({ length: MAX_PHYSICS_BODIES }, (_, i) => i)
 
@@ -76,6 +88,7 @@ export class PhysicsBodiesData {
 
     this.deltaX = views.deltaX
     this.deltaY = views.deltaY
+    this.consumedGen = views.consumedGen
   }
 
   acquire(): number {
@@ -124,6 +137,19 @@ export class PhysicsBodiesData {
     out.y = this.deltaY[slotIdx]
 
     return out
+  }
+
+  // Coordinator-only: call once rasterize() has finished consuming this
+  // slot's accumulated delta for this step. Atomic because it's the one
+  // field in this schema with a genuine cross-thread writer/reader pair
+  // (main thread reads it to decide when to reset its position anchor).
+  markConsumed(slotIdx: number): void {
+    Atomics.add(this.consumedGen, slotIdx, 1)
+  }
+
+  // Main-thread-only: read the current consumed generation for a slot.
+  getConsumedGen(slotIdx: number): number {
+    return Atomics.load(this.consumedGen, slotIdx)
   }
 
   getPoints(slotIdx: number, out: RectVerts) {

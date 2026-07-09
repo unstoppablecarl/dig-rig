@@ -3,7 +3,7 @@ import { EMPTY, MatterType, matterType, SOLID, SupportType } from '../../../Matt
 import { convertsToCollisionBody, doesSettle, getSupportType } from '../../../Matter/matter.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { FireMode } from '../../../Player/_FireMode-types.ts'
-import { EMPTY_PLAYER_BOUNDS, type PlayerBoundsDataType } from '../../data/PlayerBoundsData.ts'
+import { EMPTY_PLAYER_BOUNDS, type PlayerBounds, type PlayerBoundsDataType } from '../../data/PlayerBoundsData.ts'
 import { type ProjectileManagerData, ProjectileShape } from '../../data/ProjectileManagerData.ts'
 import type { CoordinatorInMsgBrushEraseMatter } from '../Coordinator.types.ts'
 import type { MatterSim } from '../MatterSim/MatterSim.ts'
@@ -13,7 +13,7 @@ import { ProjectileCreate } from './Effects/ProjectileCreate.ts'
 import { ProjectileDestroy } from './Effects/ProjectileDestroy.ts'
 import { ProjectileMelt } from './Effects/ProjectileMelt.ts'
 import { ProjectileSolidify } from './Effects/ProjectileSolidify.ts'
-import type { EffectResult } from './Effects/SimProjectile.ts'
+import type { EffectResult, SimProjectile } from './Effects/SimProjectile.ts'
 import { PhysicsCollapse } from './PhysicsCollapse.ts'
 import type { SimMatterTanks } from './SimMatterTanks.ts'
 
@@ -21,6 +21,24 @@ export type WriteEntry = {
   indices: number[]
   tile: number
   reactivateAround: boolean
+}
+
+const EMPTY_EFFECT_RESULT: EffectResult = {
+  tiles: [],
+  structuralDirty: false,
+  liquidDomainDelta: 0,
+  solidDomainDelta: 0,
+  prevLiquidTiles: 0,
+}
+
+function mergeEffectResults(a: EffectResult, b: EffectResult): EffectResult {
+  return {
+    tiles: a.tiles.length === 0 ? b.tiles : b.tiles.length === 0 ? a.tiles : a.tiles.concat(b.tiles),
+    structuralDirty: a.structuralDirty || b.structuralDirty,
+    liquidDomainDelta: a.liquidDomainDelta + b.liquidDomainDelta,
+    solidDomainDelta: a.solidDomainDelta + b.solidDomainDelta,
+    prevLiquidTiles: a.prevLiquidTiles + b.prevLiquidTiles,
+  }
 }
 
 export class Effects {
@@ -116,20 +134,62 @@ export class Effects {
     )
   }
 
+  // Applies a circle-shaped projectile effect swept along the segment from
+  // (fromX, fromY) to (toX, toY) instead of sampling a single point at the
+  // end. The main thread writes tileX/tileY every render frame independent
+  // of the coordinator's tick rate — under sim lag, (fromX, fromY) (where
+  // this slot was last actually processed) can be many tiles away from the
+  // current position, and a single circle at the endpoint would silently
+  // skip everything in between. Sample points are spaced roughly one radius
+  // apart so consecutive circles overlap and leave no gap, however large the
+  // jump. Budget is threaded through and decremented across sample points
+  // (not reset per point), so a beam can't overspend its remaining charge
+  // just because it had a lot of ground to cover this tick.
+  private _sweepApply(
+    projectile: SimProjectile,
+    createType: MatterType,
+    fromX: number, fromY: number,
+    toX: number, toY: number,
+    radius: number,
+    innerRadius: number,
+    ownerId: MatterTankId,
+    budget: number,
+    playerBounds: PlayerBounds,
+    activeSet: Set<number>,
+    dirtyChunks: Set<number>,
+  ): EffectResult {
+    const dx = toX - fromX
+    const dy = toY - fromY
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    const spacing = Math.max(1, radius)
+    const steps = Math.max(1, Math.ceil(dist / spacing))
+
+    let merged: EffectResult = EMPTY_EFFECT_RESULT
+    let remainingBudget = budget
+
+    for (let step = 1; step <= steps; step++) {
+      if (remainingBudget <= 0) break
+      const t = step / steps
+      const px = Math.round(fromX + dx * t)
+      const py = Math.round(fromY + dy * t)
+      const result = projectile.apply(createType, px, py, radius, innerRadius, ownerId, remainingBudget, playerBounds, activeSet, dirtyChunks)
+      remainingBudget -= result.tiles.length
+      merged = merged === EMPTY_EFFECT_RESULT ? result : mergeEffectResults(merged, result)
+    }
+
+    return merged
+  }
+
   processProjectileSlot(
     slotIdx: number,
     data: ProjectileManagerData,
+    fromX: number,
+    fromY: number,
     activeSet: Set<number>,
     dirtyChunks: Set<number>,
   ): EffectResult {
     const budget = data.tilesToModify[slotIdx] - data.tilesModified[slotIdx]
-    if (budget <= 0) return {
-      tiles: [],
-      structuralDirty: false,
-      liquidDomainDelta: 0,
-      solidDomainDelta: 0,
-      prevLiquidTiles: 0,
-    }
+    if (budget <= 0) return EMPTY_EFFECT_RESULT
 
     const mode = data.mode[slotIdx] as FireMode
     const tileX = data.tileX[slotIdx]
@@ -148,13 +208,7 @@ export class Effects {
           result = this.floodFillDestroy.applyFloodFill(tileX, tileY, ownerId, budget, slotIdx, activeSet, dirtyChunks)
           break
         default:
-          return {
-            tiles: [],
-            structuralDirty: false,
-            liquidDomainDelta: 0,
-            solidDomainDelta: 0,
-            prevLiquidTiles: 0,
-          }
+          return EMPTY_EFFECT_RESULT
       }
       data.tilesModified[slotIdx] += result.tiles.length
       return result
@@ -166,34 +220,38 @@ export class Effects {
       case FireMode.CREATE: {
         const createType = data.createType[slotIdx] as MatterType
         const innerRadius = data.innerRadius[slotIdx]
-        result = this.createProjectile.apply(createType, tileX, tileY, radius, innerRadius, ownerId, budget, this.playerBoundsData, activeSet, dirtyChunks)
+        result = this._sweepApply(
+          this.createProjectile, createType, fromX, fromY, tileX, tileY, radius, innerRadius, ownerId, budget, this.playerBoundsData, activeSet, dirtyChunks,
+        )
         data.tilesModified[slotIdx] += result.tiles.length
         break
       }
       case FireMode.DESTROY:
-        result = this.destroyProjectile.apply(EMPTY, tileX, tileY, radius, 0, ownerId, budget, EMPTY_PLAYER_BOUNDS, activeSet, dirtyChunks)
+        result = this._sweepApply(
+          this.destroyProjectile, EMPTY, fromX, fromY, tileX, tileY, radius, 0, ownerId, budget, EMPTY_PLAYER_BOUNDS, activeSet, dirtyChunks,
+        )
         data.tilesModified[slotIdx] += result.tiles.length
         break
       case FireMode.MELT:
-        result = this.meltProjectile.apply(EMPTY, tileX, tileY, radius, 0, ownerId, Number.MAX_SAFE_INTEGER, EMPTY_PLAYER_BOUNDS, activeSet, dirtyChunks)
+        result = this._sweepApply(
+          this.meltProjectile, EMPTY, fromX, fromY, tileX, tileY, radius, 0, ownerId, Number.MAX_SAFE_INTEGER, EMPTY_PLAYER_BOUNDS, activeSet, dirtyChunks,
+        )
         break
       case FireMode.SOLIDIFY:
-        result = this.solidifyProjectile.apply(EMPTY, tileX, tileY, radius, 0, ownerId, Number.MAX_SAFE_INTEGER, EMPTY_PLAYER_BOUNDS, activeSet, dirtyChunks)
+        result = this._sweepApply(
+          this.solidifyProjectile, EMPTY, fromX, fromY, tileX, tileY, radius, 0, ownerId, Number.MAX_SAFE_INTEGER, EMPTY_PLAYER_BOUNDS, activeSet, dirtyChunks,
+        )
         break
       default:
-        return {
-          tiles: [],
-          structuralDirty: false,
-          liquidDomainDelta: 0,
-          solidDomainDelta: 0,
-          prevLiquidTiles: 0,
-        }
+        return EMPTY_EFFECT_RESULT
     }
 
     return result
   }
 
   processTunnelDestroy(
+    fromX: number,
+    fromY: number,
     tileX: number,
     tileY: number,
     radius: number,
@@ -201,6 +259,8 @@ export class Effects {
     activeSet: Set<number>,
     dirtyChunks: Set<number>,
   ): EffectResult {
-    return this.destroyProjectile.apply(EMPTY, tileX, tileY, radius, 0, NO_MATTER_TANK_ID, tilesToModify, EMPTY_PLAYER_BOUNDS, activeSet, dirtyChunks)
+    return this._sweepApply(
+      this.destroyProjectile, EMPTY, fromX, fromY, tileX, tileY, radius, 0, NO_MATTER_TANK_ID, tilesToModify, EMPTY_PLAYER_BOUNDS, activeSet, dirtyChunks,
+    )
   }
 }

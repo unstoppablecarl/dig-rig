@@ -1,8 +1,14 @@
 /// <reference lib="webworker" />
 import { MatterSim } from './MatterSim.ts'
-import { type SimInMessage, SimInMsg, type SimOutMessage, SimOutMsg, type SimOutMsgDone } from './MatterSim.types.ts'
+import {
+  type SimInMessage,
+  SimInMsg,
+  SimOutMsg,
+  type SimOutMsgDoneWire,
+  type SimOutMessageWire,
+} from './MatterSim.types.ts'
 
-declare function postMessage(msg: SimOutMessage, transfer?: Transferable[]): void
+declare function postMessage(msg: SimOutMessageWire, transfer?: Transferable[]): void
 
 declare let self: DedicatedWorkerGlobalScope & {
   onmessage: ((e: MessageEvent<SimInMessage>) => void) | null
@@ -10,11 +16,11 @@ declare let self: DedicatedWorkerGlobalScope & {
 
 const sim = new MatterSim()
 
-const _done: SimOutMsgDone = {
+const _done: SimOutMsgDoneWire = {
   type: SimOutMsg.DONE as const,
-  next: [],
-  vfxJustSettled: [],
-  structuralRemovals: [],
+  nextCount: 0,
+  vfxJustSettledCount: 0,
+  structuralRemovalsCount: 0,
   matterTankTransfers: new Int32Array(),
   matterReservationReleases: new Int32Array(),
   liquidNetDelta: 0,
@@ -27,14 +33,21 @@ self.onmessage = (e: MessageEvent<SimInMessage>) => {
   const msg = e.data
 
   if (msg.type === SimInMsg.INIT) {
-    sim.init(msg.tilesBuffer, msg.fillBuffer, msg.chunkBuffers, msg.width, msg.height)
+    sim.init(
+      msg.tilesBuffer,
+      msg.fillBuffer,
+      msg.chunkBuffers,
+      msg.width,
+      msg.height,
+      msg.scratchBuffers,
+    )
     postMessage({ type: SimOutMsg.READY })
     return
   }
 
   if (msg.type === SimInMsg.PROCESS) {
     transfer.length = 0
-    const result = sim.process(msg.indices, msg.leftFirst, msg.frame, _done)
+    const result = sim.process(msg.indicesCount, msg.leftFirst, msg.frame, _done)
     if (result.matterTankTransfers.length > 0) transfer.push(result.matterTankTransfers.buffer)
     if (result.matterReservationReleases.length > 0) transfer.push(result.matterReservationReleases.buffer)
     postMessage(result, transfer)
