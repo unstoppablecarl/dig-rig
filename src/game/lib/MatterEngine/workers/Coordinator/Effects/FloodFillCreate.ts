@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 import { EMPTY, MatterType, matterType } from '../../../../Matter/_Matter.types.ts'
+import { doesSettle } from '../../../../Matter/matter.ts'
 import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
 import type { PlayerBounds } from '../../../data/PlayerBoundsData.ts'
 import { FloodFillFrontier } from './FloodFillFrontier.ts'
@@ -34,10 +35,11 @@ export class FloodFillCreate extends ProjectileCreate {
       tileX < width - 1 && tileY < height - 1 ? seedIdx + width + 1 : -1,
     ]
 
+    const typeDoesSettle = doesSettle(createType)
     const indices = this.frontier.collect(slotIdx, seedIdx, budget, width, height, (idx) => {
       const x = idx % width
       const y = (idx / width) | 0
-      if (this.shouldSkipTile(x, y, playerBounds)) return false
+      if (this.shouldSkipTile(x, y, playerBounds, typeDoesSettle)) return false
       return matterType(tiles[idx]) === EMPTY
     }, neighbors8)
 
