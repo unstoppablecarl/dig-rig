@@ -17,8 +17,8 @@ const SCHEMA = {
 const RING_BYTE_LENGTH = ringBufferByteLength(SCHEMA, MAX_PARTICLES)
 
 // One extra Int32 tacked onto the end of the ring buffer's own bytes, used as a spinlock
-// (see queueParticleSpawn) — RING_BYTE_LENGTH is always a multiple of 4 (schema's largest
-// element is 4 bytes and MAX_PARTICLES scales it), so this offset is naturally aligned.
+// (see queue()) — RING_BYTE_LENGTH is always a multiple of 4 (schema's largest
+// element is 4 bytes and MAX_PARTICLES scales it), so this offset is aligned.
 const LOCK_OFFSET = RING_BYTE_LENGTH
 const BYTE_LENGTH = RING_BYTE_LENGTH + 4
 
@@ -46,7 +46,7 @@ export class ParticleSpawnData {
   // Atomics.wait, which throws on the main thread) around the whole reserve+write turns that
   // into a mutually-exclusive critical section; contention windows are a handful of field
   // writes so busy-waiting is cheap.
-  queueParticleSpawn(particleType: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID, vx: number = 0, vy: number = 0, value: MatterValue = EMPTY) {
+  queue(particleType: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID, vx: number = 0, vy: number = 0, value: MatterValue = EMPTY) {
     while (Atomics.compareExchange(this.lock, 0, 0, 1) !== 0) {
       // busy-wait
     }

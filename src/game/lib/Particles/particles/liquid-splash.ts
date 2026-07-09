@@ -1,8 +1,11 @@
+import { Math as PMath } from 'phaser'
+import { HALF_PI } from '../../../helpers/_helpers.ts'
 import { colorToPixelRGBA, rgbaToColor } from '../../../helpers/color-converters.ts'
 import { randomRange } from '../../../helpers/random.ts'
 import { ACID, CRYO, LAVA, NAPALM, OIL, SALT_WATER, WATER } from '../../Matter/_Matter.types.ts'
 import type { LiquidTypes } from '../../Matter/matter.ts'
 import { type ParticleDef } from '../_particle-types.ts'
+import DegToRad = PMath.DegToRad
 
 // Rendered droplet color per liquid type — falls back to WATER's color for any liquid without
 // an explicit entry (e.g. a new liquid type added later) rather than failing to render.
@@ -22,11 +25,25 @@ const DEFAULT_SPLASH_COLOR = SPLASH_COLORS[WATER]
 // keeps the droplet's mass conserved instead of conjuring a full FILL_MAX tile out of thin air.
 const SPLASH_FILL_UNIT = 1
 const LIQUID_SPLASH_PARTICLE_COUNT = 5
-const LIQUID_SPLASH_VELOCITY_MULTIPLIER = 0.1
+// Scales the body's raw per-step (vx, vy) into a launch speed — bumped up from the old 0.1
+// (which made `speed` too small for the cone lean below to be visible) so the spray still
+// visibly depends on how hard the body hit the liquid.
+const LIQUID_SPLASH_VELOCITY_MULTIPLIER = 0.7
+const STRAIGHT_UP = -HALF_PI
+
+// --- Per-droplet randomization knobs, both applied once below in the spawn loop ---
+// Angle: each droplet leans 0..this many degrees off straight-up, toward whichever side the
+// body was moving (bow-wave asymmetry). 0 = every droplet flies straight up in a line; higher
+// = wider splash fan.
+const LIQUID_SPLASH_ANGLE_VARIANCE_DEG = 30
+// Speed: each droplet's launch speed is scaled by a random factor in
+// [1 - variance, 1 + variance]. 0 = every droplet flies exactly as fast; higher = bigger
+// spread between the slowest and fastest droplet.
+const LIQUID_SPLASH_SPEED_VARIANCE_MIN = 0.7
+const LIQUID_SPLASH_SPEED_VARIANCE_MAX = 1.8
 
 export const LIQUID_SPLASH = {
-  // type is the liquid being displaced; velX/velY are the source body's velocity, already
-  // scaled by PhysicsBodyProcessor's LIQUID_SPLASH_VELOCITY_MULTIPLIER.
+  // type is the liquid being displaced; vx/vy are the source body's raw per-step velocity.
   spawn(pool, sim, particleType, x, y, _ownerId, vx, vy, value) {
     const tx = Math.floor(x)
     const ty = Math.floor(y)
@@ -36,9 +53,11 @@ export const LIQUID_SPLASH = {
 
     sim.fill[idx] -= LIQUID_SPLASH_PARTICLE_COUNT
     sim.conservationTracker.addDelta(-LIQUID_SPLASH_PARTICLE_COUNT)
-    const splashVelX = vx! * LIQUID_SPLASH_VELOCITY_MULTIPLIER
-    const splashVelY = vy! * LIQUID_SPLASH_VELOCITY_MULTIPLIER
-    const speed = Math.hypot(splashVelX, splashVelY)
+    const speed = Math.hypot(vx!, vy!) * LIQUID_SPLASH_VELOCITY_MULTIPLIER
+    // Which side to lean the spray cone toward (bow-wave asymmetry) — falls back to a random
+    // side when the body has no horizontal motion (e.g. falling straight down), since there's
+    // no meaningful "side" to lean toward in that case.
+    const lean = vx! !== 0 ? Math.sign(vx!) : (Math.random() < 0.5 ? -1 : 1)
 
     // One particle per debited fill unit — each carries SPLASH_FILL_UNIT and credits it
     // back on landing (see action()), so debiting LIQUID_SPLASH_PARTICLE_COUNT above without
@@ -48,11 +67,11 @@ export const LIQUID_SPLASH = {
       if (!p) break
 
       p.liquidType = value!
-      // Sprays away from the body's direction of travel (bow-wave), tipped upward, with
-      // jitter so a stream of droplets fans out instead of firing in lockstep.
-      const away = Math.atan2(splashVelY, splashVelX) + Math.PI + randomRange(-0.6, 0.6)
-      p.setVelocity(speed, away)
-      p.yVelocity -= randomRange(2, 5)
+
+      const angleVariance = randomRange(0, DegToRad(LIQUID_SPLASH_ANGLE_VARIANCE_DEG))
+      const away = STRAIGHT_UP + lean * angleVariance
+      const speedVariance = randomRange(LIQUID_SPLASH_SPEED_VARIANCE_MIN, LIQUID_SPLASH_SPEED_VARIANCE_MAX)
+      p.setVelocity(speed * speedVariance, away)
       p.size = 1
     }
   },

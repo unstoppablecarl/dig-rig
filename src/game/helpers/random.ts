@@ -1,3 +1,6 @@
+import { Math as PMath } from 'phaser'
+import DegToRad = PMath.DegToRad
+
 // Pre-generated random table: returns integer 0–99 without float overhead.
 const RNG_SIZE = 8192
 const _rngTable = new Uint8Array(RNG_SIZE)
@@ -20,4 +23,8 @@ export function randomRange(min: number, max: number): number {
 
 export function randomRangeInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min) + min)
+}
+
+export function randomDegVarianceToRad(spreadDeg: number) {
+  return DegToRad((Math.random() - 0.5) * spreadDeg)
 }

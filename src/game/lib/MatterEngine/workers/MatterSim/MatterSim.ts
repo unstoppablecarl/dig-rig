@@ -152,7 +152,7 @@ export class MatterSim {
   }
 
   spawnParticle(particleType: ParticleType, x: number, y: number, ownerId?: MatterTankId, vx?: number, vy?: number, value?: MatterValue) {
-    this.particles.queueParticleSpawn(particleType, x, y, ownerId, vx, vy, value)
+    this.particles.queue(particleType, x, y, ownerId, vx, vy, value)
   }
 
   // Wakes tiles in `target`. Called by coordinator on ACTIVATE messages.
