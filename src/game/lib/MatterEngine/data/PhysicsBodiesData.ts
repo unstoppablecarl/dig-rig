@@ -76,8 +76,6 @@ export class PhysicsBodiesData {
 
     this.deltaX = views.deltaX
     this.deltaY = views.deltaY
-
-    this.buffers = buffers
   }
 
   acquire(): number {

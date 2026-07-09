@@ -47,15 +47,13 @@ export class ProjectileManagerData {
   readonly createType: Uint32Array
   readonly tilesModified: Uint32Array
 
-  readonly buffers: ProjectileBuffers
-
   private readonly _freeSlots: number[] = Array.from({ length: MAX_PROJECTILES }, (_, i) => i)
 
   static makeBuffer(): ProjectileBuffers {
     return makeSOABuffers(SCHEMA, MAX_PROJECTILES)
   }
 
-  constructor(buffers: Buffers<ProjectileSchema>) {
+  constructor(readonly buffers: ProjectileBuffers) {
     const views = soaBuffersToViews(SCHEMA, buffers)
 
     this.status = views.status
@@ -69,8 +67,6 @@ export class ProjectileManagerData {
     this.tilesModified = views.tilesModified
     this.ownerId = views.ownerId
     this.createType = views.createType
-
-    this.buffers = buffers
   }
 
   acquire(): number {

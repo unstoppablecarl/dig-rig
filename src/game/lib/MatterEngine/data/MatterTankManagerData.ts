@@ -43,7 +43,6 @@ export class MatterTankManagerData {
   private readonly matterMax: Uint32Array
   private readonly overflow: Uint32Array
 
-  readonly buffers: MatterTankManagerBuffers
   // must start at 0 = no owner, 1 = player
   protected idIncrement = 2
 
@@ -51,7 +50,7 @@ export class MatterTankManagerData {
     return makeSOABuffers(SCHEMA, MAX_MATTER_TANKS)
   }
 
-  constructor(buffers: MatterTankManagerBuffers) {
+  constructor(readonly buffers: MatterTankManagerBuffers) {
     const views = soaBuffersToViews(SCHEMA, buffers)
 
     this.matter = views.matter
@@ -62,7 +61,6 @@ export class MatterTankManagerData {
     this.reservedDestroyInFlight = views.reservedDestroyInFlight
     this.matterMax = views.matterMax
     this.overflow = views.overflow
-    this.buffers = buffers
   }
 
   registerPlayerMatterTank(matterMax: number, matter: number = 0) {
