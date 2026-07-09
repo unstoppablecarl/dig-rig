@@ -9,13 +9,14 @@ import { FILL_MAX } from '../../Matter/_Liquid.constants.ts'
 import {
   EMPTY,
   FIRE,
+  isSettled,
   type MatterRaw,
   matterType,
   type MatterValue,
   PHYSICS_BODY,
   STEAM,
 } from '../../Matter/_Matter.types.ts'
-import { isLiquid } from '../../Matter/matter.ts'
+import { isActivatable, isLiquid } from '../../Matter/matter.ts'
 import type { MatterTankId } from '../../Matter/Tank/_MatterTank.types.ts'
 import type { ParticleType } from '../../Particles/_particle-types.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
@@ -94,6 +95,8 @@ export class Coordinator {
     this.sim = new MatterSim()
     this.sim.init(buffers.tiles, buffers.fill, buffers.chunkGrid, width, height, MatterSimScratchData.makeBuffers(), buffers.particleSpawns)
 
+    this.seedInitialActiveSet()
+
     this.conservationTracker = new ConservationTracker()
     this.particleSim = new ParticleSim(this.data.tiles, this.data.fill, this.conservationTracker, buffers.particle)
     this.matterTanks = new SimMatterTanks(this.data.matterTankManager)
@@ -138,6 +141,18 @@ export class Coordinator {
       particleSpawnBuffer: buffers.particleSpawns,
       onReady: () => this.startLoop(),
     })
+  }
+
+  private seedInitialActiveSet() {
+    const tiles = this.sim.tiles
+    for (let idx = 0; idx < tiles.length; idx++) {
+      const raw = tiles[idx]
+      if (raw === EMPTY) continue
+      const t = matterType(raw)
+      if (isActivatable(t) && !isSettled(raw)) {
+        this.activeSet.add(idx)
+      }
+    }
   }
 
   brushEraseMatter(req: CoordinatorInMsgBrushEraseMatter) {

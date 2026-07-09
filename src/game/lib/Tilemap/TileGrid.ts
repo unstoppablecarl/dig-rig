@@ -56,9 +56,13 @@ export class TileGrid {
     return (this.width * this.height) - empty
   }
 
-  setTile(x: number, y: number, value: MatterType): boolean {
+  setTile(x: number, y: number, value: MatterType, fill = 0): boolean {
     if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false
-    this.tiles[y * this.width + x] = value
+    let idx = y * this.width + x
+    this.tiles[idx] = value
+    if (fill !== 0) {
+      this.fillLevels[idx] = fill
+    }
     return true
   }
 
@@ -173,6 +177,7 @@ export class TileGrid {
     width: number,
     height: number,
     value: MatterType,
+    fill = 0,
   ): void {
     const x0 = Math.max(0, startX)
     const y0 = Math.max(0, startY)
@@ -186,7 +191,7 @@ export class TileGrid {
     for (let y = y0; y < y1; y++) {
       for (let x = x0; x < x1; x++) {
         if (this.getTile(x, y) !== value) {
-          this.setTile(x, y, value)
+          this.setTile(x, y, value, fill)
         }
       }
     }
