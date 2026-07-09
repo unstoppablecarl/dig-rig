@@ -1,5 +1,3 @@
-import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
-import type { ParticleType } from '../../../Particles/_particle-types.ts'
 import type { ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 import type { SimScratchBuffers } from './MatterSimScratchData.ts'
 
@@ -11,7 +9,6 @@ export enum SimInMsg {
 export enum SimOutMsg {
   READY = 100,
   DONE = 101,
-  SPAWN_PARTICLE = 102,
 }
 
 export type SimInMsgInit = {
@@ -26,6 +23,7 @@ export type SimInMsgInit = {
   // Coordinator side writes indices in / reads results out via views on
   // these same buffers instead of array payloads.
   scratchBuffers: SimScratchBuffers
+  particleSpawnBuffer: SharedArrayBuffer
 }
 
 export type SimInMsgProcess = {
@@ -73,26 +71,16 @@ export type SimOutMsgDone = {
   solidNetDelta: number
 }
 
-export type SimOutMsgSpawnParticle = {
-  type: SimOutMsg.SPAWN_PARTICLE
-  particleType: ParticleType
-  x: number
-  y: number
-  ownerId?: MatterTankId
-}
-
 // Hydrated shape handed to external consumers (SimWorkerPool/Coordinator).
 export type SimOutMessage =
   | SimOutMsgReady
   | SimOutMsgDone
-  | SimOutMsgSpawnParticle
 
 // What the real worker script actually posts — DONE carries counts (see
 // SimOutMsgDoneWire), not the hydrated Int32Array views.
 export type SimOutMessageWire =
   | SimOutMsgReady
   | SimOutMsgDoneWire
-  | SimOutMsgSpawnParticle
 
 export type TypedMatterSimWorker = Omit<Worker, 'postMessage' | 'onmessage'> & {
   postMessage(msg: SimInMessage): void

@@ -5,13 +5,18 @@ import { type ParticleDef } from '../_particle-types.ts'
 
 const SIZE_DECAY_RATE = 0.95
 
-export const GUNPOWDER_EXPLOSION: ParticleDef = {
-  particlesToSpawn: 12,
-  init(p) {
-    const velocity = randomRange(5, 15)
-    const angle = Math.random() * TWO_PI
-    p.setVelocity(velocity, angle)
-    p.size = randomRange(2, 9)
+const PARTICLES_TO_SPAWN = 12
+
+export const GUNPOWDER_EXPLOSION = {
+  spawn(pool, _sim, particleType, x, y, ownerId) {
+    for (let i = 0; i < PARTICLES_TO_SPAWN; i++) {
+      const p = pool.acquire(particleType, x, y, ownerId)
+      if (!p) break
+      const velocity = randomRange(5, 15)
+      const angle = Math.random() * TWO_PI
+      p.setVelocity(velocity, angle)
+      p.size = randomRange(2, 9)
+    }
   },
   action(p, sim) {
     const dx = p.x + p.xVelocity
@@ -27,4 +32,4 @@ export const GUNPOWDER_EXPLOSION: ParticleDef = {
       sim.pool.release(p)
     }
   },
-}
+} satisfies ParticleDef

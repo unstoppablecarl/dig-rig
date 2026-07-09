@@ -5,7 +5,6 @@ import {
   type SimOutMessage,
   SimOutMsg,
   type SimOutMsgDone,
-  type SimOutMsgSpawnParticle,
 } from '../MatterSim/MatterSim.types.ts'
 import { MatterSimController } from '../MatterSim/MatterSimController.ts'
 
@@ -52,7 +51,6 @@ export class SimWorkerPool {
   private chunksWide: number
   private readonly _dirtyChunksThisStep = new Set<number>()
   private readonly onReady: () => void
-  private readonly onSpawnParticle: (msg: SimOutMsgSpawnParticle) => void
 
   // Profiling state, gated by ENABLE_MATTER_SIM_PROFILING. Aggregates
   // per-second so we can see step duration / round-trip count correlated
@@ -76,24 +74,23 @@ export class SimWorkerPool {
       tilesBuffer,
       fillBuffer,
       chunkGridBuffers,
+      particleSpawnBuffer,
       width,
       height,
       onReady,
-      onSpawnParticle,
       poolSize,
     }: {
       tilesBuffer: SharedArrayBuffer
       fillBuffer: SharedArrayBuffer
       chunkGridBuffers: ChunkGridBuffers
+      particleSpawnBuffer: SharedArrayBuffer,
       width: number
       height: number
       onReady: () => void,
-      onSpawnParticle: (msg: SimOutMsgSpawnParticle) => void,
       poolSize: number,
     },
   ) {
     this.onReady = onReady
-    this.onSpawnParticle = onSpawnParticle
     this.width = width
     this.chunksWide = chunkGridBuffers.chunksWide
     this.pendingResolvers = new Array(poolSize).fill(null)
@@ -103,6 +100,7 @@ export class SimWorkerPool {
       tilesBuffer: tilesBuffer,
       fillBuffer: fillBuffer,
       chunkBuffers: chunkGridBuffers,
+      particleSpawnBuffer,
       width: width,
       height: height,
     }
@@ -233,17 +231,12 @@ export class SimWorkerPool {
     for (const controller of this.pool) controller.terminate()
   }
 
-  private _onMessage(workerIdx: number, msg: SimOutMessage | SimOutMsgSpawnParticle,
-  ) {
+  private _onMessage(workerIdx: number, msg: SimOutMessage) {
     if (msg.type === SimOutMsg.READY) {
       if (++this.readyCount === this.pool.length) this.onReady()
       return
     }
-    if (msg.type === SimOutMsg.DONE) {
-      this.pendingResolvers[workerIdx]?.(msg)
-      this.pendingResolvers[workerIdx] = null
-      return
-    }
-    this.onSpawnParticle(msg as SimOutMsgSpawnParticle)
+    this.pendingResolvers[workerIdx]?.(msg)
+    this.pendingResolvers[workerIdx] = null
   }
 }

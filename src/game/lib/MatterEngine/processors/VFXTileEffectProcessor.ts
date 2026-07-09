@@ -1,5 +1,5 @@
-import type { GameLevel } from '../../../../scenes/GameLevel.ts'
-import type { VFXTileEffectData } from '../../data/VFXTileEffectData.ts'
+import type { GameLevel } from '../../../scenes/GameLevel.ts'
+import type { VFXTileEffectData } from '../data/VFXTileEffectData.ts'
 import Color = Phaser.Display.Color
 
 export class VFXTileEffectProcessor {

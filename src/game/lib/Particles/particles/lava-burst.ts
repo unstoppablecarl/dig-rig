@@ -15,22 +15,27 @@ import {
 } from '../../Matter/_Matter.types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
-export const LAVA_BURST: ParticleDef = {
-  particlesToSpawn: 5,
-  init(p) {
+const PARTICLES_TO_SPAWN = 5
 
-    // Bias angle away from straight-up to avoid overly vertical trajectories
-    let angle = QUARTER_PI + Math.random() * HALF_PI
-    if (Math.random() < 0.75 && Math.abs(HALF_PI - angle) < EIGHTEENTH_PI) {
-      angle += EIGHTEENTH_PI * (angle > HALF_PI ? 1 : -1)
+export const LAVA_BURST = {
+  spawn(pool, _sim, particleType, x, y, ownerId) {
+    for (let i = 0; i < PARTICLES_TO_SPAWN; i++) {
+      const p = pool.acquire(particleType, x, y, ownerId)
+      if (!p) break
+
+      // Bias angle away from straight-up to avoid overly vertical trajectories
+      let angle = QUARTER_PI + Math.random() * HALF_PI
+      if (Math.random() < 0.75 && Math.abs(HALF_PI - angle) < EIGHTEENTH_PI) {
+        angle += EIGHTEENTH_PI * (angle > HALF_PI ? 1 : -1)
+      }
+      p.xVelocity = randomRange(1, 4) * Math.cos(angle)
+      p.yVelocity = randomRange(-7, -4) * Math.sin(angle)
+      p.initY = p.y
+      p.initYVelocity = p.yVelocity
+      p.yAcceleration = 0.06
+      p.size = randomRange(4, 7)
+      p.y -= p.size
     }
-    p.xVelocity = randomRange(1, 4) * Math.cos(angle)
-    p.yVelocity = randomRange(-7, -4) * Math.sin(angle)
-    p.initY = p.y
-    p.initYVelocity = p.yVelocity
-    p.yAcceleration = 0.06
-    p.size = randomRange(4, 7)
-    p.y -= p.size
   },
   action(p, sim) {
     const x2 = p.x + p.xVelocity
@@ -72,4 +77,4 @@ export const LAVA_BURST: ParticleDef = {
       }
     }
   },
-}
+} satisfies ParticleDef

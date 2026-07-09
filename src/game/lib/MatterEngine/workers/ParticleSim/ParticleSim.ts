@@ -1,10 +1,12 @@
-import { matterType, MatterType, SupportType } from '../../../Matter/_Matter.types.ts'
-import { getSupportType } from '../../../Matter/matter.ts'
+import { FILL_MAX } from '../../../Matter/_Liquid.constants.ts'
+import { EMPTY, matterType, MatterType, type MatterValue, SupportType } from '../../../Matter/_Matter.types.ts'
+import { convertsToCollisionBody, getSupportType, isLiquid } from '../../../Matter/matter.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { ParticleType } from '../../../Particles/_particle-types.ts'
 import type { Particle } from '../../../Particles/Particle.ts'
 import { PARTICLE_DEFS } from '../../../Particles/particles.ts'
 import { ParticleData, type ParticlesBuffers } from '../../data/ParticleData.ts'
+import type { ConservationTracker } from '../Coordinator/ConservationTracker.ts'
 import { ParticlePool } from './ParticlePool.ts'
 
 export class ParticleSim {
@@ -15,7 +17,12 @@ export class ParticleSim {
   structuralRemovals: number[] = []
   data!: ParticleData
 
-  constructor(readonly tiles: Uint32Array, particleBuffers: ParticlesBuffers) {
+  constructor(
+    readonly tiles: Uint32Array,
+    readonly fill: Uint32Array,
+    readonly conservationTracker: ConservationTracker,
+    particleBuffers: ParticlesBuffers,
+  ) {
     this.width = particleBuffers.width
     this.height = particleBuffers.height
     this.data = new ParticleData(particleBuffers)
@@ -41,15 +48,18 @@ export class ParticleSim {
     this.data.publish()
   }
 
-  spawn(type: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID, initArgs: unknown[] = []) {
-    const def = PARTICLE_DEFS[type]
+  spawn<T extends ParticleType>(
+    type: T,
+    x: number,
+    y: number,
+    ownerId: MatterTankId = NO_MATTER_TANK_ID,
+    vx: number = 0,
+    vy: number = 0,
+    value: MatterValue = EMPTY,
+  ) {
+    const def = PARTICLE_DEFS[type]!
     if (!def || !this.pool) return
-    for (let i = 0; i < def.particlesToSpawn; i++) {
-      const p = this.pool.acquire(type, x, y, ownerId)
-      if (!p) break
-        ;
-      (def.init as (p: Particle, sim: ParticleSim, ...args: unknown[]) => void)(p, this, ...initArgs)
-    }
+    def.spawn(this.pool, this, type, x, y, ownerId, vx, vy, value)
   }
 
   getTileType(x: number, y: number): MatterType {
@@ -68,7 +78,38 @@ export class ParticleSim {
       this.structuralRemovals.push(idx)
     }
     tiles[idx] = type
+    // Liquids track their mass in the parallel `fill` array, not the tile bits — a liquid
+    // tile written without this stays at whatever fill (often 0) was already there and
+    // becomes a zero-fill "zombie" the sim treats as empty. See MatterSim's Brush placement
+    // for the same pattern.
+    if (isLiquid(type)) {
+      this.fill[idx] = FILL_MAX
+    }
     this.pendingActivations.push(idx)
+  }
+
+  setTile(idx: number, type: MatterValue) {
+    this.tiles[idx] = type
+    if (isLiquid(matterType(type))) {
+      this.fill[idx] = FILL_MAX
+    }
+    this.pendingActivations.push(idx)
+  }
+
+  // Adds a small amount of liquid to a tile instead of snapping it to FILL_MAX — for
+  // particles (e.g. water splash droplets) that carry a fixed, conserved fill amount rather
+  // than a full tile's worth. Refuses to overwrite a tile occupied by a different matter type
+  // (returns false so the caller knows the droplet's mass wasn't deposited — e.g. it landed on
+  // solid ground and should be treated as consumed rather than credited back).
+  depositLiquid(idx: number, type: MatterValue, amount: number): boolean {
+    const raw = this.tiles[idx]
+    const curType = matterType(raw)
+    const depositType = matterType(type)
+    if (curType !== MatterType.EMPTY && curType !== depositType) return false
+    if (curType === MatterType.EMPTY) this.tiles[idx] = type
+    this.fill[idx] = Math.min(FILL_MAX, this.fill[idx] + amount)
+    this.pendingActivations.push(idx)
+    return true
   }
 
   tileAtTip(p: Particle): MatterType {
@@ -109,6 +150,30 @@ export class ParticleSim {
     for (let i = 0; i <= steps; i++) {
       const t = i / steps
       this.fillCircle(x1 + dx * t, y1 + dy * t, radius, value)
+    }
+  }
+
+  // Sweeps from origin (x0, y0) along delta (dx, dy) and returns the tile index of the
+  // last tile before the first one a physics body would collide with (see
+  // convertsToCollisionBody), or undefined if the whole path is clear.
+  checkForCollision(x0: number, y0: number, dx: number, dy: number): number | undefined {
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    const steps = Math.max(1, Math.ceil(dist * 2))
+
+    const width = this.width
+    const tiles = this.tiles
+
+    let prevIdx = Math.round(y0) * width + Math.round(x0)
+    for (let step = 1; step <= steps; step++) {
+      const t = step / steps
+      const ox = Math.round(x0 + dx * t)
+      const oy = Math.round(y0 + dy * t)
+      const idx = oy * width + ox
+      if (idx === prevIdx) continue
+      if (convertsToCollisionBody(tiles[idx])) {
+        return prevIdx
+      }
+      prevIdx = idx
     }
   }
 }

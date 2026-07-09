@@ -3,13 +3,11 @@ import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { type MatterRaw } from '../Matter/_Matter.types.ts'
 import type { MatterTankId } from '../Matter/Tank/_MatterTank.types.ts'
-import { ParticleType } from '../Particles/_particle-types.ts'
-import type { GetParticleInitArgs } from '../Particles/particles.ts'
 import { DataManager } from './DataManager.ts'
 import { VFXParticleProcessor } from './processors/VFXParticleProcessor.ts'
 import { VFXSettledTileProcessor } from './processors/VFXSettledTileProcessor.ts'
+import { VFXTileEffectProcessor } from './processors/VFXTileEffectProcessor.ts'
 import { type CoordinatorInMsgBrushEraseMatter } from './workers/Coordinator.types.ts'
-import { VFXTileEffectProcessor } from './workers/Coordinator/VFXTileEffectProcessor.ts'
 import { CoordinatorController } from './workers/CoordinatorController.ts'
 
 export type ApplyDestroyParams = Omit<CoordinatorInMsgBrushEraseMatter, 'type'>
@@ -51,16 +49,6 @@ export class MatterEngine extends SceneBound {
 
   brushAddMatter(value: MatterRaw, tx: number, ty: number, radius = 8) {
     this.worker.brushAddMatter(value, tx, ty, radius)
-  }
-
-  spawnParticle<T extends ParticleType>(
-    type: T,
-    x: number,
-    y: number,
-    ownerId?: MatterTankId,
-    ...args: GetParticleInitArgs<T>
-  ) {
-    this.worker.spawnParticle(type, x, y, ownerId, ...args)
   }
 
   update() {

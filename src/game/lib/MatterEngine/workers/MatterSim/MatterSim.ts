@@ -16,6 +16,7 @@ import {
   isSettled,
   MatterType,
   matterType,
+  type MatterValue,
   setOwner,
   setSettled,
   SupportType,
@@ -38,10 +39,11 @@ import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { ParticleType } from '../../../Particles/_particle-types.ts'
 import { ChunkGrid, type ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 import type { Tile } from '../../../Tilemap/TileGrid.ts'
+import { ParticleSpawnData } from '../../data/ParticleSpawnData.ts'
 import { MatterCreditTransferBuffer } from '../_helpers/MatterCreditTransferBuffer.ts'
 import { MatterReservationReleaseBuffer } from '../_helpers/MatterReservationReleaseBuffer.ts'
-import { SimOutMsg, type SimOutMsgDoneWire, type SimOutMsgSpawnParticle } from './MatterSim.types.ts'
-import { SIM_SCRATCH_CAPACITY, MatterSimScratchData, type SimScratchBuffers } from './MatterSimScratchData.ts'
+import { type SimOutMsgDoneWire } from './MatterSim.types.ts'
+import { MatterSimScratchData, SIM_SCRATCH_CAPACITY, type SimScratchBuffers } from './MatterSimScratchData.ts'
 
 // Copies an iterable of tile indices into a shared scratch view, clamped to
 // capacity (dropping and warning on overflow rather than throwing/corrupting
@@ -92,6 +94,7 @@ export class MatterSim {
   private solidTilesConsumed = 0
   private solidTilesCreated = 0
 
+  private particles: ParticleSpawnData
   // The coordinator's own local MatterSim instance (used directly by
   // Brush/PhysicsBodyProcessor/etc., never dispatched through the worker
   // pool) never calls .process(), so its scratchBuffers just go unused —
@@ -104,6 +107,7 @@ export class MatterSim {
     width: number,
     height: number,
     scratchBuffers: SimScratchBuffers,
+    particlesBuffer: SharedArrayBuffer,
   ) {
     this.tiles = new Uint32Array(tilesBuffer)
     this.fill = new Uint32Array(fillBuffer)
@@ -116,6 +120,7 @@ export class MatterSim {
     this.matterTankCredits = new MatterCreditTransferBuffer(this.tiles)
 
     this.scratch = new MatterSimScratchData(scratchBuffers)
+    this.particles = new ParticleSpawnData(particlesBuffer)
   }
 
   process(
@@ -146,22 +151,8 @@ export class MatterSim {
     return out
   }
 
-  private _spawnParticle: SimOutMsgSpawnParticle = {
-    type: SimOutMsg.SPAWN_PARTICLE as const,
-    particleType: ParticleType.NONE,
-    x: 0,
-    y: 0,
-    ownerId: undefined,
-  }
-
-  spawnParticle(particleType: ParticleType, x: number, y: number, ownerId?: MatterTankId) {
-
-    this._spawnParticle.particleType = particleType
-    this._spawnParticle.x = x
-    this._spawnParticle.y = y
-    this._spawnParticle.ownerId = ownerId
-
-    postMessage(this._spawnParticle)
+  spawnParticle(particleType: ParticleType, x: number, y: number, ownerId?: MatterTankId, vx?: number, vy?: number, value?: MatterValue) {
+    this.particles.queueParticleSpawn(particleType, x, y, ownerId, vx, vy, value)
   }
 
   // Wakes tiles in `target`. Called by coordinator on ACTIVATE messages.

@@ -3,12 +3,16 @@ import { randomRange } from '../../../helpers/random.ts'
 import { FIRE, setOwner } from '../../Matter/_Matter.types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
-export const NITRO_EXPLOSION: ParticleDef = {
-  particlesToSpawn: 20,
-  init(p) {
-    const velocity = randomRange(8, 22)
-    p.setVelocity(velocity, Math.random() * TWO_PI)
-    p.size = randomRange(3, 12)
+const PARTICLES_TO_SPAWN = 20
+export const NITRO_EXPLOSION = {
+  spawn(pool, _sim, particleType, x, y, ownerId) {
+    for (let i = 0; i < PARTICLES_TO_SPAWN; i++) {
+      const p = pool.acquire(particleType, x, y, ownerId)
+      if (!p) break
+      const velocity = randomRange(8, 22)
+      p.setVelocity(velocity, Math.random() * TWO_PI)
+      p.size = randomRange(3, 12)
+    }
   },
   action(p, sim) {
     const fire = setOwner(FIRE, p.ownerId)
@@ -23,4 +27,4 @@ export const NITRO_EXPLOSION: ParticleDef = {
     if (p.size < 1.5) sim.pool.release(p)
     else if (sim.outOfBounds(p)) sim.pool.release(p)
   },
-}
+} satisfies ParticleDef

@@ -3,6 +3,7 @@ import type { Tilemap } from '../Tilemap/Tilemap.ts'
 import { type BasicTilesBuffer, BasicTilesData } from './data/BasicTilesData.ts'
 import { type MatterTankManagerBuffers, MatterTankManagerData } from './data/MatterTankManagerData.ts'
 import { ParticleData, type ParticlesBuffers } from './data/ParticleData.ts'
+import { ParticleSpawnData } from './data/ParticleSpawnData.ts'
 import { type PhysicsBodiesBuffers, PhysicsBodiesData } from './data/PhysicsBodiesData.ts'
 import { PlayerBoundsData, type PlayerBoundsDataType } from './data/PlayerBoundsData.ts'
 import { type ProjectileBuffers, ProjectileManagerData } from './data/ProjectileManagerData.ts'
@@ -27,6 +28,7 @@ export type DataManagerBuffers = {
   vfxTileEffect: SharedArrayBuffer
   activateTiles: BasicTilesBuffer
   physicsBodies: PhysicsBodiesBuffers
+  particleSpawns: SharedArrayBuffer
 
   tiles: SharedArrayBuffer
   fill: SharedArrayBuffer
@@ -52,6 +54,7 @@ export class DataManager {
   readonly fill: Uint32Array
   readonly tileFront: TileFrontData
   readonly physicsBodies: PhysicsBodiesData
+  readonly particleSpawns: ParticleSpawnData
 
   static make(tilemap: Tilemap): DataManager {
 
@@ -73,6 +76,7 @@ export class DataManager {
       fill: tilemap.buffers.fillLevels,
       tileFront: TileFrontData.makeBuffers(tilemap),
       physicsBodies: PhysicsBodiesData.makeBuffers(),
+      particleSpawns: ParticleSpawnData.makeBuffer(),
       width,
       height,
     }
@@ -97,5 +101,6 @@ export class DataManager {
     this.fill = new Uint32Array(buffers.fill)
     this.tileFront = new TileFrontData(buffers.tileFront)
     this.physicsBodies = new PhysicsBodiesData(buffers.physicsBodies)
+    this.particleSpawns = new ParticleSpawnData(buffers.particleSpawns)
   }
 }

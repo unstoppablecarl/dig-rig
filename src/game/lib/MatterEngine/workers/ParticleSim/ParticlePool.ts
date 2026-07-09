@@ -1,8 +1,8 @@
+import { MAX_PARTICLES } from '../../../../config.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import type { ParticleType } from '../../../Particles/_particle-types.ts'
 import { Particle } from '../../../Particles/Particle.ts'
 
-const POOL_SIZE = 512
 
 export class ParticlePool {
 
@@ -11,7 +11,7 @@ export class ParticlePool {
   private inactiveHead: Particle | null = null
 
   constructor() {
-    for (let i = 0; i < POOL_SIZE; i++) {
+    for (let i = 0; i < MAX_PARTICLES; i++) {
       const p = new Particle()
       p.next = this.inactiveHead
       if (this.inactiveHead) this.inactiveHead.prev = p

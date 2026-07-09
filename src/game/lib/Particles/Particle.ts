@@ -1,3 +1,5 @@
+import { MatterType } from '../Matter/_Matter.types.ts'
+import type { LiquidTypes } from '../Matter/matter.ts'
 import type { MatterTankId } from '../Matter/Tank/_MatterTank.types.ts'
 import { ParticleType } from './_particle-types.ts'
 
@@ -22,6 +24,8 @@ export class Particle {
   initYVelocity: number = 0
   yAcceleration: number = 0
   maxIterations: number = 0
+
+  liquidType: LiquidTypes = MatterType.WATER
 
   reset() {
     this.particleType = ParticleType.NONE

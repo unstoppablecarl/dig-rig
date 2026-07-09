@@ -1,11 +1,17 @@
 import type { RectVerts } from '../../../Collision/_Collision.types.ts'
 import { EMPTY, matterType, PHYSICS_BODY } from '../../../Matter/_Matter.types.ts'
 import { isLiquid } from '../../../Matter/matter.ts'
+import { ParticleType } from '../../../Particles/_particle-types.ts'
 import type { ChunkGrid } from '../../../Tilemap/ChunkGrid.ts'
 import { type PhysicsBodiesData, PhysicsBodyStatus } from '../../data/PhysicsBodiesData.ts'
 import type { MatterSim } from '../MatterSim/MatterSim.ts'
+import type { ParticleSim } from '../ParticleSim/ParticleSim.ts'
 
 const NO_OWNER = -1
+
+// Minimum body speed (tiles/step) required to spawn a splash — slow-moving/resting bodies
+// displacing liquid shouldn't kick off a splash.
+const LIQUID_SPLASH_MIN_BODY_SPEED = 0.5
 
 export class PhysicsBodyProcessor {
 
@@ -26,6 +32,7 @@ export class PhysicsBodyProcessor {
     readonly tiles: Uint32Array,
     readonly chunkGrid: ChunkGrid,
     readonly sim: MatterSim,
+    readonly particleSim: ParticleSim,
     readonly width: number,
     readonly height: number,
   ) {
@@ -149,6 +156,9 @@ export class PhysicsBodyProcessor {
         const ty = (idx / width) | 0
 
         if (isLiquid(type)) {
+          if (dist >= LIQUID_SPLASH_MIN_BODY_SPEED) {
+            this.particleSim.spawn(ParticleType.LIQUID_SPLASH, tx + 0.5, ty + 0.5, undefined, dx, dy, type)
+          }
           this.sim.doFillDisplace(tx, ty, idx, displacedIndices, activeSet)
         }
 

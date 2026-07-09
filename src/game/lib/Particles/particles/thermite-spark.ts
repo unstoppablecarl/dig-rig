@@ -3,10 +3,10 @@ import { FIRE, setOwner, SOLID } from '../../Matter/_Matter.types.ts'
 import { isDestructible } from '../../Matter/matter.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
-export const THERMITE_SPARK: ParticleDef = {
-  particlesToSpawn: 1,
-  init(p, world) {
-    const { x, y } = p
+export const THERMITE_SPARK = {
+  spawn(pool, sim, particleType, x, y, ownerId) {
+    const p = pool.acquire(particleType, x, y, ownerId)
+    if (!p) return
     p.size = 4
     p.xVelocity = 0
     p.yVelocity = -100
@@ -17,7 +17,7 @@ export const THERMITE_SPARK: ParticleDef = {
     const step = randomRangeInt(3, 5)
     p.minY = -1
     for (let sy = y - step; sy >= 0; sy -= step) {
-      const t = world.getTileType(x, sy)
+      const t = sim.getTileType(x, sy)
       if (t === SOLID || !isDestructible(t)) {
         p.minY = sy
         break
@@ -35,5 +35,5 @@ export const THERMITE_SPARK: ParticleDef = {
       sim.pool.release(p)
     }
   },
-}
+} satisfies ParticleDef
 

@@ -2,13 +2,17 @@ import { randomRange, randomRangeInt } from '../../../helpers/random.ts'
 import { FIRE, setOwner } from '../../Matter/_Matter.types.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 
-export const NAPALM_EXPLOSION: ParticleDef = {
-  particlesToSpawn: 6,
-  init(p) {
-    p.size = randomRange(8, 14)
-    p.xVelocity = randomRange(-4, 4)
-    p.yVelocity = randomRange(-8, -4)
-    p.maxIterations = randomRangeInt(5, 15)
+const PARTICLES_TO_SPAWN = 6
+export const NAPALM_EXPLOSION = {
+  spawn(pool, _sim, particleType, x, y, ownerId) {
+    for (let i = 0; i < PARTICLES_TO_SPAWN; i++) {
+      const p = pool.acquire(particleType, x, y, ownerId)
+      if (!p) break
+      p.size = randomRange(8, 14)
+      p.xVelocity = randomRange(-4, 4)
+      p.yVelocity = randomRange(-8, -4)
+      p.maxIterations = randomRangeInt(5, 15)
+    }
   },
   action(p, sim) {
     const fire = setOwner(FIRE, p.ownerId)
@@ -20,4 +24,4 @@ export const NAPALM_EXPLOSION: ParticleDef = {
       sim.pool.release(p)
     }
   },
-}
+} satisfies ParticleDef
