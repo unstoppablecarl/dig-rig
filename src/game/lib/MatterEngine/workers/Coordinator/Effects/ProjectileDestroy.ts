@@ -13,7 +13,13 @@ export class ProjectileDestroy extends SimProjectile {
   }
 
   protected postApply(candidates: ProjectileEffectResult[], _createType: MatterType, activeSet: Set<number>, dirtyChunks: Set<number>): void {
+    if (import.meta.env.DEV) {
+      console.log(`[collapse] ProjectileDestroy.postApply candidates=${candidates.length}`)
+    }
     const islands = this.physics.findNewlyDisconnected(candidates, dirtyChunks)
+    if (import.meta.env.DEV) {
+      console.log(`[collapse] ProjectileDestroy islands found=${islands.length}`)
+    }
     if (islands.length > 0) this.physics.collapseIslands(islands, activeSet, dirtyChunks)
   }
 }

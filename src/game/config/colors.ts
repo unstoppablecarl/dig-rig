@@ -264,3 +264,4 @@ export const EDGE_GLOW_COLOR = rgbToColor(`rgb(50, 5, 5)`)
 
 export const DEBUG_SETTLED_COLOR = rgbToColor(`rgb(255, 0, 150)`)
 export const DEBUG_ANCHORED_COLOR = rgbToColor(`rgb(0, 200, 0)`)
+export const DEBUG_CHUNK_GRID_COLOR = rgbToColor(`rgb(255, 255, 0)`)

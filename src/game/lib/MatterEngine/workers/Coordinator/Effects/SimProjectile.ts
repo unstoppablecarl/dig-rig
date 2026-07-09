@@ -2,7 +2,7 @@
 import { FILL_MAX } from '../../../../Matter/_Liquid.constants.ts'
 import { EMPTY, FIRE, getOwner, matterType, MatterType, SupportType } from '../../../../Matter/_Matter.types.ts'
 import {
-  convertsToCollisionBody,
+  convertsToCollisionBody, doesSettle,
   getReserveDestroyAmount,
   getSupportType,
   isLiquid,
@@ -43,7 +43,7 @@ export abstract class SimProjectile {
 
   protected abstract convertTile(existing: MatterType, createType: MatterType, ownerId: MatterTankId): MatterType | null
 
-  protected shouldSkipTile(_x: number, _y: number, _playerBounds: PlayerBounds): boolean {
+  protected shouldSkipTile(_x: number, _y: number, _playerBounds: PlayerBounds, _typeDoesSettle: boolean): boolean {
     return false
   }
 
@@ -73,6 +73,7 @@ export abstract class SimProjectile {
     const ir2 = innerRadius * innerRadius
     const minY = Math.max(0, Math.floor(tileY - tileRadius))
     const maxY = Math.min(height - 1, Math.ceil(tileY + tileRadius))
+    const typeDoesSettle = doesSettle(createType)
 
     for (let y = minY; y <= maxY; y++) {
       const dy = y - tileY
@@ -86,10 +87,10 @@ export abstract class SimProjectile {
         const innerDx = Math.sqrt(ir2 - dy2)
         const xSkipStart = Math.ceil(tileX - innerDx)
         const xSkipEnd = Math.floor(tileX + innerDx)
-        for (let x = xMin; x < xSkipStart; x++) this._tryCandidate(candidates, tiles, x, y, createType, ownerId, playerBounds)
-        for (let x = xSkipEnd + 1; x <= xMax; x++) this._tryCandidate(candidates, tiles, x, y, createType, ownerId, playerBounds)
+        for (let x = xMin; x < xSkipStart; x++) this._tryCandidate(candidates, tiles, x, y, createType, ownerId, playerBounds,typeDoesSettle)
+        for (let x = xSkipEnd + 1; x <= xMax; x++) this._tryCandidate(candidates, tiles, x, y, createType, ownerId, playerBounds,typeDoesSettle)
       } else {
-        for (let x = xMin; x <= xMax; x++) this._tryCandidate(candidates, tiles, x, y, createType, ownerId, playerBounds)
+        for (let x = xMin; x <= xMax; x++) this._tryCandidate(candidates, tiles, x, y, createType, ownerId, playerBounds,typeDoesSettle)
       }
     }
 
@@ -188,8 +189,9 @@ export abstract class SimProjectile {
     createType: MatterType,
     ownerId: MatterTankId,
     playerBounds: PlayerBounds,
+    typeDoesSettle: boolean,
   ) {
-    if (this.shouldSkipTile(x, y, playerBounds)) return
+    if (this.shouldSkipTile(x, y, playerBounds,typeDoesSettle)) return
     const idx = y * this.width + x
     const existing = matterType(tiles[idx])
     const newValue = this.convertTile(existing, createType, ownerId)

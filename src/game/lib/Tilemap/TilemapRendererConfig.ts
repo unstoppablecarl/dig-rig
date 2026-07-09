@@ -1,5 +1,6 @@
 import {
   DRAW_ANCHORED_DEBUG,
+  DRAW_CHUNK_GRID_DEBUG,
   DRAW_LIQUID_PRESSURE_DEBUG,
   DRAW_PHYSICS_BODY_TILES_DEBUG,
   DRAW_TERRAIN_SETTLED_DEBUG,
@@ -7,7 +8,7 @@ import {
   ICE_TEXTURE_ENABLED,
   PARTICLE_RENDER_ENABLED,
 } from '../../config'
-import { DEBUG_ANCHORED_COLOR, DEBUG_SETTLED_COLOR, EDGE_GLOW_COLOR } from '../../config/colors.ts'
+import { DEBUG_ANCHORED_COLOR, DEBUG_CHUNK_GRID_COLOR, DEBUG_SETTLED_COLOR, EDGE_GLOW_COLOR } from '../../config/colors.ts'
 
 export type TilemapRendererConfig = Readonly<typeof TILEMAP_RENDERER_DEFAULTS>
 export const TILEMAP_RENDERER_DEFAULTS = {
@@ -29,5 +30,9 @@ export const TILEMAP_RENDERER_DEFAULTS = {
   drawDebugPhysicsBodies: DRAW_PHYSICS_BODY_TILES_DEBUG,
   particleRenderEnabled: PARTICLE_RENDER_ENABLED,
   debugLiquidPressure: DRAW_LIQUID_PRESSURE_DEBUG,
+
+  drawDebugChunkGridColor: DEBUG_CHUNK_GRID_COLOR,
+  drawDebugChunkGridAlpha: 0.6,
+  drawDebugChunkGrid: DRAW_CHUNK_GRID_DEBUG,
 }
 

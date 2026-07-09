@@ -3,7 +3,8 @@ import { type Buffers, makeSOABuffers, type Schema, soaBuffersToViews } from '..
 import type { ChunkId } from './ChunkMap.ts'
 
 const SCHEMA = {
-  solidCount: Uint16Array,  // 0 – CHUNK_SIZE²
+  solidCount: Uint16Array,  // 0 – CHUNK_SIZE²; any collidable tile (incl. settled sand/rock/etc.)
+  structuralCount: Uint16Array,  // 0 – CHUNK_SIZE²; tiles with getSupportType() >= STRUCTURAL only
   anchored: Uint8Array,   // 0 | 1
   renderGen: Uint8Array,   // monotonic counter, worker increments on dirty
   collGen: Uint8Array,   // monotonic counter, worker increments on dirty
@@ -25,6 +26,7 @@ const CHUNK_MAX_SOLID = CHUNK_SIZE * CHUNK_SIZE
 
 export class ChunkGrid {
   private readonly solidCount: Uint16Array
+  private readonly structuralCount: Uint16Array
   private readonly anchored: Uint8Array
   private readonly renderGen: Uint8Array
   private readonly collGen: Uint8Array
@@ -49,6 +51,7 @@ export class ChunkGrid {
   constructor(buffers: ChunkGridBuffers) {
     const views = soaBuffersToViews(SCHEMA, buffers)
     this.solidCount = views.solidCount
+    this.structuralCount = views.structuralCount
     this.anchored = views.anchored
     this.renderGen = views.renderGen
     this.collGen = views.collGen
@@ -72,6 +75,19 @@ export class ChunkGrid {
     if (count === 0) return ChunkType.EMPTY
     if (count === CHUNK_MAX_SOLID) return ChunkType.FULL
     return ChunkType.PARTIAL
+  }
+
+  getStructuralCount(idx: number): number {
+    return this.structuralCount[idx]
+  }
+
+  // True only when every tile in the chunk is >= SupportType.STRUCTURAL. Stronger than
+  // getType() === FULL, which only means every tile is collidable — a chunk can be fully
+  // collidable while mixing structural rock with non-structural settled material (sand,
+  // settled rock, etc.), in which case a structural tile can still be cut off from an
+  // anchored border by a non-structural tile within the same "FULL" chunk.
+  isFullyStructural(idx: number): boolean {
+    return this.structuralCount[idx] === CHUNK_MAX_SOLID
   }
 
   isAnchored(idx: number): boolean {
@@ -99,6 +115,10 @@ export class ChunkGrid {
 
   setSolidCount(idx: number, count: number): void {
     this.solidCount[idx] = count
+  }
+
+  setStructuralCount(idx: number, count: number): void {
+    this.structuralCount[idx] = count
   }
 
   setAnchored(idx: number, val: boolean): void {

@@ -1,3 +1,4 @@
+import { CHUNK_SIZE } from '../../config.ts'
 import { BlendMode } from '../../config/blend-modes.ts'
 import type { MatterRenderConfig } from '../../config/colors.ts'
 import {
@@ -94,6 +95,7 @@ export function makeTilemapFragShader(
   #define DRAW_PHYSICS_BODY_TILES_DEBUG ${c.drawDebugPhysicsBodies ? 1 : 0}
   #define PARTICLE_RENDER_ENABLED ${c.particleRenderEnabled ? 1 : 0}
   #define DEBUG_LIQUID_PRESSURE ${c.debugLiquidPressure ? 1 : 0}
+  #define DEBUG_CHUNK_GRID ${c.drawDebugChunkGrid ? 1 : 0}
 
   uniform sampler2D uLiquidDensity;
   uniform sampler2D uTerrainBg;
@@ -672,6 +674,18 @@ export function makeTilemapFragShader(
           const vec3 drawDebugAnchoredColor = ${v3(c.drawDebugAnchoredColor)};
           const float drawDebugAnchoredAlpha = ${fl(c.drawDebugAnchoredAlpha)};
           color.rgb = mix(color.rgb, drawDebugAnchoredColor, drawDebugAnchoredAlpha);
+      }
+      #endif
+
+      #if DEBUG_CHUNK_GRID
+      if (tileCoord.x % ${CHUNK_SIZE} == 0 || tileCoord.y % ${CHUNK_SIZE} == 0) {
+          const vec3 drawDebugChunkGridColor = ${v3(c.drawDebugChunkGridColor)};
+          const float drawDebugChunkGridAlpha = ${fl(c.drawDebugChunkGridAlpha)};
+          if (tileType == ${EMPTY}) {
+              color = vec4(drawDebugChunkGridColor, drawDebugChunkGridAlpha);
+          } else {
+              color.rgb = mix(color.rgb, drawDebugChunkGridColor, drawDebugChunkGridAlpha);
+          }
       }
       #endif
 

@@ -2,7 +2,7 @@
 import { CHUNK_SIZE } from '../../../../config.ts'
 import { getSupport, matterType, PERMANENT, SupportType } from '../../../Matter/_Matter.types.ts'
 import { convertsToCollisionBody, getSupportType, setSupport, STRUCTURAL_COLLAPSE_TO } from '../../../Matter/matter.ts'
-import { ChunkGrid, ChunkType } from '../../../Tilemap/ChunkGrid.ts'
+import { ChunkGrid } from '../../../Tilemap/ChunkGrid.ts'
 import { MatterSim } from '../MatterSim/MatterSim.ts'
 
 type XY = { x: number; y: number }
@@ -20,6 +20,7 @@ export class PhysicsCollapse {
   private _bfsQueue!: Int32Array
   private _bfsComp!: Int32Array
   private _anchoredQueue!: Int32Array
+  private _anchorParent!: Int32Array
   private _bfsEpoch = 0
   private readonly chunksWide: number
   private readonly chunksHigh: number
@@ -38,6 +39,7 @@ export class PhysicsCollapse {
     this._bfsQueue = new Int32Array(n)
     this._bfsComp = new Int32Array(n)
     this._anchoredQueue = new Int32Array(this.chunksWide * this.chunksHigh)
+    this._anchorParent = new Int32Array(this.chunksWide * this.chunksHigh)
     this.initPermanentChunks()
     this.initChunkState()
   }
@@ -54,8 +56,9 @@ export class PhysicsCollapse {
       // firing a full terrain-body rebuild on every chunk with any water
       // activity, every frame, regardless of what actually changed.
       const prevSolidCount = chunkGrid.getSolidCount(chunkIdx)
-      const solidCount = this.countSolidInChunk(cx, cy)
+      const { solidCount, structuralCount } = this.countSolidInChunk(cx, cy)
       chunkGrid.setSolidCount(chunkIdx, solidCount)
+      chunkGrid.setStructuralCount(chunkIdx, structuralCount)
       if (solidCount !== prevSolidCount) {
         chunkGrid.markDirty(chunkIdx)
       } else {
@@ -163,6 +166,9 @@ export class PhysicsCollapse {
   // anchored, so they always need tile-level BFS. Dirty chunks have stale solidCount/type so they
   // are also excluded from the fast path.
   findNewlyDisconnected(structuralRemovals: XY[], dirtyChunks: Set<number>): XY[] {
+    if (import.meta.env.DEV && structuralRemovals.length > 0) {
+      console.log(`[collapse] findNewlyDisconnected called with ${structuralRemovals.length} removals, ${dirtyChunks.size} dirty chunks`)
+    }
     // Refresh chunk anchored flags — they reflect the previous step's tile state. Any chunk whose
     // only path to permanent terrain ran through a now-destroyed tile would otherwise read as stale-anchored.
     this.computeAnchored()
@@ -184,7 +190,15 @@ export class PhysicsCollapse {
     //   anchored   → the border connects to permanent terrain (fresh after computeAnchored above)
     const isFastAnchored = (cx: number, cy: number): boolean => {
       const id = cy * chunksWide + cx
-      return !dirtyChunks.has(id) && chunkGrid.getType(id) === ChunkType.FULL && chunkGrid.isAnchored(id)
+      const result = !dirtyChunks.has(id) && chunkGrid.isFullyStructural(id) && chunkGrid.isAnchored(id)
+      if (import.meta.env.DEV && result) {
+        console.log(`[collapse] isFastAnchored(${cx},${cy}) TRUE — ` +
+          `solidCount=${chunkGrid.getSolidCount(id)} structuralCount=${chunkGrid.getStructuralCount(id)} ` +
+          `dirty=${dirtyChunks.has(id)} permanent=${this.permanentChunkIds.has(id)} ` +
+          `chunksWide=${chunksWide} chunksHigh=${this.chunksHigh} ` +
+          `chain=${this.debugAnchorChain(id)}`)
+      }
+      return result
     }
 
     for (const { x: dx, y: dy } of structuralRemovals) {
@@ -220,10 +234,16 @@ export class PhysicsCollapse {
         }
         if (seedAnchored) {
           vis[sidx] = CONFIRMED
+          if (import.meta.env.DEV) {
+            console.log(`[collapse] seed (${sx},${sy}) short-circuited as anchored ` +
+              `(edge=${sx === 0 || sx === width - 1 || sy === 0 || sy === height - 1}, ` +
+              `fastAnchored=${isFastAnchored(seedCx, seedCy)}, chunk=${seedCx},${seedCy})`)
+          }
           continue
         }
 
         let head = 0, tail = 0, compLen = 0, anchored = false
+        let anchorReason = ''
         vis[sidx] = VISITED
         queue[tail++] = sidx
         comp[compLen++] = sidx
@@ -236,6 +256,7 @@ export class PhysicsCollapse {
             const nx = cx + BFS_DX[d2], ny = cy + BFS_DY[d2]
             if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
               anchored = true
+              anchorReason = `world edge at (${cx},${cy})->d${d2}`
               break bfs
             }
             const nidx = ny * width + nx
@@ -243,6 +264,7 @@ export class PhysicsCollapse {
             const st = getSupportType(tiles[nidx])
             if (st === SupportType.ANCHORED) {
               anchored = true
+              anchorReason = `ANCHORED tile at (${nx},${ny})`
               break bfs
             }
             if (st >= SupportType.STRUCTURAL) {
@@ -250,6 +272,7 @@ export class PhysicsCollapse {
               const nCy = ny / CHUNK_SIZE | 0
               if (isFastAnchored(nCx, nCy)) {
                 anchored = true
+                anchorReason = `fastAnchored chunk (${nCx},${nCy}) via tile (${nx},${ny})`
                 break bfs
               }
               vis[nidx] = VISITED
@@ -257,6 +280,11 @@ export class PhysicsCollapse {
               comp[compLen++] = nidx
             }
           }
+        }
+
+        if (import.meta.env.DEV) {
+          console.log(`[collapse] seed (${sx},${sy}) BFS: compLen=${compLen} anchored=${anchored}` +
+            (anchored ? ` reason=${anchorReason}` : ''))
         }
 
         for (let k = 0; k < compLen; k++) vis[comp[k]] = CONFIRMED
@@ -328,25 +356,35 @@ export class PhysicsCollapse {
     for (let cy = 0; cy < chunksHigh; cy++) {
       for (let cx = 0; cx < chunksWide; cx++) {
         const idx = cy * chunksWide + cx
-        chunkGrid.setSolidCount(idx, this.countSolidInChunk(cx, cy))
+        const { solidCount, structuralCount } = this.countSolidInChunk(cx, cy)
+        chunkGrid.setSolidCount(idx, solidCount)
+        chunkGrid.setStructuralCount(idx, structuralCount)
       }
     }
     this.computeAnchored()
   }
 
-  private countSolidInChunk(cx: number, cy: number): number {
+  // Counts both "collidable" tiles (any matter that contributes to the collision body,
+  // including non-structural settled material like sand/rock-when-settled) and
+  // "structural" tiles (getSupportType() >= STRUCTURAL) separately — a chunk can be 100%
+  // collidable while only partly structural, and isFastAnchored's shortcut requires the
+  // latter (see isFullyStructural doc comment on ChunkGrid).
+  private countSolidInChunk(cx: number, cy: number): { solidCount: number, structuralCount: number } {
     const { width, height } = this
     const tiles = this.sim.tiles
     const x0 = cx * CHUNK_SIZE, y0 = cy * CHUNK_SIZE
     const x1 = Math.min(x0 + CHUNK_SIZE, width)
     const y1 = Math.min(y0 + CHUNK_SIZE, height)
-    let count = 0
+    let solidCount = 0
+    let structuralCount = 0
     for (let y = y0; y < y1; y++) {
       for (let x = x0; x < x1; x++) {
-        if (convertsToCollisionBody(tiles[y * width + x])) count++
+        const raw = tiles[y * width + x]
+        if (convertsToCollisionBody(raw)) solidCount++
+        if (getSupportType(raw) >= SupportType.STRUCTURAL) structuralCount++
       }
     }
-    return count
+    return { solidCount, structuralCount }
   }
 
   private computeAnchored(): void {
@@ -358,11 +396,19 @@ export class PhysicsCollapse {
     let head = 0, tail = 0
     for (const id of this.permanentChunkIds) {
       chunkGrid.setAnchored(id, true)
+      this._anchorParent[id] = -1
       queue[tail++] = id
     }
 
     while (head < tail) {
       const id = queue[head++]
+      // A chunk can only be trusted as a waypoint to propagate "anchored" further if it's the
+      // permanent root, or if it's fully structural — hasSolidBorder only proves that ONE border
+      // pixel is structural on both sides, not that this pixel connects internally to whatever
+      // entry point made `id` anchored in the first place. A PARTIAL chunk (holes from digging)
+      // can have two structurally disjoint masses that each just touch a different border,
+      // which would otherwise bridge two genuinely disconnected structures into one false chain.
+      if (!this.permanentChunkIds.has(id) && !chunkGrid.isFullyStructural(id)) continue
       const cx = id % chunksWide
       const cy = id / chunksWide | 0
       for (let d = 0; d < 4; d++) {
@@ -372,10 +418,30 @@ export class PhysicsCollapse {
         if (chunkGrid.isAnchored(nid)) continue
         if (this.hasSolidBorder(cx, cy, BFS_DX[d], BFS_DY[d])) {
           chunkGrid.setAnchored(nid, true)
+          this._anchorParent[nid] = id
           queue[tail++] = nid
         }
       }
     }
+  }
+
+  // DEV-only: reconstructs the chunk-chain that computeAnchored() used to mark `id` as anchored,
+  // for diagnosing false-positive anchoring.
+  private debugAnchorChain(id: number): string {
+    const { chunksWide } = this
+    const hops: string[] = []
+    let cur = id
+    let guard = 0
+    while (cur !== -1 && guard++ < this.chunksWide * this.chunksHigh + 1) {
+      const cx = cur % chunksWide
+      const cy = cur / chunksWide | 0
+      const structuralCount = this.chunkGrid.getStructuralCount(cur)
+      const full = this.chunkGrid.isFullyStructural(cur)
+      hops.push(`(${cx},${cy})${this.permanentChunkIds.has(cur) ? '[PERMANENT]' : ''}` +
+        `{structuralCount=${structuralCount}${full ? '' : ' PARTIAL!'}}`)
+      cur = this._anchorParent[cur]
+    }
+    return hops.join(' <- ')
   }
 
   private hasSolidBorder(cx: number, cy: number, dx: number, dy: number): boolean {

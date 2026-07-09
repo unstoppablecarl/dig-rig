@@ -11,9 +11,8 @@ export class ProjectileCreate extends SimProjectile {
     return canHaveOwner(createType) ? setOwner(createType, ownerId) : createType
   }
 
-  protected shouldSkipTile(x: number, y: number, p: PlayerBounds): boolean {
-
-    if ((x + y) % 2 === 0) return true
+  protected shouldSkipTile(x: number, y: number, p: PlayerBounds, typeDoesSettle: boolean): boolean {
+    if (typeDoesSettle && (x + y) % 2 === 0) return true
 
     return x > p.left && x < p.right && y > p.top && y < p.bottom
   }

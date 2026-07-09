@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 import { FILL_MAX } from '../../../Matter/_Liquid.constants.ts'
 import { EMPTY, getOwner, type MatterRaw, matterType, PLANT, SupportType } from '../../../Matter/_Matter.types.ts'
-import { getReserveDestroyAmount, getSupportType, isLiquid } from '../../../Matter/matter.ts'
+import { doesSettle, getReserveDestroyAmount, getSupportType, isLiquid } from '../../../Matter/matter.ts'
 import type { Tile } from '../../../Tilemap/TileGrid.ts'
 import type { CoordinatorInMsgBrushEraseMatter } from '../Coordinator.types.ts'
 import { MatterSim } from '../MatterSim/MatterSim.ts'
@@ -83,6 +83,8 @@ export class Brush {
     const addingType = matterType(value)
     const addingLiquid = isLiquid(addingType)
 
+    const typeDoesSettle = doesSettle(addingType)
+
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
         if (dx * dx + dy * dy > r2) continue
@@ -90,7 +92,7 @@ export class Brush {
         const y = ty + dy
         if (x < 0 || x >= width || y < 0 || y >= height) continue
         const idx = y * width + x
-        if ((x+y) % 2 === 0) continue
+        if (typeDoesSettle && (x+y) % 2 === 0) continue
         if (matterType(tiles[idx]) !== EMPTY) continue
 
         if (addingType === PLANT) {
