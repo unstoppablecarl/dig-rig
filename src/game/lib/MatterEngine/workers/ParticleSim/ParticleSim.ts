@@ -188,10 +188,8 @@ export class ParticleSim {
     const startX = Math.min(width - 1, Math.max(0, Math.round(x0)))
     const startY = Math.min(height - 1, Math.max(0, Math.round(y0)))
     let prevIdx = startY * width + startX
-    if (matterType(this.tiles[prevIdx]) === type) {
-      this.depositLiquid(prevIdx, type, fillUnits)
-      return true
-    }
+
+    let prevTypeWasLiquid = matterType(this.tiles[prevIdx]) === type
     for (let step = 1; step <= steps; step++) {
       const t = step / steps
       const ox = Math.round(x0 + dx * t)
@@ -202,10 +200,15 @@ export class ParticleSim {
       }
       const idx = oy * width + ox
       if (idx === prevIdx) continue
+      if (!prevTypeWasLiquid && matterType(tiles[idx]) === type) {
+        this.depositLiquid(prevIdx, type, fillUnits)
+        return true
+      }
       if (convertsToCollisionBody(tiles[idx])) {
         this.depositLiquid(prevIdx, type, fillUnits)
         return true
       }
+      prevTypeWasLiquid = matterType(tiles[idx]) === type
       prevIdx = idx
     }
 

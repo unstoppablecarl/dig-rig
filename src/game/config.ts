@@ -9,7 +9,7 @@ export const DEFAULT_PLAYER_MATTER_TANK_SIZE = 5000
 // hard limits
 export const MAX_PROJECTILES = 512
 export const MAX_MATTER_TANKS = 256
-export const MAX_PARTICLES = 1024
+export const MAX_PARTICLES = 1024 * 4
 
 // vfx limits
 export const MAX_VFX_MATTER_PARTICLES = 1000

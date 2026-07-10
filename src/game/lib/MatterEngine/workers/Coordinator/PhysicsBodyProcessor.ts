@@ -1,5 +1,5 @@
 import type { RectVerts } from '../../../Collision/_Collision.types.ts'
-import { EMPTY, matterType, PHYSICS_BODY } from '../../../Matter/_Matter.types.ts'
+import { EMPTY, getOwner, matterType, PHYSICS_BODY } from '../../../Matter/_Matter.types.ts'
 import { isLiquid } from '../../../Matter/matter.ts'
 import { ParticleType } from '../../../Particles/_particle-types.ts'
 import type { ChunkGrid } from '../../../Tilemap/ChunkGrid.ts'
@@ -13,10 +13,19 @@ const NO_OWNER = -1
 // displacing liquid shouldn't kick off a splash.
 const LIQUID_SPLASH_MIN_BODY_SPEED = 0.5
 
+const SPLASH_PARTICLE_PERCENT = 25
+const SPLASH_STEP = Math.max(1, Math.round(100 / SPLASH_PARTICLE_PERCENT))
+
 export class PhysicsBodyProcessor {
 
   // slotIdx -> tile idx[]
   private readonly prevTiles = new Map<number, number[]>()
+
+  // Slots currently touching at least one liquid tile. Splash should only fire on the
+  // transition into this set (surface entry) — without it, a body sinking through liquid
+  // keeps sweeping fresh liquid tiles under its leading edge every frame and re-triggers
+  // the splash spawn continuously for the whole descent instead of once on contact.
+  private readonly submergedSlots = new Set<number>()
 
   // tile idx -> owning slotIdx (or NO_OWNER). Prevents two overlapping bodies
   // from both believing they own the same PHYSICS_BODY tile: without this,
@@ -98,6 +107,9 @@ export class PhysicsBodyProcessor {
     // exclude as potential fill destination
     const displacedIndices = new Set<number>()
 
+    const wasSubmerged = this.submergedSlots.has(slotIdx)
+    let touchesLiquidThisFrame = false
+
     for (let step = 1; step <= steps; step++) {
       const t = step / steps
       const ox = dx * (1 - t)
@@ -148,18 +160,29 @@ export class PhysicsBodyProcessor {
         }
       }
 
+
+      let i = -1
       for (const idx of points) {
+        i++
         const raw = tiles[idx]
         const type = matterType(raw)
 
         const tx = idx % width
         const ty = (idx / width) | 0
 
-        if (isLiquid(type)) {
-          if (dist >= LIQUID_SPLASH_MIN_BODY_SPEED) {
-            this.particleSim.spawn(ParticleType.LIQUID_SPLASH, tx + 0.5, ty + 0.5, undefined, dx, dy, type)
+        const typeIsLiquid = isLiquid(type)
+
+        if (typeIsLiquid) {
+          touchesLiquidThisFrame = true
+        }
+
+        if (i % SPLASH_STEP === 0) {
+          if (typeIsLiquid) {
+            if (!wasSubmerged && dist >= LIQUID_SPLASH_MIN_BODY_SPEED) {
+              this.particleSim.spawn(ParticleType.LIQUID_SPLASH, tx + 0.5, ty + 0.5, getOwner(raw), dx, dy, type)
+            }
+            this.sim.doFillDisplace(tx, ty, idx, displacedIndices, activeSet)
           }
-          this.sim.doFillDisplace(tx, ty, idx, displacedIndices, activeSet)
         }
 
         const isLastStep = step === steps
@@ -233,6 +256,12 @@ export class PhysicsBodyProcessor {
     prevTiles.length = 0
     for (const idx of newFootprint) prevTiles.push(idx)
 
+    if (touchesLiquidThisFrame) {
+      this.submergedSlots.add(slotIdx)
+    } else {
+      this.submergedSlots.delete(slotIdx)
+    }
+
     // Signal the main thread that this slot's accumulated delta has been
     // consumed — it resets its position anchor on seeing this change, so the
     // *next* delta correctly represents distance since now, not since its
@@ -251,6 +280,7 @@ export class PhysicsBodyProcessor {
   }
 
   clearPrevTiles(slotIdx: number, activeSet: Set<number>) {
+    this.submergedSlots.delete(slotIdx)
     let prevTiles = this.prevTiles.get(slotIdx)
     if (prevTiles === undefined) return
     const width = this.width

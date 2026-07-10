@@ -20,57 +20,55 @@ const SPLASH_COLORS: Record<LiquidTypes, number> = {
 }
 const DEFAULT_SPLASH_COLOR = SPLASH_COLORS[WATER]
 
-// Each spawned particle carries exactly 1 fill unit, debited from the source tile by
-// PhysicsBodyProcessor when the splash is spawned and credited back here on landing —
+// Each spawned particle carries SPLASH_FILL_UNIT fill, debited from the source tile in
+// total (count * unit) when the splash is spawned and credited back here on landing —
 // keeps the droplet's mass conserved instead of conjuring a full FILL_MAX tile out of thin air.
 const SPLASH_FILL_UNIT = 1
-const LIQUID_SPLASH_PARTICLE_COUNT = 5
+const SPLASH_PARTICLE_COUNT = 5
+const SPLASH_TOTAL_FILL = SPLASH_PARTICLE_COUNT * SPLASH_FILL_UNIT
 // Scales the body's raw per-step (vx, vy) into a launch speed — bumped up from the old 0.1
 // (which made `speed` too small for the cone lean below to be visible) so the spray still
 // visibly depends on how hard the body hit the liquid.
-const LIQUID_SPLASH_VELOCITY_MULTIPLIER = 0.5
+const SPLASH_VELOCITY_MULTIPLIER = 0.5
 const STRAIGHT_UP = -HALF_PI
 
-// --- Per-droplet randomization knobs, both applied once below in the spawn loop ---
 // Angle: each droplet leans 0..this many degrees off straight-up, toward whichever side the
 // body was moving (bow-wave asymmetry). 0 = every droplet flies straight up in a line; higher
 // = wider splash fan.
-const LIQUID_SPLASH_ANGLE_VARIANCE_DEG = 30
-// Speed: each droplet's launch speed is scaled by a random factor in
-// [1 - variance, 1 + variance]. 0 = every droplet flies exactly as fast; higher = bigger
-// spread between the slowest and fastest droplet.
-const LIQUID_SPLASH_SPEED_VARIANCE_MIN = 0.7
-const LIQUID_SPLASH_SPEED_VARIANCE_MAX = 1.8
+const SPLASH_ANGLE_VARIANCE_DEG = 30
+const SPLASH_SPEED_VARIANCE_MIN = 0.7
+const SPLASH_SPEED_VARIANCE_MAX = 1.8
 
 export const LIQUID_SPLASH = {
   // type is the liquid being displaced; vx/vy are the source body's raw per-step velocity.
-  spawn(pool, sim, particleType, x, y, _ownerId, vx, vy, value) {
+  spawn(pool, sim, particleType, x, y, ownerId, vx, vy, value) {
     const tx = Math.floor(x)
     const ty = Math.floor(y)
     const idx = ty * sim.width + tx
 
-    if (sim.fill[idx] <= LIQUID_SPLASH_PARTICLE_COUNT) return
+    if (sim.fill[idx] <= SPLASH_TOTAL_FILL) return
 
-    sim.fill[idx] -= LIQUID_SPLASH_PARTICLE_COUNT
-    sim.conservationTracker.addDelta(-LIQUID_SPLASH_PARTICLE_COUNT)
-    const speed = Math.hypot(vx!, vy!) * LIQUID_SPLASH_VELOCITY_MULTIPLIER
+    const speed = Math.hypot(vx!, vy!) * SPLASH_VELOCITY_MULTIPLIER
     // Which side to lean the spray cone toward (bow-wave asymmetry) — falls back to a random
     // side when the body has no horizontal motion (e.g. falling straight down), since there's
     // no meaningful "side" to lean toward in that case.
     const lean = vx! !== 0 ? Math.sign(vx!) : (Math.random() < 0.5 ? -1 : 1)
 
-    // One particle per debited fill unit — each carries SPLASH_FILL_UNIT and credits it
-    // back on landing (see action()), so debiting LIQUID_SPLASH_PARTICLE_COUNT above without
-    // spawning that many droplets would destroy fill instead of conserving it.
-    for (let i = 0; i < LIQUID_SPLASH_PARTICLE_COUNT; i++) {
-      const p = pool.acquire(particleType, x, y, undefined)
+    // Each particle credits SPLASH_FILL_UNIT back on landing (see action()), and
+    // SPLASH_TOTAL_FILL above is exactly count * unit, so spawning fewer than
+    // SPLASH_PARTICLE_COUNT droplets here would destroy fill instead of conserving it.
+    for (let i = 0; i < SPLASH_PARTICLE_COUNT; i++) {
+      const p = pool.acquire(particleType, x, y, ownerId)
       if (!p) break
+
+      sim.fill[idx] -= SPLASH_FILL_UNIT
+      sim.conservationTracker.addDelta(-SPLASH_FILL_UNIT)
 
       p.liquidType = value!
 
-      const angleVariance = randomRange(0, DegToRad(LIQUID_SPLASH_ANGLE_VARIANCE_DEG))
+      const angleVariance = randomRange(0, DegToRad(SPLASH_ANGLE_VARIANCE_DEG))
       const away = STRAIGHT_UP + lean * angleVariance
-      const speedVariance = randomRange(LIQUID_SPLASH_SPEED_VARIANCE_MIN, LIQUID_SPLASH_SPEED_VARIANCE_MAX)
+      const speedVariance = randomRange(SPLASH_SPEED_VARIANCE_MIN, SPLASH_SPEED_VARIANCE_MAX)
       p.setVelocity(speed * speedVariance, away)
       p.size = 1
     }
