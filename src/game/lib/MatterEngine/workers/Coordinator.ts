@@ -187,6 +187,7 @@ export class Coordinator {
   private async step() {
     const _profT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
     try {
+      this.data.simStats.stepCount++
       this.dirtyChunksThisStep.clear()
 
       // Drain physics-body tile activations written to the SAB by the main thread.

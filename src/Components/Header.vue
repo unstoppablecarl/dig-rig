@@ -10,6 +10,9 @@ const uiState = useUIState()
     <div class="section fps">
       <strong>FPS:</strong> {{ uiState.fps }}
     </div>
+    <div class="section fps">
+      <strong>Sim:</strong> {{ uiState.simFps }}
+    </div>
     <div class="section">{{ uiState.currentLevelDisplayName }}</div>
 
   </div>

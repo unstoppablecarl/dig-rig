@@ -7,6 +7,7 @@ import { ParticleSpawnData } from './data/ParticleSpawnData.ts'
 import { type PhysicsBodiesBuffers, PhysicsBodiesData } from './data/PhysicsBodiesData.ts'
 import { PlayerBoundsData, type PlayerBoundsDataType } from './data/PlayerBoundsData.ts'
 import { type ProjectileBuffers, ProjectileManagerData } from './data/ProjectileManagerData.ts'
+import { SimStatsData, type SimStatsDataType } from './data/SimStatsData.ts'
 import { type TileFrontBuffers, TileFrontData } from './data/TileFrontData.ts'
 import { TunnelWeaponData, type TunnelWeaponDataType } from './data/TunnelWeaponData.ts'
 import { VFXParticleData } from './data/VFXParticleData.ts'
@@ -29,6 +30,7 @@ export type DataManagerBuffers = {
   activateTiles: BasicTilesBuffer
   physicsBodies: PhysicsBodiesBuffers
   particleSpawns: SharedArrayBuffer
+  simStats: SharedArrayBuffer
 
   tiles: SharedArrayBuffer
   fill: SharedArrayBuffer
@@ -55,6 +57,7 @@ export class DataManager {
   readonly tileFront: TileFrontData
   readonly physicsBodies: PhysicsBodiesData
   readonly particleSpawns: ParticleSpawnData
+  readonly simStats: SimStatsDataType
 
   static make(tilemap: Tilemap): DataManager {
 
@@ -77,6 +80,7 @@ export class DataManager {
       tileFront: TileFrontData.makeBuffers(tilemap),
       physicsBodies: PhysicsBodiesData.makeBuffers(),
       particleSpawns: ParticleSpawnData.makeBuffer(),
+      simStats: SimStatsData.makeBuffer(),
       width,
       height,
     }
@@ -102,5 +106,6 @@ export class DataManager {
     this.tileFront = new TileFrontData(buffers.tileFront)
     this.physicsBodies = new PhysicsBodiesData(buffers.physicsBodies)
     this.particleSpawns = new ParticleSpawnData(buffers.particleSpawns)
+    this.simStats = SimStatsData.fromBuffer(buffers.simStats)
   }
 }

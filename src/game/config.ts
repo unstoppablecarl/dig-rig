@@ -33,6 +33,7 @@ export const DRAW_PARTICLE_DEBUG = false
 export const DRAW_LIQUID_PRESSURE_DEBUG = false
 export const DRAW_WORLD_BORDER_DEBUG = false
 export const DRAW_CHUNK_GRID_DEBUG = false
+export const FPS_UPDATE_INTERVAL_MS = 500
 
 // logging debug
 export const ENABLE_MATTER_TANK_MUTATION_TRACKING_DEBUG = false

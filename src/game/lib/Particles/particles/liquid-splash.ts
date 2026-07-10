@@ -76,12 +76,7 @@ export const LIQUID_SPLASH = {
     }
   },
   action(p, sim) {
-    const collisionIdx = sim.checkForCollision(p.x, p.y, p.xVelocity, p.yVelocity)
-    if (collisionIdx !== undefined) {
-      const absorbed = sim.depositLiquid(collisionIdx, p.liquidType, SPLASH_FILL_UNIT)
-      if (absorbed > 0) {
-        sim.conservationTracker.addDelta(absorbed)
-      }
+    if (sim.doLiquidCollision(p.x, p.y, p.xVelocity, p.yVelocity, p.liquidType, SPLASH_FILL_UNIT)) {
       sim.pool.release(p)
       return
     }

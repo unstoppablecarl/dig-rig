@@ -3,7 +3,6 @@ import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_Matt
 import type { ParticleType } from '../../../Particles/_particle-types.ts'
 import { Particle } from '../../../Particles/Particle.ts'
 
-
 export class ParticlePool {
 
   // Doubly-linked lists
@@ -20,7 +19,10 @@ export class ParticlePool {
   }
 
   acquire(type: ParticleType, x: number, y: number, ownerId: MatterTankId = NO_MATTER_TANK_ID): Particle | null {
-    if (!this.inactiveHead) return null
+    if (!this.inactiveHead) {
+      console.warn(`No Particles available`)
+      return null
+    }
 
     const p = this.inactiveHead
     this.inactiveHead = p.next

@@ -6,7 +6,7 @@ import { type BrushUIState, useBrushUIState } from '../../store/brushUIState.ts'
 import { type UIState, useUIState } from '../../store/uiState.ts'
 import { useWeaponUIState, type WeaponUIState } from '../../store/weaponUIState.ts'
 import { type InstantWeaponUIState, useInstantWeaponUIState } from '../../store/weaponUIState/InstantWeaponUIState.ts'
-import { DRAW_WORLD_BORDER_DEBUG } from '../config.ts'
+import { DRAW_WORLD_BORDER_DEBUG, FPS_UPDATE_INTERVAL_MS } from '../config.ts'
 import {
   MATTER_RENDER_CONFIG_DEFAULTS,
   type MatterRenderConfig,
@@ -89,6 +89,8 @@ export abstract class GameLevel extends Scene {
   protected id: LevelId
 
   private nextFpsUpdate = 0
+  private lastFpsUpdateTime = 0
+  private lastSimStepCount = 0
 
   protected makeTilemapRenderer(tilemap: Tilemap): TilemapRenderer {
     this.matterRenderConfig = mergeMatterRenderConfig(MATTER_RENDER_CONFIG_DEFAULTS, this.makeMatterRenderConfig())
@@ -283,7 +285,16 @@ export abstract class GameLevel extends Scene {
 
     if (time > this.nextFpsUpdate) {
       this.uiState.fps = Math.floor(this.game.loop.actualFps)
-      this.nextFpsUpdate = time + 500
+
+      const stepCount = this.io.simStats.stepCount
+      const elapsedMs = time - this.lastFpsUpdateTime
+      if (this.lastFpsUpdateTime > 0 && elapsedMs > 0) {
+        this.uiState.simFps = Math.round((stepCount - this.lastSimStepCount) / (elapsedMs / 1000))
+      }
+      this.lastSimStepCount = stepCount
+      this.lastFpsUpdateTime = time
+
+      this.nextFpsUpdate = time + FPS_UPDATE_INTERVAL_MS
     }
 
     this.matterEngine.update()

@@ -1,6 +1,6 @@
 import { FILL_MAX } from '../../../Matter/_Liquid.constants.ts'
 import { EMPTY, matterType, MatterType, type MatterValue, SupportType } from '../../../Matter/_Matter.types.ts'
-import { convertsToCollisionBody, getSupportType, isLiquid } from '../../../Matter/matter.ts'
+import { convertsToCollisionBody, getSupportType, isLiquid, type LiquidTypes } from '../../../Matter/matter.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { ParticleType } from '../../../Particles/_particle-types.ts'
 import type { Particle } from '../../../Particles/Particle.ts'
@@ -116,6 +116,11 @@ export class ParticleSim {
     if (curType === MatterType.EMPTY) this.tiles[idx] = type
     this.fill[idx] += amount
     this.pendingActivations.push(idx)
+
+    if (amount > 0) {
+      this.conservationTracker.addDelta(amount)
+    }
+
     return amount
   }
 
@@ -167,7 +172,7 @@ export class ParticleSim {
   // bounds computed a flat index that either silently no-op'd (mass vanished, "evaporating"
   // splash droplets near corners with nowhere logged to land) or wrapped into an unrelated,
   // valid tile on the next/previous row (droplet visibly landing far from where it left).
-  checkForCollision(x0: number, y0: number, dx: number, dy: number): number | undefined {
+  doLiquidCollision(x0: number, y0: number, dx: number, dy: number, type: LiquidTypes, fillUnits: number): boolean {
     const dist = Math.sqrt(dx * dx + dy * dy)
     const steps = Math.max(1, Math.ceil(dist * 2))
 
@@ -183,19 +188,27 @@ export class ParticleSim {
     const startX = Math.min(width - 1, Math.max(0, Math.round(x0)))
     const startY = Math.min(height - 1, Math.max(0, Math.round(y0)))
     let prevIdx = startY * width + startX
+    if (matterType(this.tiles[prevIdx]) === type) {
+      this.depositLiquid(prevIdx, type, fillUnits)
+      return true
+    }
     for (let step = 1; step <= steps; step++) {
       const t = step / steps
       const ox = Math.round(x0 + dx * t)
       const oy = Math.round(y0 + dy * t)
       if (ox < 0 || ox >= width || oy < 0 || oy >= height) {
-        return prevIdx
+        this.depositLiquid(prevIdx, type, fillUnits)
+        return true
       }
       const idx = oy * width + ox
       if (idx === prevIdx) continue
       if (convertsToCollisionBody(tiles[idx])) {
-        return prevIdx
+        this.depositLiquid(prevIdx, type, fillUnits)
+        return true
       }
       prevIdx = idx
     }
+
+    return false
   }
 }
