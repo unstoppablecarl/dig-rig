@@ -96,20 +96,27 @@ export class ParticleSim {
     this.pendingActivations.push(idx)
   }
 
-  // Adds a small amount of liquid to a tile instead of snapping it to FILL_MAX — for
-  // particles (e.g. water splash droplets) that carry a fixed, conserved fill amount rather
-  // than a full tile's worth. Refuses to overwrite a tile occupied by a different matter type
-  // (returns false so the caller knows the droplet's mass wasn't deposited — e.g. it landed on
-  // solid ground and should be treated as consumed rather than credited back).
-  depositLiquid(idx: number, type: MatterValue, amount: number): boolean {
+  // Adds a small amount of liquid to a tile — for particles (e.g. water splash droplets)
+  // that carry a fixed, conserved fill amount rather than a full tile's worth. Refuses to
+  // overwrite a tile occupied by a different matter type (returns 0). Never clamps the
+  // result to FILL_MAX — fill legitimately exceeds FILL_MAX elsewhere in this engine
+  // (compression, resolved later by doUpwardPressurePass), and clamping here silently
+  // destroyed pre-existing compressed mass whenever a droplet landed back on an
+  // already-full puddle, which the caller had no way to detect and credit.
+  depositLiquid(idx: number, type: MatterValue, amount: number): number {
+    // A write to an out-of-range idx silently no-ops on the underlying typed array —
+    // returning `amount` unconditionally below would then credit the conservation tracker
+    // for a write that never happened. Guard explicitly rather than relying on callers to
+    // always pass a valid idx.
+    if (idx < 0 || idx >= this.tiles.length) return 0
     const raw = this.tiles[idx]
     const curType = matterType(raw)
     const depositType = matterType(type)
-    if (curType !== MatterType.EMPTY && curType !== depositType) return false
+    if (curType !== MatterType.EMPTY && curType !== depositType) return 0
     if (curType === MatterType.EMPTY) this.tiles[idx] = type
-    this.fill[idx] = Math.min(FILL_MAX, this.fill[idx] + amount)
+    this.fill[idx] += amount
     this.pendingActivations.push(idx)
-    return true
+    return amount
   }
 
   tileAtTip(p: Particle): MatterType {
@@ -156,18 +163,33 @@ export class ParticleSim {
   // Sweeps from origin (x0, y0) along delta (dx, dy) and returns the tile index of the
   // last tile before the first one a physics body would collide with (see
   // convertsToCollisionBody), or undefined if the whole path is clear.
+  // Treats the map edge as a collision boundary — without this, a ray that steps past x/y
+  // bounds computed a flat index that either silently no-op'd (mass vanished, "evaporating"
+  // splash droplets near corners with nowhere logged to land) or wrapped into an unrelated,
+  // valid tile on the next/previous row (droplet visibly landing far from where it left).
   checkForCollision(x0: number, y0: number, dx: number, dy: number): number | undefined {
     const dist = Math.sqrt(dx * dx + dy * dy)
     const steps = Math.max(1, Math.ceil(dist * 2))
 
     const width = this.width
+    const height = this.height
     const tiles = this.tiles
 
-    let prevIdx = Math.round(y0) * width + Math.round(x0)
+    // Clamp the starting tile into bounds: a particle within [0, width)/[0, height) (i.e.
+    // not yet caught by outOfBounds) can still round to an out-of-range row/col when within
+    // 0.5 of an edge (e.g. y0 = height - 0.05 rounds to height) — an unclamped prevIdx here
+    // returned that invalid index whenever the very next step also landed out of bounds,
+    // and the caller had no way to detect the write silently no-op'ing on it.
+    const startX = Math.min(width - 1, Math.max(0, Math.round(x0)))
+    const startY = Math.min(height - 1, Math.max(0, Math.round(y0)))
+    let prevIdx = startY * width + startX
     for (let step = 1; step <= steps; step++) {
       const t = step / steps
       const ox = Math.round(x0 + dx * t)
       const oy = Math.round(y0 + dy * t)
+      if (ox < 0 || ox >= width || oy < 0 || oy >= height) {
+        return prevIdx
+      }
       const idx = oy * width + ox
       if (idx === prevIdx) continue
       if (convertsToCollisionBody(tiles[idx])) {

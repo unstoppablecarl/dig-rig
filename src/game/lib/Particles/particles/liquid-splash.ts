@@ -28,7 +28,7 @@ const LIQUID_SPLASH_PARTICLE_COUNT = 5
 // Scales the body's raw per-step (vx, vy) into a launch speed — bumped up from the old 0.1
 // (which made `speed` too small for the cone lean below to be visible) so the spray still
 // visibly depends on how hard the body hit the liquid.
-const LIQUID_SPLASH_VELOCITY_MULTIPLIER = 0.7
+const LIQUID_SPLASH_VELOCITY_MULTIPLIER = 0.5
 const STRAIGHT_UP = -HALF_PI
 
 // --- Per-droplet randomization knobs, both applied once below in the spawn loop ---
@@ -78,8 +78,9 @@ export const LIQUID_SPLASH = {
   action(p, sim) {
     const collisionIdx = sim.checkForCollision(p.x, p.y, p.xVelocity, p.yVelocity)
     if (collisionIdx !== undefined) {
-      if (sim.depositLiquid(collisionIdx, p.liquidType, SPLASH_FILL_UNIT)) {
-        sim.conservationTracker.addDelta(SPLASH_FILL_UNIT)
+      const absorbed = sim.depositLiquid(collisionIdx, p.liquidType, SPLASH_FILL_UNIT)
+      if (absorbed > 0) {
+        sim.conservationTracker.addDelta(absorbed)
       }
       sim.pool.release(p)
       return

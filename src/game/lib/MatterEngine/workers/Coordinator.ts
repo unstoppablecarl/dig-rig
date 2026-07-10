@@ -63,6 +63,11 @@ export class Coordinator {
   private readonly structuralRemovals: number[] = []
   private readonly dirtyChunksThisStep = new Set<number>()
   private _lastConservationTotal: number | null = null
+  // Per-tile snapshot from the previous conservation check — diagnostic only, lets a
+  // violation be narrowed down to the specific tile(s) whose change wasn't matched by any
+  // addDelta call, instead of just the aggregate drift.
+  private _prevConservationTiles: Uint32Array | null = null
+  private _prevConservationFill: Uint32Array | null = null
 
   // Profiling state, gated by ENABLE_MATTER_SIM_PROFILING. Tracks real
   // wall-clock time between successive step() invocations (nominal cadence
@@ -401,6 +406,15 @@ export class Coordinator {
     return total
   }
 
+  // Fill-unit contribution of a single tile, matching computeMatterTotal's per-tile rule.
+  private static tileContribution(raw: number, fillVal: number): number {
+    if (raw === EMPTY) return 0
+    const t = matterType(raw)
+    if (isLiquid(t) || t === STEAM) return fillVal
+    if (t !== FIRE && t !== PHYSICS_BODY) return FILL_MAX
+    return 0
+  }
+
   // Dev-only invariant checker.
   private checkMatterConservation() {
     const total = this.computeMatterTotal()
@@ -410,9 +424,55 @@ export class Coordinator {
       const expected = this._lastConservationTotal + delta
       if (total !== expected) {
         console.error(`[Coordinator] conservation violated: expected ${expected}, got ${total} (drift ${total - expected})`)
+        this.logConservationDiff()
       }
     }
 
     this._lastConservationTotal = total
+    this._prevConservationTiles = this.sim.tiles.slice()
+    this._prevConservationFill = this.sim.fill.slice()
+  }
+
+  // Diagnostic: diffs the current tiles/fill against the snapshot taken at the previous
+  // check and prints every tile whose fill-unit contribution changed, so a violation can be
+  // traced to the specific untracked tile(s) instead of just the aggregate drift number.
+  private logConservationDiff() {
+    const prevTiles = this._prevConservationTiles
+    const prevFill = this._prevConservationFill
+    if (!prevTiles || !prevFill) return
+
+    const tiles = this.sim.tiles
+    const fill = this.sim.fill
+    const width = this.width
+    const changed: { idx: number, dx: number, dy: number, prevRaw: number, raw: number, prevFill: number, fill: number, contribDelta: number }[] = []
+
+    for (let i = 0, n = tiles.length; i < n; i++) {
+      const before = Coordinator.tileContribution(prevTiles[i], prevFill[i])
+      const after = Coordinator.tileContribution(tiles[i], fill[i])
+      if (before !== after) {
+        changed.push({
+          idx: i,
+          dx: i % width,
+          dy: (i / width) | 0,
+          prevRaw: prevTiles[i],
+          raw: tiles[i],
+          prevFill: prevFill[i],
+          fill: fill[i],
+          contribDelta: after - before,
+        })
+      }
+    }
+
+    changed.sort((a, b) => Math.abs(b.contribDelta) - Math.abs(a.contribDelta))
+    const shown = changed.slice(0, 40)
+    console.log(
+      `[Coordinator] conservation diff: ${changed.length} tile(s) changed since last check `
+      + `(sum of contribDelta = ${changed.reduce((s, c) => s + c.contribDelta, 0)}), showing top ${shown.length}:`,
+    )
+    for (const c of shown) {
+      console.log(
+        `  (${c.dx},${c.dy}) idx=${c.idx}: raw ${c.prevRaw}->${c.raw} fill ${c.prevFill}->${c.fill} contribDelta=${c.contribDelta}`,
+      )
+    }
   }
 }
