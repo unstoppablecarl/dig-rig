@@ -18,6 +18,6 @@ export enum ParticleType {
 }
 
 export type ParticleDef = {
-  spawn: (pool: ParticlePool, sim: ParticleSim, particleType: ParticleType, x: number, y: number, ownerId?: MatterTankId, vx?: number, vy?: number, value?: MatterValue) => void
-  action: (p: Particle, sim: ParticleSim) => void
+  spawn(pool: ParticlePool, sim: ParticleSim, particleType: ParticleType, x: number, y: number, ownerId?: MatterTankId, vx?: number, vy?: number, value?: MatterValue): void
+  action(p: Particle, sim: ParticleSim): void
 }

@@ -161,7 +161,11 @@ export class ParticleSim {
     const steps = Math.ceil(Math.max(Math.abs(dx), Math.abs(dy), 1))
     for (let i = 0; i <= steps; i++) {
       const t = i / steps
-      this.fillCircle(x1 + dx * t, y1 + dy * t, radius, value)
+      if (size === 1) {
+        this.fillTile(Math.floor(x1 + dx * t), Math.floor(y1 + dy * t), value)
+      } else {
+        this.fillCircle(x1 + dx * t, y1 + dy * t, radius, value)
+      }
     }
   }
 

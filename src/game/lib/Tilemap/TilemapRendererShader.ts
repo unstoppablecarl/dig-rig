@@ -578,8 +578,11 @@ export function makeTilemapFragShader(
           }
           // other
           case ${FIRE}: {
-                  // mask.a encodes the age counter (0–${FIRE_INIT_AGE}); 0 = freshly placed (one frame only).
-              float ageNorm = clamp(float(mask.a) / ${fl(FIRE_INIT_AGE)}, 0.0, 1.0);
+                  // mask.a encodes the age counter (0–${FIRE_INIT_AGE}); a tile never legitimately
+                  // ages down to 0 (fire.ts converts it to EMPTY once age <= 1), so 0 only means
+                  // "placed this frame, not yet aged" — treat it as the youngest state, not the oldest.
+              float rawAge = float(mask.a);
+              float ageNorm = rawAge <= 0.0 ? 1.0 : clamp(rawAge / ${fl(FIRE_INIT_AGE)}, 0.0, 1.0);
 
               const vec3 youngColor = ${v3(m[FIRE].youngColor)};
               const vec3 midColor   = ${v3(m[FIRE].midColor)};

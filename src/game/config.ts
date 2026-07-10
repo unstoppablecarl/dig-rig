@@ -18,7 +18,7 @@ export const VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE = 4
 // shaders
 export const GLOW_ENABLED = true
 export const ICE_TEXTURE_ENABLED = true
-export const PARTICLE_RENDER_ENABLED = true
+export const PARTICLE_RENDER_ENABLED = false
 
 // panel debug
 export const ENABLE_PANE_DEBUG = true

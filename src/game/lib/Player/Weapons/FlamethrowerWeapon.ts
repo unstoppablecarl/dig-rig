@@ -1,4 +1,3 @@
-import { randomDegVarianceToRad } from '../../../helpers/random.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
 import type { Position } from '../../../types.ts'
 import { WeaponRapidFireInput } from '../../Input/InputController/WeaponInputControllers/WeaponRapidFireInput.ts'
@@ -23,8 +22,7 @@ export class FlamethrowerWeapon extends WeaponRapidFireInput implements FireGrou
 
   fire(_effect: ProjectileEffect) {
     const pos = this.scene.player.getProjectilePosition(0, this._startPos)
-    const SPREAD_DEG = 15
-    const rad = this.scene.player.getProjectileAngle() + randomDegVarianceToRad(SPREAD_DEG)
+    const rad = this.scene.player.getProjectileAngle()
     const velocity = 10
     const vx = Math.cos(rad) * velocity
     const vy = Math.sin(rad) * velocity
