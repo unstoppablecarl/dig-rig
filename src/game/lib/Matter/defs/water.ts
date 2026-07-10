@@ -15,9 +15,6 @@ export const WATER_DEF = {
 
     sim.wakeSettledNeighborTypes(tx, ty, idx, WAKE_SETTLED)
 
-    const moved = sim.tryFillFlow(tx, ty, idx)
-    if (moved) return
-
     // Water is denser than oil — sink through it
     if (sim.doDensityLiquid(tx, ty, idx, OIL, 25, 50)) return
     // Probability roll may have missed — stay active so we retry next frame
@@ -25,6 +22,9 @@ export const WATER_DEF = {
       sim.next.add(idx)
       return
     }
+
+    const moved = sim.tryFillFlow(tx, ty, idx)
+    if (moved) return
 
     sim.tiles[idx] = WATER_SETTLED
     sim.markRenderDirty(tx, ty)
