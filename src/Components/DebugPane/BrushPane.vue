@@ -7,6 +7,7 @@ import {
   getImmutableSupportTypeOrFail,
   INDESTRUCTIBLE_TYPES,
   isSupportTypeImmutable,
+  MATTER_ICONS,
   MATTER_NAMES,
 } from '../../game/lib/Matter/matter.ts'
 import type { GameLevel } from '../../game/scenes/GameLevel.ts'
@@ -36,7 +37,7 @@ const brushOptions = [...MATTER_NAMES.entries()]
   .filter(([key]) => key !== EMPTY && !INDESTRUCTIBLE_TYPES.has(key))
   .map(([key, value]) => ({
     value: key as string | number,
-    label: value,
+    label: MATTER_ICONS[key] + ' ' + value,
   }))
 
 const supportOptions = [
