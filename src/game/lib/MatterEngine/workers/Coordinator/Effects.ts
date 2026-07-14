@@ -5,6 +5,7 @@ import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_Matt
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import { EMPTY_PLAYER_BOUNDS, type PlayerBounds, type PlayerBoundsDataType } from '../../data/PlayerBoundsData.ts'
 import { type ProjectileManagerData, ProjectileShape } from '../../data/ProjectileManagerData.ts'
+import type { TileSet } from '../../data/SparseTileSet.ts'
 import type { CoordinatorInMsgBrushEraseMatter } from '../Coordinator.types.ts'
 import type { MatterSim } from '../MatterSim/MatterSim.ts'
 import { FloodFillCreate } from './Effects/FloodFillCreate.ts'
@@ -69,7 +70,7 @@ export class Effects {
 
   applyTileWrites(
     writes: WriteEntry[],
-    activeSet: Set<number>,
+    activeSet: TileSet,
     dirtyChunks: Set<number>,
   ): boolean {
     const tiles = this.sim.tiles
@@ -117,7 +118,7 @@ export class Effects {
 
   applyBrushErase(
     req: CoordinatorInMsgBrushEraseMatter,
-    activeSet: Set<number>,
+    activeSet: TileSet,
     dirtyChunks: Set<number>,
   ): EffectResult {
     return this.destroyProjectile.apply(
@@ -155,7 +156,7 @@ export class Effects {
     ownerId: MatterTankId,
     budget: number,
     playerBounds: PlayerBounds,
-    activeSet: Set<number>,
+    activeSet: TileSet,
     dirtyChunks: Set<number>,
   ): EffectResult {
     const dx = toX - fromX
@@ -185,7 +186,7 @@ export class Effects {
     data: ProjectileManagerData,
     fromX: number,
     fromY: number,
-    activeSet: Set<number>,
+    activeSet: TileSet,
     dirtyChunks: Set<number>,
   ): EffectResult {
     const budget = data.tilesToModify[slotIdx] - data.tilesModified[slotIdx]
@@ -256,7 +257,7 @@ export class Effects {
     tileY: number,
     radius: number,
     tilesToModify: number,
-    activeSet: Set<number>,
+    activeSet: TileSet,
     dirtyChunks: Set<number>,
   ): EffectResult {
     return this._sweepApply(

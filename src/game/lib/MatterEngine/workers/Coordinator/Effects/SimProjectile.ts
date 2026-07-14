@@ -14,6 +14,7 @@ import type { MatterSim } from '../../MatterSim/MatterSim.ts'
 import type { PhysicsCollapse } from '../PhysicsCollapse.ts'
 import type { SimMatterTanks } from '../SimMatterTanks.ts'
 
+import type { TileSet } from '../../../data/SparseTileSet.ts'
 export type ProjectileEffectResult = { x: number, y: number, newValue: MatterType }
 
 export type EffectResult = {
@@ -50,7 +51,7 @@ export abstract class SimProjectile {
   protected abstract postApply(
     candidates: ProjectileEffectResult[],
     createType: MatterType,
-    activeSet: Set<number>,
+    activeSet: TileSet,
     dirtyChunks: Set<number>,
   ): void
 
@@ -63,7 +64,7 @@ export abstract class SimProjectile {
     ownerId: MatterTankId,
     budget: number,
     playerBounds: PlayerBounds,
-    activeSet: Set<number>,
+    activeSet: TileSet,
     dirtyChunks: Set<number>,
   ): EffectResult {
     const { width, height } = this
@@ -109,7 +110,7 @@ export abstract class SimProjectile {
   protected _writeCandidates(
     candidates: ProjectileEffectResult[],
     createType: MatterType,
-    activeSet: Set<number>,
+    activeSet: TileSet,
     dirtyChunks: Set<number>,
   ): EffectResult {
     if (candidates.length === 0) return {

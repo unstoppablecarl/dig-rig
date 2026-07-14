@@ -1,10 +1,11 @@
 /// <reference lib="webworker" />
-import { CHUNK_SIZE } from '../../../../config.ts'
+import { CHUNK_SIZE, ENABLE_MATTER_SIM_PROFILING } from '../../../../config.ts'
 import { getSupport, matterType, PERMANENT, SupportType } from '../../../Matter/_Matter.types.ts'
 import { convertsToCollisionBody, getSupportType, setSupport, STRUCTURAL_COLLAPSE_TO } from '../../../Matter/matter.ts'
 import { ChunkGrid } from '../../../Tilemap/ChunkGrid.ts'
 import { MatterSim } from '../MatterSim/MatterSim.ts'
 
+import type { TileSet } from '../../data/SparseTileSet.ts'
 type XY = { x: number; y: number }
 
 const BFS_DX = [-1, 1, 0, 0]
@@ -24,6 +25,19 @@ export class PhysicsCollapse {
   private _bfsEpoch = 0
   private readonly chunksWide: number
   private readonly chunksHigh: number
+
+  // Profiling state, gated by ENABLE_MATTER_SIM_PROFILING. Isolates
+  // countSolidInChunk's cost (a brute-force O(CHUNK_SIZE^2) rescan per dirty
+  // chunk, every step) from the rest of postStep, since it was suspected as
+  // a major contributor to Coordinator's postDispatch time — see
+  // project memory / conversation before spending effort making it
+  // incremental instead of a full rescan.
+  private _profWindowStart = performance.now()
+  private _profPostStepCalls = 0
+  private _profCountSolidCalls = 0
+  private _profCountSolidTilesScanned = 0
+  private _profCountSolidDur = 0
+  private _profPostStepDur = 0
 
   constructor(
     private readonly sim: MatterSim,
@@ -45,6 +59,7 @@ export class PhysicsCollapse {
   }
 
   postStep(dirtyChunks: Set<number>, structuralDirty: boolean): void {
+    const _profT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
     const { chunksWide, chunksHigh, chunkGrid } = this
     for (const chunkIdx of dirtyChunks) {
       const cx = chunkIdx % chunksWide
@@ -74,6 +89,31 @@ export class PhysicsCollapse {
       }
     }
     if (structuralDirty) this.computeAnchored()
+
+    if (ENABLE_MATTER_SIM_PROFILING) {
+      this._profPostStepDur += performance.now() - _profT0
+      this._profPostStepCalls++
+      const now = performance.now()
+      if (now - this._profWindowStart > 1000) {
+        const avgCountSolidUs = this._profCountSolidCalls > 0
+          ? (this._profCountSolidDur / this._profCountSolidCalls) * 1000
+          : 0
+        console.log(
+          `[PROFILE PhysicsCollapse] postStep=${this._profPostStepCalls} `
+          + `totalDur=${this._profPostStepDur.toFixed(2)}ms `
+          + `countSolidInChunk calls=${this._profCountSolidCalls} `
+          + `(${(this._profCountSolidCalls / (this._profPostStepCalls || 1)).toFixed(2)}/postStep) `
+          + `tilesScanned=${this._profCountSolidTilesScanned} `
+          + `totalDur=${this._profCountSolidDur.toFixed(2)}ms avg=${avgCountSolidUs.toFixed(2)}us`,
+        )
+        this._profWindowStart = now
+        this._profPostStepCalls = 0
+        this._profCountSolidCalls = 0
+        this._profCountSolidTilesScanned = 0
+        this._profCountSolidDur = 0
+        this._profPostStepDur = 0
+      }
+    }
   }
 
   chunkIdxForTile(tileIdx: number): number {
@@ -278,7 +318,7 @@ export class PhysicsCollapse {
   }
 
   // Converts floating structural tiles to their collapse types and activates them.
-  collapseIslands(islands: XY[], activeSet: Set<number>, dirtyChunks: Set<number>): void {
+  collapseIslands(islands: XY[], activeSet: TileSet, dirtyChunks: Set<number>): void {
     const tiles = this.sim.tiles
     const { width } = this
 
@@ -345,6 +385,7 @@ export class PhysicsCollapse {
   // collidable while only partly structural, and isFastAnchored's shortcut requires the
   // latter (see isFullyStructural doc comment on ChunkGrid).
   private countSolidInChunk(cx: number, cy: number): { solidCount: number, structuralCount: number } {
+    const _profT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
     const { width, height } = this
     const tiles = this.sim.tiles
     const x0 = cx * CHUNK_SIZE, y0 = cy * CHUNK_SIZE
@@ -358,6 +399,11 @@ export class PhysicsCollapse {
         if (convertsToCollisionBody(raw)) solidCount++
         if (getSupportType(raw) >= SupportType.STRUCTURAL) structuralCount++
       }
+    }
+    if (ENABLE_MATTER_SIM_PROFILING) {
+      this._profCountSolidCalls++
+      this._profCountSolidTilesScanned += (x1 - x0) * (y1 - y0)
+      this._profCountSolidDur += performance.now() - _profT0
     }
     return { solidCount, structuralCount }
   }

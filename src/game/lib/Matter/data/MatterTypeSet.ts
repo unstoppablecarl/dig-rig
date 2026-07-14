@@ -1,4 +1,4 @@
-import { MatterType, MatterTypeValues } from '../_Matter.types'
+import { type MatterType, MatterTypeValues } from '../_Matter.types'
 
 export class MatterTypeSet {
   // TypeMask — 256-bit bitmask over MatterType values (8 × Uint32, 32 bytes).

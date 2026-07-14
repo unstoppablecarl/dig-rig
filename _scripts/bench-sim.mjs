@@ -5,7 +5,7 @@
 // A/B'd on the exact same scenario instead of eyeballing hand-pasted console
 // logs from whatever happened to be on screen.
 //
-// Usage: node _scripts/bench-sim.mjs [--level=BENCH] [--settle=1000] [--measure=5000] [--headed]
+// Usage: node _scripts/bench-sim.mjs [--level=BENCH] [--settle=1000] [--measure=5000] [--port=8081] [--headed]
 //
 // Relies on the dev-only window.__bench hook (src/game/lib/Debug/BenchmarkHook.ts)
 // installed from GameLevel.create(), which exposes the live scene so we can
@@ -14,9 +14,6 @@
 
 import { spawn } from 'node:child_process'
 import { chromium } from 'playwright'
-
-const DEV_PORT = 8081
-const DEV_URL = `http://localhost:${DEV_PORT}`
 
 function arg(name, fallback) {
   const prefix = `--${name}=`
@@ -31,6 +28,12 @@ function strArg(name, fallback) {
 }
 
 const LEVEL_ID = strArg('level', 'BENCH')
+
+// Defaults to the same port as `pnpm dev` — override with --port when that's
+// already occupied by an actual manual dev session, so this doesn't have to
+// fight over (or kill) someone's live browser tab.
+const DEV_PORT = arg('port', 8081)
+const DEV_URL = `http://localhost:${DEV_PORT}`
 
 // Extra settle-in time after the step loop starts advancing, before timing
 // begins — the first few steps chew through the initial oil-block drop

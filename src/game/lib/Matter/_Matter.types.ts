@@ -1,4 +1,4 @@
-import { type MatterAction } from './matter.ts'
+import type { MatterSim } from '../MatterEngine/workers/MatterSim/MatterSim.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from './Tank/_MatterTank.types.ts'
 
 /* Matter Value Encoding
@@ -207,6 +207,8 @@ export const MatterTypeValues = Object.values(MatterType).filter(
 export const MatterTypeKeyValues = Object.fromEntries(
   MatterTypeValues.map((key) => [MatterType[key as any], key]),
 )
+
+export type MatterAction = (world: MatterSim, x: number, y: number, idx: number) => void
 
 export type MatterDef = {
   id: MatterType

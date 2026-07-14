@@ -1,4 +1,4 @@
-import { CHUNK_SIZE } from '../../../../config.ts'
+import { CHUNK_SIZE, ENABLE_MATTER_SIM_PROFILING } from '../../../../config.ts'
 import { random } from '../../../../helpers/random.ts'
 import {
   FILL_COL_SCAN_MAX,
@@ -40,6 +40,7 @@ import { ParticleType } from '../../../Particles/_particle-types.ts'
 import { ChunkGrid, type ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 import type { Tile } from '../../../Tilemap/TileGrid.ts'
 import { ParticleSpawnData } from '../../data/ParticleSpawnData.ts'
+import type { TileSet } from '../../data/SparseTileSet.ts'
 import { MatterCreditTransferBuffer } from '../_helpers/MatterCreditTransferBuffer.ts'
 import { MatterReservationReleaseBuffer } from '../_helpers/MatterReservationReleaseBuffer.ts'
 import { type SimOutMsgDoneWire } from './MatterSim.types.ts'
@@ -94,6 +95,44 @@ export class MatterSim {
   private solidTilesConsumed = 0
   private solidTilesCreated = 0
 
+  // Cheap call-count profiling, gated by ENABLE_MATTER_SIM_PROFILING — plain
+  // integer increments at each function's single choke point, not
+  // performance.now() timers (which would add real self-measurement overhead
+  // at ~200k calls/round). Used to check which hot-path functions are
+  // actually called as often as reading the code suggests, before
+  // considering any optimization there.
+  private _profTryFillFlowCalls = 0
+  private _profColPressureAboveCalls = 0
+  private _profReactivateAroundCalls = 0
+  private _profDoFillTransferCalls = 0
+  // markDirty call count vs countSolidInChunk's tiles-scanned count (see
+  // PhysicsCollapse profiling) — checks whether an incremental solidCount
+  // scheme keyed off markDirty calls would actually visit fewer tiles than
+  // the current full-chunk rescan, before building it.
+  private _profMarkDirtyCalls = 0
+  private _profWindowStart = performance.now()
+
+  // Sampled wall-clock cost (every 64th call, via the call-count mask below)
+  // for the two functions actually in question — call counts alone don't
+  // tell you cost per call, and timing every call would itself add real
+  // overhead at ~500k-800k calls/sec.
+  private _profColPressureAboveTime = 0
+  private _profColPressureAboveSamples = 0
+  private _profTryFillFlowTime = 0
+  private _profTryFillFlowSamples = 0
+  // Same sampled-timing treatment for the granular/powder path (sand's
+  // MATTER_ACTIONS entry point and its movement primitive) — call counts
+  // alone (reactivateAround etc.) don't say whether the ~23ms/step dispatch
+  // cost for a falling-sand scenario is many cheap per-tile ops or has a hot
+  // inner cost worth trimming.
+  private _profDoPowderFallTime = 0
+  private _profDoPowderFallSamples = 0
+  private _profDoPowderFallCalls = 0
+  private _profTryMoveTime = 0
+  private _profTryMoveSamples = 0
+  private _profTryMoveCalls = 0
+  private static readonly PROF_SAMPLE_MASK = 63
+
   private particles: ParticleSpawnData
   // The coordinator's own local MatterSim instance (used directly by
   // Brush/PhysicsBodyProcessor/etc., never dispatched through the worker
@@ -129,6 +168,7 @@ export class MatterSim {
     frame: number,
     out: SimOutMsgDoneWire,
   ): SimOutMsgDoneWire {
+    const _profBusyT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
     this.next.clear()
     this.frame = frame
     this.leftFirst = leftFirst
@@ -147,6 +187,57 @@ export class MatterSim {
     out.matterReservationReleases = this.matterReservationReleases.flush()
     out.liquidNetDelta = this.liquidFillCreated - this.liquidFillConsumed
     out.solidNetDelta = this.solidTilesCreated - this.solidTilesConsumed
+    out.busyMs = ENABLE_MATTER_SIM_PROFILING ? performance.now() - _profBusyT0 : 0
+
+    if (ENABLE_MATTER_SIM_PROFILING) {
+      const now = performance.now()
+      if (now - this._profWindowStart > 1000) {
+        const avgTryFillFlowUs = this._profTryFillFlowSamples > 0
+          ? (this._profTryFillFlowTime / this._profTryFillFlowSamples) * 1000
+          : 0
+        const avgColPressureAboveUs = this._profColPressureAboveSamples > 0
+          ? (this._profColPressureAboveTime / this._profColPressureAboveSamples) * 1000
+          : 0
+        const avgDoPowderFallUs = this._profDoPowderFallSamples > 0
+          ? (this._profDoPowderFallTime / this._profDoPowderFallSamples) * 1000
+          : 0
+        const avgTryMoveUs = this._profTryMoveSamples > 0
+          ? (this._profTryMoveTime / this._profTryMoveSamples) * 1000
+          : 0
+        console.log(
+          `[PROFILE MatterSim] tryFillFlow=${this._profTryFillFlowCalls} `
+          + `avg=${avgTryFillFlowUs.toFixed(2)}us (n=${this._profTryFillFlowSamples}) `
+          + `colPressureAbove=${this._profColPressureAboveCalls} `
+          + `(${(this._profColPressureAboveCalls / (this._profTryFillFlowCalls || 1)).toFixed(2)}/call) `
+          + `avg=${avgColPressureAboveUs.toFixed(2)}us (n=${this._profColPressureAboveSamples}) `
+          + `reactivateAround=${this._profReactivateAroundCalls} `
+          + `(${(this._profReactivateAroundCalls / (this._profTryFillFlowCalls || 1)).toFixed(2)}/call) `
+          + `doFillTransfer=${this._profDoFillTransferCalls} `
+          + `(${(this._profDoFillTransferCalls / (this._profTryFillFlowCalls || 1)).toFixed(2)}/call) `
+          + `markDirty=${this._profMarkDirtyCalls} `
+          + `doPowderFall=${this._profDoPowderFallCalls} avg=${avgDoPowderFallUs.toFixed(2)}us (n=${this._profDoPowderFallSamples}) `
+          + `tryMove=${this._profTryMoveCalls} `
+          + `(${(this._profTryMoveCalls / (this._profDoPowderFallCalls || 1)).toFixed(2)}/call) `
+          + `avg=${avgTryMoveUs.toFixed(2)}us (n=${this._profTryMoveSamples})`,
+        )
+        this._profWindowStart = now
+        this._profTryFillFlowCalls = 0
+        this._profColPressureAboveCalls = 0
+        this._profReactivateAroundCalls = 0
+        this._profDoFillTransferCalls = 0
+        this._profMarkDirtyCalls = 0
+        this._profTryFillFlowTime = 0
+        this._profTryFillFlowSamples = 0
+        this._profColPressureAboveTime = 0
+        this._profColPressureAboveSamples = 0
+        this._profDoPowderFallCalls = 0
+        this._profDoPowderFallTime = 0
+        this._profDoPowderFallSamples = 0
+        this._profTryMoveCalls = 0
+        this._profTryMoveTime = 0
+        this._profTryMoveSamples = 0
+      }
+    }
 
     return out
   }
@@ -156,20 +247,20 @@ export class MatterSim {
   }
 
   // Wakes tiles in `target`. Called by coordinator on ACTIVATE messages.
-  activateIndexes(indices: number[], target: Set<number>) {
+  activateIndexes(indices: number[], target: TileSet) {
     for (const idx of indices) {
       this.activate(idx, target)
     }
   }
 
-  activateTiles(tiles: Tile[], target: Set<number>) {
+  activateTiles(tiles: Tile[], target: TileSet) {
     for (const { x, y } of tiles) {
       const idx = y * this.width + x
       this.activate(idx, target)
     }
   }
 
-  activate(idx: number, target: Set<number>) {
+  activate(idx: number, target: TileSet) {
     if (idx < 0 || idx >= this.tiles.length) return
     const raw = this.tiles[idx]
     const t = matterType(raw)
@@ -220,6 +311,7 @@ export class MatterSim {
   }
 
   markDirty(tx: number, ty: number) {
+    if (ENABLE_MATTER_SIM_PROFILING) this._profMarkDirtyCalls++
     const idx = (ty >>> this.chunkShift) * this.chunksWidth + (tx >>> this.chunkShift)
 
     this.chunkGrid.markDirty(idx)
@@ -254,7 +346,8 @@ export class MatterSim {
 
   // Re-activate settled material that could flow into (tx, ty) now that it is empty.
   // When called outside a step (from message handlers), pass an explicit dest set.
-  reactivateAround(tx: number, ty: number, dest: Set<number> = this.next) {
+  reactivateAround(tx: number, ty: number, dest: TileSet = this.next) {
+    if (ENABLE_MATTER_SIM_PROFILING) this._profReactivateAroundCalls++
     const { tiles, width } = this
 
     // Wake any settled tile in the 3-wide strip directly above
@@ -300,6 +393,20 @@ export class MatterSim {
   // Stops at any non-liquid cell (empty gap, wall, or different type) — a gap breaks
   // the pressure column so a floating body above does not count as weight below.
   private colPressureAbove(tx: number, ty: number, type: MatterType): number {
+    if (ENABLE_MATTER_SIM_PROFILING) {
+      this._profColPressureAboveCalls++
+      if ((this._profColPressureAboveCalls & MatterSim.PROF_SAMPLE_MASK) === 0) {
+        const t0 = performance.now()
+        const result = this._colPressureAboveImpl(tx, ty, type)
+        this._profColPressureAboveTime += performance.now() - t0
+        this._profColPressureAboveSamples++
+        return result
+      }
+    }
+    return this._colPressureAboveImpl(tx, ty, type)
+  }
+
+  private _colPressureAboveImpl(tx: number, ty: number, type: MatterType): number {
     const { tiles, fill, width } = this
     let p = 0
     for (let dy = 1; dy <= FILL_COL_SCAN_MAX; dy++) {
@@ -313,6 +420,23 @@ export class MatterSim {
   }
 
   tryMove(
+    fromIdx: number, fromTx: number, fromTy: number,
+    toTx: number, toTy: number,
+  ): boolean {
+    if (ENABLE_MATTER_SIM_PROFILING) {
+      this._profTryMoveCalls++
+      if ((this._profTryMoveCalls & MatterSim.PROF_SAMPLE_MASK) === 0) {
+        const t0 = performance.now()
+        const result = this._tryMoveImpl(fromIdx, fromTx, fromTy, toTx, toTy)
+        this._profTryMoveTime += performance.now() - t0
+        this._profTryMoveSamples++
+        return result
+      }
+    }
+    return this._tryMoveImpl(fromIdx, fromTx, fromTy, toTx, toTy)
+  }
+
+  private _tryMoveImpl(
     fromIdx: number, fromTx: number, fromTy: number,
     toTx: number, toTy: number,
   ): boolean {
@@ -941,6 +1065,20 @@ export class MatterSim {
   }
 
   doPowderFall(tx: number, ty: number, idx: number) {
+    if (ENABLE_MATTER_SIM_PROFILING) {
+      this._profDoPowderFallCalls++
+      if ((this._profDoPowderFallCalls & MatterSim.PROF_SAMPLE_MASK) === 0) {
+        const t0 = performance.now()
+        const result = this._doPowderFallImpl(tx, ty, idx)
+        this._profDoPowderFallTime += performance.now() - t0
+        this._profDoPowderFallSamples++
+        return result
+      }
+    }
+    return this._doPowderFallImpl(tx, ty, idx)
+  }
+
+  private _doPowderFallImpl(tx: number, ty: number, idx: number) {
     const raw = this.tiles[idx]
     if (getSupportType(raw) === SupportType.ANCHORED) return
 
@@ -989,6 +1127,7 @@ export class MatterSim {
     amount: number,
     liquidRaw: number,
   ): void {
+    if (ENABLE_MATTER_SIM_PROFILING) this._profDoFillTransferCalls++
     const flow = Math.round(amount)
     if (flow <= 0) return
     const wasEmpty = this.fill[toIdx] === 0
@@ -1061,6 +1200,20 @@ export class MatterSim {
   }
 
   tryFillFlow(tx: number, ty: number, idx: number, canExpandToEmpty = true, clump = false): boolean {
+    if (ENABLE_MATTER_SIM_PROFILING) {
+      this._profTryFillFlowCalls++
+      if ((this._profTryFillFlowCalls & MatterSim.PROF_SAMPLE_MASK) === 0) {
+        const t0 = performance.now()
+        const result = this._tryFillFlowImpl(tx, ty, idx, canExpandToEmpty, clump)
+        this._profTryFillFlowTime += performance.now() - t0
+        this._profTryFillFlowSamples++
+        return result
+      }
+    }
+    return this._tryFillFlowImpl(tx, ty, idx, canExpandToEmpty, clump)
+  }
+
+  private _tryFillFlowImpl(tx: number, ty: number, idx: number, canExpandToEmpty: boolean, clump: boolean): boolean {
     const { tiles, fill, width, height } = this
 
     const mass = fill[idx]
@@ -1234,7 +1387,7 @@ export class MatterSim {
   private _tryFillDisplaceNeighbors: number[] = []
   private _tryFillDisplaceFillSpread: number[] = []
 
-  doFillDisplace(tx: number, ty: number, idx: number, exclude: Set<number>, activeSet: Set<number>) {
+  doFillDisplace(tx: number, ty: number, idx: number, exclude: Set<number>, activeSet: TileSet) {
     const width = this.width
     const fill = this.fill
     exclude.add(idx)
@@ -1300,8 +1453,25 @@ export class MatterSim {
   // we process bottom-to-top, a newly overfull cell at y-1 is already next in
   // the sorted list, so the full column cascades in a single pass.
   // Must be called after all worker rounds finish (no concurrent writers).
-  doUpwardPressurePass(activeSet: Set<number>): void {
+  doUpwardPressurePass(activeSet: TileSet): void {
     const { tiles, fill, width } = this
+
+    // Bail before the O(n log n) sort below when the active set has no
+    // liquid at all (e.g. a falling sand/rock scenario) — the loop would
+    // have `continue`d past every single entry anyway. Can't pre-filter the
+    // list itself: a cell that starts EMPTY (not liquid) can be converted to
+    // liquid mid-pass by receiving flow from below (the `upType === EMPTY`
+    // branch below), and must still be eligible to cascade further up later
+    // in this same sorted iteration — pre-filtering by isLiquid/overfull
+    // would silently drop that case and truncate multi-level cascades.
+    let hasLiquid = false
+    for (const idx of activeSet) {
+      if (idx >= width && isLiquid(matterType(tiles[idx]))) {
+        hasLiquid = true
+        break
+      }
+    }
+    if (!hasLiquid) return
 
     // Sort once by y descending so bottom cells are processed first.
     const sorted = Array.from(activeSet).sort((a, b) => b - a)

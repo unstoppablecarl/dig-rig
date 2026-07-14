@@ -54,6 +54,12 @@ export type SimOutMsgDoneWire = {
   matterReservationReleases: Int32Array
   liquidNetDelta: number
   solidNetDelta: number
+  // Wall-clock time (ms) the worker actually spent inside process(), gated
+  // by ENABLE_MATTER_SIM_PROFILING (0 otherwise) — lets SimWorkerPool
+  // separate real per-worker compute time from round-trip dispatch/message
+  // overhead instead of inferring it from the gap between avgDur and a
+  // sampled per-call estimate.
+  busyMs: number
 }
 
 // What consumers (SimWorkerPool/Coordinator) actually see: MatterSimController
@@ -69,6 +75,7 @@ export type SimOutMsgDone = {
   matterReservationReleases: Int32Array
   liquidNetDelta: number
   solidNetDelta: number
+  busyMs: number
 }
 
 // Hydrated shape handed to external consumers (SimWorkerPool/Coordinator).

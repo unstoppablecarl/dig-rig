@@ -1,4 +1,3 @@
-import type { MatterSim } from '../MatterEngine/workers/MatterSim/MatterSim.ts'
 import {
   ACID,
   BURNING_THERMITE,
@@ -15,6 +14,7 @@ import {
   isSettled,
   LAVA,
   LAVA_DROP,
+  type MatterAction,
   type MatterDef,
   matterType,
   MatterType,
@@ -40,8 +40,6 @@ import {
   WAX,
 } from './_Matter.types.ts'
 import { MatterTypeSet } from './data/MatterTypeSet.ts'
-
-export type MatterAction = (world: MatterSim, x: number, y: number, idx: number) => void
 
 export interface MatterMetaRegistry {
 }

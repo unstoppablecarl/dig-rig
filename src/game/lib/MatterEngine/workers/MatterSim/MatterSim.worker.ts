@@ -25,6 +25,7 @@ const _done: SimOutMsgDoneWire = {
   matterReservationReleases: new Int32Array(),
   liquidNetDelta: 0,
   solidNetDelta: 0,
+  busyMs: 0,
 }
 
 const transfer: Transferable[] = []

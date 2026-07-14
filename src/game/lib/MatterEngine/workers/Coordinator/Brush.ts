@@ -11,6 +11,7 @@ import type { EffectResult } from './Effects/SimProjectile.ts'
 import type { PhysicsCollapse } from './PhysicsCollapse.ts'
 import { SimMatterTanks } from './SimMatterTanks.ts'
 
+import type { TileSet } from '../../data/SparseTileSet.ts'
 type BrushEntry = { value: MatterRaw; tx: number; ty: number; radius: number }
 
 export class Brush {
@@ -42,7 +43,7 @@ export class Brush {
 
   private _stepErase: EffectResult[] = []
 
-  stepErase(activeSet: Set<number>, dirtyChunks: Set<number>): EffectResult[] {
+  stepErase(activeSet: TileSet, dirtyChunks: Set<number>): EffectResult[] {
     const result = this._stepErase
     result.length = 0
     if (this.eraseQueue.length === 0) return result
@@ -55,7 +56,7 @@ export class Brush {
     return result
   }
 
-  stepCreate(activeSet: Set<number>, dirtyChunks: Set<number>): boolean {
+  stepCreate(activeSet: TileSet, dirtyChunks: Set<number>): boolean {
     if (this.queue.length === 0) return false
     let structuralDirty = false
     for (const { value, tx, ty, radius } of this.queue) {
@@ -71,7 +72,7 @@ export class Brush {
   private processAddMatter(
     value: MatterRaw,
     tx: number, ty: number, radius: number,
-    activeSet: Set<number>,
+    activeSet: TileSet,
     dirtyChunks: Set<number>,
   ): boolean {
     const tiles = this.sim.tiles

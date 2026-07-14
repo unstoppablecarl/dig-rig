@@ -9,6 +9,7 @@ import type { VFXParticleData } from '../../data/VFXParticleData.ts'
 import type { VFXTileEffectData } from '../../data/VFXTileEffectData.ts'
 import type { ConservationTracker } from './ConservationTracker.ts'
 import type { Effects } from './Effects.ts'
+import type { TileSet } from '../../data/SparseTileSet.ts'
 
 type Tile = { x: number; y: number }
 type RestoreRecord = { cx: number; cy: number; radius: number; remaining: Tile[] }
@@ -54,7 +55,7 @@ export class TunnelWeapon {
     return this.data.destroyActive !== 0 || this._pendingRestore > 0 || this._restoreQueue.length > 0
   }
 
-  step(activeSet: Set<number>, dirtyChunks: Set<number>): boolean {
+  step(activeSet: TileSet, dirtyChunks: Set<number>): boolean {
     const structuralDirty = this._stepDestroy(activeSet, dirtyChunks)
     const restoreTiles = this._stepRestore(activeSet, dirtyChunks)
     if (restoreTiles.length > 0) {
@@ -63,7 +64,7 @@ export class TunnelWeapon {
     return structuralDirty
   }
 
-  private _stepDestroy(activeSet: Set<number>, dirtyChunks: Set<number>): boolean {
+  private _stepDestroy(activeSet: TileSet, dirtyChunks: Set<number>): boolean {
     const b = this.data
     if (b.destroyActive === 0) {
       this._sweepInitialized = false
@@ -107,7 +108,7 @@ export class TunnelWeapon {
     return result.structuralDirty
   }
 
-  private _stepRestore(activeSet: Set<number>, dirtyChunks: Set<number>): Tile[] {
+  private _stepRestore(activeSet: TileSet, dirtyChunks: Set<number>): Tile[] {
     if (this._pendingRestore <= 0 && this._restoreQueue.length === 0) return []
 
     const pb = this.playerBoundsData

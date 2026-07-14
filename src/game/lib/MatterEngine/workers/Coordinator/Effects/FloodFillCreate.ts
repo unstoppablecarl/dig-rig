@@ -5,6 +5,7 @@ import type { PlayerBounds } from '../../../data/PlayerBoundsData.ts'
 import { FloodFillFrontier } from './FloodFillFrontier.ts'
 import { ProjectileCreate } from './ProjectileCreate.ts'
 import type { EffectResult, ProjectileEffectResult } from './SimProjectile.ts'
+import type { TileSet } from '../../../data/SparseTileSet.ts'
 
 export class FloodFillCreate extends ProjectileCreate {
   private readonly frontier = new FloodFillFrontier()
@@ -17,7 +18,7 @@ export class FloodFillCreate extends ProjectileCreate {
     budget: number,
     slotIdx: number,
     playerBounds: PlayerBounds,
-    activeSet: Set<number>,
+    activeSet: TileSet,
     dirtyChunks: Set<number>,
   ): EffectResult {
     const tiles = this.sim.tiles

@@ -11,6 +11,7 @@ import type { VFXTileEffectData } from '../../data/VFXTileEffectData.ts'
 import type { ConservationTracker } from './ConservationTracker.ts'
 import type { Effects } from './Effects.ts'
 import type { SimMatterTanks } from './SimMatterTanks.ts'
+import type { TileSet } from '../../data/SparseTileSet.ts'
 
 export class ProjectileProcessor {
   // Coordinator-local bookkeeping of where each slot's effect was last
@@ -48,7 +49,7 @@ export class ProjectileProcessor {
     return false
   }
 
-  step(activeSet: Set<number>, dirtyChunks: Set<number>): boolean {
+  step(activeSet: TileSet, dirtyChunks: Set<number>): boolean {
     let structuralDirty = false
     const d = this.projectileData
 

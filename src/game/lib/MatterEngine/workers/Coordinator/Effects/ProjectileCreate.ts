@@ -5,6 +5,7 @@ import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
 import type { PlayerBounds } from '../../../data/PlayerBoundsData.ts'
 import { type ProjectileEffectResult, SimProjectile } from './SimProjectile.ts'
 
+import type { TileSet } from '../../../data/SparseTileSet.ts'
 export class ProjectileCreate extends SimProjectile {
   protected convertTile(existing: MatterType, createType: MatterType, ownerId: MatterTankId): MatterType | null {
     if (existing !== EMPTY) return null
@@ -17,7 +18,7 @@ export class ProjectileCreate extends SimProjectile {
     return x > p.left && x < p.right && y > p.top && y < p.bottom
   }
 
-  protected postApply(candidates: ProjectileEffectResult[], createType: MatterType, activeSet: Set<number>, dirtyChunks: Set<number>): void {
+  protected postApply(candidates: ProjectileEffectResult[], createType: MatterType, activeSet: TileSet, dirtyChunks: Set<number>): void {
     if (doesSettle(createType)) {
       this.sim.activateTiles(candidates, activeSet)
     }

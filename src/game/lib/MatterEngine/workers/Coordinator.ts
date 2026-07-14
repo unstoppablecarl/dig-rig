@@ -21,6 +21,7 @@ import type { MatterTankId } from '../../Matter/Tank/_MatterTank.types.ts'
 import type { ParticleType } from '../../Particles/_particle-types.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
 import { ChunkPublisher } from '../data/ChunkPublisher.ts'
+import { SparseTileSet, type TileSet } from '../data/SparseTileSet.ts'
 import { DataManager } from '../DataManager.ts'
 import { MatterCreditTransferBuffer } from './_helpers/MatterCreditTransferBuffer.ts'
 import { MatterReservationReleaseBuffer } from './_helpers/MatterReservationReleaseBuffer.ts'
@@ -53,8 +54,8 @@ export class Coordinator {
   private conservationTracker!: ConservationTracker
   private physicsBodyProcessor!: PhysicsBodyProcessor
 
-  activeSet = new Set<number>()
-  private idleSet = new Set<number>()
+  activeSet!: TileSet
+  private idleSet!: TileSet
   private pendingActivations: number[] = []
   private readonly _activateTmp = new Set<number>()
   private frame = 0
@@ -81,6 +82,18 @@ export class Coordinator {
   private _profTotalInterval = 0
   private _profMaxInterval = 0
   private _profMaxActiveSet = 0
+  // Sub-segment timing to break down the gap between Coordinator's
+  // avgStepDur and SimWorkerPool's own avgDur — everything in step() that
+  // isn't the parallel worker dispatch itself (brush/tunnel/projectile prep,
+  // upward pressure pass, island collapse, particleSim, front-buffer publish).
+  private _profTotalPreDispatchDur = 0
+  private _profMaxPreDispatchDur = 0
+  private _profTotalPostDispatchDur = 0
+  private _profMaxPostDispatchDur = 0
+  private _profTotalParticleSimDur = 0
+  private _profMaxParticleSimDur = 0
+  private _profTotalPublishDur = 0
+  private _profMaxPublishDur = 0
 
   init(buffers: CoordinatorInMsgInit, poolSize: number) {
 
@@ -96,6 +109,9 @@ export class Coordinator {
     const { width, height } = buffers
     this.width = width
     const chunkGrid = this.data.chunkGrid
+
+    this.activeSet = new SparseTileSet(width * height)
+    this.idleSet = new SparseTileSet(width * height)
 
     this.sim = new MatterSim()
     this.sim.init(buffers.tiles, buffers.fill, buffers.chunkGrid, width, height, MatterSimScratchData.makeBuffers(), buffers.particleSpawns)
@@ -240,6 +256,8 @@ export class Coordinator {
 
       let structuralDirty = false
 
+      const _profPreT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
+
       // Drain brush add-matter queue.
       structuralDirty ||= this.brush.stepCreate(this.activeSet, this.dirtyChunksThisStep)
 
@@ -258,6 +276,12 @@ export class Coordinator {
       structuralDirty ||= this.projectileProcessor.step(this.activeSet, this.dirtyChunksThisStep)
       this.vfxJustSettled.length = 0
       this.structuralRemovals.length = 0
+
+      if (ENABLE_MATTER_SIM_PROFILING) {
+        const _profPreDur = performance.now() - _profPreT0
+        this._profTotalPreDispatchDur += _profPreDur
+        if (_profPreDur > this._profMaxPreDispatchDur) this._profMaxPreDispatchDur = _profPreDur
+      }
 
       const dirtyChunksThisStep = await this.workerPool.step(snapshot, leftFirst, frame, (results) => {
         for (const r of results) {
@@ -281,6 +305,8 @@ export class Coordinator {
           this.conservationTracker.addDelta(r.solidNetDelta * FILL_MAX + r.liquidNetDelta)
         }
       })
+
+      const _profPostT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
 
       // Bottom-up upward pressure cascade — runs after all worker rounds so
       // there are no concurrent writers to tiles/fill. Cascades overfull liquid
@@ -319,6 +345,14 @@ export class Coordinator {
       for (const idx of this.dirtyChunksThisStep) dirtyChunksThisStep.add(idx)
       this.physics.postStep(dirtyChunksThisStep, structuralDirty)
 
+      if (ENABLE_MATTER_SIM_PROFILING) {
+        const _profPostDur = performance.now() - _profPostT0
+        this._profTotalPostDispatchDur += _profPostDur
+        if (_profPostDur > this._profMaxPostDispatchDur) this._profMaxPostDispatchDur = _profPostDur
+      }
+
+      const _profParticleT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
+
       this.particleSim.step()
       for (const idx of this.particleSim.pendingActivations) {
         this.pendingActivations.push(idx)
@@ -336,14 +370,28 @@ export class Coordinator {
         }
       }
 
+      if (ENABLE_MATTER_SIM_PROFILING) {
+        const _profParticleDur = performance.now() - _profParticleT0
+        this._profTotalParticleSimDur += _profParticleDur
+        if (_profParticleDur > this._profMaxParticleSimDur) this._profMaxParticleSimDur = _profParticleDur
+      }
+
       if (ENABLE_MATTER_CONSERVATION_CHECK && frame % MATTER_CONSERVATION_CHECK_INTERVAL_FRAMES === 0) {
         this.checkMatterConservation()
       }
+
+      const _profPublishT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
 
       // Publish all chunks whose renderGen changed this step to the front buffers.
       // Atomics.add in publish() is the release fence; the renderer's Atomics.load
       // is the acquire — so the renderer always sees a complete post-step snapshot.
       this.tilePublisher.publish(this.data.chunkGrid)
+
+      if (ENABLE_MATTER_SIM_PROFILING) {
+        const _profPublishDur = performance.now() - _profPublishT0
+        this._profTotalPublishDur += _profPublishDur
+        if (_profPublishDur > this._profMaxPublishDur) this._profMaxPublishDur = _profPublishDur
+      }
     } finally {
       // Logs a 1s-aggregated summary of total step() duration and real
       // inter-step interval, correlated with activeSet size, so an overall
@@ -368,7 +416,11 @@ export class Coordinator {
             `[PROFILE Coordinator] steps=${this._profStepCount} `
             + `avgStepDur=${(this._profTotalStepDur / n).toFixed(2)}ms maxStepDur=${this._profMaxStepDur.toFixed(2)}ms `
             + `avgInterval=${(this._profTotalInterval / n).toFixed(2)}ms maxInterval=${this._profMaxInterval.toFixed(2)}ms `
-            + `maxActiveSetSize=${this._profMaxActiveSet}`,
+            + `maxActiveSetSize=${this._profMaxActiveSet} `
+            + `| preDispatch avg=${(this._profTotalPreDispatchDur / n).toFixed(2)}ms max=${this._profMaxPreDispatchDur.toFixed(2)}ms `
+            + `postDispatch avg=${(this._profTotalPostDispatchDur / n).toFixed(2)}ms max=${this._profMaxPostDispatchDur.toFixed(2)}ms `
+            + `particleSim avg=${(this._profTotalParticleSimDur / n).toFixed(2)}ms max=${this._profMaxParticleSimDur.toFixed(2)}ms `
+            + `publish avg=${(this._profTotalPublishDur / n).toFixed(2)}ms max=${this._profMaxPublishDur.toFixed(2)}ms`,
           )
           this._profWindowStart = _profNow
           this._profStepCount = 0
@@ -377,6 +429,14 @@ export class Coordinator {
           this._profTotalInterval = 0
           this._profMaxInterval = 0
           this._profMaxActiveSet = 0
+          this._profTotalPreDispatchDur = 0
+          this._profMaxPreDispatchDur = 0
+          this._profTotalPostDispatchDur = 0
+          this._profMaxPostDispatchDur = 0
+          this._profTotalParticleSimDur = 0
+          this._profMaxParticleSimDur = 0
+          this._profTotalPublishDur = 0
+          this._profMaxPublishDur = 0
         }
       }
     }

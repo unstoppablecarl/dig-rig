@@ -5,6 +5,7 @@ import { INDESTRUCTIBLE_TYPES } from '../../../../Matter/matter.ts'
 import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
 import { type ProjectileEffectResult, SimProjectile } from './SimProjectile.ts'
 
+import type { TileSet } from '../../../data/SparseTileSet.ts'
 const IGNORE = new MatterTypeSet(INDESTRUCTIBLE_TYPES, EMPTY, FIRE)
 
 export class ProjectileDestroy extends SimProjectile {
@@ -12,7 +13,7 @@ export class ProjectileDestroy extends SimProjectile {
     return IGNORE.has(existing) ? null : EMPTY
   }
 
-  protected postApply(candidates: ProjectileEffectResult[], _createType: MatterType, activeSet: Set<number>, dirtyChunks: Set<number>): void {
+  protected postApply(candidates: ProjectileEffectResult[], _createType: MatterType, activeSet: TileSet, dirtyChunks: Set<number>): void {
     const islands = this.physics.findNewlyDisconnected(candidates, dirtyChunks)
     if (islands.length > 0) this.physics.collapseIslands(islands, activeSet, dirtyChunks)
   }

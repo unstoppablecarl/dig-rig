@@ -6,6 +6,7 @@ import type { ChunkGrid } from '../../../Tilemap/ChunkGrid.ts'
 import { type PhysicsBodiesData, PhysicsBodyStatus } from '../../data/PhysicsBodiesData.ts'
 import type { MatterSim } from '../MatterSim/MatterSim.ts'
 import type { ParticleSim } from '../ParticleSim/ParticleSim.ts'
+import type { TileSet } from '../../data/SparseTileSet.ts'
 
 const NO_OWNER = -1
 
@@ -48,7 +49,7 @@ export class PhysicsBodyProcessor {
     this.tileOwner = new Int16Array(width * height).fill(NO_OWNER)
   }
 
-  process(activeSet: Set<number>) {
+  process(activeSet: TileSet) {
     let status = this.data.status
     for (let i = 0; i < status.length; i++) {
       if (status[i] === PhysicsBodyStatus.ACTIVE) {
@@ -72,7 +73,7 @@ export class PhysicsBodyProcessor {
   // Reused across calls to avoid a per-frame allocation for the new footprint.
   private readonly newFootprint = new Set<number>()
 
-  rasterize(slotIdx: number, activeSet: Set<number>): void {
+  rasterize(slotIdx: number, activeSet: TileSet): void {
     const tiles = this.tiles
     const width = this.width
     const height = this.height
@@ -279,7 +280,7 @@ export class PhysicsBodyProcessor {
     return prevTiles
   }
 
-  clearPrevTiles(slotIdx: number, activeSet: Set<number>) {
+  clearPrevTiles(slotIdx: number, activeSet: TileSet) {
     this.submergedSlots.delete(slotIdx)
     let prevTiles = this.prevTiles.get(slotIdx)
     if (prevTiles === undefined) return

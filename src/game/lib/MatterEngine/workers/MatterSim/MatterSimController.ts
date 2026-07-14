@@ -50,6 +50,7 @@ export class MatterSimController {
             matterReservationReleases: msg.matterReservationReleases,
             liquidNetDelta: msg.liquidNetDelta,
             solidNetDelta: msg.solidNetDelta,
+            busyMs: msg.busyMs,
           },
         } as MessageEvent<SimOutMessage>)
         return

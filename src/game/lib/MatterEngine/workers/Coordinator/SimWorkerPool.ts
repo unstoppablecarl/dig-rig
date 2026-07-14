@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 import { CHUNK_SIZE, ENABLE_MATTER_SIM_PROFILING } from '../../../../config.ts'
+import type { TileSet } from '../../data/SparseTileSet.ts'
 import type { ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 import {
   type SimOutMessage,
@@ -65,10 +66,21 @@ export class SimWorkerPool {
   // Reused scratch state for greedy least-loaded chunk-to-worker assignment
   // (see comment in step()) — cleared and refilled every round trip.
   private readonly chunkSizeMap = new Map<number, number>()
+  // chunkIdxScratch/sortedScratch are aligned in SORTED order (index i in
+  // one corresponds to index i in the other) — see the counting-sort
+  // comment in step() for why.
   private readonly chunkIdxScratch: number[] = []
+  private readonly sortedScratch: number[] = []
   private readonly workerLoad: number[] = []
   private workerBatches: number[][] = []
   private chunksWide: number
+  private height = 0
+  // Counting-sort scratch, sized to height+1 in the constructor — bucket
+  // counts per tile row, reused every round. rowCounts is left fully
+  // zeroed between rounds (the offset pass below drains it back to 0 as it
+  // reads, so no separate clear pass is needed).
+  private rowCounts!: Uint32Array
+  private rowOffsets!: Uint32Array
   private readonly _dirtyChunksThisStep = new Set<number>()
   private readonly onReady: () => void
 
@@ -91,6 +103,30 @@ export class SimWorkerPool {
   // the wrong denominator).
   private _profMaxImbalanceRatio = 0
   private _profMaxImbalanceRoundTiles = 0
+  // Per-worker round-trip overhead: (time from dispatch() call to result
+  // received) minus (worker's own reported busyMs) — isolates postMessage
+  // dispatch/wake/return + Promise resolution cost from actual worker
+  // compute time, instead of inferring it from the gap between avgDur and a
+  // sampled per-call estimate.
+  private readonly _dispatchSendTime: number[]
+  private _profTotalRoundTripMs = 0
+  private _profTotalBusyMs = 0
+  private _profTotalOverheadMs = 0
+  private _profMaxOverheadMs = 0
+  private _profOverheadSamples = 0
+  // Coordinator-side serial work per step, isolated from both dispatch
+  // round-trip time (above) and worker busyMs: bucketing the snapshot into
+  // megaGroups once, plus (per round) the sort + chunk-tally + LPT
+  // worker-assignment passes that build workerBatches before dispatchWave.
+  private _profTotalBucketMs = 0
+  private _profTotalPrepMs = 0
+  // Per-round split of dispatchWave itself: actual Promise.all wait (the
+  // real round bottleneck, vs avgRoundTrip's per-worker average which
+  // understates it when workers are imbalanced) vs the synchronous cb()
+  // merge afterward (activeSet.add() etc. — a suspected hidden cost, since
+  // nothing timed it directly before now).
+  private _profTotalPromiseAllMs = 0
+  private _profTotalCbMs = 0
 
   get size(): number {
     return this.pool.length
@@ -119,9 +155,13 @@ export class SimWorkerPool {
   ) {
     this.onReady = onReady
     this.width = width
+    this.height = height
     this.chunksWide = chunkGridBuffers.chunksWide
     this.pendingResolvers = new Array(poolSize).fill(null)
     this.workerBatches = Array.from({ length: poolSize }, () => [])
+    this._dispatchSendTime = new Array(poolSize).fill(0)
+    this.rowCounts = new Uint32Array(height + 1)
+    this.rowOffsets = new Uint32Array(height + 1)
 
     const simConfig = {
       tilesBuffer: tilesBuffer,
@@ -136,11 +176,13 @@ export class SimWorkerPool {
     }
   }
 
-  async step(snapshot: Set<number>, leftFirst: boolean, frame: number, cb: (results: SimOutMsgDone[]) => void) {
+  async step(snapshot: TileSet, leftFirst: boolean, frame: number, cb: (results: SimOutMsgDone[]) => void) {
     const _profT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
     let _profRoundTrips = 0
     this._dirtyChunksThisStep.clear()
-    const { width, chunksWide, megaGroups, chunkToWorkerId, workerBatches } = this
+    const { width, height, chunksWide, megaGroups, chunkToWorkerId, workerBatches } = this
+
+    const _profBucketT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
 
     // Clear buckets
     for (const g of megaGroups) g.length = 0
@@ -153,35 +195,73 @@ export class SimWorkerPool {
       megaGroups[(cy & 1) * 2 + (cx & 1)].push(idx)
     }
 
+    if (ENABLE_MATTER_SIM_PROFILING) this._profTotalBucketMs += performance.now() - _profBucketT0
+
     for (let g = 0; g < 4; g++) {
       const group = megaGroups[g]
       if (group.length === 0) continue
 
-      // Sort bottom-up so a tile that falls into another queued cell's slot
-      // (within the same chunk) is never double-processed — group can span
-      // the whole map, but only same-chunk entries can ever be adjacent, so
-      // a single global sort covers every such case.
-      group.sort((a, b) => (b / width | 0) - (a / width | 0))
+      const _profPrepT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
+
+      const groupLen = group.length
+      const { rowCounts, rowOffsets, sortedScratch, chunkIdxScratch } = this
 
       chunkToWorkerId.clear()
       this.chunkSizeMap.clear()
-      this.chunkIdxScratch.length = 0
       for (const batch of workerBatches) batch.length = 0
 
-      // Pass 1: compute each tile's chunkIdx once (cached for pass 3, instead
-      // of recomputing it below) and tally tiles-per-chunk.
-      for (const idx of group) {
+      // Counting sort by row, descending — replaces the old
+      // `group.sort((a, b) => rowB - rowA)` comparator sort (O(n log n)
+      // with a JS call per comparison) with two O(n) passes plus an O(height)
+      // prefix sum, since the sort key (row) is a small bounded integer.
+      // Bottom-up order is required so a tile that falls into another queued
+      // cell's slot (within the same chunk) is never double-processed —
+      // group can span the whole map, but only same-chunk entries can ever
+      // be adjacent, so a single global bottom-up order covers every case.
+      //
+      // Pass 1: tally tiles per row only (minimal work — chunkIdx isn't
+      // needed until placement below, and computing it here too would just
+      // be redundant work repeated in pass 2).
+      for (let i = 0; i < groupLen; i++) {
+        const idx = group[i]
+        const ty = (idx / width) | 0
+        rowCounts[ty]++
+      }
+
+      // Exclusive prefix sum walked from the highest row down, so the
+      // resulting bucket layout is row-descending. Draining rowCounts back
+      // to 0 as it's read means no separate clear pass is needed next round.
+      let acc = 0
+      for (let ty = height - 1; ty >= 0; ty--) {
+        const c = rowCounts[ty]
+        rowOffsets[ty] = acc
+        acc += c
+        rowCounts[ty] = 0
+      }
+
+      // Pass 2: place each tile into its sorted slot — stable, since this
+      // walks `group` in original order and only ever appends within a
+      // row's bucket, matching Array.sort's spec-guaranteed stability for
+      // same-row ties. Also computes each tile's chunkIdx once (aligned to
+      // the SORTED position for pass 4 below) and tallies tiles-per-chunk,
+      // replacing the old separate full pass over the sorted array.
+      for (let i = 0; i < groupLen; i++) {
+        const idx = group[i]
         const tx = idx % width
-        const ty = idx / width | 0
+        const ty = (idx / width) | 0
         const cx = tx / CHUNK_SIZE | 0
         const cy = ty / CHUNK_SIZE | 0
         const chunkIdx = cy * chunksWide + cx
-        this.chunkIdxScratch.push(chunkIdx)
+
+        const pos = rowOffsets[ty]++
+        sortedScratch[pos] = idx
+        chunkIdxScratch[pos] = chunkIdx
+
         this._dirtyChunksThisStep.add(chunkIdx)
         this.chunkSizeMap.set(chunkIdx, (this.chunkSizeMap.get(chunkIdx) ?? 0) + 1)
       }
 
-      // Pass 2: greedy least-loaded assignment (LPT — largest chunks first)
+      // Pass 3: greedy least-loaded assignment (LPT — largest chunks first)
       // instead of round-robin-on-first-seen. A chunk's tiles must all stay
       // on one worker (write-conflict invariant), but round-robin could
       // still stack several heavy chunks on the same worker while others sat
@@ -205,14 +285,16 @@ export class SimWorkerPool {
         workerLoad[best] += size
       }
 
-      // Pass 3: push tiles into their assigned worker's batch, preserving
-      // the row-descending order from the sort above.
-      for (let i = 0; i < group.length; i++) {
-        const idx = group[i]
-        const chunkIdx = this.chunkIdxScratch[i]
+      // Pass 4: push tiles into their assigned worker's batch, preserving
+      // the row-descending order from the counting sort above.
+      for (let i = 0; i < groupLen; i++) {
+        const idx = sortedScratch[i]
+        const chunkIdx = chunkIdxScratch[i]
         const workerIdx = chunkToWorkerId.get(chunkIdx)!
         workerBatches[workerIdx].push(idx)
       }
+
+      if (ENABLE_MATTER_SIM_PROFILING) this._profTotalPrepMs += performance.now() - _profPrepT0
 
       _profRoundTrips += await this.dispatchWave(workerBatches, group.length, leftFirst, frame, cb)
     }
@@ -230,13 +312,19 @@ export class SimWorkerPool {
       const _profNow = performance.now()
       if (_profNow - this._profWindowStart > 1000) {
         const n = this._profStepCount || 1
+        const overheadN = this._profOverheadSamples || 1
         console.log(
           `[PROFILE SimWorkerPool] steps=${this._profStepCount} `
           + `avgDur=${(this._profTotalDur / n).toFixed(2)}ms maxDur=${this._profMaxDur.toFixed(2)}ms `
           + `avgRoundTrips=${(this._profTotalRoundTrips / n).toFixed(1)} maxRoundTrips=${this._profMaxRoundTrips} `
           + `maxSnapshotSize=${this._profMaxSnapshot} `
           + `poolSize=${this.size} maxBusyWorkers=${this._profMaxBusyWorkers} maxBatchSize=${this._profMaxBatchSize} `
-          + `maxImbalanceRatio=${this._profMaxImbalanceRatio.toFixed(2)} (roundTiles=${this._profMaxImbalanceRoundTiles})`,
+          + `maxImbalanceRatio=${this._profMaxImbalanceRatio.toFixed(2)} (roundTiles=${this._profMaxImbalanceRoundTiles}) `
+          + `| perDispatch(n=${this._profOverheadSamples}) avgRoundTrip=${(this._profTotalRoundTripMs / overheadN).toFixed(2)}ms `
+          + `avgBusy=${(this._profTotalBusyMs / overheadN).toFixed(2)}ms `
+          + `avgOverhead=${(this._profTotalOverheadMs / overheadN).toFixed(2)}ms maxOverhead=${this._profMaxOverheadMs.toFixed(2)}ms `
+          + `| perStep bucket=${(this._profTotalBucketMs / n).toFixed(2)}ms prep=${(this._profTotalPrepMs / n).toFixed(2)}ms `
+          + `promiseAll=${(this._profTotalPromiseAllMs / n).toFixed(2)}ms cb=${(this._profTotalCbMs / n).toFixed(2)}ms`,
         )
         this._profWindowStart = _profNow
         this._profStepCount = 0
@@ -249,6 +337,15 @@ export class SimWorkerPool {
         this._profMaxBatchSize = 0
         this._profMaxImbalanceRatio = 0
         this._profMaxImbalanceRoundTiles = 0
+        this._profTotalRoundTripMs = 0
+        this._profTotalBusyMs = 0
+        this._profTotalOverheadMs = 0
+        this._profMaxOverheadMs = 0
+        this._profOverheadSamples = 0
+        this._profTotalBucketMs = 0
+        this._profTotalPrepMs = 0
+        this._profTotalPromiseAllMs = 0
+        this._profTotalCbMs = 0
       }
     }
 
@@ -292,14 +389,21 @@ export class SimWorkerPool {
       promises.push(this.dispatch(i, workerBatches[i], leftFirst, frame))
     }
 
+    const _profWaitT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
     const results = await Promise.all(promises)
+    if (ENABLE_MATTER_SIM_PROFILING) this._profTotalPromiseAllMs += performance.now() - _profWaitT0
+
+    const _profCbT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
     cb(results)
+    if (ENABLE_MATTER_SIM_PROFILING) this._profTotalCbMs += performance.now() - _profCbT0
+
     return 1
   }
 
   dispatch(workerIdx: number, indices: number[], leftFirst: boolean, frame: number):
     Promise<SimOutMsgDone> {
     return new Promise(resolve => {
+      if (ENABLE_MATTER_SIM_PROFILING) this._dispatchSendTime[workerIdx] = performance.now()
       this.pendingResolvers[workerIdx] = resolve
       this.pool[workerIdx].process(indices, leftFirst, frame)
     })
@@ -313,6 +417,15 @@ export class SimWorkerPool {
     if (msg.type === SimOutMsg.READY) {
       if (++this.readyCount === this.pool.length) this.onReady()
       return
+    }
+    if (ENABLE_MATTER_SIM_PROFILING) {
+      const roundTripMs = performance.now() - this._dispatchSendTime[workerIdx]
+      const overheadMs = roundTripMs - msg.busyMs
+      this._profTotalRoundTripMs += roundTripMs
+      this._profTotalBusyMs += msg.busyMs
+      this._profTotalOverheadMs += overheadMs
+      if (overheadMs > this._profMaxOverheadMs) this._profMaxOverheadMs = overheadMs
+      this._profOverheadSamples++
     }
     this.pendingResolvers[workerIdx]?.(msg)
     this.pendingResolvers[workerIdx] = null
