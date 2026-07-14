@@ -16,6 +16,7 @@ import {
 import { getDeltaT } from '../helpers/_helpers.ts'
 import { PhysicsBodyManager } from '../lib/Collision/PhysicsBodyManager.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
+import { installBenchmarkHook } from '../lib/Debug/BenchmarkHook.ts'
 import type { EntitySpawner } from '../lib/Entities/_Entity.types.ts'
 import { EntityFactory } from '../lib/Entities/EntityFactory.ts'
 import { EntityManager } from '../lib/Entities/EntityManager.ts'
@@ -218,6 +219,8 @@ export abstract class GameLevel extends Scene {
     this.terrainChunkBodyManager.trackAllDynamic()
 
     this.createUI()
+
+    if (import.meta.env.DEV) installBenchmarkHook(this)
 
     this.game.events.emit(GAME_LEVEL_LOADED, this.game, this)
   }

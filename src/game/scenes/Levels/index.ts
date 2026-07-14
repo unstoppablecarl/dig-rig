@@ -26,4 +26,12 @@ export const LEVELS = {
     displayName: 'Test Level 3',
     load: () => import('./ImageSourceTestLevel'),
   },
+  BENCH: {
+    displayName: 'Bench: Oil Flood',
+    load: () => import('././BenchLevelFluid.ts'),
+  },
+  BENCH_SAND: {
+    displayName: 'Bench: Sand Fall',
+    load: () => import('./BenchLevelSand'),
+  },
 } as const satisfies Record<string, LevelEntry>

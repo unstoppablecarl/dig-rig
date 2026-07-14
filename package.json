@@ -19,13 +19,15 @@
         "dev": "vite --config vite/vite.config.dev.ts",
         "typecheck": "vue-tsc --noEmit",
         "build": "vue-tsc --noEmit && vite build --config vite/vite.config.prod.ts",
-        "check-circ": "tsx _scripts/check-circular.ts"
+        "check-circ": "tsx _scripts/check-circular.ts",
+        "bench:sim": "node _scripts/bench-sim.mjs"
     },
     "devDependencies": {
         "@types/matter-js": "^0.20.2",
         "@types/node": "^25.9.0",
         "@vitejs/plugin-vue": "^6.0.7",
         "@vue/tsconfig": "^0.9.1",
+        "playwright": "^1.61.1",
         "sass": "^1.99.0",
         "typescript": "~6.0.3",
         "vite": "^8.0.13",
