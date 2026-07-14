@@ -3,7 +3,7 @@ import { MatterType } from '../../../../Matter/_Matter.types.ts'
 import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
 import { type ProjectileEffectResult, SimProjectile } from './SimProjectile.ts'
 
-import type { TileSet } from '../../../data/SparseTileSet.ts'
+import type { TileSet } from '../../../../Matter/data/SparseTileSet.ts'
 export class ProjectileSolidify extends SimProjectile {
   protected convertTile(existing: MatterType, _createType: MatterType, _ownerId: MatterTankId): MatterType | null {
     if (existing === MatterType.WATER) return MatterType.SAND

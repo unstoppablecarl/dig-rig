@@ -5,7 +5,7 @@ import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
 import type { PlayerBounds } from '../../../data/PlayerBoundsData.ts'
 import { type ProjectileEffectResult, SimProjectile } from './SimProjectile.ts'
 
-import type { TileSet } from '../../../data/SparseTileSet.ts'
+import type { TileSet } from '../../../../Matter/data/SparseTileSet.ts'
 export class ProjectileCreate extends SimProjectile {
   protected convertTile(existing: MatterType, createType: MatterType, ownerId: MatterTankId): MatterType | null {
     if (existing !== EMPTY) return null

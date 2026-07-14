@@ -6,7 +6,7 @@ import type { ChunkGrid } from '../../../Tilemap/ChunkGrid.ts'
 import { type PhysicsBodiesData, PhysicsBodyStatus } from '../../data/PhysicsBodiesData.ts'
 import type { MatterSim } from '../MatterSim/MatterSim.ts'
 import type { ParticleSim } from '../ParticleSim/ParticleSim.ts'
-import type { TileSet } from '../../data/SparseTileSet.ts'
+import type { TileSet } from '../../../Matter/data/SparseTileSet.ts'
 
 const NO_OWNER = -1
 

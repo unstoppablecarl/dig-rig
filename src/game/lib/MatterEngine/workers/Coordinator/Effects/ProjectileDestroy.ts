@@ -5,7 +5,7 @@ import { INDESTRUCTIBLE_TYPES } from '../../../../Matter/matter.ts'
 import type { MatterTankId } from '../../../../Matter/Tank/_MatterTank.types.ts'
 import { type ProjectileEffectResult, SimProjectile } from './SimProjectile.ts'
 
-import type { TileSet } from '../../../data/SparseTileSet.ts'
+import type { TileSet } from '../../../../Matter/data/SparseTileSet.ts'
 const IGNORE = new MatterTypeSet(INDESTRUCTIBLE_TYPES, EMPTY, FIRE)
 
 export class ProjectileDestroy extends SimProjectile {

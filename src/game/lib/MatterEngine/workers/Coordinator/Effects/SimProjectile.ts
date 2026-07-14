@@ -14,7 +14,7 @@ import type { MatterSim } from '../../MatterSim/MatterSim.ts'
 import type { PhysicsCollapse } from '../PhysicsCollapse.ts'
 import type { SimMatterTanks } from '../SimMatterTanks.ts'
 
-import type { TileSet } from '../../../data/SparseTileSet.ts'
+import type { TileSet } from '../../../../Matter/data/SparseTileSet.ts'
 export type ProjectileEffectResult = { x: number, y: number, newValue: MatterType }
 
 export type EffectResult = {

@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { CHUNK_SIZE, ENABLE_MATTER_SIM_PROFILING } from '../../../../config.ts'
-import type { TileSet } from '../../data/SparseTileSet.ts'
+import type { TileSet } from '../../../Matter/data/SparseTileSet.ts'
 import type { ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 import {
   type SimOutMessage,

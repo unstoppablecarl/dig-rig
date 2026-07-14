@@ -5,7 +5,7 @@ import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_Matt
 import { FireMode } from '../../../Player/_FireMode-types.ts'
 import { EMPTY_PLAYER_BOUNDS, type PlayerBounds, type PlayerBoundsDataType } from '../../data/PlayerBoundsData.ts'
 import { type ProjectileManagerData, ProjectileShape } from '../../data/ProjectileManagerData.ts'
-import type { TileSet } from '../../data/SparseTileSet.ts'
+import type { TileSet } from '../../../Matter/data/SparseTileSet.ts'
 import type { CoordinatorInMsgBrushEraseMatter } from '../Coordinator.types.ts'
 import type { MatterSim } from '../MatterSim/MatterSim.ts'
 import { FloodFillCreate } from './Effects/FloodFillCreate.ts'

@@ -7,7 +7,7 @@ import { FloodFillFrontier } from './FloodFillFrontier.ts'
 import { ProjectileDestroy } from './ProjectileDestroy.ts'
 import type { EffectResult, ProjectileEffectResult } from './SimProjectile.ts'
 
-import type { TileSet } from '../../../data/SparseTileSet.ts'
+import type { TileSet } from '../../../../Matter/data/SparseTileSet.ts'
 // Flood fill destroy treats water as destroyable (same as solids), unlike the radius-based
 // destroy which passes through water. WATER is intentionally absent from this set.
 const FLOOD_IGNORE = new MatterTypeSet(INDESTRUCTIBLE_TYPES, EMPTY, FIRE)

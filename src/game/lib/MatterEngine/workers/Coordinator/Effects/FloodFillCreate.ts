@@ -5,7 +5,7 @@ import type { PlayerBounds } from '../../../data/PlayerBoundsData.ts'
 import { FloodFillFrontier } from './FloodFillFrontier.ts'
 import { ProjectileCreate } from './ProjectileCreate.ts'
 import type { EffectResult, ProjectileEffectResult } from './SimProjectile.ts'
-import type { TileSet } from '../../../data/SparseTileSet.ts'
+import type { TileSet } from '../../../../Matter/data/SparseTileSet.ts'
 
 export class FloodFillCreate extends ProjectileCreate {
   private readonly frontier = new FloodFillFrontier()

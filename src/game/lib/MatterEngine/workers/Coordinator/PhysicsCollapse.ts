@@ -5,7 +5,7 @@ import { convertsToCollisionBody, getSupportType, setSupport, STRUCTURAL_COLLAPS
 import { ChunkGrid } from '../../../Tilemap/ChunkGrid.ts'
 import { MatterSim } from '../MatterSim/MatterSim.ts'
 
-import type { TileSet } from '../../data/SparseTileSet.ts'
+import type { TileSet } from '../../../Matter/data/SparseTileSet.ts'
 type XY = { x: number; y: number }
 
 const BFS_DX = [-1, 1, 0, 0]

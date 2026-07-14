@@ -9,7 +9,7 @@ import type { VFXParticleData } from '../../data/VFXParticleData.ts'
 import type { VFXTileEffectData } from '../../data/VFXTileEffectData.ts'
 import type { ConservationTracker } from './ConservationTracker.ts'
 import type { Effects } from './Effects.ts'
-import type { TileSet } from '../../data/SparseTileSet.ts'
+import type { TileSet } from '../../../Matter/data/SparseTileSet.ts'
 
 type Tile = { x: number; y: number }
 type RestoreRecord = { cx: number; cy: number; radius: number; remaining: Tile[] }

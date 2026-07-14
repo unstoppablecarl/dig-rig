@@ -11,7 +11,7 @@ import type { EffectResult } from './Effects/SimProjectile.ts'
 import type { PhysicsCollapse } from './PhysicsCollapse.ts'
 import { SimMatterTanks } from './SimMatterTanks.ts'
 
-import type { TileSet } from '../../data/SparseTileSet.ts'
+import type { TileSet } from '../../../Matter/data/SparseTileSet.ts'
 type BrushEntry = { value: MatterRaw; tx: number; ty: number; radius: number }
 
 export class Brush {
