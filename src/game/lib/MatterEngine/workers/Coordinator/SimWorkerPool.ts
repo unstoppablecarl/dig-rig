@@ -45,8 +45,28 @@ export class SimWorkerPool {
   // means only one worker ever touches a given real chunk's tiles per round
   // again, restoring the invariant that lets ChunkGrid's renderGen/collGen
   // counters be plain increments rather than needing Atomics.
+  //
+  // Also tried (and reverted): when a round has more distinct chunks than
+  // workers, pigeonhole forces some worker to take 2+ whole chunks — LPT
+  // below can't fix that (it can only move whole chunks, not shrink them).
+  // Splitting each such chunk's tiles top/bottom and running the bottom half
+  // as an immediate extra round (safe: never concurrent with anything, since
+  // it runs strictly after the main round's writes complete) does shrink the
+  // worst single batch — but it doubles the round-trip count for that
+  // mega-group, and measured on the BENCH level (_scripts/bench-sim.mjs,
+  // ~200k active tiles, one real chunk fully saturated) it made steady-state
+  // throughput ~20% WORSE (round-trip overhead cost more than the smaller
+  // batches saved), while maxImbalanceRatio was unchanged (splitting shrinks
+  // the absolute batch size, not the ratio, since the same chunk-count vs
+  // worker-count mismatch recurs at half scale in each smaller round). Don't
+  // reintroduce this without a benchmark showing a net win.
   private readonly megaGroups: number[][] = [[], [], [], []]
   private readonly chunkToWorkerId = new Map<number, number>()
+  // Reused scratch state for greedy least-loaded chunk-to-worker assignment
+  // (see comment in step()) — cleared and refilled every round trip.
+  private readonly chunkSizeMap = new Map<number, number>()
+  private readonly chunkIdxScratch: number[] = []
+  private readonly workerLoad: number[] = []
   private workerBatches: number[][] = []
   private chunksWide: number
   private readonly _dirtyChunksThisStep = new Set<number>()
@@ -64,6 +84,13 @@ export class SimWorkerPool {
   private _profMaxSnapshot = 0
   private _profMaxBusyWorkers = 0
   private _profMaxBatchSize = 0
+  // Per-round-trip imbalance: batchMax / (roundTiles / poolSize), i.e. how
+  // far the slowest worker's batch is from a perfectly-even split of that
+  // SPECIFIC round's tiles (mega-groups are rarely equal-sized, so dividing
+  // the aggregated maxSnapshotSize by 4 rounds would compare batches against
+  // the wrong denominator).
+  private _profMaxImbalanceRatio = 0
+  private _profMaxImbalanceRoundTiles = 0
 
   get size(): number {
     return this.pool.length
@@ -113,7 +140,7 @@ export class SimWorkerPool {
     const _profT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
     let _profRoundTrips = 0
     this._dirtyChunksThisStep.clear()
-    const { width, chunksWide, megaGroups, chunkToWorkerId, workerBatches, promises } = this
+    const { width, chunksWide, megaGroups, chunkToWorkerId, workerBatches } = this
 
     // Clear buckets
     for (const g of megaGroups) g.length = 0
@@ -129,7 +156,6 @@ export class SimWorkerPool {
     for (let g = 0; g < 4; g++) {
       const group = megaGroups[g]
       if (group.length === 0) continue
-      if (ENABLE_MATTER_SIM_PROFILING) _profRoundTrips++
 
       // Sort bottom-up so a tile that falls into another queued cell's slot
       // (within the same chunk) is never double-processed — group can span
@@ -138,50 +164,57 @@ export class SimWorkerPool {
       group.sort((a, b) => (b / width | 0) - (a / width | 0))
 
       chunkToWorkerId.clear()
+      this.chunkSizeMap.clear()
+      this.chunkIdxScratch.length = 0
       for (const batch of workerBatches) batch.length = 0
-      let next = 0
 
+      // Pass 1: compute each tile's chunkIdx once (cached for pass 3, instead
+      // of recomputing it below) and tally tiles-per-chunk.
       for (const idx of group) {
         const tx = idx % width
         const ty = idx / width | 0
         const cx = tx / CHUNK_SIZE | 0
         const cy = ty / CHUNK_SIZE | 0
         const chunkIdx = cy * chunksWide + cx
+        this.chunkIdxScratch.push(chunkIdx)
         this._dirtyChunksThisStep.add(chunkIdx)
+        this.chunkSizeMap.set(chunkIdx, (this.chunkSizeMap.get(chunkIdx) ?? 0) + 1)
+      }
 
-        let workerIdx = chunkToWorkerId.get(chunkIdx)
-        if (workerIdx === undefined) {
-          chunkToWorkerId.set(chunkIdx, next)
-          workerIdx = next
-          next = (next + 1) % this.size
+      // Pass 2: greedy least-loaded assignment (LPT — largest chunks first)
+      // instead of round-robin-on-first-seen. A chunk's tiles must all stay
+      // on one worker (write-conflict invariant), but round-robin could
+      // still stack several heavy chunks on the same worker while others sat
+      // idle — this keeps per-round-trip wall time closer to
+      // totalTiles / poolSize instead of being bottlenecked by whichever
+      // worker got unlucky. poolSize is small (~10), so a linear scan for
+      // the least-loaded worker per distinct chunk is cheap.
+      const chunkEntries = Array.from(this.chunkSizeMap.entries())
+      chunkEntries.sort((a, b) => b[1] - a[1])
+
+      const workerLoad = this.workerLoad
+      workerLoad.length = this.size
+      workerLoad.fill(0)
+
+      for (const [chunkIdx, size] of chunkEntries) {
+        let best = 0
+        for (let i = 1; i < this.size; i++) {
+          if (workerLoad[i] < workerLoad[best]) best = i
         }
+        chunkToWorkerId.set(chunkIdx, best)
+        workerLoad[best] += size
+      }
+
+      // Pass 3: push tiles into their assigned worker's batch, preserving
+      // the row-descending order from the sort above.
+      for (let i = 0; i < group.length; i++) {
+        const idx = group[i]
+        const chunkIdx = this.chunkIdxScratch[i]
+        const workerIdx = chunkToWorkerId.get(chunkIdx)!
         workerBatches[workerIdx].push(idx)
       }
 
-      // Load-balance check: are round trips using the whole worker pool, or
-      // funneling most tiles through a handful of workers because the
-      // active tiles only span a few distinct chunks?
-      if (ENABLE_MATTER_SIM_PROFILING) {
-        let _profBusyWorkers = 0
-        let _profBatchMax = 0
-        for (let i = 0; i < this.size; i++) {
-          const len = workerBatches[i].length
-          if (len === 0) continue
-          _profBusyWorkers++
-          if (len > _profBatchMax) _profBatchMax = len
-        }
-        if (_profBusyWorkers > this._profMaxBusyWorkers) this._profMaxBusyWorkers = _profBusyWorkers
-        if (_profBatchMax > this._profMaxBatchSize) this._profMaxBatchSize = _profBatchMax
-      }
-
-      promises.length = 0
-      for (let i = 0; i < this.size; i++) {
-        if (workerBatches[i].length === 0) continue
-        promises.push(this.dispatch(i, workerBatches[i], leftFirst, frame))
-      }
-
-      const results = await Promise.all(promises)
-      cb(results)
+      _profRoundTrips += await this.dispatchWave(workerBatches, group.length, leftFirst, frame, cb)
     }
 
     // Logs a 1s-aggregated summary so step duration and round-trip count can
@@ -202,7 +235,8 @@ export class SimWorkerPool {
           + `avgDur=${(this._profTotalDur / n).toFixed(2)}ms maxDur=${this._profMaxDur.toFixed(2)}ms `
           + `avgRoundTrips=${(this._profTotalRoundTrips / n).toFixed(1)} maxRoundTrips=${this._profMaxRoundTrips} `
           + `maxSnapshotSize=${this._profMaxSnapshot} `
-          + `poolSize=${this.size} maxBusyWorkers=${this._profMaxBusyWorkers} maxBatchSize=${this._profMaxBatchSize}`,
+          + `poolSize=${this.size} maxBusyWorkers=${this._profMaxBusyWorkers} maxBatchSize=${this._profMaxBatchSize} `
+          + `maxImbalanceRatio=${this._profMaxImbalanceRatio.toFixed(2)} (roundTiles=${this._profMaxImbalanceRoundTiles})`,
         )
         this._profWindowStart = _profNow
         this._profStepCount = 0
@@ -213,10 +247,54 @@ export class SimWorkerPool {
         this._profMaxSnapshot = 0
         this._profMaxBusyWorkers = 0
         this._profMaxBatchSize = 0
+        this._profMaxImbalanceRatio = 0
+        this._profMaxImbalanceRoundTiles = 0
       }
     }
 
     return this._dirtyChunksThisStep
+  }
+
+  // Dispatches whatever's currently in workerBatches as one round trip
+  // (profiling + actual dispatch + await). Returns 1 so the caller can just
+  // sum round-trip counts. roundTiles is the total tile count this round
+  // covers — used as the imbalance-ratio denominator, since mega-groups are
+  // rarely equal-sized (see comment above).
+  private async dispatchWave(
+    workerBatches: number[][],
+    roundTiles: number,
+    leftFirst: boolean,
+    frame: number,
+    cb: (results: SimOutMsgDone[]) => void,
+  ): Promise<number> {
+    if (ENABLE_MATTER_SIM_PROFILING) {
+      let _profBusyWorkers = 0
+      let _profBatchMax = 0
+      for (let i = 0; i < this.size; i++) {
+        const len = workerBatches[i].length
+        if (len === 0) continue
+        _profBusyWorkers++
+        if (len > _profBatchMax) _profBatchMax = len
+      }
+      if (_profBusyWorkers > this._profMaxBusyWorkers) this._profMaxBusyWorkers = _profBusyWorkers
+      if (_profBatchMax > this._profMaxBatchSize) this._profMaxBatchSize = _profBatchMax
+      const _profRatio = _profBatchMax / (roundTiles / this.size)
+      if (_profRatio > this._profMaxImbalanceRatio) {
+        this._profMaxImbalanceRatio = _profRatio
+        this._profMaxImbalanceRoundTiles = roundTiles
+      }
+    }
+
+    const { promises } = this
+    promises.length = 0
+    for (let i = 0; i < this.size; i++) {
+      if (workerBatches[i].length === 0) continue
+      promises.push(this.dispatch(i, workerBatches[i], leftFirst, frame))
+    }
+
+    const results = await Promise.all(promises)
+    cb(results)
+    return 1
   }
 
   dispatch(workerIdx: number, indices: number[], leftFirst: boolean, frame: number):
