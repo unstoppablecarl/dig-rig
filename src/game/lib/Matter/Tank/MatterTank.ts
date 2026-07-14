@@ -1,4 +1,4 @@
-import type { Position } from '../../../types.ts'
+import type { ParticleTarget, Position } from '../../../types.ts'
 import type { MatterTankManagerData } from '../../MatterEngine/data/MatterTankManagerData.ts'
 import { FireMode, type MatterTankFireMode } from '../../Player/_FireMode-types'
 import { FILL_MAX } from '../_Liquid.constants.ts'
@@ -131,7 +131,7 @@ export class MatterTank {
     return this.source
   }
 
-  getCollectPos(): Position {
+  getCollectTarget(): ParticleTarget {
     if ('matterParticleCollectPosition' in this.source) {
       return this.source.matterParticleCollectPosition()
     }

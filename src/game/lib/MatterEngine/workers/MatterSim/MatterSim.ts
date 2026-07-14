@@ -22,9 +22,11 @@ import {
   SupportType,
 } from '../../../Matter/_Matter.types.ts'
 import { MatterTypeSet } from '../../../Matter/data/MatterTypeSet.ts'
+import type { TileSet } from '../../../Matter/data/SparseTileSet.ts'
 import {
   alwaysCollides,
   collidesWhenSettled,
+  convertsToCollisionBody,
   getReserveDestroyAmount,
   getSupportType,
   isActivatable,
@@ -40,7 +42,6 @@ import { ParticleType } from '../../../Particles/_particle-types.ts'
 import { ChunkGrid, type ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 import type { Tile } from '../../../Tilemap/TileGrid.ts'
 import { ParticleSpawnData } from '../../data/ParticleSpawnData.ts'
-import type { TileSet } from '../../../Matter/data/SparseTileSet.ts'
 import { MatterCreditTransferBuffer } from '../_helpers/MatterCreditTransferBuffer.ts'
 import { MatterReservationReleaseBuffer } from '../_helpers/MatterReservationReleaseBuffer.ts'
 import { type SimOutMsgDoneWire } from './MatterSim.types.ts'
@@ -747,6 +748,18 @@ export class MatterSim {
     if (left !== -1 && mask.has(matterType(tiles[left]))) return left
     if (right !== -1 && mask.has(matterType(tiles[right]))) return right
     if (up !== -1 && mask.has(matterType(tiles[up]))) return up
+    return -1
+  }
+
+  canStickToAnyColliding(tx: number, ty: number, idx: number): number {
+    const { tiles, width } = this
+    const left = tx > 0 ? idx - 1 : -1
+    const right = tx < width - 1 ? idx + 1 : -1
+    const up = ty > 0 ? idx - width : -1
+
+    if (left !== -1 && convertsToCollisionBody(tiles[left])) return left
+    if (right !== -1 && convertsToCollisionBody(tiles[right])) return right
+    if (up !== -1 && convertsToCollisionBody(tiles[up])) return up
     return -1
   }
 

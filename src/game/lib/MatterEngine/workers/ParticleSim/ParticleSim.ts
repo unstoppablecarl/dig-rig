@@ -67,15 +67,19 @@ export class ParticleSim {
     return matterType(this.tiles[y * this.width + x])
   }
 
-  fillTile(x: number, y: number, type: MatterType) {
+  fillTile(x: number, y: number, type: MatterType, fill = FILL_MAX, onlyEmpty = false) {
     const width = this.width
     if (x < 0 || x >= width || y < 0 || y >= this.height) return
     const tiles = this.tiles
     const idx = y * width + x
     const raw = tiles[idx]
-    if (matterType(raw) === MatterType.PERMANENT) return
-    if (getSupportType(raw) >= SupportType.STRUCTURAL && getSupportType(type) < SupportType.STRUCTURAL) {
-      this.structuralRemovals.push(idx)
+    if (onlyEmpty) {
+      if (matterType(raw) !== EMPTY) return
+    } else {
+      if (matterType(raw) === MatterType.PERMANENT) return
+      if (getSupportType(raw) >= SupportType.STRUCTURAL && getSupportType(type) < SupportType.STRUCTURAL) {
+        this.structuralRemovals.push(idx)
+      }
     }
     tiles[idx] = type
     // Liquids track their mass in the parallel `fill` array, not the tile bits — a liquid
@@ -83,9 +87,13 @@ export class ParticleSim {
     // becomes a zero-fill "zombie" the sim treats as empty. See MatterSim's Brush placement
     // for the same pattern.
     if (isLiquid(type)) {
-      this.fill[idx] = FILL_MAX
+      this.fill[idx] = fill
     }
     this.pendingActivations.push(idx)
+  }
+
+  fillEmptyTile(x: number, y: number, type: MatterValue, fill = FILL_MAX) {
+    this.fillTile(x, y, type, fill, true)
   }
 
   setTile(idx: number, type: MatterValue) {
@@ -138,7 +146,7 @@ export class ParticleSim {
     return p.x < 0 || p.x >= this.width || p.y < 0 || p.y >= this.height
   }
 
-  fillCircle(x: number, y: number, radius: number, value: number) {
+  fillCircle(x: number, y: number, radius: number, value: number, fill = FILL_MAX, onlyEmpty = false) {
     const r = Math.max(1, Math.round(radius))
     const cx = Math.round(x)
     const cy = Math.round(y)
@@ -149,12 +157,16 @@ export class ParticleSim {
         const px = cx + dx
         const py = cy + dy
         if (px < 0 || px >= width || py < 0 || py >= height) continue
-        this.fillTile(px, py, value)
+        this.fillTile(px, py, value, fill, onlyEmpty)
       }
     }
   }
 
-  fillLine(x1: number, y1: number, x2: number, y2: number, size: number, value: number) {
+  fillEmptyCircle(x: number, y: number, radius: number, value: MatterValue, fill = FILL_MAX) {
+    this.fillCircle(x, y, radius, value, fill, true)
+  }
+
+  fillLine(x1: number, y1: number, x2: number, y2: number, size: number, value: MatterValue, fill = FILL_MAX, onlyEmpty = false) {
     const radius = Math.max(0.5, size / 2)
     const dx = x2 - x1
     const dy = y2 - y1
@@ -162,11 +174,15 @@ export class ParticleSim {
     for (let i = 0; i <= steps; i++) {
       const t = i / steps
       if (size === 1) {
-        this.fillTile(Math.floor(x1 + dx * t), Math.floor(y1 + dy * t), value)
+        this.fillTile(Math.floor(x1 + dx * t), Math.floor(y1 + dy * t), value, fill, onlyEmpty)
       } else {
-        this.fillCircle(x1 + dx * t, y1 + dy * t, radius, value)
+        this.fillCircle(x1 + dx * t, y1 + dy * t, radius, value, fill, onlyEmpty)
       }
     }
+  }
+
+  fillEmptyLine(x1: number, y1: number, x2: number, y2: number, size: number, value: MatterValue, fill = FILL_MAX) {
+    this.fillLine(x1, y1, x2, y2, size, value, fill, true)
   }
 
   // Sweeps from origin (x0, y0) along delta (dx, dy) and returns the tile index of the
@@ -217,5 +233,40 @@ export class ParticleSim {
     }
 
     return false
+  }
+
+  doSolidCollision(x0: number, y0: number, dx: number, dy: number): null | number {
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    const steps = Math.max(1, Math.ceil(dist * 2))
+
+    const width = this.width
+    const height = this.height
+    const tiles = this.tiles
+
+    // Clamp the starting tile into bounds: a particle within [0, width)/[0, height) (i.e.
+    // not yet caught by outOfBounds) can still round to an out-of-range row/col when within
+    // 0.5 of an edge (e.g. y0 = height - 0.05 rounds to height) — an unclamped prevIdx here
+    // returned that invalid index whenever the very next step also landed out of bounds,
+    // and the caller had no way to detect the write silently no-op'ing on it.
+    const startX = Math.min(width - 1, Math.max(0, Math.round(x0)))
+    const startY = Math.min(height - 1, Math.max(0, Math.round(y0)))
+    let prevIdx = startY * width + startX
+
+    for (let step = 1; step <= steps; step++) {
+      const t = step / steps
+      const ox = Math.round(x0 + dx * t)
+      const oy = Math.round(y0 + dy * t)
+      if (ox < 0 || ox >= width || oy < 0 || oy >= height) {
+        return prevIdx
+      }
+      const idx = oy * width + ox
+      if (idx === prevIdx) continue
+      if (convertsToCollisionBody(tiles[idx])) {
+        return prevIdx
+      }
+      prevIdx = idx
+    }
+
+    return null
   }
 }

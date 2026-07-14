@@ -2,7 +2,7 @@ import { CHUNK_SIZE } from '../../config.ts'
 import { BlendMode } from '../../config/blend-modes.ts'
 import type { MatterRenderConfig } from '../../config/colors.ts'
 import {
-  ACID,
+  ACID, BURNING_FUEL,
   BURNING_THERMITE,
   C4,
   CHILLED_ICE,
@@ -624,8 +624,11 @@ export function makeTilemapFragShader(
               break;
           }
           case ${BURNING_THERMITE}: {
-              float br = noise(tileUV * 0.25 + vec2(t * 5.0, t * 3.1)) * 0.2;
-              color = vec4(${v3(m[BURNING_THERMITE].color)} + vec3(0.0, br, br), 1.0);
+              color = vec4(${v3(m[BURNING_THERMITE].color)}, 1.0);
+              break;
+          }
+          case ${BURNING_FUEL}: {
+              color = vec4(${v3(m[BURNING_FUEL].color)}, 1.0);
               break;
           }
           case ${EMPTY}:

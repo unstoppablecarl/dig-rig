@@ -1,6 +1,6 @@
 import { Math as PMath } from 'phaser'
 import { randomDegVarianceToRad, randomRangeInt } from '../../../helpers/random.ts'
-import { FIRE, setOwner } from '../../Matter/_Matter.types.ts'
+import { BURNING_FUEL, EMPTY, FIRE, matterType, setOwner } from '../../Matter/_Matter.types.ts'
 import type { ParticleSim } from '../../MatterEngine/workers/ParticleSim/ParticleSim.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 import type { Particle } from '../Particle.ts'
@@ -29,6 +29,23 @@ export const FLAMETHROWER_BURST = {
     const dx = p.x + p.xVelocity
     const dy = p.y + p.yVelocity
 
+    const currentIdx = Math.floor(p.y) * sim.width + Math.floor(p.x)
+    let currentType = matterType(sim.tiles[currentIdx])
+    if (currentType !== EMPTY && currentType !== FIRE) {
+      sim.pool.release(p)
+      return
+    }
+
+    const collideIdx = sim.doSolidCollision(p.x, p.y, p.xVelocity, p.yVelocity)
+    if (collideIdx !== null) {
+      const cx = collideIdx % sim.width
+      const cy = collideIdx / sim.width | 0
+      const fire = setOwner(FIRE, p.ownerId)
+      sim.fillLine(p.x, p.y, cx, cy, p.size, fire)
+      sim.setTile(collideIdx, setOwner(BURNING_FUEL, p.ownerId))
+      sim.pool.release(p)
+      return
+    }
     v.set(p.xVelocity, p.yVelocity)
     const dist = v.length()
     const fire = setOwner(FIRE, p.ownerId)

@@ -166,7 +166,8 @@ export enum MatterType {
   BURNING_THERMITE = 27,
   GUNPOWDER = 28,
   LAVA_DROP = 29,
-  PHYSICS_BODY = 30
+  BURNING_FUEL = 30,
+  PHYSICS_BODY = 31,
 }
 
 export const EMPTY = MatterType.EMPTY
@@ -198,6 +199,7 @@ export const THERMITE = MatterType.THERMITE
 export const BURNING_THERMITE = MatterType.BURNING_THERMITE
 export const GUNPOWDER = MatterType.GUNPOWDER
 export const LAVA_DROP = MatterType.LAVA_DROP
+export const BURNING_FUEL = MatterType.BURNING_FUEL
 export const PHYSICS_BODY = MatterType.PHYSICS_BODY
 
 export const MatterTypeValues = Object.values(MatterType).filter(

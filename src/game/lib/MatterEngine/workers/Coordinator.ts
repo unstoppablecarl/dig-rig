@@ -7,6 +7,7 @@ import {
 } from '../../../config.ts'
 import { FILL_MAX } from '../../Matter/_Liquid.constants.ts'
 import {
+  BURNING_FUEL,
   EMPTY,
   FIRE,
   isSettled,
@@ -453,7 +454,7 @@ export class Coordinator {
       const t = matterType(tiles[i])
       if (isLiquid(t) || t === STEAM) {
         total += fill[i]
-      } else if (t !== FIRE && t !== PHYSICS_BODY) {
+      } else if (t !== FIRE && t !== PHYSICS_BODY && t !== BURNING_FUEL) {
         total += FILL_MAX
       }
     }
@@ -472,7 +473,7 @@ export class Coordinator {
     if (raw === EMPTY) return 0
     const t = matterType(raw)
     if (isLiquid(t) || t === STEAM) return fillVal
-    if (t !== FIRE && t !== PHYSICS_BODY) return FILL_MAX
+    if (t !== FIRE && t !== PHYSICS_BODY && t !== BURNING_FUEL) return FILL_MAX
     return 0
   }
 

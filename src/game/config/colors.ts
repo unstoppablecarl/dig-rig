@@ -1,7 +1,7 @@
 import { Display } from 'phaser'
 import { rgbToColor } from '../helpers/color-converters.ts'
 import {
-  ACID,
+  ACID, BURNING_FUEL,
   BURNING_THERMITE,
   C4,
   CHILLED_ICE,
@@ -227,7 +227,9 @@ export const MATTER_RENDER_CONFIG_DEFAULTS = {
   [BURNING_THERMITE]: powderMatterConfig({
     color: rgbToColor(`rgb(255, 130, 130)`),
   }),
-
+  [BURNING_FUEL]: powderMatterConfig({
+    color: rgbToColor(`rgb(255, 130, 130)`),
+  }),
   [EMPTY]: {},
   [PHYSICS_BODY]: {},
 } satisfies MatterRenderConfigDefaults

@@ -28,3 +28,13 @@ export function randomRangeInt(min: number, max: number): number {
 export function randomDegVarianceToRad(spreadDeg: number) {
   return DegToRad((Math.random() - 0.5) * spreadDeg)
 }
+
+export function shuffleArray(array: Array<number>) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = random() % (i + 1)
+    const tmp = array[i]
+    array[i] = array[j]
+    array[j] = tmp
+  }
+  return array
+}

@@ -20,7 +20,7 @@ export class VFXParticleProcessor {
   drain() {
     const { matterManager, vfxParticleManager } = this.scene
     this._drainBuffer(this.vfxParticleDestroyData, this._destroyChunks, (chunkPos, tank) => {
-      vfxParticleManager.spawnMatter(chunkPos, tank.source, false)
+      vfxParticleManager.spawnMatter(chunkPos, tank.getCollectTarget(), false)
     })
     this._drainBuffer(this.vfxParticleCreateData, this._createChunks, (chunkPos, tank, srcPos) => {
       vfxParticleManager.spawnMatter(srcPos ?? tank.getEmitPos(), chunkPos, true)
@@ -32,7 +32,7 @@ export class VFXParticleProcessor {
         console.warn(`MatterEngineVFXParticle: overflow tank not found (from=${from}, to=${to})`)
         return
       }
-      vfxParticleManager.spawnMatterTankTransfer(amount, fromTank.getEmitPos(), toTank.source)
+      vfxParticleManager.spawnMatterTankTransfer(amount, fromTank.getEmitPos(), toTank.getCollectTarget())
     })
   }
 

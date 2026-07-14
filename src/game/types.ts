@@ -8,7 +8,7 @@ export interface Position {
 
 export interface MatterExchanger {
   matterParticleEmitPosition: (out: Position) => Position,
-  matterParticleCollectPosition: () => Position,
+  matterParticleCollectPosition: () => ParticleTarget,
 }
 
 export interface ParticleTarget {

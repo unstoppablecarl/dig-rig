@@ -1,5 +1,5 @@
 import {
-  ACID,
+  ACID, BURNING_FUEL,
   BURNING_THERMITE,
   C4,
   CHILLED_ICE,
@@ -200,6 +200,10 @@ export const CRYO_STICKS_TO_IF_SETTLED = new MatterTypeSet(...MatterTypeValues.f
   return !isLiquid(v) && doesSettle(v)
 }))
 
+export const ACID_STICKS_TO = new MatterTypeSet(...MatterTypeValues.filter(v => {
+  return !isAcidImmune(v) || v === SOLID || v === PERMANENT
+}))
+
 export const MATTER_ICONS: Record<MatterType, string> = {
   [EMPTY]: '❌',
   [SOLID]: '🧱',
@@ -230,5 +234,6 @@ export const MATTER_ICONS: Record<MatterType, string> = {
   [BURNING_THERMITE]: '🔥',
   [GUNPOWDER]: '💣',
   [LAVA_DROP]: '🩸',
+  [BURNING_FUEL]: '🎇',
   [PHYSICS_BODY]: '⧅',
 }

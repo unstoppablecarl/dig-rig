@@ -12,7 +12,7 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { isAcidImmune, isLiquid } from '../matter.ts'
+import { ACID_STICKS_TO, isAcidImmune, isLiquid } from '../matter.ts'
 
 const IS_SETTLED = new MatterTypeSet(ACID, EMPTY)
 
@@ -73,7 +73,7 @@ export const ACID_DEF = {
     // the side or above must not prevent the tile from falling.
     const belowType = ty + 1 < height ? matterType(tiles[idx + width]) : SOLID
     const canFall = belowType === EMPTY || belowType === ACID
-    const touchingSolid = !canFall && sim.bordering(tx, ty, idx, SOLID) !== -1
+    const touchingSolid = !canFall && sim.borderingAny(tx, ty, idx, ACID_STICKS_TO) !== -1
     if (touchingSolid && fill[idx] >= FILL_MAX && random() < 95) {
       sim.next.add(idx)
       return
