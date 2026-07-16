@@ -226,58 +226,58 @@ export class SimWorkerPool {
       this.chunkSizeMap.clear()
       for (const batch of workerBatches) batch.length = 0
 
-      // --- Combined tally, O(n): one pass over group[] fills both colCounts
-      // and rowCounts. These are two independent bucket counts of the same
-      // array (tally order never matters, only the resulting counts), so
-      // there's no reason to walk group[] twice for them — merged into a
-      // single pass, saving one full O(n) loop versus tallying separately.
-      for (let i = 0; i < groupLen; i++) {
-        const idx = group[i]
-        colCounts[idx % width]++
-        rowCounts[(idx / width) | 0]++
-      }
+      if (ENABLE_RANDOM_ROW_DIRECTION) {
+        // --- Combined tally, O(n): one pass over group[] fills both colCounts
+        // and rowCounts. These are two independent bucket counts of the same
+        // array (tally order never matters, only the resulting counts), so
+        // there's no reason to walk group[] twice for them — merged into a
+        // single pass, saving one full O(n) loop versus tallying separately.
+        for (let i = 0; i < groupLen; i++) {
+          const idx = group[i]
+          colCounts[idx % width]++
+          rowCounts[(idx / width) | 0]++
+        }
 
-      // --- X-pass: stable counting-sort by column (tx ascending), O(n + width).
-      // First of two LSD radix passes (x, then row below). Doing x first and
-      // relying on the row-pass's stability to preserve it means each row's
-      // entries land genuinely x-ascending — a real left-to-right order to
-      // flip per row below, not an arbitrary order mislabeled as one.
-      {
+        // --- X-pass: stable counting-sort by column (tx ascending), O(n + width).
+        // First of two LSD radix passes (x, then row below). Doing x first and
+        // relying on the row-pass's stability to preserve it means each row's
+        // entries land genuinely x-ascending — a real left-to-right order to
+        // flip per row below, not an arbitrary order mislabeled as one. This
+        // whole pass (and its O(n) cost) only runs under this flag — with it
+        // off, there's no reason to pay for genuine x-order since nothing
+        // ever reverses direction to make use of it.
+        {
+          let acc = 0
+          for (let tx = 0; tx < width; tx++) {
+            const c = colCounts[tx]
+            colOffsets[tx] = acc
+            acc += c
+            colCounts[tx] = 0
+          }
+        }
+        for (let i = 0; i < groupLen; i++) {
+          const idx = group[i]
+          xSortedScratch[colOffsets[idx % width]++] = idx
+        }
+
+        // Exclusive prefix sum walked from the highest row down (row-descending
+        // layout, same as before), draining rowCounts back to 0 as it's read —
+        // no separate clear pass needed next round. Each row also gets a
+        // per-(row, frame) coin flip deciding its placement direction this
+        // tick: left-to-right (forward from the row's start offset) or
+        // right-to-left (backward from its end offset). This reproduces the
+        // source engine's independent per-row random scan direction — folded
+        // into this same pass, so flipping a row's direction costs nothing
+        // extra versus a fixed direction.
         let acc = 0
-        for (let tx = 0; tx < width; tx++) {
-          const c = colCounts[tx]
-          colOffsets[tx] = acc
-          acc += c
-          colCounts[tx] = 0
-        }
-      }
-      for (let i = 0; i < groupLen; i++) {
-        const idx = group[i]
-        xSortedScratch[colOffsets[idx % width]++] = idx
-      }
+        for (let ty = height - 1; ty >= 0; ty--) {
+          const c = rowCounts[ty]
+          rowCounts[ty] = 0
+          if (c === 0) {
+            rowOffsets[ty] = acc
+            continue
+          }
 
-      // Exclusive prefix sum walked from the highest row down (row-descending
-      // layout, same as before), draining rowCounts back to 0 as it's read —
-      // no separate clear pass needed next round. Additionally, when
-      // ENABLE_RANDOM_ROW_DIRECTION is on, each row gets a per-(row, frame)
-      // coin flip deciding its placement direction this tick: left-to-right
-      // (forward from the row's start offset) or right-to-left (backward
-      // from its end offset). This reproduces the source engine's
-      // independent per-row random scan direction — folded into this same
-      // pass, so flipping a row's direction costs nothing extra versus a
-      // fixed direction. With the flag off, every row is always forward —
-      // still genuinely x-ascending (the x-pass above guarantees that
-      // regardless of this flag), just never reversed.
-      let acc = 0
-      for (let ty = height - 1; ty >= 0; ty--) {
-        const c = rowCounts[ty]
-        rowCounts[ty] = 0
-        if (c === 0) {
-          rowOffsets[ty] = acc
-          continue
-        }
-
-        if (ENABLE_RANDOM_ROW_DIRECTION) {
           let h = (ty * 0x9E3779B1) ^ (frame * 0x85EBCA6B)
           h = (h ^ (h >>> 15)) >>> 0
           if ((h & 1) === 0) {
@@ -287,34 +287,63 @@ export class SimWorkerPool {
             rowOffsets[ty] = acc + c - 1  // right-to-left: backward from end
             rowDir[ty] = -1
           }
-        } else {
-          rowOffsets[ty] = acc
-          rowDir[ty] = 1
+          acc += c
         }
-        acc += c
-      }
 
-      // Pass 2: place each tile into its sorted slot — reading the x-sorted
-      // intermediate (instead of group directly) so within-row order is
-      // genuinely x-ascending before rowDir below decides which end of the
-      // row's segment it actually lands in. Also computes each tile's
-      // chunkIdx once (aligned to the placed position for pass 4) and
-      // tallies tiles-per-chunk, same as before.
-      for (let i = 0; i < groupLen; i++) {
-        const idx = xSortedScratch[i]
-        const tx = idx % width
-        const ty = (idx / width) | 0
-        const cx = tx / CHUNK_SIZE | 0
-        const cy = ty / CHUNK_SIZE | 0
-        const chunkIdx = cy * chunksWide + cx
+        // Pass 2: place each tile into its sorted slot — reading the x-sorted
+        // intermediate (instead of group directly) so within-row order is
+        // genuinely x-ascending before rowDir above decides which end of the
+        // row's segment it actually lands in. Also computes each tile's
+        // chunkIdx once (aligned to the placed position for pass 4) and
+        // tallies tiles-per-chunk, same as before.
+        for (let i = 0; i < groupLen; i++) {
+          const idx = xSortedScratch[i]
+          const tx = idx % width
+          const ty = (idx / width) | 0
+          const cx = tx / CHUNK_SIZE | 0
+          const cy = ty / CHUNK_SIZE | 0
+          const chunkIdx = cy * chunksWide + cx
 
-        const pos = rowOffsets[ty]
-        rowOffsets[ty] += rowDir[ty]
-        sortedScratch[pos] = idx
-        chunkIdxScratch[pos] = chunkIdx
+          const pos = rowOffsets[ty]
+          rowOffsets[ty] += rowDir[ty]
+          sortedScratch[pos] = idx
+          chunkIdxScratch[pos] = chunkIdx
 
-        this._dirtyChunksThisStep.add(chunkIdx)
-        this.chunkSizeMap.set(chunkIdx, (this.chunkSizeMap.get(chunkIdx) ?? 0) + 1)
+          this._dirtyChunksThisStep.add(chunkIdx)
+          this.chunkSizeMap.set(chunkIdx, (this.chunkSizeMap.get(chunkIdx) ?? 0) + 1)
+        }
+      } else {
+        // Flag off: plain row-only counting sort, no x-pass, always forward.
+        // Ties within a row land in whatever order group[] happens to have
+        // (arbitrary, not x-sorted) — cheapest possible path, O(n + height)
+        // total, same shape as before the x-pass/rowDir work existed.
+        for (let i = 0; i < groupLen; i++) {
+          rowCounts[(group[i] / width) | 0]++
+        }
+
+        let acc = 0
+        for (let ty = height - 1; ty >= 0; ty--) {
+          const c = rowCounts[ty]
+          rowOffsets[ty] = acc
+          acc += c
+          rowCounts[ty] = 0
+        }
+
+        for (let i = 0; i < groupLen; i++) {
+          const idx = group[i]
+          const tx = idx % width
+          const ty = (idx / width) | 0
+          const cx = tx / CHUNK_SIZE | 0
+          const cy = ty / CHUNK_SIZE | 0
+          const chunkIdx = cy * chunksWide + cx
+
+          const pos = rowOffsets[ty]++
+          sortedScratch[pos] = idx
+          chunkIdxScratch[pos] = chunkIdx
+
+          this._dirtyChunksThisStep.add(chunkIdx)
+          this.chunkSizeMap.set(chunkIdx, (this.chunkSizeMap.get(chunkIdx) ?? 0) + 1)
+        }
       }
 
       // Pass 3: greedy least-loaded assignment (LPT — largest chunks first)
