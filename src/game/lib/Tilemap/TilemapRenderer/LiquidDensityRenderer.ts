@@ -80,7 +80,7 @@ export class LiquidDensityRenderer extends SceneBound {
         for (let x = 0; x < CHUNK_SIZE; x++) {
           if (!isLiquid(matterType(tiles[srcRow + x]))) continue
           const pixIdx = (flippedRow + x) * 4
-          pixels[pixIdx] = Math.min(255, Math.round(fillLevels[srcRow + x] / FILL_MAX * 255))
+          pixels[pixIdx] = Math.min(255 * 2, Math.round(fillLevels[srcRow + x] / FILL_MAX * 255))
           pixels[pixIdx + 3] = 255
         }
       }
