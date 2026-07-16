@@ -66,6 +66,25 @@ function copyIntoView(view: Int32Array, capacity: number, source: Iterable<numbe
 export class MatterSim {
   tiles!: Uint32Array
   fill!: Uint32Array
+  // Per-tile last-touched frame stamp, shared across every worker in the pool
+  // (same buffer instance for all of them, like tiles/fill). A tick dispatches
+  // its active-tile snapshot across up to 4 sequential rounds (see
+  // SimWorkerPool's mega-groups), each round's index batch fixed from the
+  // snapshot taken before any of them ran. If a round's move writes matter
+  // into an index that a *later* round in the same tick was independently
+  // about to process (that index was itself active pre-tick), that later
+  // round would run MATTER_ACTIONS a second time this tick on matter that
+  // already got its one update — a double-move that can cross a chunk (and
+  // therefore round) boundary. touched[idx] === frame+1 means "already
+  // updated this tick" (frame+1, never 0, so it can't collide with the
+  // buffer's zero-initialized default on frame 0); processSubset checks it
+  // before running an action, and every primitive that relocates a tile's
+  // identity to a different index (tryMove, tryRise, doDensityLiquid's swap)
+  // stamps the destination so a stale later round skips it instead of
+  // re-processing it. Rounds are awaited sequentially and same-round workers
+  // only ever touch non-adjacent chunks, so plain (non-atomic) reads/writes
+  // here are safe.
+  touched!: Uint32Array
   chunkGrid!: ChunkGrid
   width = 0
   height = 0
@@ -135,6 +154,7 @@ export class MatterSim {
   private static readonly PROF_SAMPLE_MASK = 63
 
   private particles: ParticleSpawnData
+
   // The coordinator's own local MatterSim instance (used directly by
   // Brush/PhysicsBodyProcessor/etc., never dispatched through the worker
   // pool) never calls .process(), so its scratchBuffers just go unused —
@@ -143,6 +163,7 @@ export class MatterSim {
   init(
     tilesBuffer: SharedArrayBuffer,
     fillBuffer: SharedArrayBuffer,
+    touchedBuffer: SharedArrayBuffer,
     chunkBuffers: ChunkGridBuffers,
     width: number,
     height: number,
@@ -151,6 +172,7 @@ export class MatterSim {
   ) {
     this.tiles = new Uint32Array(tilesBuffer)
     this.fill = new Uint32Array(fillBuffer)
+    this.touched = new Uint32Array(touchedBuffer)
 
     this.width = width
     this.height = height
@@ -289,15 +311,16 @@ export class MatterSim {
   // once per round with their assigned subset of the active set.
   processSubset(indices: Int32Array) {
     for (const idx of indices) {
+      // Already updated this tick — some earlier round (this same dispatch,
+      // a different mega-group) moved matter into idx after this batch was
+      // built from the pre-tick snapshot. Re-running its action here would
+      // give it a second update in one tick. See `touched` field comment.
+      // Stamped as frame+1, never 0, so it can't collide with the buffer's
+      // zero-initialized default on frame 0 (the very first tick).
+      if (this.touched[idx] === this.frame + 1) continue
+
       const tx = idx % this.width
       const ty = idx / this.width | 0
-
-      // Per-cell checkerboard: defer wrong-phase cells to next step to prevent
-      // double-processing when an matterType moves into a neighbour's position.
-      // if (((tx + ty) & 1) !== phase) {
-      //   this.next.add(idx)
-      //   continue
-      // }
 
       const raw = this.tiles[idx]
       const tile = matterType(raw)
@@ -458,6 +481,11 @@ export class MatterSim {
 
     tiles[toIdx] = setSettled(rawFrom, false)
     tiles[fromIdx] = toType === EMPTY ? EMPTY : setSettled(rawTo, false)
+    // fromIdx's matter now lives at toIdx and already had its one update this
+    // tick (this call) — stamp toIdx so a later round this tick (toIdx could
+    // have been independently active pre-tick, e.g. the sinksThrough case
+    // overwriting a live liquid) skips it instead of moving it again.
+    this.touched[toIdx] = this.frame + 1
     this.markDirty(fromTx, fromTy)
     this.markDirty(toTx, toTy)
     this.next.add(toIdx)
@@ -499,6 +527,8 @@ export class MatterSim {
       tiles[fromIdx] = EMPTY
       this.fill[toIdx] = this.fill[fromIdx]
       this.fill[fromIdx] = 0
+      // fromIdx's matter now lives at toIdx and already had its update this tick.
+      this.touched[toIdx] = this.frame + 1
       // Gas/fire only (tryRise's only callers) — never collidable, so render-only.
       this.markRenderDirty(fromTx, fromTy)
       this.markRenderDirty(tx, ty)
@@ -558,6 +588,10 @@ export class MatterSim {
 
     tiles[targetIdx] = selfRaw
     tiles[idx] = displacedAs !== undefined ? displacedAs : lighter
+    // idx's matter now lives at targetIdx and already had its update this
+    // tick — targetIdx held a live `lighter` tile pre-swap, which could be
+    // independently active and scheduled in a later round this same tick.
+    this.touched[targetIdx] = this.frame + 1
 
     // swap fill levels between the two tiles
     const selfFill = this.fill[idx]
@@ -978,11 +1012,23 @@ export class MatterSim {
   // multiple physical cells — the released total is always exactly the fill actually consumed,
   // never a fixed per-tile amount. Non-liquid reserved types (lava-drop) have no fill state and
   // are always destroyed whole, so they use FILL_MAX as their effective fill.
-  consumeLiquidFill(idx: number) {
+  //
+  // Capped at FILL_MAX: column compression (see FILL_COMPRESSION_FACTOR) can push a single
+  // cell's fill slightly above FILL_MAX, but the reservation was only ever made for FILL_MAX
+  // per placed tile — releasing the raw (possibly compressed) fill over-releases against the
+  // reserved pool and eventually underflows it (SimMatterTanks.releaseDestroyCharge warning).
+  //
+  // releaseReservation=false is for mass-preserving transitions (lava → lava-drop projectile,
+  // lava sinking through steam) where this tile's contents move/repackage into a different
+  // tile or type rather than being destroyed — the reservation must stay live for whichever
+  // tile ends up holding that mass, or it gets released here while nothing was ever destroyed,
+  // then released *again* (or attempted) whenever the mass is eventually genuinely destroyed —
+  // underflowing the pool for an amount that was already spent.
+  consumeLiquidFill(idx: number, releaseReservation = true) {
     const raw = this.tiles[idx]
     const t = matterType(raw)
-    if (RESERVED_DESTROY_CHARGE.has(t)) {
-      const effectiveFill = isLiquid(t) ? this.fill[idx] : FILL_MAX
+    if (releaseReservation && RESERVED_DESTROY_CHARGE.has(t)) {
+      const effectiveFill = isLiquid(t) ? Math.min(this.fill[idx], FILL_MAX) : FILL_MAX
       if (effectiveFill > 0) {
         this.queueReservationRelease(getOwner(raw), getReserveDestroyAmount(t) * effectiveFill)
       }

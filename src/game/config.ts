@@ -11,6 +11,9 @@ export const MAX_PROJECTILES = 512
 export const MAX_MATTER_TANKS = 256
 export const MAX_PARTICLES = 1024 * 4
 
+// core behavior
+export const ENABLE_RANDOM_ROW_DIRECTION = true
+
 // vfx limits
 export const MAX_VFX_MATTER_PARTICLES = 1000
 export const VFX_PARTICLE_TO_TERRAIN_CHUNK_SIZE = 4

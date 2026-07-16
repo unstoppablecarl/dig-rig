@@ -17,7 +17,7 @@ import {
   PHYSICS_BODY,
   STEAM,
 } from '../../Matter/_Matter.types.ts'
-import { isActivatable, isLiquid } from '../../Matter/matter.ts'
+import { isActivatable, isLiquid, matterFillContribution } from '../../Matter/matter.ts'
 import type { MatterTankId } from '../../Matter/Tank/_MatterTank.types.ts'
 import type { ParticleType } from '../../Particles/_particle-types.ts'
 import { FireMode } from '../../Player/_FireMode-types.ts'
@@ -115,7 +115,7 @@ export class Coordinator {
     this.idleSet = new SparseTileSet(width * height)
 
     this.sim = new MatterSim()
-    this.sim.init(buffers.tiles, buffers.fill, buffers.chunkGrid, width, height, MatterSimScratchData.makeBuffers(), buffers.particleSpawns)
+    this.sim.init(buffers.tiles, buffers.fill, buffers.matterTouched, buffers.chunkGrid, width, height, MatterSimScratchData.makeBuffers(), buffers.particleSpawns)
 
     this.seedInitialActiveSet()
 
@@ -159,6 +159,7 @@ export class Coordinator {
       poolSize,
       tilesBuffer: buffers.tiles,
       fillBuffer: buffers.fill,
+      touchedBuffer: buffers.matterTouched,
       chunkGridBuffers: buffers.chunkGrid,
       particleSpawnBuffer: buffers.particleSpawns,
       onReady: () => this.startLoop(),
@@ -468,15 +469,6 @@ export class Coordinator {
     return total
   }
 
-  // Fill-unit contribution of a single tile, matching computeMatterTotal's per-tile rule.
-  private static tileContribution(raw: number, fillVal: number): number {
-    if (raw === EMPTY) return 0
-    const t = matterType(raw)
-    if (isLiquid(t) || t === STEAM) return fillVal
-    if (t !== FIRE && t !== PHYSICS_BODY && t !== BURNING_FUEL) return FILL_MAX
-    return 0
-  }
-
   // Dev-only invariant checker.
   private checkMatterConservation() {
     const total = this.computeMatterTotal()
@@ -509,8 +501,8 @@ export class Coordinator {
     const changed: { idx: number, dx: number, dy: number, prevRaw: number, raw: number, prevFill: number, fill: number, contribDelta: number }[] = []
 
     for (let i = 0, n = tiles.length; i < n; i++) {
-      const before = Coordinator.tileContribution(prevTiles[i], prevFill[i])
-      const after = Coordinator.tileContribution(tiles[i], fill[i])
+      const before = matterFillContribution(prevTiles[i], prevFill[i])
+      const after = matterFillContribution(tiles[i], fill[i])
       if (before !== after) {
         changed.push({
           idx: i,

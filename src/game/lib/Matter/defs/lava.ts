@@ -114,7 +114,9 @@ export const LAVA_DEF = {
       matterType(tiles[upIdx]) === EMPTY &&
       sim.bordering(tx, ty, idx, LAVA)
     ) {
-      sim.consumeLiquidFill(idx)
+      // Not a destruction — the lava is still fully present as a projectile (and will settle
+      // back into lava), so its reservation must stay live rather than being released here.
+      sim.consumeLiquidFill(idx, false)
       sim.notifySolidCreated()
       tiles[idx] = setLavaDropVel(setOwner(LAVA_DROP, ownerId), LAVA_DROP_INITIAL_VEL)
       sim.markRenderDirty(tx, ty)
@@ -156,11 +158,13 @@ export const LAVA_DEF = {
         sim.reactivateAround(tx, ty + 1)
       } else if (belowType === STEAM && random() < 95) {
         // Lava sinks through steam — swap positions, preserving steam's conserved fill.
+        // Not a destruction — the lava mass simply relocates to downIdx, still fully LAVA,
+        // so its reservation must stay live rather than being released here.
         const steamFill = sim.fill[downIdx]
         sim.notifyLiquidCreated()
         sim.fill[downIdx] = FILL_MAX
         tiles[downIdx] = setOwner(LAVA, ownerId)
-        sim.consumeLiquidFill(idx)
+        sim.consumeLiquidFill(idx, false)
         sim.fill[idx] = steamFill
         tiles[idx] = STEAM
         sim.markRenderDirty(tx, ty)

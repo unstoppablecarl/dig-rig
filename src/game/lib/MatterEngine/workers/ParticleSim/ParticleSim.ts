@@ -1,6 +1,7 @@
 import { FILL_MAX } from '../../../Matter/_Liquid.constants.ts'
 import { EMPTY, matterType, MatterType, type MatterValue, SupportType } from '../../../Matter/_Matter.types.ts'
-import { convertsToCollisionBody, getSupportType, isLiquid, type LiquidTypes } from '../../../Matter/matter.ts'
+import type { MatterTypeSet } from '../../../Matter/data/MatterTypeSet.ts'
+import { convertsToCollisionBody, getSupportType, isLiquid, type LiquidTypes, matterFillContribution } from '../../../Matter/matter.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { ParticleType } from '../../../Particles/_particle-types.ts'
 import type { Particle } from '../../../Particles/Particle.ts'
@@ -81,14 +82,20 @@ export class ParticleSim {
         this.structuralRemovals.push(idx)
       }
     }
+    // Read before mutating — matterFillContribution needs the pre-write tile/fill to know what
+    // matter (if any) this write is destroying, so the loss (or gain) can be tracked below.
+    const before = matterFillContribution(raw, this.fill[idx])
     tiles[idx] = type
-    // Liquids track their mass in the parallel `fill` array, not the tile bits — a liquid
-    // tile written without this stays at whatever fill (often 0) was already there and
-    // becomes a zero-fill "zombie" the sim treats as empty. See MatterSim's Brush placement
-    // for the same pattern.
-    if (isLiquid(type)) {
-      this.fill[idx] = fill
-    }
+    // Liquids track their mass in the parallel `fill` array, not the tile bits. Non-liquid
+    // writes must zero it too — otherwise a liquid tile overwritten by e.g. FIRE leaves its old
+    // fill behind as a "zombie" value that resurfaces (double-counted) if that cell ever
+    // becomes liquid again via depositLiquid, which only adds to whatever fill is already there.
+    this.fill[idx] = isLiquid(type) ? fill : 0
+    // fillTile is the one place particles mutate tiles/fill directly (no matching tank
+    // debit/credit like the brush/beam paths), so it must self-report the resulting
+    // matter-conservation delta the same way depositLiquid does.
+    const after = matterFillContribution(type, this.fill[idx])
+    if (after !== before) this.conservationTracker.addDelta(after - before)
     this.pendingActivations.push(idx)
   }
 
@@ -97,10 +104,11 @@ export class ParticleSim {
   }
 
   setTile(idx: number, type: MatterValue) {
+    const before = matterFillContribution(this.tiles[idx], this.fill[idx])
     this.tiles[idx] = type
-    if (isLiquid(matterType(type))) {
-      this.fill[idx] = FILL_MAX
-    }
+    this.fill[idx] = isLiquid(matterType(type)) ? FILL_MAX : 0
+    const after = matterFillContribution(type, this.fill[idx])
+    if (after !== before) this.conservationTracker.addDelta(after - before)
     this.pendingActivations.push(idx)
   }
 
@@ -183,6 +191,22 @@ export class ParticleSim {
 
   fillEmptyLine(x1: number, y1: number, x2: number, y2: number, size: number, value: MatterValue, fill = FILL_MAX) {
     this.fillLine(x1, y1, x2, y2, size, value, fill, true)
+  }
+
+  fillLineExcluding(x1: number, y1: number, x2: number, y2: number, EXCLUDE: MatterTypeSet, value: MatterValue, fill = FILL_MAX) {
+    const dx = x2 - x1
+    const dy = y2 - y1
+    const steps = Math.ceil(Math.max(Math.abs(dx), Math.abs(dy), 1))
+    const width = this.width
+
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps
+      const x = Math.floor(x1 + dx * t)
+      const y = Math.floor(y1 + dy * t)
+      if (x < 0 || x >= width || y < 0 || y >= this.height) continue
+      if (EXCLUDE.has(matterType(this.tiles[y * width + x]))) continue
+      this.fillTile(x, y, value, fill)
+    }
   }
 
   // Sweeps from origin (x0, y0) along delta (dx, dy) and returns the tile index of the

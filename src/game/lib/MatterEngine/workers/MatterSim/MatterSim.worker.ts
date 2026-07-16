@@ -37,6 +37,7 @@ self.onmessage = (e: MessageEvent<SimInMessage>) => {
     sim.init(
       msg.tilesBuffer,
       msg.fillBuffer,
+      msg.touchedBuffer,
       msg.chunkBuffers,
       msg.width,
       msg.height,

@@ -1,12 +1,15 @@
 import { random, shuffleArray } from '../../../helpers/random'
 import {
+  ACID,
   BURNING_FUEL,
+  CRYO,
   EMPTY,
   FIRE,
   getOwner,
   LAVA,
   type MatterDef,
   matterType,
+  type MatterType,
   OIL,
   PERMANENT,
   PHYSICS_BODY,
@@ -17,9 +20,15 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { isDestructible } from '../matter.ts'
+import { isDestructible, isLiquid } from '../matter.ts'
 
-const FIRE_SPREADABLE = MatterTypeSet.excluding(THERMITE, BURNING_FUEL, LAVA, SOLID, FIRE).remove(new MatterTypeSet(PERMANENT, PHYSICS_BODY))
+// Burn-through only tunnels through solid walls — liquids (flammable or not) are handled by
+// the side-spread ignite loop above, not by destroying/crediting them as a "wall".
+const isBurnableWall = (t: MatterType) => isDestructible(t) && !isLiquid(t)
+
+// Non-flammable liquids don't burn — excluded so fuel doesn't ignite/consume them as if they
+// were fuel (see fire.ts, which instead has water extinguish fire, not the other way around).
+const FIRE_SPREADABLE = MatterTypeSet.excluding(THERMITE, BURNING_FUEL, LAVA, SOLID, FIRE, WATER, SALT_WATER, ACID, CRYO).remove(new MatterTypeSet(PERMANENT, PHYSICS_BODY))
 export const BURNING_FUEL_DEF = {
   id: BURNING_FUEL,
   name: 'Burning Fuel',
@@ -61,10 +70,10 @@ export const BURNING_FUEL_DEF = {
     // Burn through: eat into one adjacent destructible wall and advance into it,
     // so fuel stuck to a surface tunnels through it instead of hovering by the hole.
     if (random() < 12) {
-      const wallLeft = tx > 0 && isDestructible(matterType(tiles[idx - 1])) ? idx - 1 : -1
-      const wallRight = tx < width - 1 && isDestructible(matterType(tiles[idx + 1])) ? idx + 1 : -1
-      const wallBelow = ty < height - 1 && isDestructible(matterType(tiles[idx + width])) ? idx + width : -1
-      const wallAbove = ty > 0 && isDestructible(matterType(tiles[idx - width])) ? idx - width : -1
+      const wallLeft = tx > 0 && isBurnableWall(matterType(tiles[idx - 1])) ? idx - 1 : -1
+      const wallRight = tx < width - 1 && isBurnableWall(matterType(tiles[idx + 1])) ? idx + 1 : -1
+      const wallBelow = ty < height - 1 && isBurnableWall(matterType(tiles[idx + width])) ? idx + width : -1
+      const wallAbove = ty > 0 && isBurnableWall(matterType(tiles[idx - width])) ? idx - width : -1
 
       const candidates: number[] = shuffleArray([
         wallBelow,

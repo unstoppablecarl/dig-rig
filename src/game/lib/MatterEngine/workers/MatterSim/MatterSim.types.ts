@@ -15,6 +15,11 @@ export type SimInMsgInit = {
   type: SimInMsg.INIT
   tilesBuffer: SharedArrayBuffer
   fillBuffer: SharedArrayBuffer
+  // Per-tile frame stamp shared across every worker in the pool — lets
+  // processSubset detect and skip an index whose occupant already had its one
+  // update this tick via a move written by an earlier round (same tick, only
+  // rounds are sequential/awaited so no atomics needed). See MatterSim.touched.
+  touchedBuffer: SharedArrayBuffer
   chunkBuffers: ChunkGridBuffers
   width: number
   height: number

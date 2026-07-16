@@ -1,6 +1,17 @@
 import { Math as PMath } from 'phaser'
 import { randomDegVarianceToRad, randomRangeInt } from '../../../helpers/random.ts'
-import { BURNING_FUEL, EMPTY, FIRE, matterType, setOwner } from '../../Matter/_Matter.types.ts'
+import {
+  ACID,
+  BURNING_FUEL,
+  CRYO,
+  EMPTY,
+  FIRE,
+  matterType,
+  SALT_WATER,
+  setOwner,
+  WATER,
+} from '../../Matter/_Matter.types.ts'
+import { MatterTypeSet } from '../../Matter/data/MatterTypeSet.ts'
 import type { ParticleSim } from '../../MatterEngine/workers/ParticleSim/ParticleSim.ts'
 import { type ParticleDef } from '../_particle-types.ts'
 import type { Particle } from '../Particle.ts'
@@ -12,6 +23,10 @@ const SPREAD_DEG = 15
 const DRAG = 0.94
 const BUOYANCY = 0.08
 const JITTER_DEG = 6
+
+// Non-flammable liquids extinguish/block fire rather than burning — see burning-fuel.ts.
+const NON_FLAMMABLE_LIQUID = new MatterTypeSet(WATER, SALT_WATER, ACID, CRYO)
+
 export const FLAMETHROWER_BURST = {
   spawn(pool, _sim, particleType, x, y, ownerId, vx: number, vy: number) {
 
@@ -41,7 +56,7 @@ export const FLAMETHROWER_BURST = {
       const cx = collideIdx % sim.width
       const cy = collideIdx / sim.width | 0
       const fire = setOwner(FIRE, p.ownerId)
-      sim.fillLine(p.x, p.y, cx, cy, p.size, fire)
+      sim.fillLineExcluding(p.x, p.y, cx, cy, NON_FLAMMABLE_LIQUID, fire)
       sim.setTile(collideIdx, setOwner(BURNING_FUEL, p.ownerId))
       sim.pool.release(p)
       return
@@ -50,7 +65,7 @@ export const FLAMETHROWER_BURST = {
     const dist = v.length()
     const fire = setOwner(FIRE, p.ownerId)
     v.normalize().scale(dist).add(p)
-    sim.fillLine(p.x, p.y, v.x, v.y, p.size, fire)
+    sim.fillLineExcluding(p.x, p.y, v.x, v.y, NON_FLAMMABLE_LIQUID, fire)
 
     p.x = dx
     p.y = dy

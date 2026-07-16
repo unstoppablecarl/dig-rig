@@ -34,6 +34,7 @@ export type DataManagerBuffers = {
 
   tiles: SharedArrayBuffer
   fill: SharedArrayBuffer
+  matterTouched: SharedArrayBuffer
   tileFront: TileFrontBuffers
   width: number
   height: number
@@ -77,6 +78,7 @@ export class DataManager {
       activateTiles: BasicTilesData.makeBuffer(width, height),
       tiles: tilemap.buffers.tiles,
       fill: tilemap.buffers.fillLevels,
+      matterTouched: tilemap.buffers.matterTouched,
       tileFront: TileFrontData.makeBuffers(tilemap),
       physicsBodies: PhysicsBodiesData.makeBuffers(),
       particleSpawns: ParticleSpawnData.makeBuffer(),

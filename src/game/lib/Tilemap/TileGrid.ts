@@ -12,6 +12,9 @@ export type TileGridBuffers = {
   tiles: SharedArrayBuffer,
   chunkGrid: ChunkGridBuffers,
   fillLevels: SharedArrayBuffer,
+  // Per-tile frame stamp: last tick a MatterSim round applied an update at (or
+  // moved matter into) this index. See MatterSim.touched for why this exists.
+  matterTouched: SharedArrayBuffer,
   width: number,
   height: number
 }
@@ -19,6 +22,7 @@ export type TileGridBuffers = {
 export class TileGrid {
   readonly tiles: Uint32Array<SharedArrayBuffer>
   readonly fillLevels: Uint32Array
+  readonly matterTouched: Uint32Array
 
   readonly chunkGrid: ChunkGrid
   readonly diagonalDistance: number
@@ -30,6 +34,7 @@ export class TileGrid {
       tiles: new SharedArrayBuffer(width * height * Uint32Array.BYTES_PER_ELEMENT),
       chunkGrid: ChunkGrid.createBuffers(width, height),
       fillLevels: new SharedArrayBuffer(width * height * Uint32Array.BYTES_PER_ELEMENT),
+      matterTouched: new SharedArrayBuffer(width * height * Uint32Array.BYTES_PER_ELEMENT),
       width,
       height,
     }
@@ -43,6 +48,7 @@ export class TileGrid {
 
     this.tiles = new Uint32Array(buffers.tiles)
     this.fillLevels = new Uint32Array(buffers.fillLevels)
+    this.matterTouched = new Uint32Array(buffers.matterTouched)
     this.chunkGrid = new ChunkGrid(buffers.chunkGrid)
     this.diagonalDistance = Math.hypot(this.width, this.height)
   }

@@ -19,6 +19,7 @@ import {
   matterType,
   MatterType,
   MatterTypeValues,
+  type MatterValue,
   METHANE,
   NAPALM,
   NITRO,
@@ -39,6 +40,7 @@ import {
   WATER,
   WAX,
 } from './_Matter.types.ts'
+import { FILL_MAX } from './_Liquid.constants.ts'
 import { MatterTypeSet } from './data/MatterTypeSet.ts'
 
 export interface MatterMetaRegistry {
@@ -118,6 +120,19 @@ export const collidesWithDestroyProjectiles = (type: MatterType) => (MATTER_FLAG
 export const isAlwaysStructural = (type: MatterType) => IMMUTABLE_SUPPORT_TYPES[type] === SupportType.STRUCTURAL
 
 export const isDestructible = (type: MatterType) => !INDESTRUCTIBLE_TYPES.has(type)
+
+// Fill-unit contribution of a single tile toward the global matter-conservation total (see
+// Coordinator.computeMatterTotal, which this must stay in sync with). FIRE/BURNING_FUEL/
+// PHYSICS_BODY don't represent conserved matter; liquids and steam are valued by their actual
+// fill; everything else solid counts as one full tile (FILL_MAX).
+export function matterFillContribution(raw: MatterValue, fillVal: number): number {
+  if (raw === EMPTY) return 0
+  const t = matterType(raw)
+  if (isLiquid(t) || t === STEAM) return fillVal
+  if (t !== FIRE && t !== PHYSICS_BODY && t !== BURNING_FUEL) return FILL_MAX
+  return 0
+}
+
 const noop = () => {
 }
 
