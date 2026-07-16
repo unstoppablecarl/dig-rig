@@ -1250,12 +1250,23 @@ export class MatterSim {
   // Yields > FILL_MAX when total > FILL_MAX, creating a small compression
   // that drives upward pressure flow (U-tube equalization).
   // Result is always rounded to an integer to preserve exact conservation.
+  //
+  // Capped at FILL_MAX + compress (~261) regardless of how large `total` gets.
+  // Previously the total >= 2*FILL_MAX+compress branch returned total/2 —
+  // unbounded in `total`, so a tall column's repeated pairwise stacking
+  // (each cell's total feeding the next cell's total below it) compounded
+  // into a runaway hydrostatic gradient instead of the "small" compression
+  // this function is documented to produce: a 50-tile column measured fill
+  // climbing linearly from 225 at the top to 389 at the bottom, all "stable"
+  // by that formula. Capping here forces any real excess above the ceiling
+  // to show up as positive `want` in the upward-pressure step and horizontal
+  // equalization instead of being silently absorbed as a new equilibrium.
   private static getStableState(total: number): number {
     const compress = FILL_MAX * FILL_COMPRESSION_FACTOR
     if (total <= FILL_MAX) return FILL_MAX
     if (total < 2 * FILL_MAX + compress)
       return Math.round((FILL_MAX * FILL_MAX + total * compress) / (FILL_MAX + compress))
-    return Math.round((total + compress) / 2)
+    return Math.round(FILL_MAX + compress)
   }
 
   tryFillFlow(tx: number, ty: number, idx: number, canExpandToEmpty = true, clump = false): boolean {
