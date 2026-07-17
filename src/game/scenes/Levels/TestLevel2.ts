@@ -62,16 +62,11 @@ export default class TestLevel2 extends GameLevel {
     tilemap.setRect(200, ref - 160, 160, 60, SOLID)
     tilemap.setRect(230, ref - 200, 60, 60, SOLID)
     tilemap.setRect(450, ref - 220, 60, 60, SOLID)
-    tilemap.setRect(400, ref - 100, 100, 60, EMPTY)
-    tilemap.setRect(400, ref - 100 - 5, 100, 60, setSettled(WATER, false), 256)
+    tilemap.setRect(400, ref - 100, 200, 60, EMPTY)
+    tilemap.setRect(400, ref - 100 - 5, 200, 60, setSettled(WATER, false), 256)
     tilemap.setRect(200, ref - 100, 60, 60, PERMANENT)
-    const mutator = new TilemapMutator(tilemap)
 
-    // mutator.makeBox(1000, 400, 300, 700, 10, PERMANENT)
-    // tilemap.setRect(600, 400, 200, 200, PERMANENT)
-    // tilemap.setRect(610, 410, 180, 180, EMPTY)
-    //
-    // tilemap.setRect(610, 510, 180, 80, setSettled(ACID, false), 256)
+    const mutator = new TilemapMutator(tilemap)
 
     const centerX = 150
     const centerY = 400
@@ -80,7 +75,14 @@ export default class TestLevel2 extends GameLevel {
     const thickness = 10
 
     mutator.makeUTube(centerX, centerY, width, height, thickness, PERMANENT)
-    // mutator.makeBowl(300, 400, 100, 100, 10, PERMANENT)
+    mutator.makePool({
+      x: 600,
+      y: ref - 100,
+      width: 100,
+      height: 100,
+      thickness: 10,
+      fillType: EMPTY, //setOwner(LAVA, PLAYER_MATTER_TANK_ID),
+    })
     tilemap.setBorder(2, PERMANENT)
     return tilemap
   }

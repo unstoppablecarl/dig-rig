@@ -1,8 +1,8 @@
 import { CHUNK_SIZE, ENABLE_MATTER_SIM_PROFILING } from '../../../../config.ts'
 import { random } from '../../../../helpers/random.ts'
 import {
-  FILL_COL_SCAN_MAX,
   FILL_COMPRESSION_FACTOR,
+  FILL_FLOW_DEADBAND,
   FILL_MAX,
   FILL_PRESSURE_DIVISOR,
   FILL_ROUND_TO_ZERO,
@@ -430,10 +430,20 @@ export class MatterSim {
     return this._colPressureAboveImpl(tx, ty, type)
   }
 
+  // No depth cap — was FILL_COL_SCAN_MAX rows, but getStableState's fill cap
+  // means every cell below the first couple rows of a stack saturates to the
+  // same value, so a bounded scan made two columns deeper than the bound
+  // read as equal pressure regardless of their real height difference
+  // (lateral equalization went blind past that depth — e.g. a 100-tile
+  // U-tube arm never equalizing against a shorter one). Scanning to the
+  // column's actual top is the exact fix — cost is unchanged for any column
+  // shallower than the old bound (still exits at the first gap/edge, exactly
+  // like before), and only columns deeper than that pay for the extra rows
+  // they actually have.
   private _colPressureAboveImpl(tx: number, ty: number, type: MatterType): number {
     const { tiles, fill, width } = this
     let p = 0
-    for (let dy = 1; dy <= FILL_COL_SCAN_MAX; dy++) {
+    for (let dy = 1; ; dy++) {
       const yy = ty - dy
       if (yy < 0) break
       const ii = yy * width + tx
@@ -1180,11 +1190,20 @@ export class MatterSim {
     return moved
   }
 
+  // `dest` defaults to `this.next` (the per-round worker scratch set, drained
+  // by the coordinator into its own activeSet after each parallel round —
+  // see Coordinator.ts's workerPool.step callback). Sequential passes that
+  // run on the coordinator's own MatterSim instance *after* worker rounds
+  // (doHorizontalCascadePass) must pass their own `activeSet` explicitly:
+  // that instance's `this.next` is never drained, so wake-ups written there
+  // would silently vanish (same reasoning as doFillDisplace's explicit
+  // `reactivateAround(tx, ty, activeSet)` call above).
   private doFillTransfer(
     fromIdx: number, fromTx: number, fromTy: number,
     toIdx: number, toTx: number, toTy: number,
     amount: number,
     liquidRaw: number,
+    dest: TileSet = this.next,
   ): void {
     if (ENABLE_MATTER_SIM_PROFILING) this._profDoFillTransferCalls++
     const flow = Math.round(amount)
@@ -1197,13 +1216,16 @@ export class MatterSim {
       this.fill[fromIdx] = 0
       this.tiles[fromIdx] = EMPTY
       this.markRenderDirty(fromTx, fromTy)
-      this.reactivateAround(fromTx, fromTy)
+      this.reactivateAround(fromTx, fromTy, dest)
     } else {
       this.tiles[fromIdx] = setSettled(this.tiles[fromIdx], false)
       this.markRenderDirty(fromTx, fromTy)
-      this.next.add(fromIdx)
-      // Wake settled neighbours so they re-equalize against the new lower fill
-      this.reactivateAround(fromTx, fromTy)
+      dest.add(fromIdx)
+      // Wake settled neighbours so they re-equalize against the new lower fill —
+      // but only for a genuinely meaningful adjustment. Below FILL_FLOW_DEADBAND
+      // this is just integer-rounding noise; cascading the expensive horizontal
+      // wake-chain for it is how a whole settled pool ends up perpetually active.
+      if (flow >= FILL_FLOW_DEADBAND) this.reactivateAround(fromTx, fromTy, dest)
     }
 
     // Wake settled liquid directly below the sender — it may be pressurized and
@@ -1214,7 +1236,7 @@ export class MatterSim {
       if (isLiquid(matterType(belowRaw)) && isSettled(belowRaw)) {
         this.tiles[belowFromIdx] = setSettled(belowRaw, false)
         this.markRenderDirtyRaw(belowFromIdx)
-        this.next.add(belowFromIdx)
+        dest.add(belowFromIdx)
       }
     }
 
@@ -1224,7 +1246,7 @@ export class MatterSim {
       this.tiles[toIdx] = setSettled(this.tiles[toIdx], false)
     }
     this.markRenderDirty(toTx, toTy)
-    this.next.add(toIdx)
+    dest.add(toIdx)
   }
 
   private setFill(
@@ -1267,6 +1289,15 @@ export class MatterSim {
     if (total < 2 * FILL_MAX + compress)
       return Math.round((FILL_MAX * FILL_MAX + total * compress) / (FILL_MAX + compress))
     return Math.round(FILL_MAX + compress)
+  }
+
+  // Below FILL_FLOW_DEADBAND, a computed want is treated as already-resolved
+  // noise rather than a real imbalance — see FILL_FLOW_DEADBAND's comment for
+  // why this matters: without it, integer rounding can make two neighboring
+  // cells chase the last unit of "imbalance" back and forth forever, and
+  // neither ever reaches `moved=false` to actually settle.
+  private static deadbandWant(want: number): number {
+    return want > FILL_FLOW_DEADBAND ? want : 0
   }
 
   tryFillFlow(tx: number, ty: number, idx: number, canExpandToEmpty = true, clump = false): boolean {
@@ -1374,12 +1405,12 @@ export class MatterSim {
         if (!hasDrain) {
           wantA = (clump && remaining < FILL_MAX)
             ? (fill[aIdx] + remaining <= FILL_MAX ? remaining : Math.max(0, FILL_MAX - fill[aIdx]))
-            : Math.round(Math.max(0, (myCP - fill[aIdx] - this.colPressureAbove(ax, ty, type)) / FILL_PRESSURE_DIVISOR))
+            : MatterSim.deadbandWant(Math.round(Math.max(0, (myCP - fill[aIdx] - this.colPressureAbove(ax, ty, type)) / FILL_PRESSURE_DIVISOR)))
         }
       } else if (aType === EMPTY && (canExpandToEmpty || aIsLedge || aIsSlopeStep)) {
         wantA = aIsLedge
           ? remaining
-          : Math.round(Math.max(0, (myCP - this.colPressureAbove(ax, ty, type)) / FILL_PRESSURE_DIVISOR))
+          : MatterSim.deadbandWant(Math.round(Math.max(0, (myCP - this.colPressureAbove(ax, ty, type)) / FILL_PRESSURE_DIVISOR)))
       }
     }
 
@@ -1389,12 +1420,12 @@ export class MatterSim {
         if (!hasDrain) {
           wantB = (clump && remaining < FILL_MAX)
             ? (fill[bIdx] + remaining <= FILL_MAX ? remaining : Math.max(0, FILL_MAX - fill[bIdx]))
-            : Math.round(Math.max(0, (myCP - fill[bIdx] - this.colPressureAbove(bx, ty, type)) / FILL_PRESSURE_DIVISOR))
+            : MatterSim.deadbandWant(Math.round(Math.max(0, (myCP - fill[bIdx] - this.colPressureAbove(bx, ty, type)) / FILL_PRESSURE_DIVISOR)))
         }
       } else if (bType === EMPTY && (canExpandToEmpty || bIsLedge || bIsSlopeStep)) {
         wantB = bIsLedge
           ? remaining
-          : Math.round(Math.max(0, (myCP - this.colPressureAbove(bx, ty, type)) / FILL_PRESSURE_DIVISOR))
+          : MatterSim.deadbandWant(Math.round(Math.max(0, (myCP - this.colPressureAbove(bx, ty, type)) / FILL_PRESSURE_DIVISOR)))
       }
     }
 
@@ -1442,7 +1473,7 @@ export class MatterSim {
       const upIdx = idx - width
       const upType = matterType(tiles[upIdx])
       if (upType === EMPTY || upType === type) {
-        const want = remaining - MatterSim.getStableState(remaining + fill[upIdx])
+        const want = MatterSim.deadbandWant(remaining - MatterSim.getStableState(remaining + fill[upIdx]))
         if (want > 0) {
           const flow = Math.min(want, remaining - FILL_MAX)
           this.doFillTransfer(idx, tx, ty, upIdx, tx, ty - 1, flow, liquidRaw)
@@ -1559,7 +1590,7 @@ export class MatterSim {
       const upValid = upType === EMPTY || upType === type
       if (!upValid) continue
 
-      const want = m - MatterSim.getStableState(m + fill[upIdx])
+      const want = MatterSim.deadbandWant(m - MatterSim.getStableState(m + fill[upIdx]))
       if (want <= 0) continue
       const flow = Math.min(want, m - FILL_MAX)
 
@@ -1578,6 +1609,107 @@ export class MatterSim {
       this.markRenderDirty(tx, ty)
       activeSet.add(upIdx)
       activeSet.add(idx)
+    }
+  }
+
+  // Runs after all worker rounds finish (like doUpwardPressurePass, no
+  // concurrent writers) — sweeps each active liquid row in one direction
+  // (alternating per tick via `leftFirst`), exchanging
+  // `floor(diff / FILL_PRESSURE_DIVISOR)` with the adjacent cell exactly
+  // like tryFillFlow's own horizontal step, but applied sequentially across
+  // a whole row in one call instead of once per tile per tick — so a
+  // disturbance can cross an entire wide pool in a single pass instead of
+  // taking O(pool width) ticks. Only ever calls doFillTransfer, so it can
+  // only move fill between two cells that are already EMPTY or the same
+  // liquid type — never a bulk rewrite of an assumed rectangle.
+  //
+  // Scan range per row is bounded to the row's contiguous liquid extent
+  // (walking outward from the active members' min/max tx while the
+  // neighbor is any liquid type, stopping at the first non-liquid cell),
+  // NOT the whole map width. An earlier version of this same cascade
+  // scanned the full map width for every active row and was measured 3x+
+  // slower to equalize the U-tube (24% arm imbalance still remaining after
+  // 45s, vs <0.1% at 15s for the whole-span rewrite above) — that slowdown
+  // was the scan cost, not a property of the pairwise-exchange algorithm
+  // itself; bounding it to the real liquid extent removes the cost without
+  // changing the exchange math, which is what the reference algorithm
+  // does implicitly by scanning its whole (small) grid.
+  doHorizontalCascadePass(activeSet: TileSet): void {
+    const { tiles, fill, width, height } = this
+
+    const rowMinX = new Map<number, number>()
+    const rowMaxX = new Map<number, number>()
+    for (const idx of activeSet) {
+      if (!isLiquid(matterType(tiles[idx]))) continue
+      const ty = (idx / width) | 0
+      const tx = idx % width
+      const curMin = rowMinX.get(ty)
+      if (curMin === undefined) {
+        rowMinX.set(ty, tx)
+        rowMaxX.set(ty, tx)
+      } else {
+        if (tx < curMin) rowMinX.set(ty, tx)
+        if (tx > rowMaxX.get(ty)!) rowMaxX.set(ty, tx)
+      }
+    }
+    if (rowMinX.size === 0) return
+
+    const dir = this.leftFirst ? -1 : 1
+
+    for (const [ty, minX] of rowMinX) {
+      const rowStart = ty * width
+      const maxX = rowMaxX.get(ty)!
+
+      let xLeft = minX
+      while (xLeft > 0 && isLiquid(matterType(tiles[rowStart + xLeft - 1]))) xLeft--
+      let xRight = maxX
+      while (xRight < width - 1 && isLiquid(matterType(tiles[rowStart + xRight + 1]))) xRight++
+
+      const start = dir === 1 ? xLeft : xRight
+      const end = dir === 1 ? xRight + 1 : xLeft - 1
+      for (let tx = start; tx !== end; tx += dir) {
+        const idx = rowStart + tx
+        const raw = tiles[idx]
+        const type = matterType(raw)
+        if (!isLiquid(type)) continue
+        let remaining = fill[idx]
+        if (remaining <= 0) continue
+
+        const downIdx = ty + 1 < height ? idx + width : -1
+        const downType = downIdx === -1 ? -1 : matterType(tiles[downIdx])
+        const downMovable = downIdx !== -1 && (downType === EMPTY || downType === type)
+        if (downMovable && fill[downIdx] < FILL_MAX * FILL_SETTLED_FACTOR) continue
+
+        const liquidRaw = setSettled(raw, false)
+
+        const ax = tx + dir
+        if (ax >= 0 && ax < width) {
+          const aIdx = idx + dir
+          const aType = matterType(tiles[aIdx])
+          if (aType === type || aType === EMPTY) {
+            const flow = Math.floor((remaining - fill[aIdx]) / FILL_PRESSURE_DIVISOR)
+            if (flow >= FILL_FLOW_DEADBAND) {
+              const f = Math.min(flow, remaining)
+              this.doFillTransfer(idx, tx, ty, aIdx, ax, ty, f, liquidRaw, activeSet)
+              remaining -= f
+            }
+          }
+        }
+        if (remaining <= 0) continue
+
+        const bx = tx - dir
+        if (bx >= 0 && bx < width) {
+          const bIdx = idx - dir
+          const bType = matterType(tiles[bIdx])
+          if (bType === type || bType === EMPTY) {
+            const flow = Math.floor((remaining - fill[bIdx]) / FILL_PRESSURE_DIVISOR)
+            if (flow >= FILL_FLOW_DEADBAND) {
+              const f = Math.min(flow, remaining)
+              this.doFillTransfer(idx, tx, ty, bIdx, bx, ty, f, liquidRaw, activeSet)
+            }
+          }
+        }
+      }
     }
   }
 }

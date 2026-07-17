@@ -315,6 +315,12 @@ export class Coordinator {
       // columns to their full height in one pass (fixes slow U-tube equalization).
       this.sim.doUpwardPressurePass(this.activeSet)
 
+      // sweeps each active liquid row
+      // in one pass so a disturbance can cross a whole wide pool in a
+      // single tick instead of tryFillFlow's nearest-neighbor-only exchange
+      // taking O(pool width) ticks.
+      this.sim.doHorizontalCascadePass(this.activeSet)
+
       if (this.structuralRemovals.length > 0) {
         const w = this.width
         const xy: { x: number, y: number }[] = []
