@@ -4,6 +4,7 @@ import { PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { ScaleLevelTexture } from '../../lib/Textures/ScaleLevelTexture.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
+import { TilemapBuilder } from '../../lib/Tilemap/TilemapBuilder.ts'
 import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
@@ -30,20 +31,20 @@ export default class TestLevel extends GameLevel {
   }
 
   makeTileMap() {
-    const tilemap = new Tilemap(
+    const builder = TilemapBuilder.make(
       this,
       2000,
       1000,
     )
 
     let ref = 600
-    tilemap.setRect(0, ref - 100, tilemap.width, 500, SOLID)
-    tilemap.setRect(200, ref - 160, 160, 60, SOLID)
-    tilemap.setRect(230, ref - 200, 60, 60, SOLID)
-    tilemap.setRect(450, ref - 220, 60, 60, SOLID)
-    tilemap.setBorder(2, PERMANENT)
+    builder.setRect(0, ref - 100, builder.width, 500, SOLID)
+    builder.setRect(200, ref - 160, 160, 60, SOLID)
+    builder.setRect(230, ref - 200, 60, 60, SOLID)
+    builder.setRect(450, ref - 220, 60, 60, SOLID)
+    builder.setBorder(2, PERMANENT)
 
-    return tilemap
+    return builder.getTilemap()
   }
 
   makePlayer() {

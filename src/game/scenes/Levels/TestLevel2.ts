@@ -1,10 +1,9 @@
 import type { PartialMatterRenderConfig } from '../../config/colors.ts'
 import { Crate } from '../../lib/Entities/defs/Crate.ts'
 import { PortableMatterTank } from '../../lib/Entities/defs/PortableMatterTank.ts'
-import { EMPTY, PERMANENT, setSettled, SOLID, WATER } from '../../lib/Matter/_Matter.types.ts'
+import { EMPTY, PERMANENT, SOLID, WATER } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
-import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
-import { TilemapMutator } from '../../lib/Tilemap/TilemapMutator.ts'
+import { TilemapBuilder } from '../../lib/Tilemap/TilemapBuilder.ts'
 import type { TilemapRendererConfig } from '../../lib/Tilemap/TilemapRendererConfig'
 import { GameLevel } from '../GameLevel.ts'
 import terrain from './TestLevel2/TestLevel2.png'
@@ -51,22 +50,20 @@ export default class TestLevel2 extends GameLevel {
   }
 
   makeTileMap() {
-    const tilemap = new Tilemap(
+    const builder = TilemapBuilder.make(
       this,
       2000,
       1000,
     )
 
-    let ref = 600
-    tilemap.setRect(0, ref - 100, tilemap.width, 500, SOLID)
-    tilemap.setRect(200, ref - 160, 160, 60, SOLID)
-    tilemap.setRect(230, ref - 200, 60, 60, SOLID)
-    tilemap.setRect(450, ref - 220, 60, 60, SOLID)
-    tilemap.setRect(400, ref - 100, 200, 60, EMPTY)
-    tilemap.setRect(400, ref - 100 - 5, 200, 60, setSettled(WATER, false), 256)
-    tilemap.setRect(200, ref - 100, 60, 60, PERMANENT)
-
-    const mutator = new TilemapMutator(tilemap)
+    const ref = 600
+    builder.setRect(0, ref - 100, builder.width, 500, SOLID)
+    builder.setRect(200, ref - 160, 160, 60, SOLID)
+    builder.setRect(230, ref - 200, 60, 60, SOLID)
+    builder.setRect(450, ref - 220, 60, 60, SOLID)
+    builder.setRect(400, ref - 100, 200, 60, EMPTY)
+    builder.setRect(400, ref - 100 - 5, 200, 60, WATER, undefined, 256, false)
+    builder.setRect(200, ref - 100, 60, 60, PERMANENT)
 
     const centerX = 150
     const centerY = 400
@@ -74,17 +71,18 @@ export default class TestLevel2 extends GameLevel {
     const height = 100
     const thickness = 10
 
-    mutator.makeUTube(centerX, centerY, width, height, thickness, PERMANENT)
-    mutator.makePool({
+    builder.makeUTube(centerX, centerY, width, height, thickness, PERMANENT)
+    builder.makePool({
       x: 600,
       y: ref - 100,
       width: 100,
       height: 100,
       thickness: 10,
-      fillType: EMPTY, //setOwner(LAVA, PLAYER_MATTER_TANK_ID),
+      value: EMPTY,
     })
-    tilemap.setBorder(2, PERMANENT)
-    return tilemap
+    builder.setBorder(2, PERMANENT)
+
+    return builder.getTilemap()
   }
 
   makePlayer() {

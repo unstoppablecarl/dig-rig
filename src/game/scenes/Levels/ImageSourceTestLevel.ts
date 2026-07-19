@@ -1,7 +1,7 @@
 import { PERMANENT } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { textureToPixelData } from '../../lib/Textures/texture-util.ts'
-import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
+import { TilemapBuilder } from '../../lib/Tilemap/TilemapBuilder.ts'
 import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
@@ -33,11 +33,10 @@ export default class ImageSourceTestLevel extends GameLevel {
   makeTileMap() {
     const solidData = textureToPixelData(this.textures, this.SOLID)
     const permanentData = textureToPixelData(this.textures, this.PERMANENT)
+    const builder = TilemapBuilder.makeFromSolidAndPermanentPixelData(this, solidData, permanentData)
+    builder.setBorder(2, PERMANENT)
 
-    const tilemap = Tilemap.makeFromSolidAndPermanentPixelData(this, solidData, permanentData)
-    tilemap.setBorder(2, PERMANENT)
-
-    return tilemap
+    return builder.getTilemap()
   }
 
   makePlayer() {

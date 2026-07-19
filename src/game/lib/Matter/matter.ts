@@ -60,6 +60,8 @@ export type HasOwnerIdTypes = {
   [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { hasOwnerId: true } ? K : never
 }[keyof MatterMetaRegistry]
 
+export type NonOwnerIdTypes = Exclude<MatterType, HasOwnerIdTypes>
+
 const IMMUTABLE_SUPPORT_TYPES = new Uint32Array(256)
 
 // IMMUTABLE_SUPPORT_TYPES[type] is SupportType.NONE (0, the array's default) for any type that

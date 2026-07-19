@@ -62,16 +62,6 @@ export class TileGrid {
     return (this.width * this.height) - empty
   }
 
-  setTile(x: number, y: number, value: MatterType, fill = 0): boolean {
-    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return false
-    let idx = y * this.width + x
-    this.tiles[idx] = value
-    if (fill !== 0) {
-      this.fillLevels[idx] = fill
-    }
-    return true
-  }
-
   // Returns the raw tile value, which may include SETTLED_FLAG (0x80) in bit 7.
   // Use `value & TYPE_MASK` to get the base MatterType for comparisons.
   getTile(x: number, y: number): number {
@@ -177,32 +167,6 @@ export class TileGrid {
     if (returnBoolOnFirstMatch) return false
   }
 
-  setRect(
-    startX: number,
-    startY: number,
-    width: number,
-    height: number,
-    value: MatterType,
-    fill = 0,
-  ): void {
-    const x0 = Math.max(0, startX)
-    const y0 = Math.max(0, startY)
-    const x1 = Math.min(startX + width, this.width)
-    const y1 = Math.min(startY + height, this.height)
-
-    if (x1 <= x0 || y1 <= y0) {
-      throw new Error('Starting coordinates are outside the grid boundaries.')
-    }
-
-    for (let y = y0; y < y1; y++) {
-      for (let x = x0; x < x1; x++) {
-        if (this.getTile(x, y) !== value) {
-          this.setTile(x, y, value, fill)
-        }
-      }
-    }
-  }
-
   checkForCollision(x: number, y: number, vx: number, vy: number, dt: number, scale = 1): {
       collision: true;
       dx: number;
@@ -288,20 +252,6 @@ export class TileGrid {
           }
         }
         this.chunkGrid.setSolidCount(idx, count)
-      }
-    }
-  }
-
-  setBorder(thickness: number, value: MatterType) {
-    const { width, height } = this
-    for (let t = 0; t < thickness; t++) {
-      for (let x = t; x < width - t; x++) {
-        this.setTile(x, t, value)
-        this.setTile(x, height - 1 - t, value)
-      }
-      for (let y = t + 1; y < height - 1 - t; y++) {
-        this.setTile(t, y, value)
-        this.setTile(width - 1 - t, y, value)
       }
     }
   }

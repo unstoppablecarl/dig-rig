@@ -1,10 +1,9 @@
-import { FILL_MAX } from '../../lib/Matter/_Liquid.constants.ts'
-import { ACID, PERMANENT, setOwner, setSettled } from '../../lib/Matter/_Matter.types.ts'
+import { ACID, PERMANENT } from '../../lib/Matter/_Matter.types.ts'
 import { PLAYER_MATTER_TANK_ID } from '../../lib/Matter/Tank/_MatterTank.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { ScaleLevelTexture } from '../../lib/Textures/ScaleLevelTexture.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
-import { TilemapMutator } from '../../lib/Tilemap/TilemapMutator.ts'
+import { TilemapBuilder } from '../../lib/Tilemap/TilemapBuilder.ts'
 import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
@@ -34,21 +33,19 @@ export default class WaterLevelDrain extends GameLevel {
   }
 
   makeTileMap() {
-    const tilemap = new Tilemap(this, MAP_WIDTH, MAP_HEIGHT)
+    const builder = TilemapBuilder.make(this, MAP_WIDTH, MAP_HEIGHT)
 
-    tilemap.setRect(0, MAP_HEIGHT - FLOOR_HEIGHT, MAP_WIDTH, FLOOR_HEIGHT, PERMANENT)
-    tilemap.setRect(
+    builder.setRect(0, MAP_HEIGHT - FLOOR_HEIGHT, MAP_WIDTH, FLOOR_HEIGHT, PERMANENT)
+    builder.setRect(
       (MAP_WIDTH - WATER_BLOCK_WIDTH) / 2,
       50,
       WATER_BLOCK_WIDTH,
       WATER_BLOCK_HEIGHT,
-      setOwner(setSettled(ACID, false), PLAYER_MATTER_TANK_ID),
-      FILL_MAX,
+      ACID,
+      PLAYER_MATTER_TANK_ID,
     )
 
-    const mutator = new TilemapMutator(tilemap)
-
-    mutator.fillRect({
+    builder.setRectOrigin({
       x: MAP_WIDTH * 0.5,
       y: MAP_HEIGHT - FLOOR_HEIGHT,
       width: 100,
@@ -60,7 +57,7 @@ export default class WaterLevelDrain extends GameLevel {
       value: PERMANENT,
     })
 
-    mutator.fillRect({
+    builder.setRectOrigin({
       x: MAP_WIDTH * 0.5,
       y: MAP_HEIGHT - FLOOR_HEIGHT,
       width: 200,
@@ -72,9 +69,9 @@ export default class WaterLevelDrain extends GameLevel {
       value: PERMANENT,
     })
 
-    tilemap.setBorder(2, PERMANENT)
+    builder.setBorder(2, PERMANENT)
 
-    return tilemap
+    return builder.getTilemap()
   }
 
   makePlayer() {

@@ -1,7 +1,8 @@
-import { PERMANENT, SAND, setSettled, SOLID } from '../../lib/Matter/_Matter.types.ts'
+import { PERMANENT, SAND, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { ScaleLevelTexture } from '../../lib/Textures/ScaleLevelTexture.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
+import { TilemapBuilder } from '../../lib/Tilemap/TilemapBuilder.ts'
 import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
@@ -36,19 +37,19 @@ export default class BenchLevelSand extends GameLevel {
   }
 
   makeTileMap() {
-    const tilemap = new Tilemap(this, MAP_WIDTH, MAP_HEIGHT)
+    const builder = TilemapBuilder.make(this, MAP_WIDTH, MAP_HEIGHT)
 
-    tilemap.setRect(0, MAP_HEIGHT - FLOOR_HEIGHT, MAP_WIDTH, FLOOR_HEIGHT, SOLID)
-    tilemap.setRect(
+    builder.setRect(0, MAP_HEIGHT - FLOOR_HEIGHT, MAP_WIDTH, FLOOR_HEIGHT, SOLID)
+    builder.setRect(
       (MAP_WIDTH - SAND_BLOCK_WIDTH) / 2,
       50,
       SAND_BLOCK_WIDTH,
       SAND_BLOCK_HEIGHT,
-      setSettled(SAND, false),
+      SAND,
     )
-    tilemap.setBorder(2, PERMANENT)
+    builder.setBorder(2, PERMANENT)
 
-    return tilemap
+    return builder.getTilemap()
   }
 
   makePlayer() {

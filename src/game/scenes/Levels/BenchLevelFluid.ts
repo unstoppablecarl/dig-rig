@@ -1,8 +1,9 @@
-import { FILL_MAX } from '../../lib/Matter/_Liquid.constants.ts'
-import { OIL, PERMANENT, setSettled, SOLID } from '../../lib/Matter/_Matter.types.ts'
+import { OIL, PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
+import { NO_MATTER_TANK_ID } from '../../lib/Matter/Tank/_MatterTank.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { ScaleLevelTexture } from '../../lib/Textures/ScaleLevelTexture.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
+import { TilemapBuilder } from '../../lib/Tilemap/TilemapBuilder.ts'
 import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
@@ -36,20 +37,20 @@ export default class BenchLevelFluid extends GameLevel {
   }
 
   makeTileMap() {
-    const tilemap = new Tilemap(this, MAP_WIDTH, MAP_HEIGHT)
+    const builder = TilemapBuilder.make(this, MAP_WIDTH, MAP_HEIGHT)
 
-    tilemap.setRect(0, MAP_HEIGHT - FLOOR_HEIGHT, MAP_WIDTH, FLOOR_HEIGHT, SOLID)
-    tilemap.setRect(
+    builder.setRect(0, MAP_HEIGHT - FLOOR_HEIGHT, MAP_WIDTH, FLOOR_HEIGHT, SOLID)
+    builder.setRect(
       (MAP_WIDTH - OIL_BLOCK_WIDTH) / 2,
       50,
       OIL_BLOCK_WIDTH,
       OIL_BLOCK_HEIGHT,
-      setSettled(OIL, false),
-      FILL_MAX,
+      OIL,
+      NO_MATTER_TANK_ID,
     )
-    tilemap.setBorder(2, PERMANENT)
+    builder.setBorder(2, PERMANENT)
 
-    return tilemap
+    return builder.getTilemap()
   }
 
   makePlayer() {

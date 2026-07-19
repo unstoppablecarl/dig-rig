@@ -320,7 +320,7 @@ export class Coordinator {
       // in one pass so a disturbance can cross a whole wide pool in a
       // single tick instead of tryFillFlow's nearest-neighbor-only exchange
       // taking O(pool width) ticks.
-      this.sim.doHorizontalCascadePass(this.activeSet)
+      this.sim.doHorizontalCascadePass(this.activeSet, frame)
 
       if (this.structuralRemovals.length > 0) {
         const w = this.width

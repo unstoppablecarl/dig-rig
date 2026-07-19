@@ -1744,7 +1744,7 @@ export class MatterSim {
   // which un-settles the tile, which lets tryFillFlow's own diffusion find
   // a tiny diff next tick and keep it from ever re-settling — a
   // self-defeating loop.
-  doHorizontalCascadePass(activeSet: TileSet): void {
+  doHorizontalCascadePass(activeSet: TileSet, debugFrame = 0): void {
     const { tiles, fill, width, height } = this
 
     const rowMinX = new Map<number, number>()
@@ -1809,6 +1809,7 @@ export class MatterSim {
       const start = dir === 1 ? xLeft : xRight
       const end = dir === 1 ? xRight + 1 : xLeft - 1
       let inRun = false
+      let curRunType: MatterType = -1 as MatterType
       let curRunHasDrain = false
       let curRunDrainPos = false
       let curRunDrainNeg = false
@@ -1826,12 +1827,18 @@ export class MatterSim {
         const raw = tiles[idx]
         const type = matterType(raw)
         if (!isLiquid(type)) { inRun = false; continue }
-        if (!inRun) {
+        // A contiguous liquid streak can change MatterType with no gap
+        // (e.g. OIL sitting directly against WATER) — that's a new run for
+        // drain-eligibility purposes even though `inRun` never went false,
+        // so the type change must also force a fresh computeRunHasDrain
+        // call instead of inheriting the previous type's cached result.
+        if (!inRun || type !== curRunType) {
           const drainDirs = this.computeRunHasDrain(tx, ty, dir, type)
           curRunDrainPos = drainDirs.pos
           curRunDrainNeg = drainDirs.neg
           curRunHasDrain = curRunDrainPos || curRunDrainNeg
           inRun = true
+          curRunType = type
           curRunSeedIdx = -1
         }
         let remaining = fill[idx]
@@ -1898,7 +1905,11 @@ export class MatterSim {
             let f = 0
             const aEmptyDrain = aType === EMPTY && this.drainReachableFrom(ax, ty, dir, type)
             if (aEmptyDrain) {
-              f = remaining
+              // Capped by the neighbor's own headroom, same as the clump
+              // branch below — `remaining` can exceed FILL_MAX (compression
+              // headroom), so dumping it uncapped into a fresh EMPTY
+              // neighbor can push the destination above FILL_MAX.
+              f = Math.min(Math.max(0, FILL_MAX - fill[aIdx]), remaining)
             } else if (aType === type && clumps) {
               f = Math.min(Math.max(0, FILL_MAX - fill[aIdx]), remaining)
             } else if (canDrainShedA) {
@@ -1931,7 +1942,8 @@ export class MatterSim {
           if (bType === type || bType === EMPTY) {
             let f = 0
             if (bType === EMPTY && this.drainReachableFrom(bx, ty, -dir, type)) {
-              f = remaining
+              // See the mirrored 'a' branch above — capped by headroom.
+              f = Math.min(Math.max(0, FILL_MAX - fill[bIdx]), remaining)
             } else if (bType === type && clumps) {
               f = Math.min(Math.max(0, FILL_MAX - fill[bIdx]), remaining)
             } else if (canDrainShedB) {
@@ -2012,15 +2024,24 @@ export class MatterSim {
           // used for zero-fill zombie cleanup, so conservation stays
           // correct) rather than leave a silent permanent residual.
           //
-          // Scans the row directly instead of trusting drainWatchRows' own
-          // stored seeds — those are only refreshed on the success path, so
-          // every tick spent in grace leaves them exactly as stale as when
-          // grace started. If that stored cell already drained to 0,
-          // destroying based on it alone does nothing while still deleting
-          // the tracking entry.
-          for (let fx = 0; fx < width; fx++) {
-            const cellIdx = rowStart + fx
-            if (isLiquid(matterType(tiles[cellIdx])) && fill[cellIdx] > 0) this.destroyTile(fx, ty, cellIdx)
+          // Walks outward from each stored seed instead of trusting the
+          // seed cell alone — those are only refreshed on the success path,
+          // so every tick spent in grace leaves them exactly as stale as
+          // when grace started, and if the stored cell itself already
+          // drained to 0, destroying based on it alone does nothing while
+          // still deleting the tracking entry.
+          const seeds = this.drainWatchRows.get(ty) ?? []
+          for (const seedIdx of seeds) {
+            const seedType = matterType(tiles[seedIdx])
+            if (!isLiquid(seedType)) continue
+            const rowEnd = rowStart + width - 1
+            let lo = seedIdx
+            while (lo > rowStart && matterType(tiles[lo - 1]) === seedType) lo--
+            let hi = seedIdx
+            while (hi < rowEnd && matterType(tiles[hi + 1]) === seedType) hi++
+            for (let cellIdx = lo; cellIdx <= hi; cellIdx++) {
+              if (fill[cellIdx] > 0) this.destroyTile(cellIdx - rowStart, ty, cellIdx)
+            }
           }
           this.drainWatchRows.delete(ty)
           this.drainWatchGrace.delete(ty)
@@ -2028,9 +2049,9 @@ export class MatterSim {
       }
     }
 
-    if (ENABLE_LIQUID_DRAIN_DEBUG && this.frame % 60 === 0) {
+    if (ENABLE_LIQUID_DRAIN_DEBUG && debugFrame % 60 === 0) {
       console.log(
-        `[LiquidDrainDebug] frame=${this.frame} liquidCellsSeen=${_debugLiquidCellsSeen} `
+        `[LiquidDrainDebug] frame=${debugFrame} liquidCellsSeen=${_debugLiquidCellsSeen} `
         + `drainEligible=${_debugDrainEligibleCells} canDrainShed=${_debugCanDrainShedCells}`,
       )
     }
