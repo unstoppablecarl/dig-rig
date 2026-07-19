@@ -1,4 +1,4 @@
-import { CHUNK_SIZE, ENABLE_MATTER_SIM_PROFILING } from '../../../../config.ts'
+import { CHUNK_SIZE, ENABLE_LIQUID_DRAIN_DEBUG, ENABLE_MATTER_SIM_PROFILING } from '../../../../config.ts'
 import { random } from '../../../../helpers/random.ts'
 import {
   FILL_COMPRESSION_FACTOR,
@@ -29,9 +29,12 @@ import {
   convertsToCollisionBody,
   getReserveDestroyAmount,
   getSupportType,
+  isAcidImmune,
   isActivatable,
   isAlwaysActive,
+  isClumpingLiquid,
   isDestructible,
+  isLavaImmune,
   isLiquid,
   MATTER_ACTIONS,
   RESERVED_DESTROY_CHARGE,
@@ -66,24 +69,12 @@ function copyIntoView(view: Int32Array, capacity: number, source: Iterable<numbe
 export class MatterSim {
   tiles!: Uint32Array
   fill!: Uint32Array
-  // Per-tile last-touched frame stamp, shared across every worker in the pool
-  // (same buffer instance for all of them, like tiles/fill). A tick dispatches
-  // its active-tile snapshot across up to 4 sequential rounds (see
-  // SimWorkerPool's mega-groups), each round's index batch fixed from the
-  // snapshot taken before any of them ran. If a round's move writes matter
-  // into an index that a *later* round in the same tick was independently
-  // about to process (that index was itself active pre-tick), that later
-  // round would run MATTER_ACTIONS a second time this tick on matter that
-  // already got its one update — a double-move that can cross a chunk (and
-  // therefore round) boundary. touched[idx] === frame+1 means "already
-  // updated this tick" (frame+1, never 0, so it can't collide with the
-  // buffer's zero-initialized default on frame 0); processSubset checks it
-  // before running an action, and every primitive that relocates a tile's
-  // identity to a different index (tryMove, tryRise, doDensityLiquid's swap)
-  // stamps the destination so a stale later round skips it instead of
-  // re-processing it. Rounds are awaited sequentially and same-round workers
-  // only ever touch non-adjacent chunks, so plain (non-atomic) reads/writes
-  // here are safe.
+  // Per-tile last-touched frame stamp, shared across the worker pool. A tick
+  // dispatches its active-tile snapshot across multiple sequential rounds;
+  // touched[idx] === frame+1 marks "already updated this tick" so a later
+  // round doesn't re-run MATTER_ACTIONS on matter that moved into idx during
+  // an earlier round this same tick. Stamped frame+1 (never 0) so it can't
+  // collide with the buffer's zero-init default on frame 0.
   touched!: Uint32Array
   chunkGrid!: ChunkGrid
   width = 0
@@ -101,6 +92,47 @@ export class MatterSim {
   structuralRemovals: number[] = []
   next = new Set<number>()
 
+  // Persistent (never swap-cleared) record of rows that still contain a
+  // drain-eligible liquid run with fill remaining — one seed cell per run
+  // (see rowDrainSeeds in doHorizontalCascadePass). Needed because activeSet
+  // is rebuilt from scratch every tick from only that tick's moved/woken
+  // entries (see Coordinator.ts's swap-then-clear) — a tile that settles
+  // (moved=false) is simply omitted from `next`, so if every cell of a run
+  // settles in the same parallel round, the whole run disappears from
+  // activeSet with nothing left to re-add it, even though it still has
+  // somewhere real to drain to.
+  //
+  // One seed per *run*, not one per row: a row can hold several disconnected
+  // runs (e.g. two separate ledges either side of a gap), and a single
+  // row-wide seed lets whichever run is processed last starve the others out
+  // of tracking. Storing every cell of every eligible run (also tried)
+  // measurably regressed bench:sim ~9% on a big-flooded-level stress
+  // scenario — one seed per run is enough, since the sweep's own
+  // xLeft/xRight expansion recovers each run's full contiguous extent
+  // regardless of which cell in it was the seed.
+  private drainWatchRows = new Map<number, number[]>()
+
+  // Grace-tick countdown per row, paired with drainWatchRows: how many more
+  // times in a row this row's sweep is allowed to come up with zero seeds
+  // before it's actually dropped. Needed because curRunHasDrain can read
+  // false for a tick or two on a run that genuinely does have a real drain
+  // (e.g. a transient state briefly fooling the check on one side of a
+  // both-edges-open run) — dropping immediately would permanently lose
+  // tracking of a run that would have reconfirmed on the very next tick.
+  private drainWatchGrace = new Map<number, number>()
+  private static readonly DRAIN_WATCH_GRACE_TICKS = 90
+
+  // Coordinator.ts's "is there work to do this tick" early-return predates
+  // drainWatchRows and doesn't know about it. activeSet can read empty on a
+  // tick where a drain-eligible run still has real fill left; without this,
+  // that early return would skip the step entirely — including
+  // doHorizontalCascadePass, the only place that reads drainWatchRows —
+  // permanently freezing the row despite drainWatchRows still correctly
+  // remembering it needs re-examining.
+  get hasDrainWatchWork(): boolean {
+    return this.drainWatchRows.size > 0
+  }
+
   // Shared scratch space for cross-thread payloads — coordinator writes
   // indices in, we write results out via the other three fields, avoiding a
   // postMessage structured-clone of what can be a many-thousand-entry array
@@ -116,35 +148,22 @@ export class MatterSim {
   private solidTilesCreated = 0
 
   // Cheap call-count profiling, gated by ENABLE_MATTER_SIM_PROFILING — plain
-  // integer increments at each function's single choke point, not
-  // performance.now() timers (which would add real self-measurement overhead
-  // at ~200k calls/round). Used to check which hot-path functions are
-  // actually called as often as reading the code suggests, before
-  // considering any optimization there.
+  // integer increments, not performance.now() timers (which would add real
+  // overhead at ~200k calls/round).
   private _profTryFillFlowCalls = 0
   private _profColPressureAboveCalls = 0
   private _profReactivateAroundCalls = 0
   private _profDoFillTransferCalls = 0
-  // markDirty call count vs countSolidInChunk's tiles-scanned count (see
-  // PhysicsCollapse profiling) — checks whether an incremental solidCount
-  // scheme keyed off markDirty calls would actually visit fewer tiles than
-  // the current full-chunk rescan, before building it.
   private _profMarkDirtyCalls = 0
   private _profWindowStart = performance.now()
 
-  // Sampled wall-clock cost (every 64th call, via the call-count mask below)
-  // for the two functions actually in question — call counts alone don't
-  // tell you cost per call, and timing every call would itself add real
-  // overhead at ~500k-800k calls/sec.
+  // Sampled wall-clock cost (every 64th call, via the mask below) — call
+  // counts alone don't say cost per call, and timing every call would
+  // itself add real overhead at this call volume.
   private _profColPressureAboveTime = 0
   private _profColPressureAboveSamples = 0
   private _profTryFillFlowTime = 0
   private _profTryFillFlowSamples = 0
-  // Same sampled-timing treatment for the granular/powder path (sand's
-  // MATTER_ACTIONS entry point and its movement primitive) — call counts
-  // alone (reactivateAround etc.) don't say whether the ~23ms/step dispatch
-  // cost for a falling-sand scenario is many cheap per-tile ops or has a hot
-  // inner cost worth trimming.
   private _profDoPowderFallTime = 0
   private _profDoPowderFallSamples = 0
   private _profDoPowderFallCalls = 0
@@ -155,11 +174,8 @@ export class MatterSim {
 
   private particles: ParticleSpawnData
 
-  // The coordinator's own local MatterSim instance (used directly by
-  // Brush/PhysicsBodyProcessor/etc., never dispatched through the worker
-  // pool) never calls .process(), so its scratchBuffers just go unused —
-  // still allocated uniformly here rather than made optional, to keep this
-  // signature simple.
+  // The coordinator's own local MatterSim instance never calls .process(),
+  // so its scratchBuffers go unused — still allocated for signature simplicity.
   init(
     tilesBuffer: SharedArrayBuffer,
     fillBuffer: SharedArrayBuffer,
@@ -311,12 +327,7 @@ export class MatterSim {
   // once per round with their assigned subset of the active set.
   processSubset(indices: Int32Array) {
     for (const idx of indices) {
-      // Already updated this tick — some earlier round (this same dispatch,
-      // a different mega-group) moved matter into idx after this batch was
-      // built from the pre-tick snapshot. Re-running its action here would
-      // give it a second update in one tick. See `touched` field comment.
-      // Stamped as frame+1, never 0, so it can't collide with the buffer's
-      // zero-initialized default on frame 0 (the very first tick).
+      // Already updated this tick by an earlier round — see `touched` field.
       if (this.touched[idx] === this.frame + 1) continue
 
       const tx = idx % this.width
@@ -347,13 +358,10 @@ export class MatterSim {
     this.markDirty(tx, ty)
   }
 
-  // Render-only dirty — no collGen bump. Liquid tiles never contribute to
-  // Matter.js collision geometry (no liquid MatterDef sets collidesWhenSettled
-  // or alwaysCollides), so pure liquid-fill movement between liquid/empty
-  // cells can never change collidability. Bumping collGen for it anyway forces
-  // TerrainChunkBodyManager to tear down and rebuild the chunk's static body
-  // on every such change, which is what made rigid bodies resting in water
-  // (or anywhere near flowing/settling liquid in the same chunk) vibrate.
+  // Render-only dirty — no collGen bump. Liquid never contributes to
+  // collision geometry, so pure fill movement between liquid/empty cells
+  // can't change collidability; bumping collGen anyway made rigid bodies
+  // near flowing/settling liquid vibrate from constant terrain body rebuilds.
   markRenderDirty(tx: number, ty: number) {
     const idx = (ty >>> this.chunkShift) * this.chunksWidth + (tx >>> this.chunkShift)
 
@@ -384,13 +392,8 @@ export class MatterSim {
         const raw = tiles[idx]
         if (isSettled(raw)) {
           tiles[idx] = setSettled(raw, false)
-          // Only types whose collidability actually depends on the settled
-          // flag (e.g. SAND) need the collision mesh rebuilt. alwaysCollides
-          // types stay collidable regardless, and most wakes here are liquid
-          // (e.g. settled water above a physics body) which never collides —
-          // bumping collGen for those is what forced the terrain body under a
-          // resting object to be torn down and rebuilt every time nearby
-          // water re-settled.
+          // Only types whose collidability depends on the settled flag
+          // (e.g. SAND) need the collision mesh rebuilt.
           this.markDirtyForWake(ax, aboveY, matterType(raw))
           dest.add(idx)
         }
@@ -430,16 +433,12 @@ export class MatterSim {
     return this._colPressureAboveImpl(tx, ty, type)
   }
 
-  // No depth cap — was FILL_COL_SCAN_MAX rows, but getStableState's fill cap
-  // means every cell below the first couple rows of a stack saturates to the
-  // same value, so a bounded scan made two columns deeper than the bound
-  // read as equal pressure regardless of their real height difference
-  // (lateral equalization went blind past that depth — e.g. a 100-tile
-  // U-tube arm never equalizing against a shorter one). Scanning to the
-  // column's actual top is the exact fix — cost is unchanged for any column
-  // shallower than the old bound (still exits at the first gap/edge, exactly
-  // like before), and only columns deeper than that pay for the extra rows
-  // they actually have.
+  // No depth cap: getStableState's fill cap makes every cell below the first
+  // couple rows of a stack saturate to the same value, so a bounded scan
+  // made two columns deeper than the bound read as equal pressure regardless
+  // of real height difference (e.g. a 100-tile U-tube arm never equalizing
+  // against a shorter one). Cost is unchanged for shallower columns — still
+  // exits at the first gap/edge.
   private _colPressureAboveImpl(tx: number, ty: number, type: MatterType): number {
     const { tiles, fill, width } = this
     let p = 0
@@ -491,10 +490,8 @@ export class MatterSim {
 
     tiles[toIdx] = setSettled(rawFrom, false)
     tiles[fromIdx] = toType === EMPTY ? EMPTY : setSettled(rawTo, false)
-    // fromIdx's matter now lives at toIdx and already had its one update this
-    // tick (this call) — stamp toIdx so a later round this tick (toIdx could
-    // have been independently active pre-tick, e.g. the sinksThrough case
-    // overwriting a live liquid) skips it instead of moving it again.
+    // fromIdx's matter now lives at toIdx — stamp it so a later round this
+    // tick doesn't move it again (see `touched` field).
     this.touched[toIdx] = this.frame + 1
     this.markDirty(fromTx, fromTy)
     this.markDirty(toTx, toTy)
@@ -598,9 +595,8 @@ export class MatterSim {
 
     tiles[targetIdx] = selfRaw
     tiles[idx] = displacedAs !== undefined ? displacedAs : lighter
-    // idx's matter now lives at targetIdx and already had its update this
-    // tick — targetIdx held a live `lighter` tile pre-swap, which could be
-    // independently active and scheduled in a later round this same tick.
+    // idx's matter now lives at targetIdx — stamp it so a later round this
+    // tick doesn't re-process it (targetIdx held a live tile pre-swap).
     this.touched[targetIdx] = this.frame + 1
 
     // swap fill levels between the two tiles
@@ -618,11 +614,9 @@ export class MatterSim {
 
     const tx2 = targetIdx % width
     const ty2 = (targetIdx / width) | 0
-    // targetIdx always becomes `selfRaw`, which is always a liquid (this is only
-    // ever called from a liquid's own action) — never collidable, render-only.
-    // idx becomes `displacedAs ?? lighter`; both are liquid in the common case
-    // (e.g. water sinking into oil) — only cryo's freeze-to-CHILLED_ICE path
-    // actually creates a collidable solid there and needs the real collGen bump.
+    // targetIdx always becomes a liquid (render-only); idx becomes
+    // displacedAs ?? lighter — only cryo's freeze-to-solid path actually
+    // creates a collidable solid there and needs the real collGen bump.
     if (displacedAs !== undefined && !isLiquid(matterType(displacedAs))) {
       this.markDirty(tx, ty)
     } else {
@@ -1010,30 +1004,23 @@ export class MatterSim {
     return true
   }
 
-  // Zero liquid fill at idx and track the consumed amount for the conservation check. Safe to
-  // call on non-liquid tiles (fill is already 0, nothing tracked).
+  // Zero liquid fill at idx and track the consumed amount for the
+  // conservation check. Safe on non-liquid tiles (fill already 0).
   //
-  // Also the single choke point for releasing reserved destroy-charge (lava/acid): every code
-  // path that permanently destroys a tile's mass — destroyTile, fire/burn conversions, growth
-  // overwrites, the tryFillFlow zombie-cleanup — funnels through here, so this is the one place
-  // that needs to know about reservations rather than each of those call sites separately. The
-  // release is fill-unit denominated (reserveDestroyAmount * fill, matching how the reservation
-  // was made) so it stays exact regardless of how fill-flow fragmented the original tile across
-  // multiple physical cells — the released total is always exactly the fill actually consumed,
-  // never a fixed per-tile amount. Non-liquid reserved types (lava-drop) have no fill state and
-  // are always destroyed whole, so they use FILL_MAX as their effective fill.
+  // Also the single choke point for releasing reserved destroy-charge
+  // (lava/acid): every path that permanently destroys a tile's mass funnels
+  // through here. Release is fill-unit denominated so it stays exact
+  // regardless of how fill-flow fragmented the tile across multiple cells.
   //
-  // Capped at FILL_MAX: column compression (see FILL_COMPRESSION_FACTOR) can push a single
-  // cell's fill slightly above FILL_MAX, but the reservation was only ever made for FILL_MAX
-  // per placed tile — releasing the raw (possibly compressed) fill over-releases against the
-  // reserved pool and eventually underflows it (SimMatterTanks.releaseDestroyCharge warning).
+  // Capped at FILL_MAX: column compression can push a cell's fill slightly
+  // above FILL_MAX, but the reservation was only ever made for FILL_MAX per
+  // placed tile — releasing the raw fill would over-release and underflow
+  // the reserved pool.
   //
-  // releaseReservation=false is for mass-preserving transitions (lava → lava-drop projectile,
-  // lava sinking through steam) where this tile's contents move/repackage into a different
-  // tile or type rather than being destroyed — the reservation must stay live for whichever
-  // tile ends up holding that mass, or it gets released here while nothing was ever destroyed,
-  // then released *again* (or attempted) whenever the mass is eventually genuinely destroyed —
-  // underflowing the pool for an amount that was already spent.
+  // releaseReservation=false is for mass-preserving transitions (e.g. lava
+  // sinking through steam) where the contents move to a different tile
+  // rather than being destroyed — the reservation must stay live for
+  // whatever ends up holding that mass, or it gets released twice.
   consumeLiquidFill(idx: number, releaseReservation = true) {
     const raw = this.tiles[idx]
     const t = matterType(raw)
@@ -1100,11 +1087,9 @@ export class MatterSim {
     const t = matterType(raw)
     this.consumeLiquidFill(idx)
     this.tiles[idx] = EMPTY
-    // Only bump collGen if the destroyed tile was actually contributing to the
-    // terrain collision mesh. Shared by both solid destruction (projectiles,
-    // brush erase, acid dissolving terrain — needs the real bump) and liquid
-    // cleanup (tryFillFlow's zero-fill zombie tiles — never collidable, was
-    // firing thousands of wasted terrain-body rebuilds per session).
+    // Only bump collGen if the destroyed tile actually contributed to the
+    // collision mesh — shared by solid destruction (needs the bump) and
+    // liquid zombie-tile cleanup (never collidable, render-only).
     if (alwaysCollides(t) || (collidesWhenSettled(t) && isSettled(raw))) {
       this.markDirty(x, y)
     } else {
@@ -1190,14 +1175,10 @@ export class MatterSim {
     return moved
   }
 
-  // `dest` defaults to `this.next` (the per-round worker scratch set, drained
-  // by the coordinator into its own activeSet after each parallel round —
-  // see Coordinator.ts's workerPool.step callback). Sequential passes that
-  // run on the coordinator's own MatterSim instance *after* worker rounds
-  // (doHorizontalCascadePass) must pass their own `activeSet` explicitly:
-  // that instance's `this.next` is never drained, so wake-ups written there
-  // would silently vanish (same reasoning as doFillDisplace's explicit
-  // `reactivateAround(tx, ty, activeSet)` call above).
+  // `dest` defaults to `this.next` (drained by the coordinator each round).
+  // Sequential passes running on the coordinator's own MatterSim instance
+  // after worker rounds (doHorizontalCascadePass) must pass their own
+  // `activeSet` explicitly — that instance's `this.next` is never drained.
   private doFillTransfer(
     fromIdx: number, fromTx: number, fromTy: number,
     toIdx: number, toTx: number, toTy: number,
@@ -1269,20 +1250,15 @@ export class MatterSim {
   }
 
   // Returns how much fill the lower of two stacked cells should hold.
-  // Yields > FILL_MAX when total > FILL_MAX, creating a small compression
-  // that drives upward pressure flow (U-tube equalization).
-  // Result is always rounded to an integer to preserve exact conservation.
+  // Yields > FILL_MAX when total > FILL_MAX, driving upward pressure flow
+  // (U-tube equalization). Result always rounded to an integer to preserve
+  // exact conservation.
   //
-  // Capped at FILL_MAX + compress (~261) regardless of how large `total` gets.
-  // Previously the total >= 2*FILL_MAX+compress branch returned total/2 —
-  // unbounded in `total`, so a tall column's repeated pairwise stacking
-  // (each cell's total feeding the next cell's total below it) compounded
-  // into a runaway hydrostatic gradient instead of the "small" compression
-  // this function is documented to produce: a 50-tile column measured fill
-  // climbing linearly from 225 at the top to 389 at the bottom, all "stable"
-  // by that formula. Capping here forces any real excess above the ceiling
-  // to show up as positive `want` in the upward-pressure step and horizontal
-  // equalization instead of being silently absorbed as a new equilibrium.
+  // Capped at FILL_MAX + compress (~261) regardless of `total` — uncapped, a
+  // tall column's repeated pairwise stacking compounds into a runaway
+  // hydrostatic gradient instead of the small compression this is meant to
+  // produce. Capping forces real excess above the ceiling to show up as
+  // positive `want` in the upward-pressure step and horizontal equalization.
   private static getStableState(total: number): number {
     const compress = FILL_MAX * FILL_COMPRESSION_FACTOR
     if (total <= FILL_MAX) return FILL_MAX
@@ -1334,6 +1310,12 @@ export class MatterSim {
       downMovable = downType === EMPTY || downType === type
       if (downMovable) {
         const want = MatterSim.getStableState(mass + fill[downIdx]) - fill[downIdx]
+        if (ENABLE_LIQUID_DRAIN_DEBUG && mass > 0 && mass < 20) {
+          console.log(
+            `[LiquidDrainDebug] tryFillFlow gravity tx=${tx} ty=${ty} mass=${mass} `
+            + `fillBelow=${fill[downIdx]} want=${want}`,
+          )
+        }
         if (want > 0) {
           const flow = Math.min(want, Math.min(FILL_MAX, remaining))
           this.doFillTransfer(idx, tx, ty, downIdx, tx, ty + 1, flow, liquidRaw)
@@ -1549,22 +1531,17 @@ export class MatterSim {
     return moved
   }
 
-  // Takes the current active set, sorts it by y descending (bottommost first),
-  // and for each overfull liquid cell pushes excess upward in-place. Because
-  // we process bottom-to-top, a newly overfull cell at y-1 is already next in
-  // the sorted list, so the full column cascades in a single pass.
-  // Must be called after all worker rounds finish (no concurrent writers).
+  // Sorts the active set by y descending and pushes excess fill upward
+  // in-place — processing bottom-to-top means a newly overfull cell at y-1
+  // is already next in the sorted list, so a full column cascades in one
+  // pass. Must run after all worker rounds finish (no concurrent writers).
   doUpwardPressurePass(activeSet: TileSet): void {
     const { tiles, fill, width } = this
 
-    // Bail before the O(n log n) sort below when the active set has no
-    // liquid at all (e.g. a falling sand/rock scenario) — the loop would
-    // have `continue`d past every single entry anyway. Can't pre-filter the
-    // list itself: a cell that starts EMPTY (not liquid) can be converted to
-    // liquid mid-pass by receiving flow from below (the `upType === EMPTY`
-    // branch below), and must still be eligible to cascade further up later
-    // in this same sorted iteration — pre-filtering by isLiquid/overfull
-    // would silently drop that case and truncate multi-level cascades.
+    // Bail before the sort when nothing in activeSet is liquid. Can't
+    // pre-filter the list itself: a cell starting EMPTY can be converted to
+    // liquid mid-pass (the `upType === EMPTY` branch below) and must stay
+    // eligible to cascade further up later in this same sorted iteration.
     let hasLiquid = false
     for (const idx of activeSet) {
       if (idx >= width && isLiquid(matterType(tiles[idx]))) {
@@ -1612,35 +1589,168 @@ export class MatterSim {
     }
   }
 
-  // Runs after all worker rounds finish (like doUpwardPressurePass, no
-  // concurrent writers) — sweeps each active liquid row in one direction
-  // (alternating per tick via `leftFirst`), exchanging
-  // `floor(diff / FILL_PRESSURE_DIVISOR)` with the adjacent cell exactly
-  // like tryFillFlow's own horizontal step, but applied sequentially across
-  // a whole row in one call instead of once per tile per tick — so a
-  // disturbance can cross an entire wide pool in a single pass instead of
-  // taking O(pool width) ticks. Only ever calls doFillTransfer, so it can
-  // only move fill between two cells that are already EMPTY or the same
-  // liquid type — never a bulk rewrite of an assumed rectangle.
+  // True if (x, y) isn't resting on solid ground — its own neighbor below
+  // is empty or same-type liquid, i.e. it could still fall further on its
+  // own. Distinguishes transient, still-cascading liquid from a genuinely
+  // settled puddle sitting in a drain path (see isDrainCell/drainReachableFrom).
+  private isUnsupported(x: number, y: number, type: MatterType): boolean {
+    const { tiles, width, height } = this
+    if (y + 1 >= height) return false
+    const belowType = matterType(tiles[(y + 1) * width + x])
+    return belowType === EMPTY || belowType === type
+  }
+
+  // True if (x, ty) is a real drop — empty directly below, same-type liquid
+  // that's itself still unsupported there, or a slope-step down within a
+  // few rows. Tolerates transient liquid actively cascading through the
+  // drain path (isUnsupported) — without that allowance, a cell mid-fall
+  // for a single tick can make a strict "must be EMPTY" check see the drain
+  // as blocked, dropping curRunHasDrain (and the whole row's tracking) for
+  // good even though the blob clears moments later.
+  private isDrainCell(x: number, ty: number, type: MatterType): boolean {
+    const { tiles, width, height } = this
+    if (ty + 1 >= height) return false
+    const belowType = matterType(tiles[(ty + 1) * width + x])
+    if (belowType === EMPTY) return true
+    if (belowType === type && this.isUnsupported(x, ty + 1, type)) return true
+    for (let dy = 2; dy <= 8 && ty + dy < height; dy++) {
+      const t = matterType(tiles[(ty + dy) * width + x])
+      if (t === EMPTY) return true
+      if (t === type && this.isUnsupported(x, ty + dy, type)) return true
+    }
+    return false
+  }
+
+  // True if walking from (startX, ty) through a contiguous run of empty or
+  // same-type-liquid ground reaches a real drain (isDrainCell) before
+  // hitting something blocking. Checked fresh from the specific gap a cell
+  // is about to flow into, not once per row (a row-wide flag can bridge two
+  // disconnected puddles — see computeRunHasDrain).
   //
-  // Scan range per row is bounded to the row's contiguous liquid extent
-  // (walking outward from the active members' min/max tx while the
-  // neighbor is any liquid type, stopping at the first non-liquid cell),
-  // NOT the whole map width. An earlier version of this same cascade
-  // scanned the full map width for every active row and was measured 3x+
-  // slower to equalize the U-tube (24% arm imbalance still remaining after
-  // 45s, vs <0.1% at 15s for the whole-span rewrite above) — that slowdown
-  // was the scan cost, not a property of the pairwise-exchange algorithm
-  // itself; bounding it to the real liquid extent removes the cost without
-  // changing the exchange math, which is what the reference algorithm
-  // does implicitly by scanning its whole (small) grid.
+  // Tolerates same-type liquid only up to DRAIN_WALK_DEBRIS_MAX_FILL — a
+  // stray grounded droplet shouldn't block the walk, but tolerating ANY
+  // amount let one cell's real dump inflate the next cell's fill past
+  // FILL_MAX mid-sweep with no cap, netting to zero real progress once the
+  // sweep direction alternated the next tick.
+  private drainReachableFrom(startX: number, ty: number, dir: number, type: MatterType): boolean {
+    const { tiles, fill, width } = this
+    let x = startX
+    while (x >= 0 && x < width) {
+      const idx = ty * width + x
+      const t = matterType(tiles[idx])
+      if (t !== EMPTY && !(t === type && fill[idx] <= MatterSim.DRAIN_WALK_DEBRIS_MAX_FILL)) return false
+      if (this.isDrainCell(x, ty, type)) return true
+      x += dir
+    }
+    return false
+  }
+
+  // Debris-scale fill threshold for drainReachableFrom's same-type walk
+  // tolerance — see that method's own comment. Small enough that it can
+  // only ever be a leftover straggler, not a meaningful body of water still
+  // actively part of the run.
+  private static readonly DRAIN_WALK_DEBRIS_MAX_FILL = 24
+
+  // True per-direction whether a real drain is reachable off either end of
+  // the contiguous liquid run (runStartTx, ty) belongs to — walked fresh
+  // here against the actual run, not the activeSet-derived scan range
+  // (which can bridge two disconnected puddles in the same row and let an
+  // enclosed pocket "see" a different puddle's drain). Cached by the caller
+  // once per run, not per cell.
+  //
+  // Returns {pos, neg} rather than one boolean: a run open on both sides
+  // needs both checked independently. Collapsing to one boolean and always
+  // shedding toward whichever direction `dir` currently points seems
+  // harmless, but `dir` flips every tick — once the run's profile goes
+  // flat, that shed becomes a symmetric conveyor that cancels to zero net
+  // progress.
+  private computeRunHasDrain(runStartTx: number, ty: number, dir: number, type: MatterType): { pos: boolean, neg: boolean } {
+    const { tiles, width } = this
+    const rowIdx = ty * width
+    let x = runStartTx
+    while (x + dir >= 0 && x + dir < width && isLiquid(matterType(tiles[rowIdx + x + dir]))) x += dir
+    const farOutX = x + dir
+    const farOk = farOutX >= 0 && farOutX < width && matterType(tiles[rowIdx + farOutX]) === EMPTY
+    const farDrains = farOk && this.drainReachableFrom(farOutX, ty, dir, type)
+    const nearOutX = runStartTx - dir
+    const nearOk = nearOutX >= 0 && nearOutX < width && matterType(tiles[rowIdx + nearOutX]) === EMPTY
+    const nearDrains = nearOk && this.drainReachableFrom(nearOutX, ty, -dir, type)
+    // far is in the `dir` direction, near is the opposite — translate to
+    // absolute increasing-x/decreasing-x regardless of dir's current sign.
+    return dir === 1
+      ? { pos: farDrains, neg: nearDrains }
+      : { pos: nearDrains, neg: farDrains }
+  }
+
+  // True if the column below (tx, ty) has genuinely bottomed out: walking
+  // down, every cell is same-type liquid until a real wall (success) or an
+  // actual EMPTY gap/different liquid (fail). Deliberately does NOT require
+  // every row to be exactly FILL_MAX — a large settled pool can have minor
+  // per-row variance from normal equalization without being "still
+  // falling"; a real gap (not just imperfect saturation) is what
+  // distinguishes the two. Bounded by `height`, not a smaller cap, since a
+  // shallow cap made this never fire for a real deep pool.
+  private isColumnGrounded(tx: number, ty: number, type: MatterType): boolean {
+    const { tiles, width, height } = this
+    for (let y = ty + 1; y < height; y++) {
+      const cType = matterType(tiles[y * width + tx])
+      if (cType === type) continue
+      if (cType === EMPTY) return false
+      return !isLiquid(cType)
+    }
+    return true
+  }
+
+  // True if `type` prefers to consolidate into an already-fuller same-type
+  // neighbor (lava/acid) and the floor below (tx, ty) isn't immune to it —
+  // mirrors the belowType/isXImmune composition in lava.ts/acid.ts's own action().
+  private clumpsHere(type: MatterType, tx: number, ty: number): boolean {
+    if (!isClumpingLiquid(type)) return false
+    const { tiles, width, height } = this
+    const belowType = ty + 1 < height ? matterType(tiles[(ty + 1) * width + tx]) : MatterType.SOLID
+    if (isLiquid(belowType)) return true
+    if (type === MatterType.LAVA) return !isLavaImmune(belowType)
+    if (type === MatterType.ACID) return !isAcidImmune(belowType)
+    return true
+  }
+
+  // Runs after all worker rounds finish (no concurrent writers) — sweeps
+  // each active liquid row in one direction (alternating per tick via
+  // leftFirst), exchanging floor(diff / FILL_PRESSURE_DIVISOR) with the
+  // adjacent cell like tryFillFlow's own horizontal step, but applied
+  // sequentially across a whole row in one call — so a disturbance can
+  // cross an entire wide pool in a single pass instead of O(pool width) ticks.
+  //
+  // Scan range per row is bounded to the row's contiguous liquid extent, not
+  // the whole map width — an earlier full-width scan was measured 3x+
+  // slower to equalize the U-tube; the scan cost, not the exchange math,
+  // was the slowdown.
+  //
+  // Same-type neighbor decision order: (1) clumping liquid (lava/acid) not
+  // on an immune floor — top off the neighbor toward FILL_MAX; (2) the run
+  // has a reachable drain, this cell can't fall any further, and it's at
+  // least as full as the neighbor — shed a fraction of THIS cell's own
+  // remaining fill every tick regardless of the neighbor's level; (3)
+  // otherwise, the original diff-gated diffusion + FILL_FLOW_DEADBAND.
+  //
+  // (2) is deliberately not diff-based: a wide, already-leveled surface has
+  // ~0 diff between interior same-type pairs, so a diff-gated rule never
+  // fires there and the drain crawls forward one cell per tick. Shedding a
+  // fraction of the cell's own fill needs no diff to exist.
+  //
+  // (2) gates on "can't fall any further" (downMovable false, or resting on
+  // a genuinely grounded same-type column) rather than the SETTLED flag —
+  // SETTLED was tried first and rejected: firing this rule changes fill,
+  // which un-settles the tile, which lets tryFillFlow's own diffusion find
+  // a tiny diff next tick and keep it from ever re-settling — a
+  // self-defeating loop.
   doHorizontalCascadePass(activeSet: TileSet): void {
     const { tiles, fill, width, height } = this
 
     const rowMinX = new Map<number, number>()
     const rowMaxX = new Map<number, number>()
-    for (const idx of activeSet) {
-      if (!isLiquid(matterType(tiles[idx]))) continue
+    const noteRow = (idx: number) => {
+      if (!isLiquid(matterType(tiles[idx]))) return
       const ty = (idx / width) | 0
       const tx = idx % width
       const curMin = rowMinX.get(ty)
@@ -1652,9 +1762,34 @@ export class MatterSim {
         if (tx > rowMaxX.get(ty)!) rowMaxX.set(ty, tx)
       }
     }
+    for (const idx of activeSet) noteRow(idx)
+    // See drainWatchRows's own comment: a row may have zero activeSet
+    // members this tick yet still have real undrained fill. A stored seed
+    // can also itself die between ticks (drained to 0 via ordinary
+    // diffusion) — if every seed for a row dies this way, the row gets zero
+    // entries in rowMinX/rowMaxX and the per-row loop below never runs for
+    // it again, permanently deadlocking that row's grace countdown. A
+    // bounded full-row rescan — only when a row's seeds are entirely dead —
+    // finds a live replacement if the run still exists, or drops the row
+    // for good otherwise.
+    for (const [ty, seeds] of this.drainWatchRows) {
+      for (const idx of seeds) noteRow(idx)
+      if (rowMinX.has(ty)) continue
+      const rowStart = ty * width
+      let replacement = -1
+      for (let x = 0; x < width; x++) {
+        if (isLiquid(matterType(tiles[rowStart + x]))) { replacement = rowStart + x; break }
+      }
+      if (replacement !== -1) noteRow(replacement)
+      else this.drainWatchRows.delete(ty)
+    }
     if (rowMinX.size === 0) return
 
     const dir = this.leftFirst ? -1 : 1
+    let _debugLiquidCellsSeen = 0
+    let _debugDrainEligibleCells = 0
+    let _debugCanDrainShedCells = 0
+    let _debugSampleLogsLeft = ENABLE_LIQUID_DRAIN_DEBUG ? 5 : 0
 
     for (const [ty, minX] of rowMinX) {
       const rowStart = ty * width
@@ -1665,13 +1800,40 @@ export class MatterSim {
       let xRight = maxX
       while (xRight < width - 1 && isLiquid(matterType(tiles[rowStart + xRight + 1]))) xRight++
 
+      // Drain reachability is checked per-run (computeRunHasDrain, cached
+      // in curRunHasDrain as the sweep crosses run boundaries below) — NOT
+      // once for this whole [xLeft, xRight] scan range, which can bridge
+      // two disconnected puddles in the same row (see computeRunHasDrain's
+      // own comment for the bug that causes).
+
       const start = dir === 1 ? xLeft : xRight
       const end = dir === 1 ? xRight + 1 : xLeft - 1
+      let inRun = false
+      let curRunHasDrain = false
+      let curRunDrainPos = false
+      let curRunDrainNeg = false
+      // One seed per run, not per row: a row can hold several disconnected
+      // drain-eligible runs, and a single row-wide seed lets whichever run
+      // is processed last starve the others out of tracking. The seed slot
+      // is kept refreshed to the last live cell seen in the run each tick —
+      // a fixed first-touch seed can itself later drain to exactly 0 and
+      // get swept up as a zombie tile elsewhere, silently dropping out of
+      // noteRow even though the rest of the run is still alive.
+      let curRunSeedIdx = -1
+      const rowDrainSeeds: number[] = []
       for (let tx = start; tx !== end; tx += dir) {
         const idx = rowStart + tx
         const raw = tiles[idx]
         const type = matterType(raw)
-        if (!isLiquid(type)) continue
+        if (!isLiquid(type)) { inRun = false; continue }
+        if (!inRun) {
+          const drainDirs = this.computeRunHasDrain(tx, ty, dir, type)
+          curRunDrainPos = drainDirs.pos
+          curRunDrainNeg = drainDirs.neg
+          curRunHasDrain = curRunDrainPos || curRunDrainNeg
+          inRun = true
+          curRunSeedIdx = -1
+        }
         let remaining = fill[idx]
         if (remaining <= 0) continue
 
@@ -1681,15 +1843,80 @@ export class MatterSim {
         if (downMovable && fill[downIdx] < FILL_MAX * FILL_SETTLED_FACTOR) continue
 
         const liquidRaw = setSettled(raw, false)
+        const clumps = this.clumpsHere(type, tx, ty)
+        // A cell resting on an already-saturated, genuinely-grounded
+        // same-type column has just as little room to move down as one on
+        // a real wall — gravity's own `want` is already ~0 there. Treating
+        // downMovable alone as "defer to gravity" breaks once the column
+        // below is full: the cell can't fall AND doesn't qualify for the
+        // shed rule, so it sits forever. isColumnGrounded (not a raw
+        // fill[downIdx]>=FILL_MAX check) is required — a still-falling mass
+        // can have many cells momentarily at FILL_MAX mid-fall, which a
+        // single-tile check can't tell apart from a real bottomed-out stack
+        // (regressed bench:sim ~19->11fps when tried).
+        //
+        // Both guards (curRunHasDrain, remaining < FILL_SETTLED_FACTOR *
+        // FILL_MAX) must gate isColumnGrounded before it's paid for — it's
+        // a real per-cell walk, and computing it too liberally reintroduced
+        // the same falling-mass regression.
+        const canDrainShed = curRunHasDrain
+          && (!downMovable || (
+            downType === type
+            && remaining < FILL_MAX * FILL_SETTLED_FACTOR
+            && this.isColumnGrounded(tx, ty, type)
+          ))
+        // Per-direction split of canDrainShed against the specific
+        // direction 'a'/'b' points this tick — must track the confirmed
+        // absolute drain direction rather than reusing canDrainShed for
+        // whichever neighbor `dir` currently makes "a" vs "b", or a run
+        // could shed toward a direction with no confirmed drain just
+        // because `dir` pointed there, creating a side-to-side conveyor
+        // that cancels out across dir's alternation.
+        const aIsPos = dir === 1
+        const canDrainShedA = canDrainShed && (aIsPos ? curRunDrainPos : curRunDrainNeg)
+        const canDrainShedB = canDrainShed && (aIsPos ? curRunDrainNeg : curRunDrainPos)
+
+        if (ENABLE_LIQUID_DRAIN_DEBUG) {
+          _debugLiquidCellsSeen++
+          if (curRunHasDrain) _debugDrainEligibleCells++
+          if (canDrainShed) _debugCanDrainShedCells++
+          if (curRunHasDrain && !canDrainShed && _debugSampleLogsLeft > 0) {
+            _debugSampleLogsLeft--
+            console.log(
+              `[LiquidDrainDebug] sample tx=${tx} ty=${ty} remaining=${remaining} `
+              + `downType=${downType === -1 ? 'edge' : MatterType[downType]} `
+              + `fillBelow=${downIdx === -1 ? 'n/a' : fill[downIdx]} downMovable=${downMovable}`,
+            )
+          }
+        }
 
         const ax = tx + dir
         if (ax >= 0 && ax < width) {
           const aIdx = idx + dir
           const aType = matterType(tiles[aIdx])
           if (aType === type || aType === EMPTY) {
-            const flow = Math.floor((remaining - fill[aIdx]) / FILL_PRESSURE_DIVISOR)
-            if (flow >= FILL_FLOW_DEADBAND) {
-              const f = Math.min(flow, remaining)
+            let f = 0
+            const aEmptyDrain = aType === EMPTY && this.drainReachableFrom(ax, ty, dir, type)
+            if (aEmptyDrain) {
+              f = remaining
+            } else if (aType === type && clumps) {
+              f = Math.min(Math.max(0, FILL_MAX - fill[aIdx]), remaining)
+            } else if (canDrainShedA) {
+              // No `remaining >= fill[aIdx]` gate (unlike the diffusion
+              // fallback below) — that gate exists to make a contained pool
+              // settle flat and stop, which is wrong for a run already
+              // confirmed to be headed for a real exit. Capped by the
+              // neighbor's own headroom instead, so this can't overfill it.
+              f = Math.min(
+                remaining,
+                Math.max(0, FILL_MAX - fill[aIdx]),
+                Math.max(1, Math.floor(remaining / FILL_PRESSURE_DIVISOR)),
+              )
+            } else {
+              const flow = Math.floor((remaining - fill[aIdx]) / FILL_PRESSURE_DIVISOR)
+              if (flow >= FILL_FLOW_DEADBAND) f = Math.min(flow, remaining)
+            }
+            if (f > 0) {
               this.doFillTransfer(idx, tx, ty, aIdx, ax, ty, f, liquidRaw, activeSet)
               remaining -= f
             }
@@ -1702,14 +1929,110 @@ export class MatterSim {
           const bIdx = idx - dir
           const bType = matterType(tiles[bIdx])
           if (bType === type || bType === EMPTY) {
-            const flow = Math.floor((remaining - fill[bIdx]) / FILL_PRESSURE_DIVISOR)
-            if (flow >= FILL_FLOW_DEADBAND) {
-              const f = Math.min(flow, remaining)
+            let f = 0
+            if (bType === EMPTY && this.drainReachableFrom(bx, ty, -dir, type)) {
+              f = remaining
+            } else if (bType === type && clumps) {
+              f = Math.min(Math.max(0, FILL_MAX - fill[bIdx]), remaining)
+            } else if (canDrainShedB) {
+              // See the mirrored 'a' branch above.
+              f = Math.min(
+                remaining,
+                Math.max(0, FILL_MAX - fill[bIdx]),
+                Math.max(1, Math.floor(remaining / FILL_PRESSURE_DIVISOR)),
+              )
+            } else {
+              const flow = Math.floor((remaining - fill[bIdx]) / FILL_PRESSURE_DIVISOR)
+              if (flow >= FILL_FLOW_DEADBAND) f = Math.min(flow, remaining)
+            }
+            if (f > 0) {
               this.doFillTransfer(idx, tx, ty, bIdx, bx, ty, f, liquidRaw, activeSet)
             }
           }
         }
+
+        // Coordinator.ts double-buffers activeSet every tick (clear, then
+        // repopulate only from r.next / explicit re-adds) — a cell that
+        // settles (tryFillFlow's moved=false path, e.g. WATER_SETTLED in
+        // water.ts) is NOT re-added by that path, so once every cell in a
+        // row has independently settled with nothing left to reactivate
+        // them, the whole row silently stops appearing in activeSet and
+        // this pass never looks at it again — permanently, regardless of
+        // what formula runs above. Explicitly keep every cell in a
+        // drain-eligible run alive in activeSet as long as it still holds
+        // any fill, so the run keeps getting re-examined tick after tick
+        // until it's actually drained to zero, instead of quietly going
+        // invisible while still partially full. Contained runs (no drain)
+        // are deliberately not kept alive here — they're allowed to settle
+        // and drop out normally once level.
+        //
+        // activeSet alone isn't enough: it's rebuilt from scratch each tick
+        // (see Coordinator.ts's swap-then-clear), so this add only survives
+        // to the *next* tick if this pass gets to run again — which requires
+        // some cell of the row to already be in activeSet at the *start* of
+        // that tick. If every cell of a run settles in the same parallel
+        // round before this pass ever sees any of them, activeSet.add here
+        // never happens for any of them and the row vanishes with nothing
+        // left to rediscover it. drainWatchRows is a persistent (never
+        // swap-cleared) record this pass owns entirely, so it survives that
+        // gap and guarantees the run keeps getting found regardless of what
+        // the parallel round's activeSet churn does — one seed slot per
+        // run (curRunSeedIdx), continuously refreshed to the last live cell
+        // seen in that run rather than fixed at first-touch.
+        if (curRunHasDrain && fill[idx] > 0) {
+          activeSet.add(idx)
+          if (curRunSeedIdx === -1) {
+            curRunSeedIdx = rowDrainSeeds.length
+            rowDrainSeeds.push(idx)
+          } else {
+            rowDrainSeeds[curRunSeedIdx] = idx
+          }
+        }
       }
+
+      // Finalize drainWatchRows once per row, storing every run's seed
+      // collected above — see rowDrainSeeds' own comment for why one per
+      // run. A row that comes up empty this tick but was already tracked
+      // gets a grace period before being dropped, so a transient false
+      // reading has a chance to self-correct — previous seeds are left
+      // untouched during grace so the row keeps being rediscovered. A row
+      // seen for the first time with no seeds is a genuinely contained run,
+      // not a lapse.
+      if (rowDrainSeeds.length > 0) {
+        this.drainWatchRows.set(ty, rowDrainSeeds)
+        this.drainWatchGrace.delete(ty)
+      } else if (this.drainWatchRows.has(ty)) {
+        const graceLeft = (this.drainWatchGrace.get(ty) ?? MatterSim.DRAIN_WATCH_GRACE_TICKS) - 1
+        if (graceLeft > 0) {
+          this.drainWatchGrace.set(ty, graceLeft)
+        } else {
+          // Grace exhausted: this run had a confirmed drain for a long
+          // stretch and then stopped making progress despite still having
+          // fill. Force-drain whatever's left via destroyTile (same path
+          // used for zero-fill zombie cleanup, so conservation stays
+          // correct) rather than leave a silent permanent residual.
+          //
+          // Scans the row directly instead of trusting drainWatchRows' own
+          // stored seeds — those are only refreshed on the success path, so
+          // every tick spent in grace leaves them exactly as stale as when
+          // grace started. If that stored cell already drained to 0,
+          // destroying based on it alone does nothing while still deleting
+          // the tracking entry.
+          for (let fx = 0; fx < width; fx++) {
+            const cellIdx = rowStart + fx
+            if (isLiquid(matterType(tiles[cellIdx])) && fill[cellIdx] > 0) this.destroyTile(fx, ty, cellIdx)
+          }
+          this.drainWatchRows.delete(ty)
+          this.drainWatchGrace.delete(ty)
+        }
+      }
+    }
+
+    if (ENABLE_LIQUID_DRAIN_DEBUG && this.frame % 60 === 0) {
+      console.log(
+        `[LiquidDrainDebug] frame=${this.frame} liquidCellsSeen=${_debugLiquidCellsSeen} `
+        + `drainEligible=${_debugDrainEligibleCells} canDrainShed=${_debugCanDrainShedCells}`,
+      )
     }
   }
 }

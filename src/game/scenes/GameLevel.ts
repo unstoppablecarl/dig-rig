@@ -163,6 +163,7 @@ export abstract class GameLevel extends Scene {
     const barW = 320
     const barH = 24
 
+
     const title = this.add.text(cx, cy - 60,
       `Loading ${this.displayName}...`,
       { fontSize: '20px' })

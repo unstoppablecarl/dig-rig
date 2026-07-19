@@ -21,6 +21,7 @@ export const ACID_DEF = {
   name: 'Acid',
   liquid: true as const,
   acidImmune: true as const,
+  clumps: true as const,
   hasOwnerId: true as const,
   settles: true as const,
   reserveDestroyAmount: 2,

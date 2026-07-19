@@ -56,6 +56,10 @@ export type LiquidTypes = {
   [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { liquid: true } ? K : never
 }[keyof MatterMetaRegistry]
 
+export type HasOwnerIdTypes = {
+  [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { hasOwnerId: true } ? K : never
+}[keyof MatterMetaRegistry]
+
 const IMMUTABLE_SUPPORT_TYPES = new Uint32Array(256)
 
 // IMMUTABLE_SUPPORT_TYPES[type] is SupportType.NONE (0, the array's default) for any type that
@@ -100,6 +104,7 @@ const enum Flag {
   IMMUTABLE_SUPPORT_TYPE = 1 << 8,
   NO_CREATE_PROJECTILE_COLLISION = 1 << 9,
   NO_DESTROY_PROJECTILE_COLLISION = 1 << 10,
+  CLUMPS = 1 << 11,
 }
 
 export const INDESTRUCTIBLE_TYPES = new MatterTypeSet(PERMANENT, PHYSICS_BODY)
@@ -113,6 +118,7 @@ export const collidesWhenSettled = (type: MatterType) => (MATTER_FLAGS[type] & F
 export const isLiquid = (type: MatterType) => (MATTER_FLAGS[type] & Flag.LIQUID) !== 0
 export const isActivatable = (type: MatterType) => (MATTER_FLAGS[type] & (Flag.ALWAYS_ACTIVE | Flag.SETTLES)) !== 0
 export const canHaveOwner = (type: MatterType) => (MATTER_FLAGS[type] & Flag.HAS_OWNER_ID) !== 0
+export const isClumpingLiquid = (type: MatterType) => (MATTER_FLAGS[type] & Flag.CLUMPS) !== 0
 export const alwaysCollides = (type: MatterType) => (MATTER_FLAGS[type] & Flag.ALWAYS_COLLIDES) !== 0
 export const isSupportTypeImmutable = (type: MatterType) => (MATTER_FLAGS[type] & Flag.IMMUTABLE_SUPPORT_TYPE) !== 0
 export const collidesWithCreateProjectiles = (type: MatterType) => (MATTER_FLAGS[type] & Flag.NO_CREATE_PROJECTILE_COLLISION) === 0
@@ -144,6 +150,7 @@ function registerMatterType(
     immutableSupport,
     lavaImmune = false,
     acidImmune = false,
+    clumps = false,
     collidesWhenSettled = false,
     liquid = false,
     hasOwnerId = false,
@@ -167,6 +174,7 @@ function registerMatterType(
 
   if (lavaImmune) MATTER_FLAGS[id] |= Flag.LAVA_IMMUNE
   if (acidImmune) MATTER_FLAGS[id] |= Flag.ACID_IMMUNE
+  if (clumps) MATTER_FLAGS[id] |= Flag.CLUMPS
   if (settles) MATTER_FLAGS[id] |= Flag.SETTLES
   if (alwaysActive) MATTER_FLAGS[id] |= Flag.ALWAYS_ACTIVE
   if (liquid) MATTER_FLAGS[id] |= Flag.LIQUID

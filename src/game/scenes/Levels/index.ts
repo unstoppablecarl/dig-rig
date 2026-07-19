@@ -34,4 +34,8 @@ export const LEVELS = {
     displayName: 'Bench: Sand Fall',
     load: () => import('./BenchLevelSand'),
   },
+  TEST_WATER: {
+    displayName: 'Test: Water Drain',
+    load: () => import('././WaterLevelDrain.ts'),
+  },
 } as const satisfies Record<string, LevelEntry>

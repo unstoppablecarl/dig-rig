@@ -31,6 +31,7 @@ export const LAVA_DEF = {
   id: LAVA,
   name: 'Lava',
   lavaImmune: true as const,
+  clumps: true as const,
   liquid: true as const,
   hasOwnerId: true as const,
   settles: true as const,

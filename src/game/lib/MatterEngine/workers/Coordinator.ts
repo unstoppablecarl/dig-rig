@@ -241,7 +241,8 @@ export class Coordinator {
         !this.brush.hasWork() &&
         !this.tunnelWeapon.hasWork() &&
         !this.projectileProcessor.hasWork() &&
-        this.particleSim.pool.isEmpty
+        this.particleSim.pool.isEmpty &&
+        !this.sim.hasDrainWatchWork
       ) {
         return
       }

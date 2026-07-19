@@ -220,6 +220,10 @@ export type MatterDef = {
   immutableSupport?: SupportType.ANCHORED | SupportType.STRUCTURAL | SupportType.AFFIXED
   lavaImmune?: boolean
   acidImmune?: boolean
+  // whether this liquid prefers to consolidate into an already-full same-type
+  // neighbor (top it off toward FILL_MAX) instead of even nearest-neighbor
+  // diffusion — lava/acid only; water-like liquids look fine spreading evenly.
+  clumps?: boolean
   liquid?: boolean
   settles?: boolean,
   alwaysActive?: boolean,

@@ -32,7 +32,7 @@ const LEVEL_ID = strArg('level', 'BENCH')
 // Defaults to the same port as `pnpm dev` — override with --port when that's
 // already occupied by an actual manual dev session, so this doesn't have to
 // fight over (or kill) someone's live browser tab.
-const DEV_PORT = arg('port', 8081)
+const DEV_PORT = arg('port', 8083)
 const DEV_URL = `http://localhost:${DEV_PORT}`
 
 // Extra settle-in time after the step loop starts advancing, before timing
