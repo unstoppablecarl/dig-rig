@@ -26,6 +26,7 @@ export class InstantWeapon extends WeaponRapidFireInput implements Weapon {
     })
 
     this.renderer = new ProjectileRenderer(scene, null, () => scene.instantWeaponUIState.fireModeColor.color, charge)
+    this.renderer.setVisible(false)
 
     const a = this.scene.playerActions
     this.binder.addInput(() => [

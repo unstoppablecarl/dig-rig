@@ -17,6 +17,7 @@ export class TunnelWeapon extends WeaponConstantInput implements Weapon {
     this.destroyRenderer = new ProjectileRenderer(scene)
     this.destroyRenderer.setColor(DESTROY_COLOR.color)
     this.destroyRenderer.setRadius(DESTROY_RADIUS)
+    this.destroyRenderer.setVisible(false)
   }
 
   getCharge(): number {
