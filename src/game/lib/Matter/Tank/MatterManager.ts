@@ -30,6 +30,28 @@ export class MatterManager extends SceneBound<GameLevel> {
     return this.playerMatterTank
   }
 
+  registerMatterTank(matterMax: number, matter: number = 0): MatterTankId {
+    return this.scene.io.matterTankManager.registerMatterTank(matterMax, matter)
+  }
+
+  makeRegisteredMatterTank(source: MatterTankSource, id: MatterTankId) {
+    const data = this.scene.io.matterTankManager
+
+    if (!data.isRegistered(id)) throw new Error(`matter tank: "${id}" not registered`)
+    if (this.matterTanks.has(id)) throw new Error(`matter tank: "${id}" already exists`)
+
+    const tank = new MatterTank(
+      this,
+      data,
+      source,
+      id,
+    )
+
+    this.matterTanks.set(id, tank)
+
+    return tank
+  }
+
   makeMatterTank(
     source: MatterTankSource,
     matterMax: number,

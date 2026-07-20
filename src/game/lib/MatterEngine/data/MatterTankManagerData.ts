@@ -38,6 +38,7 @@ const SCHEMA = {
   reservedDestroyInFlightFillUnits: Uint32Array,
   overflow: Uint32Array,
   matterMax: Uint32Array,
+  registered: Uint8Array
 } as const satisfies Schema
 
 type MatterTankManagerSchema = typeof SCHEMA
@@ -53,6 +54,7 @@ export class MatterTankManagerData {
   private readonly reservedDestroyInFlightFillUnits: Uint32Array
   private readonly matterMax: Uint32Array
   private readonly overflow: Uint32Array
+  private readonly registered: Uint8Array
 
   // must start at 0 = no owner, 1 = player
   protected idIncrement = 2
@@ -72,6 +74,7 @@ export class MatterTankManagerData {
     this.reservedDestroyInFlightFillUnits = views.reservedDestroyInFlightFillUnits
     this.matterMax = views.matterMax
     this.overflow = views.overflow
+    this.registered = views.registered
   }
 
   registerPlayerMatterTank(matterMax: number, matter: number = 0) {
@@ -92,6 +95,11 @@ export class MatterTankManagerData {
   private create(id: MatterTankId, matterMax: number, matter: number = 0): void {
     this.setMatter(id, matter)
     this.setMatterMax(id, matterMax)
+    this.registered[id] = 1
+  }
+
+  isRegistered(id: MatterTankId): boolean {
+    return this.registered[id] === 1
   }
 
   getMatter(id: MatterTankId): number {
