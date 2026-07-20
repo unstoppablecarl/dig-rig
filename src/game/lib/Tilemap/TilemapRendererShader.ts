@@ -2,7 +2,8 @@ import { CHUNK_SIZE } from '../../config.ts'
 import { BlendMode } from '../../config/blend-modes.ts'
 import type { MatterRenderConfig } from '../../config/colors.ts'
 import {
-  ACID, BURNING_FUEL,
+  ACID,
+  BURNING_FUEL,
   BURNING_THERMITE,
   C4,
   CHILLED_ICE,
@@ -16,7 +17,7 @@ import {
   GUNPOWDER,
   ICE,
   LAVA,
-  LAVA_DROP,
+  LAVA_DROP, MatterTypeValues,
   METHANE,
   NAPALM,
   NITRO,
@@ -34,6 +35,8 @@ import {
   WATER,
   WAX,
 } from '../Matter/_Matter.types.ts'
+import { MatterTypeSet } from '../Matter/data/MatterTypeSet.ts'
+import { isLiquid } from '../Matter/matter.ts'
 import type { TilemapRendererConfig } from './TilemapRendererConfig.ts'
 import Color = Phaser.Display.Color
 
@@ -81,6 +84,8 @@ export function makeTilemapFragShader(
   const m = matterConfig
   const GR = c.glowRadius
   const GR1 = c.glowRadius + 1  // intensity numerator at d=1
+
+  const LIQUID_TYPES = new MatterTypeSet(...MatterTypeValues.filter(v => isLiquid(v)))
 
   // language=GLSL
   return `#version 300 es
@@ -143,9 +148,9 @@ export function makeTilemapFragShader(
       vec2 f = fract(p);
       vec2 u = f * f * (3.0 - 2.0 * f);
       return mix(
-      mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
-      mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
-      u.y
+              mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
+              mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+              u.y
       );
   }
 
@@ -155,9 +160,9 @@ export function makeTilemapFragShader(
 
   vec3 blendOverlay(vec3 base, vec3 blend, float ratio) {
       vec3 blended = vec3(
-      blendOverlay(base.r, blend.r),
-      blendOverlay(base.g, blend.g),
-      blendOverlay(base.b, blend.b)
+              blendOverlay(base.r, blend.r),
+              blendOverlay(base.g, blend.g),
+              blendOverlay(base.b, blend.b)
       );
       return mix(base.rgb, blended, ratio);
   }
@@ -224,6 +229,12 @@ export function makeTilemapFragShader(
       return col;
   }
 
+  bool isLiquid(int value) {
+      const uint mask[8] = uint[8](${LIQUID_TYPES.toWebGL()});
+
+      return (mask[value >> 5u] & (1u << (uint(value) & 31u))) != 0u;
+  }
+
   void main() {
       // Normalise time to seconds in a small range to avoid mediump precision loss
       float t = mod(uTime * 0.001, 100.0);
@@ -237,12 +248,12 @@ export function makeTilemapFragShader(
       // uMask R = MatterType (0–255), G = SETTLED (0 or 255), B = ANCHORED (0 or 255), A = per-type data.
       uvec4 mask = texelFetch(uMask, tileCoord, 0);
       int tileType = int(mask.r);
-      bool settled  = mask.g != 0u;
+      bool settled = mask.g != 0u;
       bool anchored = mask.b != 0u;
 
       // Glow: find the minimum Manhattan distance from this tile to the
       // nearest EMPTY or WATER neighbour within glowRadius.
-      float glow    = 0.0;
+      float glow = 0.0;
       float outline = 0.0;
       #if GLOW_ENABLED
       if (tileType != ${EMPTY} && (tileType == ${SOLID} || tileType == ${PERMANENT} || settled)) {
@@ -256,7 +267,7 @@ export function makeTilemapFragShader(
                       int nt = int(n.r);
                       bool nSettled = n.g != 0u;
                       bool nIsSolid = nt == ${SOLID} || nt == ${PERMANENT};
-                      if (nt == ${EMPTY} || nt == ${WATER} || (!nSettled && !nIsSolid)) {
+                      if (nt == ${EMPTY} || isLiquid(nt) || (!nSettled && !nIsSolid)) {
                           int d = abs(dx) + abs(dy);
                           if (d < minDist) minDist = d;
                       }
@@ -264,7 +275,7 @@ export function makeTilemapFragShader(
               }
           }
           if (minDist <= ${GR}) {
-              glow    = float(${GR1} - minDist) / float(${GR});
+              glow = float(${GR1} - minDist) / float(${GR});
               outline = minDist == 1 ? 1.0 : 0.0;
           }
       }
@@ -579,14 +590,14 @@ export function makeTilemapFragShader(
           // other
           case ${FIRE}: {
                   // mask.a encodes the age counter (0–${FIRE_INIT_AGE}); a tile never legitimately
-                  // ages down to 0 (fire.ts converts it to EMPTY once age <= 1), so 0 only means
-                  // "placed this frame, not yet aged" — treat it as the youngest state, not the oldest.
+              // ages down to 0 (fire.ts converts it to EMPTY once age <= 1), so 0 only means
+              // "placed this frame, not yet aged" — treat it as the youngest state, not the oldest.
               float rawAge = float(mask.a);
               float ageNorm = rawAge <= 0.0 ? 1.0 : clamp(rawAge / ${fl(FIRE_INIT_AGE)}, 0.0, 1.0);
 
               const vec3 youngColor = ${v3(m[FIRE].youngColor)};
-              const vec3 midColor   = ${v3(m[FIRE].midColor)};
-              const vec3 oldColor   = ${v3(m[FIRE].oldColor)};
+              const vec3 midColor = ${v3(m[FIRE].midColor)};
+              const vec3 oldColor = ${v3(m[FIRE].oldColor)};
 
               vec3 fireColor = ageNorm > 0.5
               ? mix(midColor, youngColor, (ageNorm - 0.5) * 2.0)
@@ -632,22 +643,28 @@ export function makeTilemapFragShader(
               break;
           }
           case ${EMPTY}:
-          break;
+              break;
           case ${PHYSICS_BODY}:
-          #if DRAW_PHYSICS_BODY_TILES_DEBUG
-          color = vec4(1.0, 0.0, 1.0, 1.0);
-          #endif
-          break;
+              #if DRAW_PHYSICS_BODY_TILES_DEBUG
+              color = vec4(1.0, 0.0, 1.0, 1.0);
+              #endif
+              break;
           default :
-          color = vec4(1.0, 0.0, 1.0, 1.0);
-          break;
+              color = vec4(1.0, 0.0, 1.0, 1.0);
+              break;
       }
 
       #if DEBUG_LIQUID_PRESSURE
       if (tileType == ${WATER} || tileType == ${SALT_WATER} || tileType == ${OIL} ||
-      tileType == ${LAVA} || tileType == ${NAPALM} || tileType == ${ACID}) {
-          float density = texture(uLiquidDensity, outTexCoord).r;
-          color.rgb = mix(color.rgb, spectrum(density), 1.0);
+          tileType == ${LAVA} || tileType == ${NAPALM} || tileType == ${ACID}) {
+          vec2 densityData = texture(uLiquidDensity, outTexCoord).rg;
+          // R loops every FILL_MAX (full spectrum resolution per loop); G is
+          // which loop ("band") — dim per band so a repeated hue at higher
+          // fill (compression headroom/overflow) stays distinguishable from
+          // the same hue at band 0 instead of aliasing to an identical color.
+          float band = densityData.g * 255.0;
+          float brightness = 1.0 / (1.0 + band * 0.5);
+          color.rgb = mix(color.rgb, spectrum(densityData.r) * brightness, 1.0);
       }
       #endif
 

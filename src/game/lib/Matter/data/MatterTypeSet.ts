@@ -55,10 +55,19 @@ export class MatterTypeSet {
     const lookupMask = 1 << (type & 31)
     // same as: const index = Math.floor(type / 32)
     const index = type >>> 5
+
     return (this._mask[index] & lookupMask) !== 0
   }
 
   toArray(): MatterType[] {
     return MatterTypeValues.filter(v => this.has(v))
+  }
+
+  toWebGL(): string {
+    return Array.from(this._mask)
+      .map((v): string => {
+        return `0x${v.toString(16).padStart(8, '0')}u`
+      })
+      .join(', ')
   }
 }

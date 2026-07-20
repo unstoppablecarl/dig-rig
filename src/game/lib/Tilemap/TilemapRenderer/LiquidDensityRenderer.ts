@@ -65,6 +65,18 @@ export class LiquidDensityRenderer extends SceneBound {
     gl.bindTexture(gl.TEXTURE_2D, null)
   }
 
+  // R = hue phase, looping every FILL_MAX (full spectrum resolution within
+  // each loop). G = which loop ("band") the fill is in, so the shader can
+  // dim brightness per band — same hue at band 0 vs band 1 (compression
+  // headroom/overflow) stays visually distinguishable instead of aliasing.
+  private static hueByte(fill: number): number {
+    return Math.round((fill % FILL_MAX) / FILL_MAX * 255)
+  }
+
+  private static bandByte(fill: number): number {
+    return Math.min(255, Math.floor(fill / FILL_MAX))
+  }
+
   private renderChunk(cx: number, cy: number) {
     const { tiles, fillLevels, width, height } = this.scene.tilemap
     const offX = cx * CHUNK_SIZE
@@ -80,7 +92,9 @@ export class LiquidDensityRenderer extends SceneBound {
         for (let x = 0; x < CHUNK_SIZE; x++) {
           if (!isLiquid(matterType(tiles[srcRow + x]))) continue
           const pixIdx = (flippedRow + x) * 4
-          pixels[pixIdx] = Math.min(275, Math.round(fillLevels[srcRow + x] / FILL_MAX * 255))
+          const fill = fillLevels[srcRow + x]
+          pixels[pixIdx] = LiquidDensityRenderer.hueByte(fill)
+          pixels[pixIdx + 1] = LiquidDensityRenderer.bandByte(fill)
           pixels[pixIdx + 3] = 255
         }
       }
@@ -94,7 +108,9 @@ export class LiquidDensityRenderer extends SceneBound {
           const srcIdx = tileY * width + tileX
           if (!isLiquid(matterType(tiles[srcIdx]))) continue
           const pixIdx = (flippedRow + x) * 4
-          pixels[pixIdx] = Math.min(255, Math.round(fillLevels[srcIdx] / FILL_MAX * 255))
+          const fill = fillLevels[srcIdx]
+          pixels[pixIdx] = LiquidDensityRenderer.hueByte(fill)
+          pixels[pixIdx + 1] = LiquidDensityRenderer.bandByte(fill)
           pixels[pixIdx + 3] = 255
         }
       }
