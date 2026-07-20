@@ -314,13 +314,13 @@ export class Coordinator {
       // Bottom-up upward pressure cascade — runs after all worker rounds so
       // there are no concurrent writers to tiles/fill. Cascades overfull liquid
       // columns to their full height in one pass (fixes slow U-tube equalization).
-      this.sim.doUpwardPressurePass(this.activeSet)
+      this.sim.doUpwardPressureProcessor(this.activeSet)
 
       // sweeps each active liquid row
       // in one pass so a disturbance can cross a whole wide pool in a
       // single tick instead of tryFillFlow's nearest-neighbor-only exchange
       // taking O(pool width) ticks.
-      this.sim.doHorizontalCascadePass(this.activeSet, frame)
+      this.sim.doHorizontalCascadeProcessor(this.activeSet, frame)
 
       // These two passes run on this.sim directly, not through process(), so
       // their mass-tracking counters need their own read+reset here.

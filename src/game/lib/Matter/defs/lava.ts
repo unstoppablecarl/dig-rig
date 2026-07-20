@@ -4,6 +4,7 @@ import { FILL_MAX } from '../_Liquid.constants.ts'
 import {
   EMPTY,
   FIRE,
+  getCounter,
   getOwner,
   LAVA,
   LAVA_DROP,
@@ -12,6 +13,7 @@ import {
   OIL,
   ROCK,
   SALT_WATER,
+  setCounter,
   setLavaDropVel,
   setOwner,
   setSettled,
@@ -24,6 +26,12 @@ import { isLavaImmune, isLiquid } from '../matter.ts'
 
 const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)
 const COOLED = new MatterTypeSet(WATER, SALT_WATER)
+
+// Ticks a partial-fill tile must stay isolated before it's destroyed — a
+// same-tick chain reaction can make an actively-spreading edge briefly look
+// isolated, so a fixed grace period (via the shared per-tile counter
+// bitfield) avoids destroying live, still-connected lava.
+const ISOLATED_DROPLET_GRACE_TICKS = 30
 
 export const LAVA_DROP_INITIAL_VEL = 10
 
@@ -212,14 +220,21 @@ export const LAVA_DEF = {
           (tx < width - 1 && matterType(tiles[idx + 1]) === LAVA && fill[idx + 1] > 0) ||
           (ty > 0 && matterType(tiles[idx - width]) === LAVA && fill[idx - width] > 0) ||
           (ty < height - 1 && matterType(tiles[idx + width]) === LAVA && fill[idx + width] > 0)
-        if (!hasLivingNeighbour) {
-          sim.queueMatterCreditFromTile(tx, ty, idx)
-          sim.destroyTile(tx, ty, idx)
-          sim.reactivateAround(tx, ty)
-          return
+        if (hasLivingNeighbour) {
+          if (getCounter(tiles[idx]) !== 0) sim.tiles[idx] = setCounter(tiles[idx], 0)
+        } else {
+          const isolatedTicks = getCounter(tiles[idx]) + 1
+          if (isolatedTicks >= ISOLATED_DROPLET_GRACE_TICKS) {
+            sim.queueMatterCreditFromTile(tx, ty, idx)
+            sim.destroyTile(tx, ty, idx)
+            sim.reactivateAround(tx, ty)
+            return
+          }
+          sim.tiles[idx] = setCounter(tiles[idx], isolatedTicks)
+          sim.next.add(idx)
         }
       }
-      sim.tiles[idx] = setSettled(existing, true)
+      sim.tiles[idx] = setSettled(sim.tiles[idx], true)
       sim.markRenderDirty(tx, ty)
 
       if (!sim.surroundedByAny(tx, ty, idx, IS_SETTLED)) {

@@ -1,6 +1,9 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { FIRE, getFirstOwnerId, type MatterDef, NAPALM, setOwner, setSettled } from '../_Matter.types.ts'
+import { EMPTY, FIRE, getFirstOwnerId, type MatterDef, NAPALM, setOwner, setSettled } from '../_Matter.types.ts'
+import { MatterTypeSet } from '../data/MatterTypeSet.ts'
+
+const IS_SETTLED = new MatterTypeSet(NAPALM, EMPTY)
 
 export const NAPALM_DEF = {
   id: NAPALM,
@@ -28,9 +31,17 @@ export const NAPALM_DEF = {
     }
 
     const moved = sim.tryFillFlow(tx, ty, idx)
-    if (!moved) {
-      sim.tiles[idx] = setSettled(NAPALM, true)
-      sim.markRenderDirty(tx, ty)
+    if (moved) {
+      sim.reactivateAround(tx, ty)
+      return
+    }
+
+    sim.tiles[idx] = setSettled(NAPALM, true)
+    sim.markRenderDirty(tx, ty)
+
+    // Keep re-checking until fully boxed in — see water.ts for why.
+    if (!sim.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
+      sim.next.add(idx)
     }
   },
 } satisfies MatterDef

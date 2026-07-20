@@ -1,8 +1,9 @@
-import { CRYO, isSettled, LAVA, type MatterDef, matterType, OIL, SALT, SAND, setSettled, WATER } from '../_Matter.types.ts'
+import { CRYO, EMPTY, isSettled, LAVA, type MatterDef, matterType, OIL, SALT, SAND, setSettled, WATER } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet.ts'
 
 export const WATER_SETTLED = setSettled(WATER, true)
 const WAKE_SETTLED = new MatterTypeSet(LAVA, SALT, CRYO)
+const IS_SETTLED = new MatterTypeSet(WATER, EMPTY)
 
 export const WATER_DEF = {
   id: WATER,
@@ -24,7 +25,10 @@ export const WATER_DEF = {
     }
 
     const moved = sim.tryFillFlow(tx, ty, idx)
-    if (moved) return
+    if (moved) {
+      sim.reactivateAround(tx, ty)
+      return
+    }
 
     sim.tiles[idx] = WATER_SETTLED
     sim.markRenderDirty(tx, ty)
@@ -39,6 +43,13 @@ export const WATER_DEF = {
         sim.markDirty(tx, ty - 1)
         sim.next.add(aboveIdx)
       }
+    }
+
+    // Keep re-checking until fully boxed in — otherwise a settled tile only
+    // wakes via a neighbor's reactivateAround, and a row that drops out of
+    // drainWatchRows tracking (no confirmed drain left) never calls that.
+    if (!sim.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
+      sim.next.add(idx)
     }
   },
 } satisfies MatterDef

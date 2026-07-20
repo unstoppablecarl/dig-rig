@@ -126,6 +126,11 @@ export class MatterSim {
   // doUpwardPressurePass instead of all at once. Tune by feel.
   private static readonly UPWARD_PRESSURE_RELIEF_RATE = 0.01
 
+  // Fraction of a residual-scale cell's fill shed per tick in
+  // doHorizontalCascadePass when the shed direction opposes this tick's dir
+  // (see that method's own comment). Tune by feel.
+  private static readonly RESIDUAL_SHED_RATE = 0.5
+
   // Coordinator.ts's "is there work to do this tick" early-return predates
   // drainWatchRows and doesn't know about it. activeSet can read empty on a
   // tick where a drain-eligible run still has real fill left; without this,
@@ -1553,7 +1558,7 @@ export class MatterSim {
   // in-place — processing bottom-to-top means a newly overfull cell at y-1
   // is already next in the sorted list, so a full column cascades in one
   // pass. Must run after all worker rounds finish (no concurrent writers).
-  doUpwardPressurePass(activeSet: TileSet): void {
+  doUpwardPressureProcessor(activeSet: TileSet): void {
     const { tiles, fill, width } = this
 
     // Bail before the sort when nothing in activeSet is liquid. Can't
@@ -1690,7 +1695,10 @@ export class MatterSim {
   // harmless, but `dir` flips every tick — once the run's profile goes
   // flat, that shed becomes a symmetric conveyor that cancels to zero net
   // progress.
-  private computeRunHasDrain(runStartTx: number, ty: number, dir: number, type: MatterType): { pos: boolean, neg: boolean } {
+  private computeRunHasDrain(runStartTx: number, ty: number, dir: number, type: MatterType): {
+    pos: boolean,
+    neg: boolean
+  } {
     const { tiles, width } = this
     const rowIdx = ty * width
     let x = runStartTx
@@ -1790,7 +1798,7 @@ export class MatterSim {
   // which un-settles the tile, which lets tryFillFlow's own diffusion find
   // a tiny diff next tick and keep it from ever re-settling — a
   // self-defeating loop.
-  doHorizontalCascadePass(activeSet: TileSet, debugFrame = 0): void {
+  doHorizontalCascadeProcessor(activeSet: TileSet, debugFrame = 0): void {
     const { tiles, fill, width, height } = this
 
     const rowMinX = new Map<number, number>()
@@ -1867,7 +1875,10 @@ export class MatterSim {
         const idx = rowStart + tx
         const raw = tiles[idx]
         const type = matterType(raw)
-        if (!isLiquid(type)) { inRun = false; continue }
+        if (!isLiquid(type)) {
+          inRun = false
+          continue
+        }
         // A contiguous liquid streak can change MatterType with no gap
         // (e.g. OIL sitting directly against WATER) — that's a new run for
         // drain-eligibility purposes even though `inRun` never went false,
@@ -1954,34 +1965,69 @@ export class MatterSim {
           }
         }
 
-        // Residual-scale full-shed priority is fixed (always positive-x
-        // first), not tied to dir like ax/bx below — dir flips every tick,
-        // so two adjacent residual cells with a bidirectional drain would
-        // otherwise become each other's full-dump target in turn and
-        // oscillate forever instead of draining.
+        // Residual-scale shed prefers whichever direction matches this tick's
+        // dir: that shed chains into a same-tick multi-hop cascade (each
+        // downstream cell gets its own turn later in this sweep), while a
+        // shed against dir is a lone hop whose target already had its turn,
+        // so it just sits until dir flips back. Only ONE direction is used
+        // per cell per tick — trying the opposing direction too whenever the
+        // preferred one had leftover (rather than only when unavailable)
+        // made a bidirectional residual run slosh back and forth as the
+        // privileged direction flipped with dir every tick.
+        //
+        // A same-type target must have strictly less fill than remaining —
+        // "has headroom below FILL_MAX" alone let mass shove into a neighbor
+        // that was no lower, which never converges and churns forever.
         if (canDrainShed && remaining <= MatterSim.DRAIN_WALK_DEBRIS_MAX_FILL) {
-          if (curRunDrainPos && tx + 1 < width) {
-            const posIdx = idx + 1
-            const posType = matterType(tiles[posIdx])
-            const posOk = posType === type || (posType === EMPTY && this.drainReachableFrom(tx + 1, ty, 1, type))
-            if (posOk) {
-              const f = Math.min(remaining, Math.max(0, FILL_MAX - fill[posIdx]))
-              if (f > 0) {
-                this.doFillTransfer(idx, tx, ty, posIdx, tx + 1, ty, f, liquidRaw, activeSet)
-                remaining -= f
-              }
+          const posIdx = idx + 1
+          const posInBounds = tx + 1 < width
+          const posType = posInBounds ? matterType(tiles[posIdx]) : EMPTY
+          const posValid = curRunDrainPos && posInBounds
+            && (
+              (posType === type && fill[posIdx] < remaining)
+              || (posType === EMPTY && this.drainReachableFrom(tx + 1, ty, 1, type))
+            )
+
+          const negIdx = idx - 1
+          const negInBounds = tx - 1 >= 0
+          const negType = negInBounds ? matterType(tiles[negIdx]) : EMPTY
+          const negValid = curRunDrainNeg && negInBounds
+            && (
+              (negType === type && fill[negIdx] < remaining)
+              || (negType === EMPTY && this.drainReachableFrom(tx - 1, ty, -1, type))
+            )
+
+          // A tile with no same-type neighbor in either direction has
+          // nothing to cascade through, so aligning with dir buys no speed —
+          // it would just teleport into empty space one way, then back the
+          // other way next tick as dir flips. Use a stable preference
+          // instead for that case; a tile that's part of a larger run still
+          // aligns with dir for the same-tick cascade.
+          const isolated = posType !== type && negType !== type
+          const preferPos = isolated || dir === 1
+          const preferredValid = preferPos ? posValid : negValid
+          const fallbackValid = preferPos ? negValid : posValid
+
+          if (preferredValid) {
+            const toIdx = preferPos ? posIdx : negIdx
+            const toTx = preferPos ? tx + 1 : tx - 1
+            const f = Math.min(remaining, Math.max(0, FILL_MAX - fill[toIdx]))
+            if (f > 0) {
+              this.doFillTransfer(idx, tx, ty, toIdx, toTx, ty, f, liquidRaw, activeSet)
+              remaining -= f
             }
-          }
-          if (remaining > 0 && curRunDrainNeg && tx - 1 >= 0) {
-            const negIdx = idx - 1
-            const negType = matterType(tiles[negIdx])
-            const negOk = negType === type || (negType === EMPTY && this.drainReachableFrom(tx - 1, ty, -1, type))
-            if (negOk) {
-              const f = Math.min(remaining, Math.max(0, FILL_MAX - fill[negIdx]))
-              if (f > 0) {
-                this.doFillTransfer(idx, tx, ty, negIdx, tx - 1, ty, f, liquidRaw, activeSet)
-                remaining -= f
-              }
+          } else if (fallbackValid) {
+            const toIdx = preferPos ? negIdx : posIdx
+            const toTx = preferPos ? tx - 1 : tx + 1
+            // Isolated tiles have no same-tick cascade to lose either way,
+            // so the fallback direction gets a full dump too — only a tile
+            // that's part of a larger run needs the throttle, to avoid
+            // fighting the opposing sweep's own cascade.
+            const shedCap = isolated ? remaining : Math.max(1, Math.round(remaining * MatterSim.RESIDUAL_SHED_RATE))
+            const f = Math.min(remaining, Math.max(0, FILL_MAX - fill[toIdx]), shedCap)
+            if (f > 0) {
+              this.doFillTransfer(idx, tx, ty, toIdx, toTx, ty, f, liquidRaw, activeSet)
+              remaining -= f
             }
           }
           if (remaining <= 0) continue
@@ -2002,11 +2048,12 @@ export class MatterSim {
               f = Math.min(Math.max(0, FILL_MAX - fill[aIdx]), remaining)
             } else if (aType === type && clumps) {
               f = Math.min(Math.max(0, FILL_MAX - fill[aIdx]), remaining)
-            } else if (canDrainShedA) {
-              // No `remaining >= fill[aIdx]` gate (unlike the diffusion
-              // fallback below) — a run confirmed headed for a real exit
-              // shouldn't stop just because the neighbor is fuller. Capped by
-              // headroom instead. Residual amounts are already handled above.
+            } else if (canDrainShedA && (aType === EMPTY || fill[aIdx] < remaining)) {
+              // Same-type target must be strictly lower, or this just swaps
+              // equal amounts back and forth forever (the exact churn the
+              // residual block's gradient check was added to prevent) —
+              // matters here since non-clumping liquids (water) reach this
+              // branch for same-type neighbors above the residual-scale cutoff.
               f = Math.min(
                 remaining,
                 Math.max(0, FILL_MAX - fill[aIdx]),
@@ -2035,7 +2082,7 @@ export class MatterSim {
               f = Math.min(Math.max(0, FILL_MAX - fill[bIdx]), remaining)
             } else if (bType === type && clumps) {
               f = Math.min(Math.max(0, FILL_MAX - fill[bIdx]), remaining)
-            } else if (canDrainShedB) {
+            } else if (canDrainShedB && (bType === EMPTY || fill[bIdx] < remaining)) {
               // See the mirrored 'a' branch above.
               f = Math.min(
                 remaining,
