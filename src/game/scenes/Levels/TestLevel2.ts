@@ -1,7 +1,8 @@
 import type { PartialMatterRenderConfig } from '../../config/colors.ts'
 import { Crate } from '../../lib/Entities/defs/Crate.ts'
 import { PortableMatterTank } from '../../lib/Entities/defs/PortableMatterTank.ts'
-import { EMPTY, PERMANENT, SOLID, WATER } from '../../lib/Matter/_Matter.types.ts'
+import { ACID, EMPTY, PERMANENT, SOLID, WATER } from '../../lib/Matter/_Matter.types.ts'
+import { PLAYER_MATTER_TANK_ID } from '../../lib/Matter/Tank/_MatterTank.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { TilemapBuilder } from '../../lib/Tilemap/TilemapBuilder.ts'
 import type { TilemapRendererConfig } from '../../lib/Tilemap/TilemapRendererConfig'
@@ -80,9 +81,10 @@ export default class TestLevel2 extends GameLevel {
       thickness: 10,
       value: EMPTY,
     })
+    builder.setRect(620, ref - 200, 20, 100, ACID, PLAYER_MATTER_TANK_ID)
     builder.setBorder(2, PERMANENT)
 
-    return builder.getTilemap()
+    return builder
   }
 
   makePlayer() {

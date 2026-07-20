@@ -49,7 +49,7 @@ export default class BenchLevelSand extends GameLevel {
     )
     builder.setBorder(2, PERMANENT)
 
-    return builder.getTilemap()
+    return builder
   }
 
   makePlayer() {

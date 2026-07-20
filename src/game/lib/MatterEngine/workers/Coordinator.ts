@@ -322,6 +322,11 @@ export class Coordinator {
       // taking O(pool width) ticks.
       this.sim.doHorizontalCascadePass(this.activeSet, frame)
 
+      // These two passes run on this.sim directly, not through process(), so
+      // their mass-tracking counters need their own read+reset here.
+      const { solidNetDelta, liquidNetDelta } = this.sim.consumeNetDelta()
+      this.conservationTracker.addDelta(solidNetDelta * FILL_MAX + liquidNetDelta)
+
       if (this.structuralRemovals.length > 0) {
         const w = this.width
         const xy: { x: number, y: number }[] = []

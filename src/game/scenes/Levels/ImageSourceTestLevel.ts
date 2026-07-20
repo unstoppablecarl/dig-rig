@@ -36,7 +36,7 @@ export default class ImageSourceTestLevel extends GameLevel {
     const builder = TilemapBuilder.makeFromSolidAndPermanentPixelData(this, solidData, permanentData)
     builder.setBorder(2, PERMANENT)
 
-    return builder.getTilemap()
+    return builder
   }
 
   makePlayer() {

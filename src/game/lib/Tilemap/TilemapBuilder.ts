@@ -1,15 +1,23 @@
 import { type Color32, type PixelData, unpackAlpha } from 'pixel-data-js'
+import type { MatterTankManagerData } from '../MatterEngine/data/MatterTankManagerData.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { FILL_MAX } from '../Matter/_Liquid.constants.ts'
 import { EMPTY, MatterType, PERMANENT, setOwner, setSettled, SOLID } from '../Matter/_Matter.types.ts'
-import { type HasOwnerIdTypes, isLiquid, type NonOwnerIdTypes } from '../Matter/matter.ts'
-import type { MatterTankId } from '../Matter/Tank/_MatterTank.types.ts'
+import { getReserveDestroyAmount, type HasOwnerIdTypes, isLiquid, type NonOwnerIdTypes } from '../Matter/matter.ts'
+import { type MatterTankId, NO_MATTER_TANK_ID } from '../Matter/Tank/_MatterTank.types.ts'
 import { Tilemap } from './Tilemap.ts'
 
 export class TilemapBuilder {
   readonly width: number
   readonly height: number
   readonly tiles: Uint32Array
+
+  // Accumulated as owned matter is placed (see setTileRaw) — a tile whose
+  // type reserves destroy-charge (acid, lava, ...) always starts full, same
+  // assumption Brush.reserveDestroyCharge makes for player-painted matter at
+  // runtime, so this stays exact without needing to inspect the actual fill
+  // written per tile.
+  private readonly reservedDestroyFillUnits = new Map<MatterTankId, number>()
 
   static make(scene: GameLevel, width: number, height: number) {
     return new TilemapBuilder(new Tilemap(scene, width, height))
@@ -23,6 +31,17 @@ export class TilemapBuilder {
 
   getTilemap(): Tilemap {
     return this.tilemap
+  }
+
+  // Levels that place owned acid/lava/etc. via setTile/setRect/setRectOrigin
+  // can't reserve destroy-charge for it at construction time — the tank (and
+  // the worker holding SimMatterTanks) don't exist yet (see GameLevel's
+  // preCreateLevel ordering). Call this once they do, instead of every level
+  // re-deriving reserveAmount * FILL_MAX * tileCount by hand.
+  applyReservedDestroyCharges(matterTankManager: MatterTankManagerData): void {
+    for (const [ownerId, fillUnits] of this.reservedDestroyFillUnits) {
+      matterTankManager.addReservedDestroyPlacedFillUnits(ownerId, fillUnits)
+    }
   }
 
   makeUTube(centerX: number, centerY: number, width: number, height: number, thickness: number, type: NonOwnerIdTypes): void {
@@ -209,6 +228,13 @@ export class TilemapBuilder {
     let raw: number = value
     if (ownerId !== undefined) raw = setOwner(raw, ownerId)
     if (settled !== undefined) raw = setSettled(raw, settled)
+    if (ownerId !== undefined && ownerId !== NO_MATTER_TANK_ID) {
+      const reserveAmount = getReserveDestroyAmount(value)
+      if (reserveAmount > 0) {
+        const prev = this.reservedDestroyFillUnits.get(ownerId) ?? 0
+        this.reservedDestroyFillUnits.set(ownerId, prev + reserveAmount * FILL_MAX)
+      }
+    }
     this.tiles[idx] = raw
     if (isLiquid(value) && fill === undefined) {
       fill = FILL_MAX

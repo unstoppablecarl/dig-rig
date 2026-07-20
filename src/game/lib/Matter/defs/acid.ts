@@ -3,10 +3,12 @@ import { FILL_MAX } from '../_Liquid.constants.ts'
 import {
   ACID,
   EMPTY,
+  getCounter,
   getOwner,
   type MatterDef,
   matterType,
   SALT_WATER,
+  setCounter,
   setSettled,
   SOLID,
   WATER,
@@ -15,6 +17,12 @@ import { MatterTypeSet } from '../data/MatterTypeSet'
 import { ACID_STICKS_TO, isAcidImmune, isLiquid } from '../matter.ts'
 
 const IS_SETTLED = new MatterTypeSet(ACID, EMPTY)
+
+// Ticks a partial-fill tile must stay isolated before it's destroyed — a
+// same-tick chain reaction can make an actively-spreading edge briefly look
+// isolated, so a fixed grace period (via the shared per-tile counter
+// bitfield) avoids destroying live, still-connected acid.
+const ISOLATED_DROPLET_GRACE_TICKS = 30
 
 export const ACID_DEF = {
   id: ACID,
@@ -75,17 +83,23 @@ export const ACID_DEF = {
     const belowType = ty + 1 < height ? matterType(tiles[idx + width]) : SOLID
     const canFall = belowType === EMPTY || belowType === ACID
     const touchingSolid = !canFall && sim.borderingAny(tx, ty, idx, ACID_STICKS_TO) !== -1
-    if (touchingSolid && fill[idx] >= FILL_MAX && random() < 95) {
+    const onImmuneFloor = isAcidImmune(belowType) && !isLiquid(belowType)
+    // Reused below for the stickiness gate and the clump-vs-spread decision —
+    // an unbounded run walk, only paid for when actually resting on something.
+    const hasDrainNearby = (touchingSolid || onImmuneFloor) && sim.hasReachableDrainFromCell(tx, ty, ACID)
+    // Skip sticking when a drain is confirmed — otherwise relaying to an
+    // edge across a wide floor can outlast DRAIN_WATCH_GRACE_TICKS and get
+    // force-destroyed before stickiness ever lets it move.
+    if (touchingSolid && fill[idx] >= FILL_MAX && random() < 95 && !hasDrainNearby) {
       sim.next.add(idx)
       return
     }
 
-    // On an immune floor, switch to water-like flow: spread outward to find a ledge
-    // instead of clumping.  This lets partial acid cascade toward the surface edge
-    // and drain off rather than pooling indefinitely.
-    const onImmuneFloor = isAcidImmune(belowType) && !isLiquid(belowType)
-    const canExpand = onImmuneFloor || fill[idx] >= FILL_MAX
-    const clump = !onImmuneFloor
+    // Spread toward a confirmed drain instead of clumping; clump once no
+    // drain is reachable so isolated stragglers consolidate instead of
+    // scattering across the floor.
+    const canExpand = (onImmuneFloor && hasDrainNearby) || fill[idx] >= FILL_MAX
+    const clump = !(onImmuneFloor && hasDrainNearby)
 
     const moved = sim.tryFillFlow(tx, ty, idx, canExpand, clump)
     if (matterType(tiles[idx]) === EMPTY) return  // tryFillFlow donated all fill and destroyed tile
@@ -99,11 +113,18 @@ export const ACID_DEF = {
           (tx < width - 1 && matterType(tiles[idx + 1]) === ACID && fill[idx + 1] > 0) ||
           (ty > 0 && matterType(tiles[idx - width]) === ACID && fill[idx - width] > 0) ||
           (ty < height - 1 && matterType(tiles[idx + width]) === ACID && fill[idx + width] > 0)
-        if (!hasLivingNeighbour) {
-          sim.queueMatterCreditFromTile(tx, ty, idx)
-          sim.destroyTile(tx, ty, idx)
-          sim.reactivateAround(tx, ty)
-          return
+        if (hasLivingNeighbour) {
+          if (getCounter(tiles[idx]) !== 0) sim.tiles[idx] = setCounter(tiles[idx], 0)
+        } else {
+          const isolatedTicks = getCounter(tiles[idx]) + 1
+          if (isolatedTicks >= ISOLATED_DROPLET_GRACE_TICKS) {
+            sim.queueMatterCreditFromTile(tx, ty, idx)
+            sim.destroyTile(tx, ty, idx)
+            sim.reactivateAround(tx, ty)
+            return
+          }
+          sim.tiles[idx] = setCounter(tiles[idx], isolatedTicks)
+          sim.next.add(idx)
         }
       }
       sim.tiles[idx] = setSettled(sim.tiles[idx], true)

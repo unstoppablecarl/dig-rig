@@ -44,7 +44,7 @@ export default class TestLevel extends GameLevel {
     builder.setRect(450, ref - 220, 60, 60, SOLID)
     builder.setBorder(2, PERMANENT)
 
-    return builder.getTilemap()
+    return builder
   }
 
   makePlayer() {

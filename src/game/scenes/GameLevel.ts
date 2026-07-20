@@ -31,6 +31,7 @@ import { Player } from '../lib/Player/Player.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
 import { makePreviewProjectileRenderer, ProjectileRenderer } from '../lib/Projectiles/ProjectileRenderer.ts'
 import { Tilemap } from '../lib/Tilemap/Tilemap.ts'
+import { TilemapBuilder } from '../lib/Tilemap/TilemapBuilder.ts'
 import { TilemapRenderer } from '../lib/Tilemap/TilemapRenderer.ts'
 import type { TilemapRendererConfig } from '../lib/Tilemap/TilemapRendererConfig'
 import { CameraController } from '../lib/UI/CameraController.ts'
@@ -116,7 +117,7 @@ export abstract class GameLevel extends Scene {
   startLevel() {
   }
 
-  abstract makeTileMap(): Tilemap
+  abstract makeTileMap(): TilemapBuilder
 
   abstract makePlayer(): Player
 
@@ -243,7 +244,8 @@ export abstract class GameLevel extends Scene {
     this.previewProjectileRenderer = makePreviewProjectileRenderer(this)
 
     this.matterManager = new MatterManager(this)
-    this.tilemap = this.makeTileMap()
+    const tilemapBuilder = this.makeTileMap()
+    this.tilemap = tilemapBuilder.getTilemap()
     this.tilemap.initChunkSolidCounts()
 
     this.worldBounds = new Rectangle(0, 0,
@@ -266,6 +268,7 @@ export abstract class GameLevel extends Scene {
 
     this.player = this.makePlayer()
     this.weaponUIState.activeMatterTank = this.player.matterTank
+    tilemapBuilder.applyReservedDestroyCharges(this.io.matterTankManager)
 
     this.matter.world.setBounds(
       0, 0,

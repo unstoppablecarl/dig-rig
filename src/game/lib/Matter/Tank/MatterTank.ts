@@ -10,6 +10,7 @@ import type { MatterManager } from './MatterManager.ts'
 export class MatterTank {
   matterStart: number
   private _overflowTank: MatterTank | null = null
+  source: MatterTankSource
 
   get overflowTank(): MatterTank | null {
     return this._overflowTank
@@ -23,10 +24,11 @@ export class MatterTank {
   constructor(
     private manager: MatterManager,
     private readonly data: MatterTankManagerData,
-    readonly source: MatterTankSource,
+    source: MatterTankSource,
     readonly id: MatterTankId,
     tweenFrom = 0,
   ) {
+    this.source = source
     this.matterStart = tweenFrom
   }
 

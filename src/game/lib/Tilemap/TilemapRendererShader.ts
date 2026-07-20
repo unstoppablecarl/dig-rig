@@ -647,7 +647,7 @@ export function makeTilemapFragShader(
       if (tileType == ${WATER} || tileType == ${SALT_WATER} || tileType == ${OIL} ||
       tileType == ${LAVA} || tileType == ${NAPALM} || tileType == ${ACID}) {
           float density = texture(uLiquidDensity, outTexCoord).r;
-          color.rgb = mix(color.rgb, spectrum(density), 0.85);
+          color.rgb = mix(color.rgb, spectrum(density), 1.0);
       }
       #endif
 

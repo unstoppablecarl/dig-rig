@@ -122,6 +122,10 @@ export class MatterSim {
   private drainWatchGrace = new Map<number, number>()
   private static readonly DRAIN_WATCH_GRACE_TICKS = 90
 
+  // Fraction of a column's overflow (above FILL_MAX) relieved per tick in
+  // doUpwardPressurePass instead of all at once. Tune by feel.
+  private static readonly UPWARD_PRESSURE_RELIEF_RATE = 0.01
+
   // Coordinator.ts's "is there work to do this tick" early-return predates
   // drainWatchRows and doesn't know about it. activeSet can read empty on a
   // tick where a drain-eligible run still has real fill left; without this,
@@ -1050,6 +1054,20 @@ export class MatterSim {
     this.solidTilesCreated++
   }
 
+  // Coordinator's local sim runs doUpwardPressurePass/doHorizontalCascadePass
+  // directly (not through process()), so these counters need their own
+  // read+reset call — feed the result into conservationTracker.addDelta(...)
+  // once per tick, same as worker results.
+  consumeNetDelta(): { solidNetDelta: number, liquidNetDelta: number } {
+    const solidNetDelta = this.solidTilesCreated - this.solidTilesConsumed
+    const liquidNetDelta = this.liquidFillCreated - this.liquidFillConsumed
+    this.solidTilesCreated = 0
+    this.solidTilesConsumed = 0
+    this.liquidFillCreated = 0
+    this.liquidFillConsumed = 0
+    return { solidNetDelta, liquidNetDelta }
+  }
+
   /**
    * Credit and set self + all 4 cardinal neighbours to FIRE (skipping PERMANENT).
    */
@@ -1569,7 +1587,15 @@ export class MatterSim {
 
       const want = MatterSim.deadbandWant(m - MatterSim.getStableState(m + fill[upIdx]))
       if (want <= 0) continue
-      const flow = Math.min(want, m - FILL_MAX)
+      const uncappedFlow = Math.min(want, m - FILL_MAX)
+      // Throttled to a fraction of the imbalance per tick rather than all at
+      // once — a column builds pressure invisibly below FILL_MAX, then this
+      // loop's bottom-to-top order lets a full-column solve propagate in one
+      // tick, reading as "nothing, then everything". Capping the amount (not
+      // how far it propagates) keeps U-tube arms equalizing across their
+      // full height in one pass while spreading a big correction over
+      // several ticks. Math.max(1, ...) guarantees forward progress.
+      const flow = Math.min(uncappedFlow, Math.max(1, Math.round(uncappedFlow * MatterSim.UPWARD_PRESSURE_RELIEF_RATE)))
 
       fill[idx] -= flow
       fill[upIdx] += flow
@@ -1682,6 +1708,26 @@ export class MatterSim {
       : { pos: nearDrains, neg: farDrains }
   }
 
+  // Same question as computeRunHasDrain, but callable from any cell in the
+  // run, not just one already sitting at its edge (computeRunHasDrain's
+  // nearOutX assumes that). Walks outward both directions to each edge, then
+  // checks drainReachableFrom from just past it. Used by matter defs (e.g.
+  // acid's stickiness gate) needing this from an arbitrary interior cell.
+  hasReachableDrainFromCell(tx: number, ty: number, type: MatterType): boolean {
+    const { tiles, width } = this
+    const rowIdx = ty * width
+    let leftX = tx
+    while (leftX - 1 >= 0 && isLiquid(matterType(tiles[rowIdx + leftX - 1]))) leftX--
+    const leftOutX = leftX - 1
+    if (leftOutX >= 0 && matterType(tiles[rowIdx + leftOutX]) === EMPTY && this.drainReachableFrom(leftOutX, ty, -1, type)) {
+      return true
+    }
+    let rightX = tx
+    while (rightX + 1 < width && isLiquid(matterType(tiles[rowIdx + rightX + 1]))) rightX++
+    const rightOutX = rightX + 1
+    return rightOutX < width && matterType(tiles[rowIdx + rightOutX]) === EMPTY && this.drainReachableFrom(rightOutX, ty, 1, type)
+  }
+
   // True if the column below (tx, ty) has genuinely bottomed out: walking
   // down, every cell is same-type liquid until a real wall (success) or an
   // actual EMPTY gap/different liquid (fail). Deliberately does NOT require
@@ -1763,25 +1809,16 @@ export class MatterSim {
       }
     }
     for (const idx of activeSet) noteRow(idx)
-    // See drainWatchRows's own comment: a row may have zero activeSet
-    // members this tick yet still have real undrained fill. A stored seed
-    // can also itself die between ticks (drained to 0 via ordinary
-    // diffusion) — if every seed for a row dies this way, the row gets zero
-    // entries in rowMinX/rowMaxX and the per-row loop below never runs for
-    // it again, permanently deadlocking that row's grace countdown. A
-    // bounded full-row rescan — only when a row's seeds are entirely dead —
-    // finds a live replacement if the run still exists, or drops the row
-    // for good otherwise.
+    // A stored seed can die between ticks (drained to 0) — if every seed for
+    // a row dies, that run is genuinely finished, so the row is dropped
+    // outright. Deliberately not falling back to scanning the row for any
+    // other live liquid: that liquid has no relation to the run the clock
+    // was counting down for, and would inherit already-elapsed grace.
     for (const [ty, seeds] of this.drainWatchRows) {
       for (const idx of seeds) noteRow(idx)
       if (rowMinX.has(ty)) continue
-      const rowStart = ty * width
-      let replacement = -1
-      for (let x = 0; x < width; x++) {
-        if (isLiquid(matterType(tiles[rowStart + x]))) { replacement = rowStart + x; break }
-      }
-      if (replacement !== -1) noteRow(replacement)
-      else this.drainWatchRows.delete(ty)
+      this.drainWatchRows.delete(ty)
+      this.drainWatchGrace.delete(ty)
     }
     if (rowMinX.size === 0) return
 
@@ -1822,6 +1859,10 @@ export class MatterSim {
       // noteRow even though the rest of the run is still alive.
       let curRunSeedIdx = -1
       const rowDrainSeeds: number[] = []
+      // Whether ANY run in this row currently has a confirmed drain, as
+      // opposed to rowDrainSeeds (whether one is actively progressing) — see
+      // the finalize step below for why both are needed.
+      let rowHasAnyConfirmedDrain = false
       for (let tx = start; tx !== end; tx += dir) {
         const idx = rowStart + tx
         const raw = tiles[idx]
@@ -1837,12 +1878,28 @@ export class MatterSim {
           curRunDrainPos = drainDirs.pos
           curRunDrainNeg = drainDirs.neg
           curRunHasDrain = curRunDrainPos || curRunDrainNeg
+          if (curRunHasDrain) rowHasAnyConfirmedDrain = true
           inRun = true
           curRunType = type
           curRunSeedIdx = -1
         }
         let remaining = fill[idx]
         if (remaining <= 0) continue
+
+        // Registered before the gravity-defer check below, not after the
+        // horizontal logic further down — a still-falling cell takes that
+        // early continue every tick and would never reach the later version,
+        // starving this row's seed tracking while it's purely a cascade/
+        // transit zone even though liquid is actively passing through.
+        if (curRunHasDrain && fill[idx] > 0) {
+          activeSet.add(idx)
+          if (curRunSeedIdx === -1) {
+            curRunSeedIdx = rowDrainSeeds.length
+            rowDrainSeeds.push(idx)
+          } else {
+            rowDrainSeeds[curRunSeedIdx] = idx
+          }
+        }
 
         const downIdx = ty + 1 < height ? idx + width : -1
         const downType = downIdx === -1 ? -1 : matterType(tiles[downIdx])
@@ -1897,6 +1954,39 @@ export class MatterSim {
           }
         }
 
+        // Residual-scale full-shed priority is fixed (always positive-x
+        // first), not tied to dir like ax/bx below — dir flips every tick,
+        // so two adjacent residual cells with a bidirectional drain would
+        // otherwise become each other's full-dump target in turn and
+        // oscillate forever instead of draining.
+        if (canDrainShed && remaining <= MatterSim.DRAIN_WALK_DEBRIS_MAX_FILL) {
+          if (curRunDrainPos && tx + 1 < width) {
+            const posIdx = idx + 1
+            const posType = matterType(tiles[posIdx])
+            const posOk = posType === type || (posType === EMPTY && this.drainReachableFrom(tx + 1, ty, 1, type))
+            if (posOk) {
+              const f = Math.min(remaining, Math.max(0, FILL_MAX - fill[posIdx]))
+              if (f > 0) {
+                this.doFillTransfer(idx, tx, ty, posIdx, tx + 1, ty, f, liquidRaw, activeSet)
+                remaining -= f
+              }
+            }
+          }
+          if (remaining > 0 && curRunDrainNeg && tx - 1 >= 0) {
+            const negIdx = idx - 1
+            const negType = matterType(tiles[negIdx])
+            const negOk = negType === type || (negType === EMPTY && this.drainReachableFrom(tx - 1, ty, -1, type))
+            if (negOk) {
+              const f = Math.min(remaining, Math.max(0, FILL_MAX - fill[negIdx]))
+              if (f > 0) {
+                this.doFillTransfer(idx, tx, ty, negIdx, tx - 1, ty, f, liquidRaw, activeSet)
+                remaining -= f
+              }
+            }
+          }
+          if (remaining <= 0) continue
+        }
+
         const ax = tx + dir
         if (ax >= 0 && ax < width) {
           const aIdx = idx + dir
@@ -1914,10 +2004,9 @@ export class MatterSim {
               f = Math.min(Math.max(0, FILL_MAX - fill[aIdx]), remaining)
             } else if (canDrainShedA) {
               // No `remaining >= fill[aIdx]` gate (unlike the diffusion
-              // fallback below) — that gate exists to make a contained pool
-              // settle flat and stop, which is wrong for a run already
-              // confirmed to be headed for a real exit. Capped by the
-              // neighbor's own headroom instead, so this can't overfill it.
+              // fallback below) — a run confirmed headed for a real exit
+              // shouldn't stop just because the neighbor is fuller. Capped by
+              // headroom instead. Residual amounts are already handled above.
               f = Math.min(
                 remaining,
                 Math.max(0, FILL_MAX - fill[aIdx]),
@@ -1962,74 +2051,33 @@ export class MatterSim {
             }
           }
         }
-
-        // Coordinator.ts double-buffers activeSet every tick (clear, then
-        // repopulate only from r.next / explicit re-adds) — a cell that
-        // settles (tryFillFlow's moved=false path, e.g. WATER_SETTLED in
-        // water.ts) is NOT re-added by that path, so once every cell in a
-        // row has independently settled with nothing left to reactivate
-        // them, the whole row silently stops appearing in activeSet and
-        // this pass never looks at it again — permanently, regardless of
-        // what formula runs above. Explicitly keep every cell in a
-        // drain-eligible run alive in activeSet as long as it still holds
-        // any fill, so the run keeps getting re-examined tick after tick
-        // until it's actually drained to zero, instead of quietly going
-        // invisible while still partially full. Contained runs (no drain)
-        // are deliberately not kept alive here — they're allowed to settle
-        // and drop out normally once level.
-        //
-        // activeSet alone isn't enough: it's rebuilt from scratch each tick
-        // (see Coordinator.ts's swap-then-clear), so this add only survives
-        // to the *next* tick if this pass gets to run again — which requires
-        // some cell of the row to already be in activeSet at the *start* of
-        // that tick. If every cell of a run settles in the same parallel
-        // round before this pass ever sees any of them, activeSet.add here
-        // never happens for any of them and the row vanishes with nothing
-        // left to rediscover it. drainWatchRows is a persistent (never
-        // swap-cleared) record this pass owns entirely, so it survives that
-        // gap and guarantees the run keeps getting found regardless of what
-        // the parallel round's activeSet churn does — one seed slot per
-        // run (curRunSeedIdx), continuously refreshed to the last live cell
-        // seen in that run rather than fixed at first-touch.
-        if (curRunHasDrain && fill[idx] > 0) {
-          activeSet.add(idx)
-          if (curRunSeedIdx === -1) {
-            curRunSeedIdx = rowDrainSeeds.length
-            rowDrainSeeds.push(idx)
-          } else {
-            rowDrainSeeds[curRunSeedIdx] = idx
-          }
-        }
       }
 
-      // Finalize drainWatchRows once per row, storing every run's seed
-      // collected above — see rowDrainSeeds' own comment for why one per
-      // run. A row that comes up empty this tick but was already tracked
-      // gets a grace period before being dropped, so a transient false
-      // reading has a chance to self-correct — previous seeds are left
-      // untouched during grace so the row keeps being rediscovered. A row
-      // seen for the first time with no seeds is a genuinely contained run,
-      // not a lapse.
+      // Finalize drainWatchRows once per row. A row that comes up empty but
+      // was already tracked gets a grace period before being dropped, so a
+      // transient false reading can self-correct.
+      //
+      // That grace period only makes sense for a row with a confirmed drain
+      // that stalled — not one with no drain at all (a genuinely sealed
+      // pool/U-tube bottom can end up in drainWatchRows from a transient
+      // false positive during initial fill, then never produce a seed again
+      // once correctly settled). rowHasAnyConfirmedDrain tells those apart:
+      // no drain at all this tick drops tracking immediately, no destroy.
       if (rowDrainSeeds.length > 0) {
         this.drainWatchRows.set(ty, rowDrainSeeds)
+        this.drainWatchGrace.delete(ty)
+      } else if (!rowHasAnyConfirmedDrain) {
+        this.drainWatchRows.delete(ty)
         this.drainWatchGrace.delete(ty)
       } else if (this.drainWatchRows.has(ty)) {
         const graceLeft = (this.drainWatchGrace.get(ty) ?? MatterSim.DRAIN_WATCH_GRACE_TICKS) - 1
         if (graceLeft > 0) {
           this.drainWatchGrace.set(ty, graceLeft)
         } else {
-          // Grace exhausted: this run had a confirmed drain for a long
-          // stretch and then stopped making progress despite still having
-          // fill. Force-drain whatever's left via destroyTile (same path
-          // used for zero-fill zombie cleanup, so conservation stays
-          // correct) rather than leave a silent permanent residual.
-          //
-          // Walks outward from each stored seed instead of trusting the
-          // seed cell alone — those are only refreshed on the success path,
-          // so every tick spent in grace leaves them exactly as stale as
-          // when grace started, and if the stored cell itself already
-          // drained to 0, destroying based on it alone does nothing while
-          // still deleting the tracking entry.
+          // Grace exhausted with a confirmed drain still stalled: force-drain
+          // via destroyTile (conservation-tracked). Walks outward from each
+          // stored seed rather than trusting it directly, since a seed can
+          // itself have drained to 0 while the rest of the run is still live.
           const seeds = this.drainWatchRows.get(ty) ?? []
           for (const seedIdx of seeds) {
             const seedType = matterType(tiles[seedIdx])

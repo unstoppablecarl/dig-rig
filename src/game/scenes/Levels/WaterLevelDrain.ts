@@ -71,7 +71,7 @@ export default class WaterLevelDrain extends GameLevel {
 
     builder.setBorder(2, PERMANENT)
 
-    return builder.getTilemap()
+    return builder
   }
 
   makePlayer() {
