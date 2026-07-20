@@ -1,5 +1,6 @@
 import {
-  ACID, BURNING_FUEL,
+  ACID,
+  BURNING_FUEL,
   BURNING_THERMITE,
   C4,
   CHILLED_ICE,
@@ -113,13 +114,13 @@ export const INDESTRUCTIBLE_TYPES = new MatterTypeSet(PERMANENT, PHYSICS_BODY)
 
 const MATTER_FLAGS = new Uint32Array(256)
 export const isAlwaysActive = (type: MatterType) => (MATTER_FLAGS[type] & Flag.ALWAYS_ACTIVE) !== 0
-export const doesSettle = (type: MatterType) => (MATTER_FLAGS[type] & Flag.SETTLES) !== 0
+export const doesSettle = (type: MatterType): type is SettlingTypes => (MATTER_FLAGS[type] & Flag.SETTLES) !== 0
 export const isLavaImmune = (type: MatterType) => (MATTER_FLAGS[type] & Flag.LAVA_IMMUNE) !== 0
 export const isAcidImmune = (type: MatterType) => (MATTER_FLAGS[type] & Flag.ACID_IMMUNE) !== 0
 export const collidesWhenSettled = (type: MatterType) => (MATTER_FLAGS[type] & Flag.COLLIDES_WHEN_SETTLED) !== 0
-export const isLiquid = (type: MatterType) => (MATTER_FLAGS[type] & Flag.LIQUID) !== 0
+export const isLiquid = (type: MatterType): type is LiquidTypes => (MATTER_FLAGS[type] & Flag.LIQUID) !== 0
 export const isActivatable = (type: MatterType) => (MATTER_FLAGS[type] & (Flag.ALWAYS_ACTIVE | Flag.SETTLES)) !== 0
-export const canHaveOwner = (type: MatterType) => (MATTER_FLAGS[type] & Flag.HAS_OWNER_ID) !== 0
+export const canHaveOwner = (type: MatterType): type is HasOwnerIdTypes => (MATTER_FLAGS[type] & Flag.HAS_OWNER_ID) !== 0
 export const isClumpingLiquid = (type: MatterType) => (MATTER_FLAGS[type] & Flag.CLUMPS) !== 0
 export const alwaysCollides = (type: MatterType) => (MATTER_FLAGS[type] & Flag.ALWAYS_COLLIDES) !== 0
 export const isSupportTypeImmutable = (type: MatterType) => (MATTER_FLAGS[type] & Flag.IMMUTABLE_SUPPORT_TYPE) !== 0
