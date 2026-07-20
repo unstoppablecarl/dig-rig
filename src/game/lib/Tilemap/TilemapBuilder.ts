@@ -44,12 +44,20 @@ export class TilemapBuilder {
     }
   }
 
-  makeUTube(centerX: number, centerY: number, width: number, height: number, thickness: number, type: NonOwnerIdTypes): void {
+  makeUTubeCentered(centerX: number, centerY: number, width: number, height: number, thickness: number, type: NonOwnerIdTypes): void {
     let startX = centerX - width * 0.5
     let startY = centerY - height * 0.5
     this.setRectRaw(startX, startY, width, height, type)
     this.setRectRaw(centerX - (width - thickness * 2) * 0.5, startY, width - thickness * 2, height - thickness, EMPTY)
     this.setRectRaw(centerX - thickness * 0.5, startY, thickness, height - thickness * 2, type)
+  }
+
+  makeUTube(x: number, y: number, width: number, height: number, thickness: number, type: NonOwnerIdTypes): void {
+    let startX = x
+    let startY = y
+    this.setRectRaw(startX, startY, width, height, type)
+    this.setRectRaw(x + thickness, startY, width - thickness * 2, height - thickness, EMPTY)
+    this.setRectRaw(x + width * 0.5 - thickness* 0.5, startY, thickness, height - thickness * 2, type)
   }
 
   makeBowl(centerX: number, centerY: number, width: number, height: number, thickness: number, borderType: NonOwnerIdTypes, fillType?: NonOwnerIdTypes, fill = FILL_MAX): void {

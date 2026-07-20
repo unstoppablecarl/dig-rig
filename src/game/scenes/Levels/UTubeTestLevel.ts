@@ -1,7 +1,18 @@
 import type { PartialMatterRenderConfig } from '../../config/colors.ts'
-import { Crate } from '../../lib/Entities/defs/Crate.ts'
 import { PortableMatterTank } from '../../lib/Entities/defs/PortableMatterTank.ts'
-import { EMPTY, PERMANENT, SOLID, WATER } from '../../lib/Matter/_Matter.types.ts'
+import {
+  ACID,
+  LAVA,
+  MatterType,
+  NAPALM,
+  OIL,
+  PERMANENT,
+  SALT_WATER,
+  SOLID,
+  WATER,
+} from '../../lib/Matter/_Matter.types.ts'
+import { canHaveOwner } from '../../lib/Matter/matter.ts'
+import { PLAYER_MATTER_TANK_ID } from '../../lib/Matter/Tank/_MatterTank.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { TilemapBuilder } from '../../lib/Tilemap/TilemapBuilder.ts'
 import type { TilemapRendererConfig } from '../../lib/Tilemap/TilemapRendererConfig'
@@ -9,11 +20,10 @@ import { GameLevel } from '../GameLevel.ts'
 import terrain from './TestLevel2/TestLevel2.png'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
-export default class TestLevel2 extends GameLevel {
+export default class UTubeTestLevel extends GameLevel {
   registerEntities() {
     return [
       PortableMatterTank,
-      Crate,
     ]
   }
 
@@ -58,35 +68,62 @@ export default class TestLevel2 extends GameLevel {
 
     const ref = 600
     builder.setRect(0, ref - 100, builder.width, 500, SOLID)
-    builder.setRect(200, ref - 160, 160, 60, SOLID)
-    builder.setRect(230, ref - 200, 60, 60, SOLID)
-    builder.setRect(450, ref - 220, 60, 60, SOLID)
-    builder.setRect(400, ref - 100, 200, 60, EMPTY)
-    builder.setRect(400, ref - 100 - 5, 200, 60, WATER, undefined, 256, false)
-    builder.setRect(200, ref - 100, 60, 60, PERMANENT)
 
-    const centerX = 150
-    const centerY = 400
-    const width = 60
-    const height = 100
-    const thickness = 10
+    this.makeTestPools(builder, ref)
 
-    builder.makeUTubeCentered(centerX, centerY, width, height, thickness, PERMANENT)
     builder.setBorder(2, PERMANENT)
 
     return builder
   }
 
+  makeTestPools(builder: TilemapBuilder, ref: number) {
+
+    const types: MatterType[] = [
+      ACID,
+      LAVA,
+      NAPALM,
+      WATER,
+      SALT_WATER,
+      OIL,
+    ]
+
+    let x = 200
+    const y = ref - 210
+    const width = 120
+    const height = 60
+    const thickness = 10
+
+    const liqWidthGap = 12
+    const liqWidth = ((width - thickness * 3) * 0.5) - liqWidthGap * 2
+    const liqHeight = 100
+    const liqY = ref - 300
+
+    for (const type of types) {
+
+      const liqX = x + thickness + liqWidthGap
+
+      builder.makeUTube(
+        x,
+        y,
+        width,
+        height,
+        thickness,
+        PERMANENT,
+      )
+      if (canHaveOwner(type)) {
+        builder.setRect(liqX, liqY, liqWidth, liqHeight, type, PLAYER_MATTER_TANK_ID)
+      } else {
+        builder.setRect(liqX, liqY, liqWidth, liqHeight, type)
+      }
+      x += 100
+    }
+  }
+
   makePlayer() {
-    const player = new Player(this, 100, 300)
-    const tank = this.entityFactory.spawn(PortableMatterTank, 220, 350, 99)
+    const player = new Player(this, 100, 400)
+    const tank = this.entityFactory.spawn(PortableMatterTank, 10, 350, 99)
 
     player.matterTank.overflowTank = tank.matterTank
     return player
-  }
-
-  startLevel() {
-    // this.entityFactory.spawn(Crate, 90, 50)
-    super.startLevel()
   }
 }
