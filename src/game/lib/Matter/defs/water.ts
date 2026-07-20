@@ -1,9 +1,8 @@
-import { CRYO, EMPTY, isSettled, LAVA, type MatterDef, matterType, OIL, SALT, SAND, setSettled, WATER } from '../_Matter.types.ts'
+import { CRYO, isSettled, LAVA, type MatterDef, matterType, OIL, SALT, SAND, setSettled, WATER } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet.ts'
 
 export const WATER_SETTLED = setSettled(WATER, true)
 const WAKE_SETTLED = new MatterTypeSet(LAVA, SALT, CRYO)
-const IS_SETTLED = new MatterTypeSet(WATER, EMPTY)
 
 export const WATER_DEF = {
   id: WATER,
@@ -45,10 +44,13 @@ export const WATER_DEF = {
       }
     }
 
-    // Keep re-checking until fully boxed in — otherwise a settled tile only
-    // wakes via a neighbor's reactivateAround, and a row that drops out of
-    // drainWatchRows tracking (no confirmed drain left) never calls that.
-    if (!sim.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
+    // Keep re-checking only while this cell's run has an actual reachable
+    // drain — otherwise a settled tile only wakes via a neighbor's
+    // reactivateAround, and a row that drops out of drainWatchRows tracking
+    // (no confirmed drain left) never calls that. Scoped to a real drain
+    // (not "touches any wall") so a genuinely sealed/flat pool can still go
+    // idle instead of every boundary tile re-queuing forever.
+    if (sim.hasReachableDrainFromCell(tx, ty, WATER)) {
       sim.next.add(idx)
     }
   },

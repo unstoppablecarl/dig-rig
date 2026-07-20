@@ -13,10 +13,7 @@ import {
   SOLID,
   WATER,
 } from '../_Matter.types.ts'
-import { MatterTypeSet } from '../data/MatterTypeSet'
 import { ACID_STICKS_TO, isAcidImmune, isLiquid } from '../matter.ts'
-
-const IS_SETTLED = new MatterTypeSet(ACID, EMPTY)
 
 // Ticks a partial-fill tile must stay isolated before it's destroyed — a
 // same-tick chain reaction can make an actively-spreading edge briefly look
@@ -130,7 +127,12 @@ export const ACID_DEF = {
       sim.tiles[idx] = setSettled(sim.tiles[idx], true)
       sim.markRenderDirty(tx, ty)
 
-      if (!sim.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
+      // Keep re-checking only while this cell's run has an actual reachable
+      // drain — see water.ts for why. Recomputed rather than reusing
+      // hasDrainNearby above: that one's gated on touchingSolid/onImmuneFloor
+      // for the stickiness/clump decision, which would under-count a drain
+      // reachable from a cell not directly resting on anything solid.
+      if (sim.hasReachableDrainFromCell(tx, ty, ACID)) {
         sim.next.add(idx)
       }
     }

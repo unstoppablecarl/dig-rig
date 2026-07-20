@@ -1,8 +1,7 @@
-import { EMPTY, LAVA, type MatterDef, OIL, SALT, SALT_WATER, setSettled, WATER } from '../_Matter.types.ts'
+import { LAVA, type MatterDef, OIL, SALT, SALT_WATER, setSettled, WATER } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet.ts'
 
 const WAKE_SETTLED = new MatterTypeSet(LAVA, SALT)
-const IS_SETTLED = new MatterTypeSet(SALT_WATER, EMPTY)
 
 export const SALT_WATER_DEF = {
   id: SALT_WATER,
@@ -31,8 +30,9 @@ export const SALT_WATER_DEF = {
     sim.tiles[idx] = setSettled(SALT_WATER, true)
     sim.markRenderDirty(tx, ty)
 
-    // Keep re-checking until fully boxed in — see water.ts for why.
-    if (!sim.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
+    // Keep re-checking only while this cell's run has an actual reachable
+    // drain — see water.ts for why.
+    if (sim.hasReachableDrainFromCell(tx, ty, SALT_WATER)) {
       sim.next.add(idx)
     }
   },

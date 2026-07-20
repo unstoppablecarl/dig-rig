@@ -13,9 +13,6 @@ import {
   setOwner,
   setSettled,
 } from '../_Matter.types.ts'
-import { MatterTypeSet } from '../data/MatterTypeSet.ts'
-
-const IS_SETTLED = new MatterTypeSet(OIL, EMPTY)
 
 export const OIL_DEF = {
   id: OIL,
@@ -83,8 +80,9 @@ export const OIL_DEF = {
     tiles[idx] = setSettled(OIL, true)
     sim.markRenderDirty(tx, ty)
 
-    // Keep re-checking until fully boxed in — see water.ts for why.
-    if (!sim.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
+    // Keep re-checking only while this cell's run has an actual reachable
+    // drain — see water.ts for why.
+    if (sim.hasReachableDrainFromCell(tx, ty, OIL)) {
       sim.next.add(idx)
     }
   },

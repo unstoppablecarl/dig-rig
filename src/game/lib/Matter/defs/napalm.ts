@@ -1,9 +1,6 @@
 import { random } from '../../../helpers/random'
 import { ParticleType } from '../../Particles/_particle-types.ts'
-import { EMPTY, FIRE, getFirstOwnerId, type MatterDef, NAPALM, setOwner, setSettled } from '../_Matter.types.ts'
-import { MatterTypeSet } from '../data/MatterTypeSet.ts'
-
-const IS_SETTLED = new MatterTypeSet(NAPALM, EMPTY)
+import { FIRE, getFirstOwnerId, type MatterDef, NAPALM, setOwner, setSettled } from '../_Matter.types.ts'
 
 export const NAPALM_DEF = {
   id: NAPALM,
@@ -39,8 +36,9 @@ export const NAPALM_DEF = {
     sim.tiles[idx] = setSettled(NAPALM, true)
     sim.markRenderDirty(tx, ty)
 
-    // Keep re-checking until fully boxed in — see water.ts for why.
-    if (!sim.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
+    // Keep re-checking only while this cell's run has an actual reachable
+    // drain — see water.ts for why.
+    if (sim.hasReachableDrainFromCell(tx, ty, NAPALM)) {
       sim.next.add(idx)
     }
   },

@@ -24,7 +24,6 @@ import {
 import { MatterTypeSet } from '../data/MatterTypeSet'
 import { isLavaImmune, isLiquid } from '../matter.ts'
 
-const IS_SETTLED = new MatterTypeSet(LAVA, EMPTY)
 const COOLED = new MatterTypeSet(WATER, SALT_WATER)
 
 // Ticks a partial-fill tile must stay isolated before it's destroyed — a
@@ -237,7 +236,9 @@ export const LAVA_DEF = {
       sim.tiles[idx] = setSettled(sim.tiles[idx], true)
       sim.markRenderDirty(tx, ty)
 
-      if (!sim.surroundedByAny(tx, ty, idx, IS_SETTLED)) {
+      // Keep re-checking only while this cell's run has an actual reachable
+      // drain — see water.ts for why.
+      if (sim.hasReachableDrainFromCell(tx, ty, LAVA)) {
         sim.next.add(idx)
       }
     }
