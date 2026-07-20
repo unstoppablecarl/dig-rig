@@ -73,24 +73,16 @@ export const ACID_DEF = {
       return
     }
 
-    // Stickiness — only when acid can actually dissolve (full tile).
-    // Partial acid has nothing to react with; don't delay its movement.
-    // Only stick when gravity can't act (below is not empty/passable); a wall to
-    // the side or above must not prevent the tile from falling.
+    // Only when acid can actually dissolve (full tile). Partial acid has
+    // nothing to react with. Only relevant when gravity can't act (below is
+    // not empty/passable); a wall to the side or above doesn't gate this.
     const belowType = ty + 1 < height ? matterType(tiles[idx + width]) : SOLID
     const canFall = belowType === EMPTY || belowType === ACID
     const touchingSolid = !canFall && sim.borderingAny(tx, ty, idx, ACID_STICKS_TO) !== -1
     const onImmuneFloor = isAcidImmune(belowType) && !isLiquid(belowType)
-    // Reused below for the stickiness gate and the clump-vs-spread decision —
-    // an unbounded run walk, only paid for when actually resting on something.
+    // Reused below for the clump-vs-spread decision — an unbounded run walk,
+    // only paid for when actually resting on something.
     const hasDrainNearby = (touchingSolid || onImmuneFloor) && sim.hasReachableDrainFromCell(tx, ty, ACID)
-    // Skip sticking when a drain is confirmed — otherwise relaying to an
-    // edge across a wide floor can outlast DRAIN_WATCH_GRACE_TICKS and get
-    // force-destroyed before stickiness ever lets it move.
-    if (touchingSolid && fill[idx] >= FILL_MAX && random() < 95 && !hasDrainNearby) {
-      sim.next.add(idx)
-      return
-    }
 
     // Spread toward a confirmed drain instead of clumping; clump once no
     // drain is reachable so isolated stragglers consolidate instead of
