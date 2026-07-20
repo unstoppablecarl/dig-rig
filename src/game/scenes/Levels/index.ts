@@ -28,7 +28,7 @@ export const LEVELS = {
   },
   BENCH: {
     displayName: 'Bench: Oil Flood',
-    load: () => import('././BenchLevelFluid.ts'),
+    load: () => import('./BenchLevelFluid.ts'),
   },
   BENCH_SAND: {
     displayName: 'Bench: Sand Fall',
@@ -36,6 +36,10 @@ export const LEVELS = {
   },
   TEST_WATER: {
     displayName: 'Test: Water Drain',
-    load: () => import('././WaterLevelDrain.ts'),
+    load: () => import('./WaterLevelDrain.ts'),
+  },
+  TEST_LIQUID_POOLS: {
+    displayName: 'Test: Liquid Pools',
+    load: () => import('./LiquidPoolsTestLevel.ts'),
   },
 } as const satisfies Record<string, LevelEntry>
