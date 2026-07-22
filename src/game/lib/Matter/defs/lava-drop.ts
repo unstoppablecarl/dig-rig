@@ -13,6 +13,10 @@ import {
 } from '../_Matter.types.ts'
 import { isLavaImmune } from '../matter.ts'
 
+// Narrow reactivateAround range for drop vacate/landing — default
+// FILL_ROW_SCAN_MAX (64) would ripple across an entire settled pool.
+const LAVA_DROP_WAKE_RADIUS = 2
+
 export const LAVA_DROP_DEF = {
   id: LAVA_DROP,
   name: 'Lava Drop',
@@ -74,7 +78,7 @@ export const LAVA_DROP_DEF = {
         sim.markRenderDirty(tx, ty)
         sim.markRenderDirty(tx, ty + 1)
         sim.next.add(downIdx)
-        sim.reactivateAround(tx, ty)
+        sim.reactivateAround(tx, ty, sim.next, LAVA_DROP_WAKE_RADIUS)
         return
       }
 
@@ -116,7 +120,7 @@ export const LAVA_DROP_DEF = {
     tiles[idx] = setOwner(LAVA, ownerId)
     sim.next.add(idx)
     sim.markRenderDirty(tx, ty)
-    sim.reactivateAround(tx, ty)
+    sim.reactivateAround(tx, ty, sim.next, LAVA_DROP_WAKE_RADIUS)
   },
 } satisfies MatterDef
 

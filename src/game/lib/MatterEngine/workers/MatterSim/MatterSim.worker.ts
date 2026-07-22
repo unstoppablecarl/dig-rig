@@ -43,6 +43,7 @@ self.onmessage = (e: MessageEvent<SimInMessage>) => {
       msg.height,
       msg.scratchBuffers,
       msg.particleSpawnBuffer,
+      msg.lavaColumnTopBuffer,
     )
     postMessage({ type: SimOutMsg.READY })
     return

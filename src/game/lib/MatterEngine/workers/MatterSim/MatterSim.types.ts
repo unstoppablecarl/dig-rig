@@ -29,6 +29,9 @@ export type SimInMsgInit = {
   // these same buffers instead of array payloads.
   scratchBuffers: SimScratchBuffers
   particleSpawnBuffer: SharedArrayBuffer
+  // Shared across every worker in the pool and Coordinator — see
+  // MatterSim.lavaColumnTop's own comment for the self-report mechanics.
+  lavaColumnTopBuffer: SharedArrayBuffer
 }
 
 export type SimInMsgProcess = {

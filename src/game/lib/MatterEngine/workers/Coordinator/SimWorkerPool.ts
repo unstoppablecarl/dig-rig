@@ -140,6 +140,7 @@ export class SimWorkerPool {
       touchedBuffer,
       chunkGridBuffers,
       particleSpawnBuffer,
+      lavaColumnTopBuffer,
       width,
       height,
       onReady,
@@ -150,6 +151,7 @@ export class SimWorkerPool {
       touchedBuffer: SharedArrayBuffer
       chunkGridBuffers: ChunkGridBuffers
       particleSpawnBuffer: SharedArrayBuffer,
+      lavaColumnTopBuffer: SharedArrayBuffer,
       width: number
       height: number
       onReady: () => void,
@@ -175,6 +177,7 @@ export class SimWorkerPool {
       touchedBuffer: touchedBuffer,
       chunkBuffers: chunkGridBuffers,
       particleSpawnBuffer,
+      lavaColumnTopBuffer,
       width: width,
       height: height,
     }

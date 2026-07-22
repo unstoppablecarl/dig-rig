@@ -36,6 +36,8 @@ export type DataManagerBuffers = {
   fill: SharedArrayBuffer
   matterTouched: SharedArrayBuffer
   tileFront: TileFrontBuffers
+  // One Int32 per map column — see MatterSim.lavaColumnTop.
+  lavaColumnTop: SharedArrayBuffer
   width: number
   height: number
 }
@@ -79,6 +81,7 @@ export class DataManager {
       tiles: tilemap.buffers.tiles,
       fill: tilemap.buffers.fillLevels,
       matterTouched: tilemap.buffers.matterTouched,
+      lavaColumnTop: new SharedArrayBuffer(width * Int32Array.BYTES_PER_ELEMENT),
       tileFront: TileFrontData.makeBuffers(tilemap),
       physicsBodies: PhysicsBodiesData.makeBuffers(),
       particleSpawns: ParticleSpawnData.makeBuffer(),

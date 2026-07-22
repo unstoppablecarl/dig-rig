@@ -7,14 +7,12 @@ import {
   getCounter,
   getOwner,
   LAVA,
-  LAVA_DROP,
   type MatterDef,
   matterType,
   OIL,
   ROCK,
   SALT_WATER,
   setCounter,
-  setLavaDropVel,
   setOwner,
   setSettled,
   SOLID,
@@ -22,7 +20,7 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { isLavaImmune, isLiquid } from '../matter.ts'
+import { isLavaImmune } from '../matter.ts'
 
 const COOLED = new MatterTypeSet(WATER, SALT_WATER)
 
@@ -31,8 +29,6 @@ const COOLED = new MatterTypeSet(WATER, SALT_WATER)
 // isolated, so a fixed grace period (via the shared per-tile counter
 // bitfield) avoids destroying live, still-connected lava.
 const ISOLATED_DROPLET_GRACE_TICKS = 30
-
-export const LAVA_DROP_INITIAL_VEL = 10
 
 export const LAVA_DEF = {
   id: LAVA,
@@ -48,6 +44,11 @@ export const LAVA_DEF = {
 
     const existing = tiles[idx]
     const ownerId = getOwner(existing)
+
+    // Self-report as this column's eruption candidate — see MatterSim.lavaColumnTop.
+    if (fill[idx] >= FILL_MAX && (ty === 0 || matterType(tiles[idx - width]) === EMPTY)) {
+      sim.lavaColumnTop[tx] = ty
+    }
 
     // Turn to rock when touching water or salt-water
     let waterLoc = sim.borderingAny(tx, ty, idx, COOLED)
@@ -112,25 +113,8 @@ export const LAVA_DEF = {
       }
     }
 
-    // Launch a lava drop upward — converts this lava tile into a projectile
-    const upIdx = ty > 0 ? idx - width : -1
-    const canMoveUp = upIdx !== -1
-    if (
-      canMoveUp &&
-      sim.fill[idx] >= FILL_MAX &&
-      random() < 6 &&
-      matterType(tiles[upIdx]) === EMPTY &&
-      sim.bordering(tx, ty, idx, LAVA)
-    ) {
-      // Not a destruction — the lava is still fully present as a projectile (and will settle
-      // back into lava), so its reservation must stay live rather than being released here.
-      sim.consumeLiquidFill(idx, false)
-      sim.notifySolidCreated()
-      tiles[idx] = setLavaDropVel(setOwner(LAVA_DROP, ownerId), LAVA_DROP_INITIAL_VEL)
-      sim.markRenderDirty(tx, ty)
-      sim.next.add(idx)
-      return
-    }
+    // Lava-drop eruptions are triggered externally — see Coordinator.tryLavaEruption.
+    const downIdx = ty < height - 1 ? idx + width : -1
 
     // Burn adjacent non-immune tiles (4-directional, SOLID is lava-immune so skipped)
     if (sim.fill[idx] >= FILL_MAX && random() < 25) {
@@ -157,7 +141,6 @@ export const LAVA_DEF = {
     }
 
     // Clear fire directly below so lava can fall through it
-    const downIdx = ty < height - 1 ? idx + width : -1
     if (downIdx !== -1) {
       const belowType = matterType(tiles[downIdx])
       if (belowType === FIRE) {
@@ -199,15 +182,7 @@ export const LAVA_DEF = {
       }
     }
 
-    // On an immune floor, switch to water-like flow: spread outward to find a ledge
-    // instead of clumping.  Lets partial lava cascade toward the surface edge and
-    // drain off rather than pooling on surfaces it can never melt.
-    const belowType = ty < height - 1 ? matterType(tiles[idx + width]) : SOLID
-    const onImmuneFloor = isLavaImmune(belowType) && !isLiquid(belowType)
-    const canExpand = onImmuneFloor || fill[idx] >= FILL_MAX
-    const clump = !onImmuneFloor
-
-    const moved = sim.tryFillFlow(tx, ty, idx, canExpand, clump)
+    const moved = sim.tryFillFlow(tx, ty, idx)
     if (matterType(tiles[idx]) === EMPTY) return  // tryFillFlow donated all fill and destroyed tile
 
     if (moved) {

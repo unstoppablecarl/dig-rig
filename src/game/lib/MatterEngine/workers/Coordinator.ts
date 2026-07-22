@@ -5,16 +5,23 @@ import {
   MATTER_CONSERVATION_CHECK_INTERVAL_FRAMES,
   MAX_MATTER_TANKS,
 } from '../../../config.ts'
+import { randomRangeInt } from '../../../helpers/random.ts'
 import { FILL_MAX } from '../../Matter/_Liquid.constants.ts'
 import {
   BURNING_FUEL,
   EMPTY,
   FIRE,
+  getOwner,
   isSettled,
+  LAVA,
+  LAVA_DROP,
+  LAVA_DROP_INITIAL_VEL,
   type MatterRaw,
   matterType,
   type MatterValue,
   PHYSICS_BODY,
+  setLavaDropVel,
+  setOwner,
   STEAM,
 } from '../../Matter/_Matter.types.ts'
 import { isActivatable, isLiquid, matterFillContribution } from '../../Matter/matter.ts'
@@ -40,6 +47,7 @@ import { MatterSim } from './MatterSim/MatterSim.ts'
 import { MatterSimScratchData } from './MatterSim/MatterSimScratchData.ts'
 import { ParticleSim } from './ParticleSim/ParticleSim.ts'
 
+
 export class Coordinator {
   private data!: DataManager
   private tilePublisher!: ChunkPublisher
@@ -64,6 +72,25 @@ export class Coordinator {
   private readonly vfxJustSettled: number[] = []
   private readonly structuralRemovals: number[] = []
   private readonly dirtyChunksThisStep = new Set<number>()
+
+  // Real step() invocations between lava-eruption checks — not sim frames
+  // (this.frame freezes once the sim goes idle). Randomized per check so
+  // eruptions don't read as metronomic. Tune by feel.
+  private static readonly LAVA_ERUPTION_CHECK_MIN_STEPS = 20
+  private static readonly LAVA_ERUPTION_CHECK_MAX_STEPS = 30
+  // Random columns probed per check — see tryLavaEruption.
+  private static readonly LAVA_ERUPTION_PROBE_COUNT = 20
+  // Margin around the tracked X range, in case it's slightly stale.
+  private static readonly LAVA_BOUNDS_PADDING = 8
+
+  // X range of "where lava currently is", updated for free in step()'s
+  // r.next loop (2 comparisons per lava tile). -1 = no lava seen yet. Only
+  // narrows which columns to probe — the actual row comes from
+  // sim.lavaColumnTop (see tryLavaEruption).
+  private _lavaBoundsMinX = -1
+  private _lavaBoundsMaxX = -1
+  private _lavaEruptionStepCounter = 0
+  private _lavaEruptionNextCheckAt = Coordinator.LAVA_ERUPTION_CHECK_MIN_STEPS
   private _lastConservationTotal: number | null = null
   // Per-tile snapshot from the previous conservation check — diagnostic only, lets a
   // violation be narrowed down to the specific tile(s) whose change wasn't matched by any
@@ -114,8 +141,20 @@ export class Coordinator {
     this.activeSet = new SparseTileSet(width * height)
     this.idleSet = new SparseTileSet(width * height)
 
+    // Coordinator is a long-lived worker-scoped singleton (see
+    // Coordinator.worker.ts) reused across level (re)loads via repeated
+    // init() calls — without this, bounds left over from a PREVIOUS
+    // level's lava would persist, now describing whatever the new level
+    // happens to have at those same numeric positions.
+    this._lavaBoundsMinX = -1
+    this._lavaBoundsMaxX = -1
+    this._lavaEruptionStepCounter = 0
+    this._lavaEruptionNextCheckAt = Coordinator.LAVA_ERUPTION_CHECK_MIN_STEPS
+
     this.sim = new MatterSim()
-    this.sim.init(buffers.tiles, buffers.fill, buffers.matterTouched, buffers.chunkGrid, width, height, MatterSimScratchData.makeBuffers(), buffers.particleSpawns)
+    this.sim.init(buffers.tiles, buffers.fill, buffers.matterTouched, buffers.chunkGrid, width, height, MatterSimScratchData.makeBuffers(), buffers.particleSpawns, buffers.lavaColumnTop)
+    // Fresh buffer zero-inits to 0, misreading as a row-0 surface everywhere — reset to -1.
+    this.sim.lavaColumnTop.fill(-1)
 
     this.seedInitialActiveSet()
 
@@ -162,6 +201,7 @@ export class Coordinator {
       touchedBuffer: buffers.matterTouched,
       chunkGridBuffers: buffers.chunkGrid,
       particleSpawnBuffer: buffers.particleSpawns,
+      lavaColumnTopBuffer: buffers.lavaColumnTop,
       onReady: () => this.startLoop(),
     })
   }
@@ -236,6 +276,17 @@ export class Coordinator {
         this.particleSim.spawn(type, x, y, ownerId, vx, vy, value)
       })
 
+      // Must run before the early-return below — see field comments for why.
+      this._lavaEruptionStepCounter++
+      if (this._lavaEruptionStepCounter >= this._lavaEruptionNextCheckAt) {
+        this._lavaEruptionStepCounter = 0
+        this._lavaEruptionNextCheckAt = randomRangeInt(
+          Coordinator.LAVA_ERUPTION_CHECK_MIN_STEPS,
+          Coordinator.LAVA_ERUPTION_CHECK_MAX_STEPS + 1,
+        )
+        this.tryLavaEruption()
+      }
+
       if (
         this.activeSet.size === 0 &&
         !this.brush.hasWork() &&
@@ -288,7 +339,15 @@ export class Coordinator {
 
       const dirtyChunksThisStep = await this.workerPool.step(snapshot, leftFirst, frame, (results) => {
         for (const r of results) {
-          for (const idx of r.next) this.activeSet.add(idx)
+          for (const idx of r.next) {
+            this.activeSet.add(idx)
+            // Track lava's X extent for free — see tryLavaEruption.
+            if (matterType(this.sim.tiles[idx]) === LAVA) {
+              const tx = idx % this.width
+              if (this._lavaBoundsMinX === -1 || tx < this._lavaBoundsMinX) this._lavaBoundsMinX = tx
+              if (tx > this._lavaBoundsMaxX) this._lavaBoundsMaxX = tx
+            }
+          }
           for (const idx of r.vfxJustSettled) this.vfxJustSettled.push(idx)
           for (const idx of r.structuralRemovals) this.structuralRemovals.push(idx)
           MatterCreditTransferBuffer.readBuffer(r.matterTankTransfers, (x, y, ownerId, fill) => {
@@ -453,6 +512,63 @@ export class Coordinator {
           this._profMaxPublishDur = 0
         }
       }
+    }
+  }
+
+  // Probes random X columns in the tracked lava range, reading
+  // sim.lavaColumnTop[tx] (O(1), self-reported by lava.ts) for that
+  // column's surface row. If eligible, converts it to a LAVA_DROP
+  // projectile. Runs externally instead of from lava.ts's own action()
+  // because keeping the top-of-pool cell permanently active would never
+  // let doHorizontalCascadeProcessor's row settle.
+  private tryLavaEruption() {
+    const { tiles, fill, height, width, lavaColumnTop } = this.sim
+    if (this._lavaBoundsMinX === -1) return // no lava seen yet
+
+    const minX = Math.max(0, this._lavaBoundsMinX - Coordinator.LAVA_BOUNDS_PADDING)
+    const maxX = Math.min(width - 1, this._lavaBoundsMaxX + Coordinator.LAVA_BOUNDS_PADDING)
+
+    for (let probe = 0; probe < Coordinator.LAVA_ERUPTION_PROBE_COUNT; probe++) {
+      const tx = randomRangeInt(minX, maxX + 1)
+      const ty = lavaColumnTop[tx]
+      if (ty <= 0) continue // no self-reported surface here, or no room above to erupt into
+
+      const idx = ty * width + tx
+      // Re-validate — the cache may be stale (tile since buried, drained, or consumed).
+      if (matterType(tiles[idx]) !== LAVA || !(ty === 0 || matterType(tiles[idx - width]) === EMPTY)) {
+        lavaColumnTop[tx] = -1
+        continue
+      }
+
+      const downIdx = ty < height - 1 ? idx + width : -1
+      if (fill[idx] >= FILL_MAX) {
+        // Surface tile itself already has enough — simplest case.
+        this.sim.consumeLiquidFillAmount(idx, FILL_MAX, false)
+      } else if (downIdx !== -1 && matterType(tiles[downIdx]) === LAVA && fill[downIdx] >= FILL_MAX) {
+        // Surface tile is only partial (the common case once the surface
+        // spreads thin) — borrow exactly FILL_MAX from the cell below,
+        // matching what LAVA_DROP_DEF credits back on landing, and
+        // relocate the surface tile's own (usually partial) fill onto
+        // whatever surplus remains below. Fully conserved either way.
+        const currentFill = fill[idx]
+        this.sim.consumeLiquidFillAmount(downIdx, FILL_MAX, false)
+        fill[downIdx] += currentFill
+        fill[idx] = 0
+      } else {
+        // Not enough fill anywhere yet — try a different column.
+        continue
+      }
+
+      const ownerId = getOwner(tiles[idx])
+      this.sim.notifySolidCreated()
+      tiles[idx] = setLavaDropVel(setOwner(LAVA_DROP, ownerId), LAVA_DROP_INITIAL_VEL)
+      this.sim.markRenderDirty(tx, ty)
+      this.activeSet.add(idx)
+      // Wake the tile below so it gets a chance to self-report as the
+      // column's new surface — without this, candidates only ever deplete.
+      if (downIdx !== -1 && matterType(tiles[downIdx]) === LAVA) this.activeSet.add(downIdx)
+      lavaColumnTop[tx] = -1
+      return
     }
   }
 

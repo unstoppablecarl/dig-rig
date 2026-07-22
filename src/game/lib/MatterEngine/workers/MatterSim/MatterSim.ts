@@ -29,12 +29,10 @@ import {
   convertsToCollisionBody,
   getReserveDestroyAmount,
   getSupportType,
-  isAcidImmune,
   isActivatable,
   isAlwaysActive,
   isClumpingLiquid,
   isDestructible,
-  isLavaImmune,
   isLiquid,
   MATTER_ACTIONS,
   RESERVED_DESTROY_CHARGE,
@@ -81,6 +79,15 @@ export class MatterSim {
   height = 0
   chunkShift = 0
   chunksWidth = 0
+
+  // One Int32 per map column, shared via SharedArrayBuffer across every pool
+  // worker and Coordinator's own MatterSim. Value = y of the topmost tile in
+  // that column self-reported by lava.ts's action() as a full-fill surface
+  // with nothing above it; -1 = none known. Written by lava.ts, read by
+  // Coordinator.tryLavaEruption (O(1) instead of scanning). Stays valid
+  // after the tile settles (settled lava doesn't move) — the reader
+  // re-validates before trusting it, so a stale/racy write just gets pruned.
+  lavaColumnTop!: Int32Array
 
   private matterTankCredits: MatterCreditTransferBuffer
   private matterReservationReleases = new MatterReservationReleaseBuffer()
@@ -130,6 +137,19 @@ export class MatterSim {
   // doHorizontalCascadePass when the shed direction opposes this tick's dir
   // (see that method's own comment). Tune by feel.
   private static readonly RESIDUAL_SHED_RATE = 0.5
+
+  // Fraction of the clump-consolidation transfer (lava/acid topping a
+  // single-tile surface droplet's own leftover into an already-fuller
+  // same-type neighbor — see clumpsHere for the exact scope) applied per
+  // tick. Every other transfer rule in this file is throttled (this rate,
+  // RESIDUAL_SHED_RATE, UPWARD_PRESSURE_RELIEF_RATE, or
+  // FILL_PRESSURE_DIVISOR) — clumping was the only one that dumped a
+  // neighbor's entire remaining headroom in a single tick, uncapped. That
+  // let one column snap to full while its next-door neighbor got nothing
+  // the same tick (visible as lava separating into blocky columns while
+  // falling), and left a settling pool re-lumping mass in full-strength
+  // jumps instead of smoothly converging. Tune by feel.
+  private static readonly CLUMP_RATE = 0.5
 
   // Coordinator.ts's "is there work to do this tick" early-return predates
   // drainWatchRows and doesn't know about it. activeSet can read empty on a
@@ -194,6 +214,7 @@ export class MatterSim {
     height: number,
     scratchBuffers: SimScratchBuffers,
     particlesBuffer: SharedArrayBuffer,
+    lavaColumnTopBuffer: SharedArrayBuffer,
   ) {
     this.tiles = new Uint32Array(tilesBuffer)
     this.fill = new Uint32Array(fillBuffer)
@@ -208,6 +229,7 @@ export class MatterSim {
 
     this.scratch = new MatterSimScratchData(scratchBuffers)
     this.particles = new ParticleSpawnData(particlesBuffer)
+    this.lavaColumnTop = new Int32Array(lavaColumnTopBuffer)
   }
 
   process(
@@ -387,7 +409,11 @@ export class MatterSim {
 
   // Re-activate settled material that could flow into (tx, ty) now that it is empty.
   // When called outside a step (from message handlers), pass an explicit dest set.
-  reactivateAround(tx: number, ty: number, dest: TileSet = this.next) {
+  // horizontalRange overrides how far the settled-liquid wake-chain reaches
+  // (default FILL_ROW_SCAN_MAX) — narrow this for a disturbance that's
+  // genuinely local and shouldn't ripple across a whole settled pool (e.g.
+  // a lava drop landing; see lava-drop.ts).
+  reactivateAround(tx: number, ty: number, dest: TileSet = this.next, horizontalRange: number = FILL_ROW_SCAN_MAX) {
     if (ENABLE_MATTER_SIM_PROFILING) this._profReactivateAroundCalls++
     const { tiles, width } = this
 
@@ -411,7 +437,7 @@ export class MatterSim {
 
     // Wake the horizontal chain of settled liquids so pools level quickly.
     for (const dir of this._reactiveAroundRange) {
-      for (let d = 1; d <= FILL_ROW_SCAN_MAX; d++) {
+      for (let d = 1; d <= horizontalRange; d++) {
         const ax = tx + dir * d
         if (ax < 0 || ax >= width) break
         const sidx = ty * width + ax
@@ -1044,6 +1070,24 @@ export class MatterSim {
     this.fill[idx] = 0
   }
 
+  // Same accounting as consumeLiquidFill, but withdraws only `amount` of
+  // idx's fill instead of zeroing the whole tile — for a partial-consuming
+  // transition (e.g. a lava drop launch borrowing exactly FILL_MAX from a
+  // deeper, overfull cell while leaving the remainder as ordinary liquid).
+  // consumeLiquidFill can't be reused for this: it always zeroes the entire
+  // fill and logs that whole value as consumed, which is wrong whenever the
+  // tile is meant to keep existing as liquid with its remaining fill intact.
+  consumeLiquidFillAmount(idx: number, amount: number, releaseReservation = true) {
+    if (amount <= 0) return
+    const raw = this.tiles[idx]
+    const t = matterType(raw)
+    if (releaseReservation && RESERVED_DESTROY_CHARGE.has(t)) {
+      this.queueReservationRelease(getOwner(raw), getReserveDestroyAmount(t) * amount)
+    }
+    this.liquidFillConsumed += amount
+    this.fill[idx] -= amount
+  }
+
   // Track that FILL_MAX liquid fill was created at a new liquid tile.
   notifyLiquidCreated() {
     this.liquidFillCreated += FILL_MAX
@@ -1299,21 +1343,33 @@ export class MatterSim {
     return want > FILL_FLOW_DEADBAND ? want : 0
   }
 
-  tryFillFlow(tx: number, ty: number, idx: number, canExpandToEmpty = true, clump = false): boolean {
+  // Throttles a clump-consolidation target down to CLUMP_RATE of itself per
+  // tick — see CLUMP_RATE's own comment for why an unthrottled full dump is
+  // wrong here. `raw` is the full amount that WOULD close the gap toward the
+  // neighbor being topped off; only a fraction of it is actually taken this
+  // tick. Deadbanded exactly like deadbandWant so a genuinely tiny residual
+  // gap can reach exactly 0 and let the cell settle, instead of an
+  // unconditional minimum-1-unit transfer chasing it forever.
+  private static clumpWant(raw: number): number {
+    if (raw <= FILL_FLOW_DEADBAND) return 0
+    return Math.max(1, Math.round(raw * MatterSim.CLUMP_RATE))
+  }
+
+  tryFillFlow(tx: number, ty: number, idx: number, canExpandToEmpty = true): boolean {
     if (ENABLE_MATTER_SIM_PROFILING) {
       this._profTryFillFlowCalls++
       if ((this._profTryFillFlowCalls & MatterSim.PROF_SAMPLE_MASK) === 0) {
         const t0 = performance.now()
-        const result = this._tryFillFlowImpl(tx, ty, idx, canExpandToEmpty, clump)
+        const result = this._tryFillFlowImpl(tx, ty, idx, canExpandToEmpty)
         this._profTryFillFlowTime += performance.now() - t0
         this._profTryFillFlowSamples++
         return result
       }
     }
-    return this._tryFillFlowImpl(tx, ty, idx, canExpandToEmpty, clump)
+    return this._tryFillFlowImpl(tx, ty, idx, canExpandToEmpty)
   }
 
-  private _tryFillFlowImpl(tx: number, ty: number, idx: number, canExpandToEmpty: boolean, clump: boolean): boolean {
+  private _tryFillFlowImpl(tx: number, ty: number, idx: number, canExpandToEmpty: boolean): boolean {
     const { tiles, fill, width, height } = this
 
     const mass = fill[idx]
@@ -1405,12 +1461,21 @@ export class MatterSim {
     let wantA = 0
     if (aIdx !== -1) {
       if (aType === type) {
-        // Same-type: clump (donate fill) unless a drain is reachable — when draining,
-        // suppress same-type flow entirely so the full budget exits the surface.
+        // Same-type: ordinary column-pressure equalization unless a drain is
+        // reachable — when draining, suppress same-type flow entirely so
+        // the full budget exits the surface. lava/acid used to special-case
+        // this with a separate "clump toward FILL_MAX" formula (via a
+        // `clump` param this function no longer takes); that formula was
+        // confirmed to be the cause of those liquids only settling at
+        // specific poured amounts, through several rounds of trying to fix
+        // its details (deadband, height-gating, gradient gate) — none
+        // resolved it. doHorizontalCascadeProcessor's own, separately-scoped
+        // clumping (still active, unaffected by this) is now the sole
+        // source of the "consolidate toward a fuller tile" visual; this
+        // per-tile step always uses the same proven diffusion formula every
+        // liquid settles correctly with.
         if (!hasDrain) {
-          wantA = (clump && remaining < FILL_MAX)
-            ? (fill[aIdx] + remaining <= FILL_MAX ? remaining : Math.max(0, FILL_MAX - fill[aIdx]))
-            : MatterSim.deadbandWant(Math.round(Math.max(0, (myCP - fill[aIdx] - this.colPressureAbove(ax, ty, type)) / FILL_PRESSURE_DIVISOR)))
+          wantA = MatterSim.deadbandWant(Math.round(Math.max(0, (myCP - fill[aIdx] - this.colPressureAbove(ax, ty, type)) / FILL_PRESSURE_DIVISOR)))
         }
       } else if (aType === EMPTY && (canExpandToEmpty || aIsLedge || aIsSlopeStep)) {
         wantA = aIsLedge
@@ -1422,10 +1487,9 @@ export class MatterSim {
     let wantB = 0
     if (bIdx !== -1) {
       if (bType === type) {
+        // See the mirrored 'a' branch above.
         if (!hasDrain) {
-          wantB = (clump && remaining < FILL_MAX)
-            ? (fill[bIdx] + remaining <= FILL_MAX ? remaining : Math.max(0, FILL_MAX - fill[bIdx]))
-            : MatterSim.deadbandWant(Math.round(Math.max(0, (myCP - fill[bIdx] - this.colPressureAbove(bx, ty, type)) / FILL_PRESSURE_DIVISOR)))
+          wantB = MatterSim.deadbandWant(Math.round(Math.max(0, (myCP - fill[bIdx] - this.colPressureAbove(bx, ty, type)) / FILL_PRESSURE_DIVISOR)))
         }
       } else if (bType === EMPTY && (canExpandToEmpty || bIsLedge || bIsSlopeStep)) {
         wantB = bIsLedge
@@ -1755,17 +1819,29 @@ export class MatterSim {
     return true
   }
 
-  // True if `type` prefers to consolidate into an already-fuller same-type
-  // neighbor (lava/acid) and the floor below (tx, ty) isn't immune to it —
-  // mirrors the belowType/isXImmune composition in lava.ts/acid.ts's own action().
+  // True only for a genuine single-tile-deep surface droplet: nothing above
+  // this cell (empty), and the floor below is non-liquid (resting directly
+  // on solid/immune ground, not stacked on more of the same liquid).
+  //
+  // Every previous attempt at scoping this (remaining < FILL_MAX, target
+  // strictly less full, source not already settled, even requiring empty
+  // above alone) still returned true whenever this cell rested on MORE of
+  // the same liquid below — which in a multi-row-deep pool is true for
+  // virtually every row simultaneously, not just an isolated straggler.
+  // That over-broad case (not the amount formula, which had already been
+  // throttled/deadbanded/gated correctly) was the actual reason acid/lava
+  // only settled at specific poured amounts, confirmed via isolated A/B
+  // testing (clumps:true vs clumps:false on otherwise-identical code).
+  // Requiring the floor below to be non-liquid excludes that case
+  // structurally: a cell resting on more same-type liquid always resolves
+  // via the same proven diffusion formula water settles with; clumping now
+  // only ever applies to a lone droplet sitting directly on the ground.
   private clumpsHere(type: MatterType, tx: number, ty: number): boolean {
     if (!isClumpingLiquid(type)) return false
     const { tiles, width, height } = this
+    if (ty > 0 && matterType(tiles[(ty - 1) * width + tx]) !== EMPTY) return false
     const belowType = ty + 1 < height ? matterType(tiles[(ty + 1) * width + tx]) : MatterType.SOLID
-    if (isLiquid(belowType)) return true
-    if (type === MatterType.LAVA) return !isLavaImmune(belowType)
-    if (type === MatterType.ACID) return !isAcidImmune(belowType)
-    return true
+    return !isLiquid(belowType)
   }
 
   // Runs after all worker rounds finish (no concurrent writers) — sweeps
@@ -2046,8 +2122,22 @@ export class MatterSim {
               // headroom), so dumping it uncapped into a fresh EMPTY
               // neighbor can push the destination above FILL_MAX.
               f = Math.min(Math.max(0, FILL_MAX - fill[aIdx]), remaining)
-            } else if (aType === type && clumps) {
-              f = Math.min(Math.max(0, FILL_MAX - fill[aIdx]), remaining)
+            } else if (aType === type && clumps && fill[aIdx] < remaining && remaining < FILL_MAX && !isSettled(raw)) {
+              // clumps (clumpsHere) already scopes this to a genuine
+              // single-tile surface droplet — see its own comment. The
+              // extra conditions here: target must be strictly less full
+              // than source (else two neighbors within a rounding hair of
+              // each other ping-pong this transfer forever), the droplet
+              // must still be partial (a full droplet has no leftover to
+              // donate), and the source must not already be settled — this
+              // scan touches a row's entire contiguous liquid extent once
+              // ANY member is active, so an already-settled droplet can get
+              // re-examined here whenever something else in the same row is
+              // still active; without this it would get un-settled again by
+              // doFillTransfer for no reason. Throttled via clumpWant
+              // (CLUMP_RATE) rather than an unthrottled full-headroom dump,
+              // which used to cause lava's blocky/separating fall pattern.
+              f = Math.min(MatterSim.clumpWant(Math.max(0, FILL_MAX - fill[aIdx])), remaining)
             } else if (canDrainShedA && (aType === EMPTY || fill[aIdx] < remaining)) {
               // Same-type target must be strictly lower, or this just swaps
               // equal amounts back and forth forever (the exact churn the
@@ -2080,8 +2170,9 @@ export class MatterSim {
             if (bType === EMPTY && this.drainReachableFrom(bx, ty, -dir, type)) {
               // See the mirrored 'a' branch above — capped by headroom.
               f = Math.min(Math.max(0, FILL_MAX - fill[bIdx]), remaining)
-            } else if (bType === type && clumps) {
-              f = Math.min(Math.max(0, FILL_MAX - fill[bIdx]), remaining)
+            } else if (bType === type && clumps && fill[bIdx] < remaining && remaining < FILL_MAX && !isSettled(raw)) {
+              // See the mirrored 'a' branch above.
+              f = Math.min(MatterSim.clumpWant(Math.max(0, FILL_MAX - fill[bIdx])), remaining)
             } else if (canDrainShedB && (bType === EMPTY || fill[bIdx] < remaining)) {
               // See the mirrored 'a' branch above.
               f = Math.min(

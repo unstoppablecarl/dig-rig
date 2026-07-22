@@ -10,10 +10,9 @@ import {
   SALT_WATER,
   setCounter,
   setSettled,
-  SOLID,
   WATER,
 } from '../_Matter.types.ts'
-import { ACID_STICKS_TO, isAcidImmune, isLiquid } from '../matter.ts'
+import { isAcidImmune } from '../matter.ts'
 
 // Ticks a partial-fill tile must stay isolated before it's destroyed — a
 // same-tick chain reaction can make an actively-spreading edge briefly look
@@ -46,8 +45,6 @@ export const ACID_DEF = {
         [tx, ty - 1, idx - width],
       ] as [number, number, number][]
 
-      // @TODO if fill > FILL_MAX transfer excess to neighbor ACID or EMPTY
-
       for (const [nx, ny, nidx] of neighbors) {
         if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue
 
@@ -73,24 +70,7 @@ export const ACID_DEF = {
       return
     }
 
-    // Only when acid can actually dissolve (full tile). Partial acid has
-    // nothing to react with. Only relevant when gravity can't act (below is
-    // not empty/passable); a wall to the side or above doesn't gate this.
-    const belowType = ty + 1 < height ? matterType(tiles[idx + width]) : SOLID
-    const canFall = belowType === EMPTY || belowType === ACID
-    const touchingSolid = !canFall && sim.borderingAny(tx, ty, idx, ACID_STICKS_TO) !== -1
-    const onImmuneFloor = isAcidImmune(belowType) && !isLiquid(belowType)
-    // Reused below for the clump-vs-spread decision — an unbounded run walk,
-    // only paid for when actually resting on something.
-    const hasDrainNearby = (touchingSolid || onImmuneFloor) && sim.hasReachableDrainFromCell(tx, ty, ACID)
-
-    // Spread toward a confirmed drain instead of clumping; clump once no
-    // drain is reachable so isolated stragglers consolidate instead of
-    // scattering across the floor.
-    const canExpand = (onImmuneFloor && hasDrainNearby) || fill[idx] >= FILL_MAX
-    const clump = !(onImmuneFloor && hasDrainNearby)
-
-    const moved = sim.tryFillFlow(tx, ty, idx, canExpand, clump)
+    const moved = sim.tryFillFlow(tx, ty, idx)
     if (matterType(tiles[idx]) === EMPTY) return  // tryFillFlow donated all fill and destroyed tile
 
     if (moved) {
@@ -120,10 +100,7 @@ export const ACID_DEF = {
       sim.markRenderDirty(tx, ty)
 
       // Keep re-checking only while this cell's run has an actual reachable
-      // drain — see water.ts for why. Recomputed rather than reusing
-      // hasDrainNearby above: that one's gated on touchingSolid/onImmuneFloor
-      // for the stickiness/clump decision, which would under-count a drain
-      // reachable from a cell not directly resting on anything solid.
+      // drain — see water.ts for why.
       if (sim.hasReachableDrainFromCell(tx, ty, ACID)) {
         sim.next.add(idx)
       }

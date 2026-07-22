@@ -226,10 +226,6 @@ export const CRYO_STICKS_TO_IF_SETTLED = new MatterTypeSet(...MatterTypeValues.f
   return !isLiquid(v) && doesSettle(v)
 }))
 
-export const ACID_STICKS_TO = new MatterTypeSet(...MatterTypeValues.filter(v => {
-  return !isAcidImmune(v) || v === SOLID || v === PERMANENT
-}))
-
 export const MATTER_ICONS: Record<MatterType, string> = {
   [EMPTY]: '❌',
   [SOLID]: '🧱',

@@ -80,6 +80,11 @@ export function setLavaDropVel(tile: MatterValue, vel: number): MatterRaw {
   return ((tile & ~LAVA_DROP_VEL_MASK) | ((vel & 0xF) << LAVA_DROP_VEL_SHIFT)) as MatterRaw
 }
 
+// Starting upward velocity for a launched lava drop. Lives here, not in
+// defs/lava.ts, so Coordinator.ts can use it without a circular import
+// (defs/*.ts are eagerly glob-imported by matter.ts's registration loop).
+export const LAVA_DROP_INITIAL_VEL = 10
+
 // COUNTER — 8-bit field in bits 19–26. Shared by mutually exclusive tile types:
 //   Fuel tiles (PLANT, OIL, FUSE): burn countdown; 0 = not burning, 1–255 = ticks remaining
 //   FIRE tiles: age countdown; 0 = freshly placed (initialized on first tick), 1–255 = ticks remaining
