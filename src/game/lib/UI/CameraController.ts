@@ -1,11 +1,10 @@
 import { Math as PMath, Scale } from 'phaser'
+import { INITIAL_ZOOM } from '../../config.ts'
 import { getFactor } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { EventsBinder } from '../Util/EventsBinder.ts'
 import RESIZE = Scale.Events.RESIZE
-
-const INITIAL_ZOOM = 3
 
 export class CameraController extends SceneBound {
 

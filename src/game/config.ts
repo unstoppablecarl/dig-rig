@@ -6,6 +6,10 @@ export const PLAYER_MOVE_SPEED = 3.5
 export const DEFAULT_PLAYER_STARTING_MATTER = 400
 export const DEFAULT_PLAYER_MATTER_TANK_SIZE = 5000
 
+// initial state
+export const INITIAL_ZOOM = 3
+
+
 // hard limits
 export const MAX_PROJECTILES = 512
 export const MAX_MATTER_TANKS = 256
@@ -30,10 +34,10 @@ export const ENABLE_SPAWN_OBJ_MODE_DEBUG = true
 
 // visual debug
 export const DRAW_TERRAIN_SETTLED_DEBUG = false
+export const DRAW_LIQUID_PRESSURE_DEBUG = false
 export const DRAW_PHYSICS_BODY_TILES_DEBUG = false
 export const DRAW_ANCHORED_DEBUG = false
 export const DRAW_PARTICLE_DEBUG = false
-export const DRAW_LIQUID_PRESSURE_DEBUG = false
 export const DRAW_WORLD_BORDER_DEBUG = false
 export const DRAW_CHUNK_GRID_DEBUG = false
 export const FPS_UPDATE_INTERVAL_MS = 500
