@@ -1297,6 +1297,35 @@ export class MatterSim {
     dest.add(toIdx)
   }
 
+  // Right before an unmoved acid/lava tile settles under FILL_MAX beside
+  // something it could otherwise destroy (dissolve/melt/burn rolls are all
+  // gated on fill >= FILL_MAX), pull spare fill from an adjacent same-type
+  // liquid neighbour so a later reactivation can actually reach that gate.
+  // Without this, a droplet that settles a hair under FILL_MAX next to a
+  // destructible wall never gets there on its own — settled liquid only
+  // re-equalizes toward neighbours' fill, it doesn't chase FILL_MAX.
+  topOffFromNeighbour(tx: number, ty: number, idx: number, type: MatterType): void {
+    const needed = FILL_MAX - this.fill[idx]
+    if (needed <= 0) return
+
+    const { tiles, fill, width, height } = this
+    const candidates = [
+      ty < height - 1 ? idx + width : -1,
+      tx > 0 ? idx - 1 : -1,
+      tx < width - 1 ? idx + 1 : -1,
+      ty > 0 ? idx - width : -1,
+    ]
+    for (const nidx of candidates) {
+      if (nidx === -1 || matterType(tiles[nidx]) !== type) continue
+      const donation = Math.min(needed, fill[nidx])
+      if (donation <= 0) continue
+      const nx = nidx % width
+      const ny = (nidx / width) | 0
+      this.doFillTransfer(nidx, nx, ny, idx, tx, ty, donation, setSettled(tiles[idx], false))
+      return
+    }
+  }
+
   private setFill(
     toIdx: number, toTx: number, toTy: number,
     amount: number,

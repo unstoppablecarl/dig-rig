@@ -12,7 +12,7 @@ import {
   setSettled,
   WATER,
 } from '../_Matter.types.ts'
-import { isAcidImmune } from '../matter.ts'
+import { ACID_DESTROYABLE, isAcidImmune } from '../matter.ts'
 
 // Ticks a partial-fill tile must stay isolated before it's destroyed — a
 // same-tick chain reaction can make an actively-spreading edge briefly look
@@ -76,6 +76,14 @@ export const ACID_DEF = {
     if (moved) {
       sim.reactivateAround(tx, ty)
     } else {
+      if (fill[idx] < FILL_MAX) {
+        // About to settle under FILL_MAX beside a tile the dissolve roll
+        // above could otherwise eat — top up from an adjacent ACID tile so
+        // a later reactivation can actually clear that fill >= FILL_MAX gate.
+        const hasDissolveTarget = sim.borderingAny(tx, ty, idx, ACID_DESTROYABLE) !== -1
+        if (hasDissolveTarget) sim.topOffFromNeighbour(tx, ty, idx, ACID)
+      }
+
       if (fill[idx] < FILL_MAX) {
         const hasLivingNeighbour =
           (tx > 0 && matterType(tiles[idx - 1]) === ACID && fill[idx - 1] > 0) ||

@@ -20,7 +20,7 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { isLavaImmune } from '../matter.ts'
+import { isLavaImmune, LAVA_DESTROYABLE } from '../matter.ts'
 
 const COOLED = new MatterTypeSet(WATER, SALT_WATER)
 
@@ -86,27 +86,6 @@ export const LAVA_DEF = {
         sim.queueMatterCredit(mx, my, ownerId)
         sim.destroyTile(mx, my, meltLoc)
         sim.reactivateAround(mx, my)
-        // Single isolated SOLID neighbors → ROCK so they sink through the lava pool.
-        // (The structural BFS converts disconnected islands to SAND, which doesn't sink.)
-        const p1: [number, number, number][] = [
-          [mx - 1, my, mx > 0 ? meltLoc - 1 : -1],
-          [mx + 1, my, mx < width - 1 ? meltLoc + 1 : -1],
-          [mx, my - 1, my > 0 ? meltLoc - width : -1],
-          [mx, my + 1, my < height - 1 ? meltLoc + width : -1],
-        ]
-        for (const [nx, ny, nidx] of p1) {
-          if (nidx === -1 || matterType(tiles[nidx]) !== SOLID) continue
-          let n = 0
-          if (nx > 0 && matterType(tiles[nidx - 1]) === SOLID) n++
-          if (nx < width - 1 && matterType(tiles[nidx + 1]) === SOLID) n++
-          if (ny > 0 && matterType(tiles[nidx - width]) === SOLID) n++
-          if (ny < height - 1 && matterType(tiles[nidx + width]) === SOLID) n++
-          if (n === 0) {
-            tiles[nidx] = ROCK
-            sim.markDirty(nx, ny)
-            sim.next.add(nidx)
-          }
-        }
         sim.queueMatterCreditFromTile(tx, ty, idx)
         sim.destroyTile(tx, ty, idx)
         return
@@ -188,6 +167,14 @@ export const LAVA_DEF = {
     if (moved) {
       sim.reactivateAround(tx, ty)
     } else {
+      if (fill[idx] < FILL_MAX) {
+        // About to settle under FILL_MAX beside a tile the melt/burn rolls
+        // above could otherwise eat — top up from an adjacent LAVA tile so
+        // a later reactivation can actually clear that fill >= FILL_MAX gate.
+        const burnTarget = sim.borderingAny(tx, ty, idx, LAVA_DESTROYABLE) !== -1
+        if (burnTarget) sim.topOffFromNeighbour(tx, ty, idx, LAVA)
+      }
+
       if (fill[idx] < FILL_MAX) {
         const hasLivingNeighbour =
           (tx > 0 && matterType(tiles[idx - 1]) === LAVA && fill[idx - 1] > 0) ||

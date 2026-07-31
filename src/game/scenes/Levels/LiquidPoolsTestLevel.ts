@@ -21,7 +21,7 @@ import { GameLevel } from '../GameLevel.ts'
 import terrain from './TestLevel2/TestLevel2.png'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
-export default class TestLevel2 extends GameLevel {
+export default class LiquidPoolsTestLevel extends GameLevel {
   registerEntities() {
     return [
       PortableMatterTank,
@@ -88,13 +88,13 @@ export default class TestLevel2 extends GameLevel {
       OIL,
     ]
 
-    let x = 200
-    const y = ref - 200
-    const width = 100
+    let x = 64
+    const y = ref - 210
+    const width = 128
     const height = 60
     const thickness = 10
 
-    const liqWidth = 20
+    const liqWidth = 32
     const liqHeight = 100
     const liqY = ref - 300
 
@@ -115,12 +115,12 @@ export default class TestLevel2 extends GameLevel {
       } else {
         builder.setRect(liqX, liqY, liqWidth, liqHeight, type)
       }
-      x += 100
+      x += width + 64
     }
   }
 
   makePlayer() {
-    const player = new Player(this, 100, 400)
+    const player = new Player(this, 40, 400)
     const tank = this.entityFactory.spawn(PortableMatterTank, 10, 350, 99)
 
     player.matterTank.overflowTank = tank.matterTank

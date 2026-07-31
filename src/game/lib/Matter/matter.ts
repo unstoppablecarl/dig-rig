@@ -259,3 +259,6 @@ export const MATTER_ICONS: Record<MatterType, string> = {
   [BURNING_FUEL]: '🎇',
   [PHYSICS_BODY]: '⧅',
 }
+
+export const ACID_DESTROYABLE = new MatterTypeSet(...MatterTypeValues.filter(v => !isAcidImmune(v)))
+export const LAVA_DESTROYABLE = new MatterTypeSet(...MatterTypeValues.filter(v => !isLavaImmune(v) || v === SOLID))
