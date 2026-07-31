@@ -19,9 +19,8 @@ export const CHILLED_ICE_DEF = {
   id: MatterType.CHILLED_ICE,
   name: 'Chilled Ice',
   immutableSupport: SupportType.AFFIXED as const,
-  acidImmune: true as const,
   alwaysCollides: true as const,
-  // alwaysActive: true as const,
+  lavaBurnable: true as const,
   action(sim, tx, ty, idx): void {
     // Thaw to regular ice
     if (random() < 6) {

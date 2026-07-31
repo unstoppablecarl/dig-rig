@@ -97,8 +97,8 @@ export const getReserveDestroyAmount = (type: MatterType) => RESERVE_DESTROY_AMO
 
 const enum Flag {
   SETTLES = 1 << 0,
-  LAVA_IMMUNE = 1 << 1,
-  ACID_IMMUNE = 1 << 2,
+  LAVA_BURNABLE = 1 << 1,
+  ACID_MELTABLE = 1 << 2,
   LIQUID = 1 << 3,
   COLLIDES_WHEN_SETTLED = 1 << 4,
   ALWAYS_ACTIVE = 1 << 5,
@@ -108,6 +108,7 @@ const enum Flag {
   NO_CREATE_PROJECTILE_COLLISION = 1 << 9,
   NO_DESTROY_PROJECTILE_COLLISION = 1 << 10,
   CLUMPS = 1 << 11,
+  LAVA_MELTABLE = 1 << 12,
 }
 
 export const INDESTRUCTIBLE_TYPES = new MatterTypeSet(PERMANENT, PHYSICS_BODY)
@@ -115,8 +116,14 @@ export const INDESTRUCTIBLE_TYPES = new MatterTypeSet(PERMANENT, PHYSICS_BODY)
 const MATTER_FLAGS = new Uint32Array(256)
 export const isAlwaysActive = (type: MatterType) => (MATTER_FLAGS[type] & Flag.ALWAYS_ACTIVE) !== 0
 export const doesSettle = (type: MatterType): type is SettlingTypes => (MATTER_FLAGS[type] & Flag.SETTLES) !== 0
-export const isLavaImmune = (type: MatterType) => (MATTER_FLAGS[type] & Flag.LAVA_IMMUNE) !== 0
-export const isAcidImmune = (type: MatterType) => (MATTER_FLAGS[type] & Flag.ACID_IMMUNE) !== 0
+export const isLavaBurnable = (type: MatterType) => (MATTER_FLAGS[type] & Flag.LAVA_BURNABLE) !== 0
+export const isLavaMeltable = (type: MatterType) => (MATTER_FLAGS[type] & Flag.LAVA_MELTABLE) !== 0
+// Skips direct ignite-to-FIRE conversion (lava's burn loop, lava-drop contact) — independent of
+// lavaMeltable, since a meltable-but-not-burnable type (SOLID) is still immune to burning and is
+// destroyed only through its own separate melt path.
+export const isLavaImmune = (type: MatterType) => !isLavaBurnable(type)
+export const isAcidMeltable = (type: MatterType) => (MATTER_FLAGS[type] & Flag.ACID_MELTABLE) !== 0
+export const isAcidImmune = (type: MatterType) => !isAcidMeltable(type)
 export const collidesWhenSettled = (type: MatterType) => (MATTER_FLAGS[type] & Flag.COLLIDES_WHEN_SETTLED) !== 0
 export const isLiquid = (type: MatterType): type is LiquidTypes => (MATTER_FLAGS[type] & Flag.LIQUID) !== 0
 export const isActivatable = (type: MatterType) => (MATTER_FLAGS[type] & (Flag.ALWAYS_ACTIVE | Flag.SETTLES)) !== 0
@@ -151,8 +158,9 @@ function registerMatterType(
     name,
     action = noop,
     immutableSupport,
-    lavaImmune = false,
-    acidImmune = false,
+    lavaBurnable = false,
+    lavaMeltable = false,
+    acidMeltable = false,
     clumps = false,
     collidesWhenSettled = false,
     liquid = false,
@@ -175,8 +183,9 @@ function registerMatterType(
     MATTER_FLAGS[id] |= Flag.IMMUTABLE_SUPPORT_TYPE
   }
 
-  if (lavaImmune) MATTER_FLAGS[id] |= Flag.LAVA_IMMUNE
-  if (acidImmune) MATTER_FLAGS[id] |= Flag.ACID_IMMUNE
+  if (lavaBurnable) MATTER_FLAGS[id] |= Flag.LAVA_BURNABLE
+  if (lavaMeltable) MATTER_FLAGS[id] |= Flag.LAVA_MELTABLE
+  if (acidMeltable) MATTER_FLAGS[id] |= Flag.ACID_MELTABLE
   if (clumps) MATTER_FLAGS[id] |= Flag.CLUMPS
   if (settles) MATTER_FLAGS[id] |= Flag.SETTLES
   if (alwaysActive) MATTER_FLAGS[id] |= Flag.ALWAYS_ACTIVE
@@ -260,5 +269,5 @@ export const MATTER_ICONS: Record<MatterType, string> = {
   [PHYSICS_BODY]: '⧅',
 }
 
-export const ACID_DESTROYABLE = new MatterTypeSet(...MatterTypeValues.filter(v => !isAcidImmune(v)))
-export const LAVA_DESTROYABLE = new MatterTypeSet(...MatterTypeValues.filter(v => !isLavaImmune(v) || v === SOLID))
+export const ACID_DESTROYABLE = new MatterTypeSet(...MatterTypeValues.filter(v => isAcidMeltable(v)))
+export const LAVA_DESTROYABLE = new MatterTypeSet(...MatterTypeValues.filter(v => isLavaBurnable(v) || isLavaMeltable(v)))

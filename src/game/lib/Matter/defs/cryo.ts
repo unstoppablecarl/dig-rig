@@ -22,10 +22,10 @@ import { CRYO_STICKS_TO, CRYO_STICKS_TO_IF_SETTLED } from '../matter.ts'
 export const CRYO_DEF = {
   id: CRYO,
   name: 'Cryo',
-  acidImmune: true as const,
   hasOwnerId: true as const,
   settles: true as const,
   liquid: true as const,
+  lavaBurnable: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width, height } = sim
     const ownerId = getOwner(tiles[idx])

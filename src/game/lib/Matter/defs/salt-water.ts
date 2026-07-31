@@ -6,8 +6,6 @@ const WAKE_SETTLED = new MatterTypeSet(LAVA, SALT)
 export const SALT_WATER_DEF = {
   id: SALT_WATER,
   name: 'Salt Water',
-  lavaImmune: true as const,
-  acidImmune: true as const,
   liquid: true as const,
   settles: true as const,
   action(sim, tx, ty, idx): void {

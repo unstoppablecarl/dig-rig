@@ -223,8 +223,13 @@ export type MatterDef = {
   action?: MatterAction
   // alwaysSupport — immutable support type enforced at read-time regardless of per-tile bits.
   immutableSupport?: SupportType.ANCHORED | SupportType.STRUCTURAL | SupportType.AFFIXED
-  lavaImmune?: boolean
-  acidImmune?: boolean
+  // whether lava ignites this type into FIRE on contact. Defaults to false.
+  lavaBurnable?: boolean
+  // whether lava slowly melts this type on contact — for types that are otherwise
+  // lava-immune (not burnable) but still consumed, e.g. SOLID. Defaults to false.
+  lavaMeltable?: boolean
+  // whether acid dissolves this type on contact. Defaults to false.
+  acidMeltable?: boolean
   // whether this liquid prefers to consolidate into an already-full same-type
   // neighbor (top it off toward FILL_MAX) instead of even nearest-neighbor
   // diffusion — lava/acid only; water-like liquids look fine spreading evenly.

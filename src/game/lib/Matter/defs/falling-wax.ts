@@ -5,6 +5,8 @@ export const FALLING_WAX_DEF = {
   name: 'Falling Wax',
   hasOwnerId: true as const,
   alwaysActive: true as const,
+  lavaBurnable: true as const,
+  acidMeltable: true as const,
   action(sim, tx, ty, idx): void {
     const moved = sim.tryMove(idx, tx, ty, tx, ty + 1)
     if (!moved) {

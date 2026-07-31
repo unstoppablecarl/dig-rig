@@ -7,6 +7,8 @@ export const NITRO_DEF = {
   name: 'Nitro',
   hasOwnerId: true as const,
   settles: true as const,
+  lavaBurnable: true as const,
+  acidMeltable: true as const,
   action(sim, tx, ty, idx): void {
     if (random() < 30) {
       const nidx = sim.bordering(tx, ty, idx, FIRE)

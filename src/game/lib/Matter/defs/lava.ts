@@ -33,12 +33,12 @@ const ISOLATED_DROPLET_GRACE_TICKS = 30
 export const LAVA_DEF = {
   id: LAVA,
   name: 'Lava',
-  lavaImmune: true as const,
   clumps: true as const,
   liquid: true as const,
   hasOwnerId: true as const,
   settles: true as const,
   reserveDestroyAmount: 1,
+  acidMeltable: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, fill, width, height } = sim
 

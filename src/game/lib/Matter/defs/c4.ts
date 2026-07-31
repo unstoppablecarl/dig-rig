@@ -7,6 +7,8 @@ export const C4_DEF = {
   name: 'C4',
   immutableSupport: SupportType.AFFIXED as const,
   hasOwnerId: true as const,
+  lavaBurnable: true as const,
+  acidMeltable: true as const,
   action(sim, tx, ty, idx): void {
     if (random() < 60) {
       const tiles = sim.tiles

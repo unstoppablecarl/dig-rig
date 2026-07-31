@@ -8,6 +8,8 @@ export const NAPALM_DEF = {
   liquid: true as const,
   hasOwnerId: true as const,
   settles: true as const,
+  lavaBurnable: true as const,
+  acidMeltable: true as const,
   action(sim, tx, ty, idx): void {
     if (random() < 25) {
       const nidx = sim.bordering(tx, ty, idx, FIRE)

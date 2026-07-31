@@ -25,6 +25,8 @@ export const BURNING_THERMITE_DEF = {
   sinksThrough: [WATER, SALT_WATER, OIL],
   hasOwnerId: true as const,
   alwaysActive: true as const,
+  lavaBurnable: true as const,
+  acidMeltable: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width, height, leftFirst } = sim
 

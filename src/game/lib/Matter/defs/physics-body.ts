@@ -6,8 +6,6 @@ export const PHYSICS_BODY_DEF = {
   immutableSupport: SupportType.AFFIXED,
   collidesWithDestroyProjectiles: false as const,
   collidesWithCreateProjectiles: false as const,
-  acidImmune: true as const,
-  lavaImmune: true as const,
   action(): void {
 
   },

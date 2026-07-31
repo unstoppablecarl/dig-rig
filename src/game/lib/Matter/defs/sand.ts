@@ -6,6 +6,8 @@ export const SAND_DEF = {
   collidesWhenSettled: true as const,
   sinksThrough: [WATER, OIL, SALT_WATER],
   settles: true as const,
+  lavaBurnable: true as const,
+  acidMeltable: true as const,
   action(sim, tx, ty, idx): void {
     sim.doPowderFall(tx, ty, idx)
   },

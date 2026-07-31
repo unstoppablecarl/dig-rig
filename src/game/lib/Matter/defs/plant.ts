@@ -18,6 +18,8 @@ export const PLANT_DEF = {
   id: PLANT,
   name: 'Plant',
   immutableSupport: SupportType.AFFIXED as const,
+  lavaBurnable: true as const,
+  acidMeltable: true as const,
   action(sim, tx, ty, idx): void {
     const { tiles, width } = sim
 

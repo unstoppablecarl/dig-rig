@@ -8,6 +8,8 @@ export const SALT_DEF = {
   settles: true as const,
   collidesWhenSettled: true as const,
   sinksThrough: [WATER, SALT_WATER],
+  lavaBurnable: true as const,
+  acidMeltable: true as const,
   action(sim, tx, ty, idx): void {
     // Dissolve in water → salt water
     if (random() < 25) {

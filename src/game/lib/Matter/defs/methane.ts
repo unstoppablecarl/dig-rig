@@ -8,6 +8,7 @@ export const METHANE_DEF = {
   hasOwnerId: true as const,
   alwaysActive: true as const,
   collidesWithCreateProjectiles: false as const,
+  lavaBurnable: true as const,
   action(sim, tx, ty, idx): void {
     // Explode near fire
     if (random() < 25) {

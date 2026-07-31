@@ -20,7 +20,6 @@ const LAVA_DROP_WAKE_RADIUS = 2
 export const LAVA_DROP_DEF = {
   id: LAVA_DROP,
   name: 'Lava Drop',
-  lavaImmune: true as const,
   hasOwnerId: true as const,
   alwaysActive: true as const,
   collidesWithCreateProjectiles: false as const,

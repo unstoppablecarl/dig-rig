@@ -7,6 +7,8 @@ export const CONCRETE_DEF = {
   collidesWhenSettled: true as const,
   settles: true as const,
   sinksThrough: [WATER, SALT_WATER],
+  lavaBurnable: true as const,
+  acidMeltable: true as const,
   action(sim, tx, ty, idx): void {
     // Harden into SOLID near existing SOLID
     if (random() < 10 && random() < 10) {

@@ -5,6 +5,8 @@ export const WAX_DEF = {
   name: 'Wax',
   immutableSupport: SupportType.STRUCTURAL as const,
   structuralCollapseType: FALLING_WAX,
+  lavaBurnable: true as const,
+  acidMeltable: true as const,
   action(sim, tx, ty, idx): void {
     // Melt to falling wax near fire
     if (sim.borderingAdjacent(tx, ty, idx, FIRE) !== -1) {

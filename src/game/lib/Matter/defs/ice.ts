@@ -21,9 +21,9 @@ export const ICE_DEF = {
   id: ICE,
   name: 'Ice',
   immutableSupport: SupportType.AFFIXED as const,
-  acidImmune: true as const,
   settles: true as const,
   alwaysCollides: true as const,
+  lavaBurnable: true as const,
   action(sim, tx, ty, idx): void {
 
     // Melt from water
