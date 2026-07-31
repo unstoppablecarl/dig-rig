@@ -6,7 +6,7 @@ import { type MatterTankId, NO_MATTER_TANK_ID } from '../../../Matter/Tank/_Matt
 import { ParticleType } from '../../../Particles/_particle-types.ts'
 import type { Particle } from '../../../Particles/Particle.ts'
 import { PARTICLE_DEFS } from '../../../Particles/particles.ts'
-import { ParticleData, type ParticlesBuffers } from '../../data/ParticleData.ts'
+import { ParticleDataDraw, type ParticlesBuffers } from '../../data/ParticleDataDraw.ts'
 import type { ConservationTracker } from '../Coordinator/ConservationTracker.ts'
 import { ParticlePool } from './ParticlePool.ts'
 
@@ -16,7 +16,7 @@ export class ParticleSim {
   pool!: ParticlePool
   pendingActivations: number[] = []
   structuralRemovals: number[] = []
-  data!: ParticleData
+  data!: ParticleDataDraw
 
   constructor(
     readonly tiles: Uint32Array,
@@ -26,7 +26,7 @@ export class ParticleSim {
   ) {
     this.width = particleBuffers.width
     this.height = particleBuffers.height
-    this.data = new ParticleData(particleBuffers)
+    this.data = new ParticleDataDraw(particleBuffers)
     this.pool = new ParticlePool()
   }
 

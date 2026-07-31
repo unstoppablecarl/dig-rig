@@ -2,7 +2,7 @@ import { ChunkGrid, type ChunkGridBuffers } from '../Tilemap/ChunkGrid.ts'
 import type { Tilemap } from '../Tilemap/Tilemap.ts'
 import { type BasicTilesBuffer, BasicTilesData } from './data/BasicTilesData.ts'
 import { type MatterTankManagerBuffers, MatterTankManagerData } from './data/MatterTankManagerData.ts'
-import { ParticleData, type ParticlesBuffers } from './data/ParticleData.ts'
+import { ParticleDataDraw, type ParticlesBuffers } from './data/ParticleDataDraw.ts'
 import { ParticleSpawnData } from './data/ParticleSpawnData.ts'
 import { type PhysicsBodiesBuffers, PhysicsBodiesData } from './data/PhysicsBodiesData.ts'
 import { PlayerBoundsData, type PlayerBoundsDataType } from './data/PlayerBoundsData.ts'
@@ -44,7 +44,7 @@ export type DataManagerBuffers = {
 
 export class DataManager {
   readonly chunkGrid: ChunkGrid
-  readonly particle: ParticleData
+  readonly particle: ParticleDataDraw
   readonly matterTankManager: MatterTankManagerData
   readonly playerBounds: PlayerBoundsDataType
   readonly projectileManager: ProjectileManagerData
@@ -67,7 +67,7 @@ export class DataManager {
     const { width, height } = tilemap
     const buffers: DataManagerBuffers = {
       chunkGrid: tilemap.chunkGrid.buffers,
-      particle: ParticleData.makeBuffers(width, height),
+      particle: ParticleDataDraw.makeBuffers(width, height),
       matterTankManager: MatterTankManagerData.makeBuffer(),
       playerBounds: PlayerBoundsData.makeBuffer(),
       projectileManager: ProjectileManagerData.makeBuffer(),
@@ -95,7 +95,7 @@ export class DataManager {
 
   constructor(readonly buffers: DataManagerBuffers) {
     this.chunkGrid = new ChunkGrid(buffers.chunkGrid)
-    this.particle = new ParticleData(buffers.particle)
+    this.particle = new ParticleDataDraw(buffers.particle)
     this.matterTankManager = new MatterTankManagerData(buffers.matterTankManager)
     this.playerBounds = PlayerBoundsData.fromBuffer(buffers.playerBounds)
     this.projectileManager = new ProjectileManagerData(buffers.projectileManager)

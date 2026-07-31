@@ -9,7 +9,7 @@ export type ParticlesBuffers = {
 }
 
 // only used for transporting draw data for particles
-export class ParticleData {
+export class ParticleDataDraw {
   private readonly viewA: Uint8ClampedArray
   private readonly viewB: Uint8ClampedArray
   private readonly buf32A: Uint32Array
