@@ -1,3 +1,4 @@
+import { FILL_MAX } from './_Liquid.constants.ts'
 import {
   ACID,
   BURNING_FUEL,
@@ -41,7 +42,6 @@ import {
   WATER,
   WAX,
 } from './_Matter.types.ts'
-import { FILL_MAX } from './_Liquid.constants.ts'
 import { MatterTypeSet } from './data/MatterTypeSet.ts'
 
 export interface MatterMetaRegistry {
@@ -118,12 +118,7 @@ export const isAlwaysActive = (type: MatterType) => (MATTER_FLAGS[type] & Flag.A
 export const doesSettle = (type: MatterType): type is SettlingTypes => (MATTER_FLAGS[type] & Flag.SETTLES) !== 0
 export const isLavaBurnable = (type: MatterType) => (MATTER_FLAGS[type] & Flag.LAVA_BURNABLE) !== 0
 export const isLavaMeltable = (type: MatterType) => (MATTER_FLAGS[type] & Flag.LAVA_MELTABLE) !== 0
-// Skips direct ignite-to-FIRE conversion (lava's burn loop, lava-drop contact) — independent of
-// lavaMeltable, since a meltable-but-not-burnable type (SOLID) is still immune to burning and is
-// destroyed only through its own separate melt path.
-export const isLavaImmune = (type: MatterType) => !isLavaBurnable(type)
 export const isAcidMeltable = (type: MatterType) => (MATTER_FLAGS[type] & Flag.ACID_MELTABLE) !== 0
-export const isAcidImmune = (type: MatterType) => !isAcidMeltable(type)
 export const collidesWhenSettled = (type: MatterType) => (MATTER_FLAGS[type] & Flag.COLLIDES_WHEN_SETTLED) !== 0
 export const isLiquid = (type: MatterType): type is LiquidTypes => (MATTER_FLAGS[type] & Flag.LIQUID) !== 0
 export const isActivatable = (type: MatterType) => (MATTER_FLAGS[type] & (Flag.ALWAYS_ACTIVE | Flag.SETTLES)) !== 0
@@ -271,3 +266,12 @@ export const MATTER_ICONS: Record<MatterType, string> = {
 
 export const ACID_DESTROYABLE = new MatterTypeSet(...MatterTypeValues.filter(v => isAcidMeltable(v)))
 export const LAVA_DESTROYABLE = new MatterTypeSet(...MatterTypeValues.filter(v => isLavaBurnable(v) || isLavaMeltable(v)))
+
+// Maps a liquid's own type to what it may concentrate fill toward destroying
+// (see MatterSim._tryFillFlowImpl's destroy-bias term). No entry (WATER, OIL,
+// ...) means the type never biases same-type flow — callers must treat
+// undefined as "skip entirely", no bordering scan.
+export const DESTROYS: Partial<Record<MatterType, MatterTypeSet>> = {
+  [LAVA]: LAVA_DESTROYABLE,
+  [ACID]: ACID_DESTROYABLE,
+}

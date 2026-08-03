@@ -10,10 +10,12 @@ import {
   FILL_SETTLED_FACTOR,
 } from '../../../Matter/_Liquid.constants.ts'
 import {
+  ACID,
   EMPTY,
   FIRE,
   getOwner,
   isSettled,
+  LAVA,
   MatterType,
   matterType,
   type MatterValue,
@@ -27,12 +29,16 @@ import {
   alwaysCollides,
   collidesWhenSettled,
   convertsToCollisionBody,
+  DESTROYS,
   getReserveDestroyAmount,
   getSupportType,
+  isAcidMeltable,
   isActivatable,
   isAlwaysActive,
   isClumpingLiquid,
   isDestructible,
+  isLavaBurnable,
+  isLavaMeltable,
   isLiquid,
   MATTER_ACTIONS,
   RESERVED_DESTROY_CHARGE,
@@ -799,13 +805,12 @@ export class MatterSim {
   bordering(tx: number, ty: number, idx: number, type: MatterType): number {
     const { tiles, width, height } = this
     const down = ty < height - 1 ? idx + width : -1
-    const left = tx > 0 ? idx - 1 : -1
-    const right = tx < width - 1 ? idx + 1 : -1
-    const up = ty > 0 ? idx - width : -1
-
     if (down !== -1 && matterType(tiles[down]) === type) return down
+    const left = tx > 0 ? idx - 1 : -1
     if (left !== -1 && matterType(tiles[left]) === type) return left
+    const right = tx < width - 1 ? idx + 1 : -1
     if (right !== -1 && matterType(tiles[right]) === type) return right
+    const up = ty > 0 ? idx - width : -1
     if (up !== -1 && matterType(tiles[up]) === type) return up
     return -1
   }
@@ -813,13 +818,12 @@ export class MatterSim {
   borderingAny(tx: number, ty: number, idx: number, mask: MatterTypeSet): number {
     const { tiles, width, height } = this
     const down = ty < height - 1 ? idx + width : -1
-    const left = tx > 0 ? idx - 1 : -1
-    const right = tx < width - 1 ? idx + 1 : -1
-    const up = ty > 0 ? idx - width : -1
-
     if (down !== -1 && mask.has(matterType(tiles[down]))) return down
+    const left = tx > 0 ? idx - 1 : -1
     if (left !== -1 && mask.has(matterType(tiles[left]))) return left
+    const right = tx < width - 1 ? idx + 1 : -1
     if (right !== -1 && mask.has(matterType(tiles[right]))) return right
+    const up = ty > 0 ? idx - width : -1
     if (up !== -1 && mask.has(matterType(tiles[up]))) return up
     return -1
   }
@@ -827,11 +831,10 @@ export class MatterSim {
   canStickToAnyColliding(tx: number, ty: number, idx: number): number {
     const { tiles, width } = this
     const left = tx > 0 ? idx - 1 : -1
-    const right = tx < width - 1 ? idx + 1 : -1
-    const up = ty > 0 ? idx - width : -1
-
     if (left !== -1 && convertsToCollisionBody(tiles[left])) return left
+    const right = tx < width - 1 ? idx + 1 : -1
     if (right !== -1 && convertsToCollisionBody(tiles[right])) return right
+    const up = ty > 0 ? idx - width : -1
     if (up !== -1 && convertsToCollisionBody(tiles[up])) return up
     return -1
   }
@@ -1239,6 +1242,15 @@ export class MatterSim {
       }
     }
 
+    if (!moved) {
+      const type = matterType(raw)
+      if (isAcidMeltable(type)) {
+        this.wakeSettledNeighbors(tx, ty, idx, ACID)
+      }
+      if (isLavaBurnable(type) || isLavaMeltable(type)) {
+        this.wakeSettledNeighbors(tx, ty, idx, LAVA)
+      }
+    }
     return moved
   }
 
@@ -1297,32 +1309,94 @@ export class MatterSim {
     dest.add(toIdx)
   }
 
+  // True if this tile is a liquid type that can destroy something (lava/acid
+  // — DESTROYS[type] is undefined for every other liquid, a single false-y
+  // lookup with zero scanning cost) and actually borders material it can
+  // destroy right now. Used both by topOffFromNeighbour and by lava/acid's
+  // own "should I stay in the active set" check — see call sites for why a
+  // destroy-eligible tile needs to keep re-checking even with no drain.
+  isDestroyEligible(tx: number, ty: number, idx: number, type: MatterType): boolean {
+    const destroyMask = DESTROYS[type]
+    return destroyMask !== undefined && this.borderingAny(tx, ty, idx, destroyMask) !== -1
+  }
+
+  // Attempts one topOffFromNeighbour donation from `nidx` (at `nx, ny`) into
+  // `idx` (at `tx, ty, selfDestroyable`), gated by favoursDestroy so a donor
+  // is only used when it would agree, on its own turn, that fill should flow
+  // this direction. Returns true once a transfer is made (caller should stop
+  // searching — one donation per call is enough to make progress).
+  private tryTopOffFrom(tx: number, ty: number, idx: number, selfDestroyable: boolean, needed: number, nidx: number, nx: number, ny: number, type: MatterType, destroyMask: MatterTypeSet): boolean {
+    if (matterType(this.tiles[nidx]) !== type || this.fill[nidx] <= 0) return false
+    const neighborDestroyable = this.borderingAny(nx, ny, nidx, destroyMask) !== -1
+    if (!MatterSim.favoursDestroy(idx, selfDestroyable, nidx, neighborDestroyable)) return false
+    const donation = Math.min(needed, this.fill[nidx])
+    if (donation <= 0) return false
+    this.doFillTransfer(nidx, nx, ny, idx, tx, ty, donation, setSettled(this.tiles[idx], false))
+    return true
+  }
+
   // Right before an unmoved acid/lava tile settles under FILL_MAX beside
   // something it could otherwise destroy (dissolve/melt/burn rolls are all
-  // gated on fill >= FILL_MAX), pull spare fill from an adjacent same-type
-  // liquid neighbour so a later reactivation can actually reach that gate.
-  // Without this, a droplet that settles a hair under FILL_MAX next to a
-  // destructible wall never gets there on its own — settled liquid only
-  // re-equalizes toward neighbours' fill, it doesn't chase FILL_MAX.
+  // gated on fill >= FILL_MAX), pull spare fill from a same-type liquid
+  // neighbour so a later reactivation can actually reach that gate. Without
+  // this, a droplet that settles a hair under FILL_MAX next to a destructible
+  // wall never gets there on its own — settled liquid only re-equalizes
+  // toward neighbours' fill via tryFillFlow's ordinary diffusion, it doesn't
+  // chase FILL_MAX.
+  //
+  // An earlier version of this blindly grabbed from ANY same-type neighbour
+  // with fill to spare. Two mutually destroy-eligible neighbours (e.g. both
+  // bordering separate destroyable walls, or a whole lake uniformly topped
+  // with destroyable sand) would then hand fullness back and forth forever —
+  // whichever tile pulled last each tick held FILL_MAX only until the other
+  // pulled it right back on its own turn, so neither one's destroy-roll ever
+  // fired while actually holding it. The favoursDestroy() check (in
+  // tryTopOffFrom) fixes that: a donor is only used when the exact same
+  // deterministic rule the donor would apply on its own turn already agrees
+  // fill should flow this direction — so the donor can never have standing
+  // to reverse it.
+  //
+  // Checks the 4 immediate neighbours first, then falls back to scanning
+  // straight down the connected same-type column for a deeper reservoir.
+  // That fallback matters because ordinary vertical flow (tryFillFlow's
+  // gravity/upward-pressure steps) only ever pushes fill DOWN, or relieves
+  // genuine over-compression upward — there is no mechanism for a
+  // merely-full-but-not-overflowing column to feed a shallower tile above
+  // it. Without reaching further, a destroy-eligible surface tile can only
+  // ever tap whatever mass happens to already be within one hop, even with a
+  // large, untouched reservoir sitting a few tiles further down — this is
+  // what left "trapped" (fully enclosed, no-drain) pockets with leftover
+  // mass that could never actually reach FILL_MAX. (No equivalent gap
+  // horizontally or upward: reactivateAround's horizontal wake-chain plus
+  // ordinary diffusion already relay fill across many same-row tiles over
+  // time, and gravity already feeds a shallower tile from whatever sits
+  // above it.)
   topOffFromNeighbour(tx: number, ty: number, idx: number, type: MatterType): void {
     const needed = FILL_MAX - this.fill[idx]
     if (needed <= 0) return
 
-    const { tiles, fill, width, height } = this
-    const candidates = [
-      ty < height - 1 ? idx + width : -1,
-      tx > 0 ? idx - 1 : -1,
-      tx < width - 1 ? idx + 1 : -1,
-      ty > 0 ? idx - width : -1,
+    const destroyMask = DESTROYS[type]
+    if (destroyMask === undefined) return
+
+    const { width, height } = this
+    const selfDestroyable = this.borderingAny(tx, ty, idx, destroyMask) !== -1
+    if (!selfDestroyable) return
+
+    const candidates: [number, number, number][] = [
+      [tx, ty + 1, ty < height - 1 ? idx + width : -1],
+      [tx - 1, ty, tx > 0 ? idx - 1 : -1],
+      [tx + 1, ty, tx < width - 1 ? idx + 1 : -1],
+      [tx, ty - 1, ty > 0 ? idx - width : -1],
     ]
-    for (const nidx of candidates) {
-      if (nidx === -1 || matterType(tiles[nidx]) !== type) continue
-      const donation = Math.min(needed, fill[nidx])
-      if (donation <= 0) continue
-      const nx = nidx % width
-      const ny = (nidx / width) | 0
-      this.doFillTransfer(nidx, nx, ny, idx, tx, ty, donation, setSettled(tiles[idx], false))
-      return
+    for (const [nx, ny, nidx] of candidates) {
+      if (nidx === -1) continue
+      if (this.tryTopOffFrom(tx, ty, idx, selfDestroyable, needed, nidx, nx, ny, type, destroyMask)) return
+    }
+
+    for (let dy = 2; ty + dy < height; dy++) {
+      const nidx = idx + dy * width
+      if (matterType(this.tiles[nidx]) !== type) break
+      if (this.tryTopOffFrom(tx, ty, idx, selfDestroyable, needed, nidx, tx, ty + dy, type, destroyMask)) return
     }
   }
 
@@ -1370,6 +1444,22 @@ export class MatterSim {
   // neither ever reaches `moved=false` to actually settle.
   private static deadbandWant(want: number): number {
     return want > FILL_FLOW_DEADBAND ? want : 0
+  }
+
+  // True if `idx` should be favoured over `otherIdx` to receive spare
+  // same-type fill when both are competing for it — see topOffFromNeighbour.
+  // Only one side destroy-eligible: favour it. Both eligible (e.g. a whole
+  // lake uniformly topped with destroyable sand, where every tile qualifies):
+  // break the tie with a fixed, deterministic comparison (linear index)
+  // instead of leaving it unresolved either way. Antisymmetric by
+  // construction — favoursDestroy(A, ..., B, ...) and favoursDestroy(B, ...,
+  // A, ...) are always exact opposites — so whichever tile this favours
+  // never has to worry about the other side's own turn reversing the
+  // transfer right back (the bug in the original topOffFromNeighbour, which
+  // pulled fill from any same-type neighbour with none of this check).
+  private static favoursDestroy(idx: number, idxDestroyable: boolean, otherIdx: number, otherDestroyable: boolean): boolean {
+    if (idxDestroyable !== otherDestroyable) return idxDestroyable
+    return idxDestroyable && idx > otherIdx
   }
 
   // Throttles a clump-consolidation target down to CLUMP_RATE of itself per
@@ -1452,7 +1542,10 @@ export class MatterSim {
     // Pre-scan both neighbours so hasDrain is known before computing wants.
     // Clumping yields entirely to any reachable drain so the full budget flows
     // off the surface rather than being split with same-type consolidation.
-    let aIdx = -1, aType = EMPTY, aIsLedge = false, aIsSlopeStep = false
+    let aIdx = -1
+    let aType = EMPTY
+    let aIsLedge = false
+    let aIsSlopeStep = false
     if (ax >= 0 && ax < width) {
       aIdx = ty * width + ax
       aType = matterType(tiles[aIdx])
@@ -1468,7 +1561,10 @@ export class MatterSim {
         }
       }
     }
-    let bIdx = -1, bType = EMPTY, bIsLedge = false, bIsSlopeStep = false
+    let bIdx = -1
+    let bType = EMPTY
+    let bIsLedge = false
+    let bIsSlopeStep = false
     if (bx >= 0 && bx < width) {
       bIdx = ty * width + bx
       bType = matterType(tiles[bIdx])
@@ -1487,6 +1583,25 @@ export class MatterSim {
     const hasDrain = (aIdx !== -1 && aType === EMPTY && (aIsLedge || aIsSlopeStep))
       || (bIdx !== -1 && bType === EMPTY && (bIsLedge || bIsSlopeStep))
 
+    // A destroy-eligible tile (lava/acid bordering something it can burn/
+    // dissolve) that has actually reached FILL_MAX needs to hold that charge
+    // long enough to get a real shot at its destroy roll. Without this,
+    // ordinary same-type equalization below has no idea this tile was just
+    // deliberately topped off (topOffFromNeighbour) — it just sees a big
+    // pressure difference against a neighbour drained to make room, and
+    // immediately levels it back down over the next few ticks, diluting the
+    // tile below FILL_MAX before its roll (checked only while >= FILL_MAX)
+    // ever gets more than one or two ticks to fire. Confirmed via logging:
+    // a tile would reach FILL_MAX, then ordinary diffusion would push a
+    // chunk straight back to the neighbour it was just drained from, cycling
+    // forever with the destroy roll rarely (if ever) landing on a tick where
+    // the tile was still genuinely full. This only suppresses the same-type
+    // horizontal branch below (same as hasDrain does) — gravity and the
+    // upward-pressure relief step are untouched, so genuine over-compression
+    // still equalizes normally.
+    const holdingDestroyCharge = remaining >= FILL_MAX && DESTROYS[type] !== undefined
+      && this.isDestroyEligible(tx, ty, idx, type)
+
     let wantA = 0
     if (aIdx !== -1) {
       if (aType === type) {
@@ -1502,8 +1617,11 @@ export class MatterSim {
         // clumping (still active, unaffected by this) is now the sole
         // source of the "consolidate toward a fuller tile" visual; this
         // per-tile step always uses the same proven diffusion formula every
-        // liquid settles correctly with.
-        if (!hasDrain) {
+        // liquid settles correctly with. (Lava/acid's own destroy-concentration
+        // need is handled entirely outside this formula — see
+        // topOffFromNeighbour — precisely so this core diffusion math never
+        // has to know about it again, aside from holdingDestroyCharge above.)
+        if (!hasDrain && !holdingDestroyCharge) {
           wantA = MatterSim.deadbandWant(Math.round(Math.max(0, (myCP - fill[aIdx] - this.colPressureAbove(ax, ty, type)) / FILL_PRESSURE_DIVISOR)))
         }
       } else if (aType === EMPTY && (canExpandToEmpty || aIsLedge || aIsSlopeStep)) {
@@ -1517,7 +1635,7 @@ export class MatterSim {
     if (bIdx !== -1) {
       if (bType === type) {
         // See the mirrored 'a' branch above.
-        if (!hasDrain) {
+        if (!hasDrain && !holdingDestroyCharge) {
           wantB = MatterSim.deadbandWant(Math.round(Math.max(0, (myCP - fill[bIdx] - this.colPressureAbove(bx, ty, type)) / FILL_PRESSURE_DIVISOR)))
         }
       } else if (bType === EMPTY && (canExpandToEmpty || bIsLedge || bIsSlopeStep)) {
@@ -2024,6 +2142,14 @@ export class MatterSim {
 
         const liquidRaw = setSettled(raw, false)
         const clumps = this.clumpsHere(type, tx, ty)
+        // Same rationale as _tryFillFlowImpl's holdingDestroyCharge (see its
+        // comment) — this processor is a SEPARATE pass with its own plain-
+        // diffusion fallback below, which was found (via logging) to still
+        // drain a destroy-eligible tile back down from FILL_MAX even after
+        // that guard was added to tryFillFlow alone. Only suppresses the
+        // same-type fallback, not expansion into EMPTY space.
+        const holdingDestroyCharge = remaining >= FILL_MAX && DESTROYS[type] !== undefined
+          && this.isDestroyEligible(tx, ty, idx, type)
         // A cell resting on an already-saturated, genuinely-grounded
         // same-type column has just as little room to move down as one on
         // a real wall — gravity's own `want` is already ~0 there. Treating
@@ -2178,7 +2304,7 @@ export class MatterSim {
                 Math.max(0, FILL_MAX - fill[aIdx]),
                 Math.max(1, Math.floor(remaining / FILL_PRESSURE_DIVISOR)),
               )
-            } else {
+            } else if (!(aType === type && holdingDestroyCharge)) {
               const flow = Math.floor((remaining - fill[aIdx]) / FILL_PRESSURE_DIVISOR)
               if (flow >= FILL_FLOW_DEADBAND) f = Math.min(flow, remaining)
             }
@@ -2209,7 +2335,7 @@ export class MatterSim {
                 Math.max(0, FILL_MAX - fill[bIdx]),
                 Math.max(1, Math.floor(remaining / FILL_PRESSURE_DIVISOR)),
               )
-            } else {
+            } else if (!(bType === type && holdingDestroyCharge)) {
               const flow = Math.floor((remaining - fill[bIdx]) / FILL_PRESSURE_DIVISOR)
               if (flow >= FILL_FLOW_DEADBAND) f = Math.min(flow, remaining)
             }

@@ -20,7 +20,7 @@ import {
   WATER,
 } from '../_Matter.types.ts'
 import { MatterTypeSet } from '../data/MatterTypeSet'
-import { isLavaImmune, LAVA_DESTROYABLE } from '../matter.ts'
+import { isLavaBurnable } from '../matter.ts'
 
 const COOLED = new MatterTypeSet(WATER, SALT_WATER)
 
@@ -106,12 +106,13 @@ export const LAVA_DEF = {
       for (const [nx, ny, nidx] of burnCandidates) {
         if (nidx === -1) continue
         const nt = matterType(tiles[nidx])
-        if (!isLavaImmune(nt)) {
+        if (isLavaBurnable(nt)) {
           if (nt !== EMPTY) sim.queueMatterCredit(nx, ny, ownerId)
           sim.consumeLiquidFill(nidx)
           tiles[nidx] = setOwner(FIRE, ownerId)
           sim.queueMatterCredit(tx, ty, ownerId)
           sim.destroyTile(tx, ty, idx)
+          sim.reactivateAround(tx, ty)
           sim.markDirty(nx, ny)
           sim.next.add(nidx)
           return
@@ -167,13 +168,12 @@ export const LAVA_DEF = {
     if (moved) {
       sim.reactivateAround(tx, ty)
     } else {
-      if (fill[idx] < FILL_MAX) {
-        // About to settle under FILL_MAX beside a tile the melt/burn rolls
-        // above could otherwise eat — top up from an adjacent LAVA tile so
-        // a later reactivation can actually clear that fill >= FILL_MAX gate.
-        const burnTarget = sim.borderingAny(tx, ty, idx, LAVA_DESTROYABLE) !== -1
-        if (burnTarget) sim.topOffFromNeighbour(tx, ty, idx, LAVA)
-      }
+      // About to settle under FILL_MAX beside a tile the melt/burn rolls
+      // above could otherwise eat — top up from an adjacent LAVA tile so a
+      // later reactivation can actually clear that fill >= FILL_MAX gate.
+      // (topOffFromNeighbour checks destroy-eligibility itself; a no-op if
+      // this tile doesn't border anything burnable/meltable.)
+      if (fill[idx] < FILL_MAX) sim.topOffFromNeighbour(tx, ty, idx, LAVA)
 
       if (fill[idx] < FILL_MAX) {
         const hasLivingNeighbour =
@@ -198,9 +198,15 @@ export const LAVA_DEF = {
       sim.tiles[idx] = setSettled(sim.tiles[idx], true)
       sim.markRenderDirty(tx, ty)
 
-      // Keep re-checking only while this cell's run has an actual reachable
-      // drain — see water.ts for why.
-      if (sim.hasReachableDrainFromCell(tx, ty, LAVA)) {
+      // Keep re-checking while this cell's run has an actual reachable drain
+      // (see water.ts for why) OR this tile still borders something it could
+      // destroy. A fully enclosed ("trapped") pocket has no drain at all, so
+      // without the second condition, a tile drops out of the active set
+      // after one attempt and never gets another shot — either at
+      // topOffFromNeighbour once fill actually ripples in from a neighbour a
+      // few ticks later, or (once already full) at its own burn roll if that
+      // roll's random chance just happened to fail this tick.
+      if (sim.hasReachableDrainFromCell(tx, ty, LAVA) || sim.isDestroyEligible(tx, ty, idx, LAVA)) {
         sim.next.add(idx)
       }
     }

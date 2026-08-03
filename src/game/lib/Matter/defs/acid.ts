@@ -12,7 +12,7 @@ import {
   setSettled,
   WATER,
 } from '../_Matter.types.ts'
-import { ACID_DESTROYABLE, isAcidImmune } from '../matter.ts'
+import { isAcidMeltable } from '../matter.ts'
 
 // Ticks a partial-fill tile must stay isolated before it's destroyed — a
 // same-tick chain reaction can make an actively-spreading edge briefly look
@@ -48,14 +48,16 @@ export const ACID_DEF = {
         if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue
 
         const nt = matterType(tiles[nidx])
-        if (isAcidImmune(nt)) continue
+        if (!isAcidMeltable(nt)) continue
 
         const ownerId = getOwner(tiles[idx])
         sim.queueMatterCredit(tx, ty, ownerId)
         sim.destroyTile(tx, ty, idx)
+        sim.reactivateAround(tx, ty)
 
         sim.queueMatterCredit(nx, ny, ownerId)
         sim.destroyTile(nx, ny, nidx)
+        sim.reactivateAround(nx, ny)
 
         return
       }
@@ -75,13 +77,12 @@ export const ACID_DEF = {
     if (moved) {
       sim.reactivateAround(tx, ty)
     } else {
-      if (fill[idx] < FILL_MAX) {
-        // About to settle under FILL_MAX beside a tile the dissolve roll
-        // above could otherwise eat — top up from an adjacent ACID tile so
-        // a later reactivation can actually clear that fill >= FILL_MAX gate.
-        const hasDissolveTarget = sim.borderingAny(tx, ty, idx, ACID_DESTROYABLE) !== -1
-        if (hasDissolveTarget) sim.topOffFromNeighbour(tx, ty, idx, ACID)
-      }
+      // About to settle under FILL_MAX beside a tile the dissolve roll above
+      // could otherwise eat — top up from an adjacent ACID tile so a later
+      // reactivation can actually clear that fill >= FILL_MAX gate.
+      // (topOffFromNeighbour checks destroy-eligibility itself; a no-op if
+      // this tile doesn't border anything meltable.)
+      if (fill[idx] < FILL_MAX) sim.topOffFromNeighbour(tx, ty, idx, ACID)
 
       if (fill[idx] < FILL_MAX) {
         const hasLivingNeighbour =
@@ -106,9 +107,15 @@ export const ACID_DEF = {
       sim.tiles[idx] = setSettled(sim.tiles[idx], true)
       sim.markRenderDirty(tx, ty)
 
-      // Keep re-checking only while this cell's run has an actual reachable
-      // drain — see water.ts for why.
-      if (sim.hasReachableDrainFromCell(tx, ty, ACID)) {
+      // Keep re-checking while this cell's run has an actual reachable drain
+      // (see water.ts for why) OR this tile still borders something it could
+      // destroy. A fully enclosed ("trapped") pocket has no drain at all, so
+      // without the second condition, a tile drops out of the active set
+      // after one attempt and never gets another shot — either at
+      // topOffFromNeighbour once fill actually ripples in from a neighbour a
+      // few ticks later, or (once already full) at its own dissolve roll if
+      // that roll's random chance just happened to fail this tick.
+      if (sim.hasReachableDrainFromCell(tx, ty, ACID) || sim.isDestroyEligible(tx, ty, idx, ACID)) {
         sim.next.add(idx)
       }
     }

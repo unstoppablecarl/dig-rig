@@ -11,7 +11,7 @@ import {
   setLavaDropVel,
   setOwner,
 } from '../_Matter.types.ts'
-import { isLavaImmune } from '../matter.ts'
+import { isLavaBurnable } from '../matter.ts'
 
 // Narrow reactivateAround range for drop vacate/landing — default
 // FILL_ROW_SCAN_MAX (64) would ripple across an entire settled pool.
@@ -49,7 +49,7 @@ export const LAVA_DROP_DEF = {
 
         // Blocked going up: burn non-immune tile (aboveType is neither EMPTY nor FIRE here —
         // both already returned above)
-        if (!isLavaImmune(aboveType)) {
+        if (isLavaBurnable(aboveType)) {
           sim.queueMatterCredit(tx, ty - 1, ownerId)
           sim.consumeLiquidFill(upIdx)
           tiles[upIdx] = setOwner(FIRE, ownerId)
@@ -103,7 +103,7 @@ export const LAVA_DROP_DEF = {
     for (const [nx, ny, nidx] of neighbors) {
       if (nidx === -1) continue
       const nt = matterType(tiles[nidx])
-      if (nt !== EMPTY && !isLavaImmune(nt)) {
+      if (nt !== EMPTY && isLavaBurnable(nt)) {
         sim.queueMatterCredit(nx, ny, ownerId)
         sim.consumeLiquidFill(nidx)
         tiles[nidx] = setOwner(FIRE, ownerId)
