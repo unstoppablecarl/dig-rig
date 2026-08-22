@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { CHUNK_SIZE, ENABLE_MATTER_SIM_PROFILING, ENABLE_RANDOM_ROW_DIRECTION } from '../../../../config.ts'
+import { CHUNK_SIZE, ENABLE_COLUMN_DISPATCH, ENABLE_MATTER_SIM_PROFILING, ENABLE_RANDOM_ROW_DIRECTION } from '../../../../config.ts'
 import type { TileSet } from '../../../Matter/data/SparseTileSet.ts'
 import type { ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 import { type SimOutMessage, SimOutMsg, type SimOutMsgDone } from '../MatterSim/MatterSim.types.ts'
@@ -129,6 +129,14 @@ export class SimWorkerPool {
   private readonly xSortedScratch: number[] = []  // group's indices, x-ascending (intermediate)
   private rowDir!: Int8Array             // height, this round's per-row placement direction (+1/-1)
 
+  // ENABLE_COLUMN_DISPATCH scratch (see step()'s pre-pass): which real
+  // chunk-columns (by cx) the current snapshot touches at all, regardless of
+  // cy. Sized chunksWide, cleared via touchedColsScratch (only the entries
+  // actually set get cleared) rather than a full Uint8Array.fill(0) every
+  // step.
+  private columnTouched!: Uint8Array
+  private readonly touchedColsScratch: number[] = []
+
   get size(): number {
     return this.pool.length
   }
@@ -170,6 +178,7 @@ export class SimWorkerPool {
     this.colCounts = new Uint32Array(width + 1)
     this.colOffsets = new Uint32Array(width + 1)
     this.rowDir = new Int8Array(height)
+    this.columnTouched = new Uint8Array(this.chunksWide)
 
     const simConfig = {
       tilesBuffer: tilesBuffer,
@@ -197,17 +206,53 @@ export class SimWorkerPool {
     // Clear buckets
     for (const g of megaGroups) g.length = 0
 
+    // ENABLE_COLUMN_DISPATCH: pick per-step instead of picking one scheme globally: do a
+    // cheap pre-pass counting how many distinct real chunk-columns (by cx)
+    // the snapshot actually touches, and only use column-mode when that's
+    // >= poolSize — i.e. only when there's a real chance every worker gets a
+    // whole column to itself. Falls back to the plain 4-group scheme
+    // (cheaply — this pre-pass is a single O(n) modulo/division pass, no
+    // heavier than the bucket pass it precedes) whenever activity is
+    // concentrated in too few columns to make column-mode's coarser units
+    // pay off, e.g. a narrow shaft.
+    let useColumnDispatch = false
+    if (ENABLE_COLUMN_DISPATCH) {
+      const { columnTouched, touchedColsScratch } = this
+      touchedColsScratch.length = 0
+      for (const idx of snapshot) {
+        const cx = (idx % width) / CHUNK_SIZE | 0
+        if (!columnTouched[cx]) {
+          columnTouched[cx] = 1
+          touchedColsScratch.push(cx)
+        }
+      }
+      useColumnDispatch = touchedColsScratch.length >= this.size
+      for (const cx of touchedColsScratch) columnTouched[cx] = 0
+    }
+
+    // A group still spans the whole map (every cy at that cx parity) in
+    // column mode — there's no cy-parity split anymore, so pass 3 below
+    // assigns each *entire chunk-column* (all real chunks sharing a cx, full
+    // map height) to a single worker, see the assignKey comment in the sort
+    // passes. Two same-parity columns are always >=2 apart, so the
+    // write-conflict invariant (no two concurrently-dispatched real chunks
+    // ever share an edge/corner) still holds with just 2 rounds.
     for (const idx of snapshot) {
       const tx = idx % width
-      const ty = idx / width | 0
       const cx = tx / CHUNK_SIZE | 0
-      const cy = ty / CHUNK_SIZE | 0
-      megaGroups[(cy & 1) * 2 + (cx & 1)].push(idx)
+      if (useColumnDispatch) {
+        megaGroups[cx & 1].push(idx)
+      } else {
+        const ty = idx / width | 0
+        const cy = ty / CHUNK_SIZE | 0
+        megaGroups[(cy & 1) * 2 + (cx & 1)].push(idx)
+      }
     }
 
     if (ENABLE_MATTER_SIM_PROFILING) this._profTotalBucketMs += performance.now() - _profBucketT0
 
-    for (let g = 0; g < 4; g++) {
+    const numGroups = useColumnDispatch ? 2 : 4
+    for (let g = 0; g < numGroups; g++) {
       const group = megaGroups[g]
       if (group.length === 0) continue
 
@@ -306,14 +351,26 @@ export class SimWorkerPool {
           const cx = tx / CHUNK_SIZE | 0
           const cy = ty / CHUNK_SIZE | 0
           const chunkIdx = cy * chunksWide + cx
+          // Dirty-tracking always uses the real chunkIdx (rendering/physics
+          // still operate at true CHUNK_SIZE granularity regardless of
+          // dispatch mode). Worker ASSIGNMENT uses a separate key: in column
+          // mode that's just cx, so every real chunk sharing that cx (i.e.
+          // the whole column strip) lands on one worker together — this is
+          // what lets a single worker sweep a column's full height in one
+          // pass with no inter-round boundary. The "exactly one worker
+          // touches a given real chunk per round" invariant (plain ++ on
+          // renderGen/collGen, see ChunkGrid) still holds: every real chunk
+          // with this cx was bucketed into the same group above, so it's
+          // impossible for two different assignKeys to disagree about it.
+          const assignKey = useColumnDispatch ? cx : chunkIdx
 
           const pos = rowOffsets[ty]
           rowOffsets[ty] += rowDir[ty]
           sortedScratch[pos] = idx
-          chunkIdxScratch[pos] = chunkIdx
+          chunkIdxScratch[pos] = assignKey
 
           this._dirtyChunksThisStep.add(chunkIdx)
-          this.chunkSizeMap.set(chunkIdx, (this.chunkSizeMap.get(chunkIdx) ?? 0) + 1)
+          this.chunkSizeMap.set(assignKey, (this.chunkSizeMap.get(assignKey) ?? 0) + 1)
         }
       } else {
         // Flag off: plain row-only counting sort, no x-pass, always forward.
@@ -339,13 +396,14 @@ export class SimWorkerPool {
           const cx = tx / CHUNK_SIZE | 0
           const cy = ty / CHUNK_SIZE | 0
           const chunkIdx = cy * chunksWide + cx
+          const assignKey = useColumnDispatch ? cx : chunkIdx
 
           const pos = rowOffsets[ty]++
           sortedScratch[pos] = idx
-          chunkIdxScratch[pos] = chunkIdx
+          chunkIdxScratch[pos] = assignKey
 
           this._dirtyChunksThisStep.add(chunkIdx)
-          this.chunkSizeMap.set(chunkIdx, (this.chunkSizeMap.get(chunkIdx) ?? 0) + 1)
+          this.chunkSizeMap.set(assignKey, (this.chunkSizeMap.get(assignKey) ?? 0) + 1)
         }
       }
 

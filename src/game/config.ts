@@ -17,6 +17,12 @@ export const MAX_PARTICLES = 1024 * 4
 
 // core behavior
 export const ENABLE_RANDOM_ROW_DIRECTION = true
+// Adaptive SimWorkerPool dispatch. Per step, if the active
+// snapshot touches at least `poolSize` distinct real chunk-columns, dispatch
+// by full-height chunk-column strips (2-color checkerboard on cx parity
+// only) instead of the default 4-group 64x64 chunk checkerboard; otherwise
+// falls back to the classic 4-group scheme.
+export const ENABLE_COLUMN_DISPATCH = true
 
 // vfx limits
 export const MAX_VFX_MATTER_PARTICLES = 1000
