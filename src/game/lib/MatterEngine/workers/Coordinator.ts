@@ -152,7 +152,7 @@ export class Coordinator {
     this._lavaEruptionNextCheckAt = Coordinator.LAVA_ERUPTION_CHECK_MIN_STEPS
 
     this.sim = new MatterSim()
-    this.sim.init(buffers.tiles, buffers.fill, buffers.matterTouched, buffers.chunkGrid, width, height, MatterSimScratchData.makeBuffers(), buffers.particleSpawns, buffers.lavaColumnTop)
+    this.sim.init(buffers.tiles, buffers.fill, buffers.matterTouched, buffers.chunkGrid, width, height, MatterSimScratchData.makeBuffers(), buffers.particleSpawns, buffers.lavaColumnTop, buffers.playerBounds)
     // Fresh buffer zero-inits to 0, misreading as a row-0 surface everywhere — reset to -1.
     this.sim.lavaColumnTop.fill(-1)
 
@@ -202,6 +202,7 @@ export class Coordinator {
       chunkGridBuffers: buffers.chunkGrid,
       particleSpawnBuffer: buffers.particleSpawns,
       lavaColumnTopBuffer: buffers.lavaColumnTop,
+      playerBoundsBuffer: buffers.playerBounds,
       onReady: () => this.startLoop(),
     })
   }

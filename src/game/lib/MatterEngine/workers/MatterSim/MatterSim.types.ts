@@ -32,6 +32,9 @@ export type SimInMsgInit = {
   // Shared across every worker in the pool and Coordinator — see
   // MatterSim.lavaColumnTop's own comment for the self-report mechanics.
   lavaColumnTopBuffer: SharedArrayBuffer
+  // Player world-space AABB, written every render frame by Player.ts —
+  // see MatterSim.playerBounds for why powder settling reads it.
+  playerBoundsBuffer: SharedArrayBuffer
 }
 
 export type SimInMsgProcess = {

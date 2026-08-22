@@ -49,6 +49,7 @@ import { ParticleType } from '../../../Particles/_particle-types.ts'
 import { ChunkGrid, type ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 import type { Tile } from '../../../Tilemap/TileGrid.ts'
 import { ParticleSpawnData } from '../../data/ParticleSpawnData.ts'
+import { PlayerBoundsData, type PlayerBoundsDataType } from '../../data/PlayerBoundsData.ts'
 import { MatterCreditTransferBuffer } from '../_helpers/MatterCreditTransferBuffer.ts'
 import { MatterReservationReleaseBuffer } from '../_helpers/MatterReservationReleaseBuffer.ts'
 import { type SimOutMsgDoneWire } from './MatterSim.types.ts'
@@ -209,6 +210,15 @@ export class MatterSim {
 
   private particles: ParticleSpawnData
 
+  // World-space AABB of the player, updated main-thread-side every render
+  // frame. Read here so falling powder never solidifies (sets SETTLED_FLAG,
+  // which makes it collidable) on top of/inside the player — that flip can
+  // hand the Matter.js solver a large, instantaneous penetration it has no
+  // good way to resolve, which is what reads as the player getting "stuck"
+  // in freshly-settled sand. Grains inside these bounds just stay active and
+  // keep re-checking each tick until the player moves off them.
+  private playerBounds!: PlayerBoundsDataType
+
   // The coordinator's own local MatterSim instance never calls .process(),
   // so its scratchBuffers go unused — still allocated for signature simplicity.
   init(
@@ -221,6 +231,7 @@ export class MatterSim {
     scratchBuffers: SimScratchBuffers,
     particlesBuffer: SharedArrayBuffer,
     lavaColumnTopBuffer: SharedArrayBuffer,
+    playerBoundsBuffer: SharedArrayBuffer,
   ) {
     this.tiles = new Uint32Array(tilesBuffer)
     this.fill = new Uint32Array(fillBuffer)
@@ -236,6 +247,14 @@ export class MatterSim {
     this.scratch = new MatterSimScratchData(scratchBuffers)
     this.particles = new ParticleSpawnData(particlesBuffer)
     this.lavaColumnTop = new Int32Array(lavaColumnTopBuffer)
+    this.playerBounds = PlayerBoundsData.fromBuffer(playerBoundsBuffer)
+  }
+
+  // Open-interval AABB test, matching the convention used by
+  // ProjectileCreate.shouldSkipTile/FloodFillCreate for the same player-bounds struct.
+  private isInPlayerBounds(x: number, y: number): boolean {
+    const p = this.playerBounds
+    return x > p.left && x < p.right && y > p.top && y < p.bottom
   }
 
   process(
@@ -1215,7 +1234,13 @@ export class MatterSim {
 
     if (!moved) {
       const ty1 = ty + 1
-      if (ty1 >= this.height) {
+
+      // Never let a settleable settle (and become collidable) on top of/inside
+      // the player — keep it active so it re-checks next tick instead. See
+      // playerBounds field comment.
+      if (collidesWhenSettled(matterType(raw)) && this.isInPlayerBounds(tx, ty)) {
+        this.next.add(idx)
+      } else if (ty1 >= this.height) {
         // Map boundary — unconditionally settled.
         this.tiles[idx] = setSettled(raw, true)
         this.markDirty(tx, ty)
