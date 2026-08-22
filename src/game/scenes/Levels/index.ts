@@ -34,6 +34,14 @@ export const LEVELS = {
     displayName: 'Bench: Sand Fall',
     load: () => import('./BenchLevelSand'),
   },
+  BENCH_SHAFT: {
+    displayName: 'Bench: Narrow Shaft',
+    load: () => import('./BenchLevelShaft'),
+  },
+  BENCH_MIXED: {
+    displayName: 'Bench: Mixed Wide+Shaft',
+    load: () => import('./BenchLevelMixed'),
+  },
   TEST_WATER: {
     displayName: 'Test: Water Drain',
     load: () => import('./WaterLevelDrain.ts'),
