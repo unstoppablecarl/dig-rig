@@ -64,12 +64,24 @@ export class InputManager extends SceneBound {
     scene.input.keyboard!.addCapture(BROWSER_DISABLED_KEYS)
   }
 
-  private handleMouseWheel(pointer: Pointer, _objs: any, _dx: number, deltaY: number) {
+  private handleMouseWheel(pointer: Pointer, _objs: any, deltaX: number, deltaY: number) {
     if (!this.modeControllers) return
     const event = pointer.event as WheelEvent
+
+    let delta = 0
+    if (deltaY !== 0) {
+      delta = deltaY
+    } else {
+      // Shift+wheel makes browsers report the motion as deltaX instead of deltaY
+      // (the native "scroll horizontally" convention for single-axis mouse wheels).
+      // Only fall back to deltaX when Shift is held, so a plain horizontal trackpad
+      // swipe (deltaY === 0, no Shift) still correctly produces no delta.
+      delta = event.shiftKey ? deltaX : 0
+    }
+
     // find first valid wheel input
     for (const c of this.modeControllers[this.mode]) {
-      if (c.onMouseWheel?.(deltaY, event, pointer)) break
+      if (c.onMouseWheel?.(delta, event, pointer)) break
     }
   }
 
