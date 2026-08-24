@@ -1,7 +1,0 @@
-export enum MatterType {
-  EMPTY = 0,
-  SOLID = 1,
-  PERMANENT = 2,
-}
-
-export const MatterTypeValues = Object.values(MatterType).filter((key) => !isNaN(Number(key))) as MatterType[]

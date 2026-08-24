@@ -1,5 +1,5 @@
-import { Player } from '../../lib/Player/Player.ts'
 import { PERMANENT } from '../../lib/Matter/_Matter.types.ts'
+import { Player } from '../../lib/Player/Player.ts'
 import { textureToPixelData } from '../../lib/Textures/texture-util.ts'
 import { TilemapBuilder } from '../../lib/Tilemap/TilemapBuilder.ts'
 import { GameLevel } from '../GameLevel.ts'

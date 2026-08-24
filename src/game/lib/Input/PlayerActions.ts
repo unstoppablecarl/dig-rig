@@ -1,5 +1,5 @@
-import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { Input } from 'phaser'
+import type { GameLevel } from '../../scenes/GameLevel.ts'
 import { CompositeActionInput } from './PlayerActions/CompositeActionInput.ts'
 import { KeyActionInput } from './PlayerActions/KeyActionInput.ts'
 import { PointerActionInput } from './PlayerActions/PointerActionInput.ts'

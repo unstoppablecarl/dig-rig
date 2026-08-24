@@ -84,31 +84,6 @@ export abstract class BaseProjectile extends SceneBound {
       this.onTilesModified()
     }
     return delta
-import type { MatterTank } from '../Matter/Tank/MatterTank.ts'
-import { ProjectileShape } from '../MatterEngine/data/ProjectileManagerData.ts'
-import type { ProjectileEffect } from './ProjectileEffect/_ProjectileEffect.types.ts'
-import { ProjectileRenderer } from './ProjectileRenderer.ts'
-  protected readonly DEFAULT_VELOCITY: number = 300
-  // Subclasses override to react when the coordinator has modified tiles for this slot.
-  // Called each frame when _readSlotDelta() returns > 0.
-  protected onTilesModified(): void {
-  }
-  // Write current projectile state to the SAB slot so the coordinator picks it up next step.
-  protected sync(count: number, innerRadius = 0): void {
-    if (count <= 0) return
-    this.scene.io.projectileManager.syncFromProjectile(this, innerRadius)
-  // Read how many tiles the coordinator processed for this slot since last frame.
-  // Updates tilesModified Returns the delta (0 if no slot).
-  protected syncTilesModified(): number {
-    if (this.slotIdx < 0) return 0
-    const bridge = this.scene.io.projectileManager
-    const current = bridge.tilesModified[this.slotIdx]
-    const delta = current - this._lastSlotModified
-    if (delta > 0) {
-      this._lastSlotModified = current
-      this.tilesModified += delta
-      this.onTilesModified()
-    return delta
   }
 
   charge() {
