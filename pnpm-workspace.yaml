@@ -1,2 +1,5 @@
 allowBuilds:
   '@parcel/watcher': false
+  vue-demi: false
+minimumReleaseAgeExclude:
+  - vue-pane@0.13.0

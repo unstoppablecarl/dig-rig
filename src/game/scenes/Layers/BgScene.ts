@@ -17,7 +17,7 @@ type Layer = {
 const MARGIN = 50
 const DEBUG_INSET = 0
 
-let layerIds: number[] = []
+const layerIds: number[] = []
 for (let i = 1; i < 7; i++) {
   layerIds.push(i)
 }
@@ -108,11 +108,11 @@ export class BgScene extends Scene {
     const playerFactorY = (getFactor(0, worldHeight, playerY) - 0.5) * 2
     const playerOffsetY = playerFactorY * MARGIN
 
-    this.parallaxLayers.forEach(layer => {
+    for (const layer of this.parallaxLayers) {
       const parallaxX = playerX * (1 - layer.speedX)
       const parallaxY = playerOffsetY * (1 - layer.speedY)
-
-      layer.sprite.setTilePosition(parallaxX, parallaxY)
-    })
+      const ts = layer.sprite.tileScaleX
+      layer.sprite.setTilePosition(parallaxX / ts, parallaxY / ts)
+    }
   }
 }

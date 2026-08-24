@@ -1,0 +1,475 @@
+/// <reference lib="webworker" />
+import { CHUNK_SIZE, ENABLE_MATTER_SIM_PROFILING } from '../../../../config.ts'
+import { getSupport, matterType, PERMANENT, SupportType } from '../../../Matter/_Matter.types.ts'
+import { convertsToCollisionBody, getSupportType, setSupport, STRUCTURAL_COLLAPSE_TO } from '../../../Matter/matter.ts'
+import { ChunkGrid } from '../../../Tilemap/ChunkGrid.ts'
+import { MatterSim } from '../MatterSim/MatterSim.ts'
+
+import type { TileSet } from '../../../Matter/data/SparseTileSet.ts'
+type XY = { x: number; y: number }
+
+const BFS_DX = [-1, 1, 0, 0]
+const BFS_DY = [0, 0, -1, 1]
+
+function isChunkStructural(raw: number): boolean {
+  return getSupportType(raw) >= SupportType.STRUCTURAL
+}
+
+export class PhysicsCollapse {
+  private readonly permanentChunkIds = new Set<number>()
+  private _bfsVisited!: Uint32Array  // epoch-tagged; avoids fill(0) between calls
+  private _bfsQueue!: Int32Array
+  private _bfsComp!: Int32Array
+  private _anchoredQueue!: Int32Array
+  private _anchorParent!: Int32Array
+  private _bfsEpoch = 0
+  private readonly chunksWide: number
+  private readonly chunksHigh: number
+
+  // Profiling state, gated by ENABLE_MATTER_SIM_PROFILING. Isolates
+  // countSolidInChunk's cost (a brute-force O(CHUNK_SIZE^2) rescan per dirty
+  // chunk, every step) from the rest of postStep, since it was suspected as
+  // a major contributor to Coordinator's postDispatch time — see
+  // project memory / conversation before spending effort making it
+  // incremental instead of a full rescan.
+  private _profWindowStart = performance.now()
+  private _profPostStepCalls = 0
+  private _profCountSolidCalls = 0
+  private _profCountSolidTilesScanned = 0
+  private _profCountSolidDur = 0
+  private _profPostStepDur = 0
+
+  constructor(
+    private readonly sim: MatterSim,
+    private readonly chunkGrid: ChunkGrid,
+    private readonly width: number,
+    private readonly height: number,
+  ) {
+    this.chunksWide = chunkGrid.chunksWide
+    this.chunksHigh = chunkGrid.chunksHigh
+
+    const n = this.width * this.height
+    this._bfsVisited = new Uint32Array(n)
+    this._bfsQueue = new Int32Array(n)
+    this._bfsComp = new Int32Array(n)
+    this._anchoredQueue = new Int32Array(this.chunksWide * this.chunksHigh)
+    this._anchorParent = new Int32Array(this.chunksWide * this.chunksHigh)
+    this.initPermanentChunks()
+    this.initChunkState()
+  }
+
+  postStep(dirtyChunks: Set<number>, structuralDirty: boolean): void {
+    const _profT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
+    const { chunksWide, chunksHigh, chunkGrid } = this
+    for (const chunkIdx of dirtyChunks) {
+      const cx = chunkIdx % chunksWide
+      const cy = chunkIdx / chunksWide | 0
+      // dirtyChunks is "had any active tile processed this step" — mostly
+      // liquid flow, which never touches collidability. Only bump collGen
+      // (forcing TerrainChunkBodyManager to rebuild the chunk's static body)
+      // when the collidable-tile count actually changed; otherwise this was
+      // firing a full terrain-body rebuild on every chunk with any water
+      // activity, every frame, regardless of what actually changed.
+      const prevSolidCount = chunkGrid.getSolidCount(chunkIdx)
+      const { solidCount, structuralCount } = this.countSolidInChunk(cx, cy)
+      chunkGrid.setSolidCount(chunkIdx, solidCount)
+      chunkGrid.setStructuralCount(chunkIdx, structuralCount)
+      if (solidCount !== prevSolidCount) {
+        chunkGrid.markDirty(chunkIdx)
+      } else {
+        chunkGrid.markRenderDirty(chunkIdx)
+      }
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue
+          const nx = cx + dx, ny = cy + dy
+          if (nx < 0 || nx >= chunksWide || ny < 0 || ny >= chunksHigh) continue
+          chunkGrid.markRenderDirty(ny * chunksWide + nx)
+        }
+      }
+    }
+    if (structuralDirty) this.computeAnchored()
+
+    if (ENABLE_MATTER_SIM_PROFILING) {
+      this._profPostStepDur += performance.now() - _profT0
+      this._profPostStepCalls++
+      const now = performance.now()
+      if (now - this._profWindowStart > 1000) {
+        const avgCountSolidUs = this._profCountSolidCalls > 0
+          ? (this._profCountSolidDur / this._profCountSolidCalls) * 1000
+          : 0
+        console.log(
+          `[PROFILE PhysicsCollapse] postStep=${this._profPostStepCalls} `
+          + `totalDur=${this._profPostStepDur.toFixed(2)}ms `
+          + `countSolidInChunk calls=${this._profCountSolidCalls} `
+          + `(${(this._profCountSolidCalls / (this._profPostStepCalls || 1)).toFixed(2)}/postStep) `
+          + `tilesScanned=${this._profCountSolidTilesScanned} `
+          + `totalDur=${this._profCountSolidDur.toFixed(2)}ms avg=${avgCountSolidUs.toFixed(2)}us`,
+        )
+        this._profWindowStart = now
+        this._profPostStepCalls = 0
+        this._profCountSolidCalls = 0
+        this._profCountSolidTilesScanned = 0
+        this._profCountSolidDur = 0
+        this._profPostStepDur = 0
+      }
+    }
+  }
+
+  chunkIdxForTile(tileIdx: number): number {
+    const tx = tileIdx % this.width
+    const ty = tileIdx / this.width | 0
+    return (ty / CHUNK_SIZE | 0) * this.chunksWide + (tx / CHUNK_SIZE | 0)
+  }
+
+  // Returns the subset of newTiles that form a floating island not connected to anchored terrain.
+  findIslandTiles(newTiles: XY[]): XY[] {
+    if (newTiles.length === 0) return []
+    const { width, height, chunkGrid } = this
+    const tiles = this.sim.tiles
+
+    if (this._bfsEpoch > 0xFFFFFFFD) {
+      this._bfsVisited.fill(0)
+      this._bfsEpoch = 0
+    }
+    this._bfsEpoch += 2
+    const VISITED = this._bfsEpoch
+    const { _bfsVisited: vis, _bfsQueue: queue } = this
+
+    // Pre-mark new tiles so neighbor checks and BFS can use vis[idx] === VISITED
+    let tail = 0
+    for (const { x, y } of newTiles) {
+      const idx = y * width + x
+      vis[idx] = VISITED
+      queue[tail++] = idx
+    }
+
+    let touchesAnchoredSolid = false
+    let touchesUnanchoredSolid = false
+    for (const { x, y } of newTiles) {
+      for (let d = 0; d < 4; d++) {
+        const nx = x + BFS_DX[d], ny = y + BFS_DY[d]
+        if (nx < 0 || nx >= width || ny < 0 || ny >= height) return []
+        const nidx = ny * width + nx
+        if (vis[nidx] === VISITED) continue
+        const st = getSupportType(tiles[nidx])
+        if (st === SupportType.ANCHORED) return []
+        if (st < SupportType.STRUCTURAL) continue
+        if (chunkGrid.isAnchoredCoord(nx / CHUNK_SIZE | 0, ny / CHUNK_SIZE | 0)) {
+          touchesAnchoredSolid = true
+        } else {
+          touchesUnanchoredSolid = true
+        }
+      }
+      if (touchesAnchoredSolid) break
+    }
+
+    if (touchesAnchoredSolid) return []
+    if (!touchesUnanchoredSolid) return newTiles
+
+    let head = 0, anchored = false
+    outer: while (head < tail) {
+      const idx = queue[head++]
+      const x = idx % width
+      const y = idx / width | 0
+      for (let d = 0; d < 4; d++) {
+        const nx = x + BFS_DX[d], ny = y + BFS_DY[d]
+        if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+          anchored = true
+          break outer
+        }
+        const nidx = ny * width + nx
+        if (vis[nidx] === VISITED) continue
+        const st = getSupportType(tiles[nidx])
+        if (st === SupportType.ANCHORED) {
+          anchored = true
+          break outer
+        }
+        if (st >= SupportType.STRUCTURAL) {
+          if (chunkGrid.isAnchoredCoord(nx / CHUNK_SIZE | 0, ny / CHUNK_SIZE | 0)) {
+            anchored = true
+            break outer
+          }
+          vis[nidx] = VISITED
+          queue[tail++] = nidx
+        }
+      }
+    }
+
+    return anchored ? [] : newTiles
+  }
+
+  // Returns structural tiles adjacent to structuralRemovals that are no longer connected to anchored terrain.
+  // Chunk-level pruning is safe only for chunks that are non-dirty AND FULL (no holes) AND anchored:
+  // FULL guarantees every tile in the chunk reaches its border; anchored guarantees the border
+  // reaches permanent terrain. PARTIAL chunks may contain isolated tiles even if the chunk is
+  // anchored, so they always need tile-level BFS. Dirty chunks have stale solidCount/type so they
+  // are also excluded from the fast path.
+  findNewlyDisconnected(structuralRemovals: XY[], dirtyChunks: Set<number>): XY[] {
+    // Refresh chunk anchored flags — they reflect the previous step's tile state. Any chunk whose
+    // only path to permanent terrain ran through a now-destroyed tile would otherwise read as stale-anchored.
+    this.computeAnchored()
+
+    if (this._bfsEpoch > 0xFFFFFFFD) {
+      this._bfsVisited.fill(0)
+      this._bfsEpoch = 0
+    }
+    this._bfsEpoch += 2
+    const VISITED = this._bfsEpoch
+    const CONFIRMED = this._bfsEpoch + 1
+    const { width, height, chunksWide, chunkGrid, _bfsVisited: vis, _bfsQueue: queue, _bfsComp: comp } = this
+    const tiles = this.sim.tiles
+    const islandTiles: XY[] = []
+
+    // Returns true only when chunk-level data is a trustworthy anchor proxy:
+    //   non-dirty  → solidCount/type is accurate for this step
+    //   FULL       → no holes, so every tile in the chunk connects to its border
+    //   anchored   → the border connects to permanent terrain (fresh after computeAnchored above)
+    const isFastAnchored = (cx: number, cy: number): boolean => {
+      const id = cy * chunksWide + cx
+      return !dirtyChunks.has(id) && chunkGrid.isFullyStructural(id) && chunkGrid.isAnchored(id)
+    }
+
+    for (const { x: dx, y: dy } of structuralRemovals) {
+      for (let d = 0; d < 4; d++) {
+        const sx = dx + BFS_DX[d], sy = dy + BFS_DY[d]
+        if (sx < 0 || sx >= width || sy < 0 || sy >= height) continue
+        const sidx = sy * width + sx
+        if (vis[sidx] >= VISITED) continue
+        const supportType = getSupportType(tiles[sidx])
+        if (supportType < SupportType.STRUCTURAL) continue
+        if (supportType === SupportType.ANCHORED) {
+          vis[sidx] = CONFIRMED
+          continue
+        }
+
+        // Seed-level pruning: skip full BFS if this tile's chunk is already anchored.
+        // Skip the chunk check for dirty chunks — their anchored flag is from the previous step.
+        const seedCx = sx / CHUNK_SIZE | 0, seedCy = sy / CHUNK_SIZE | 0
+        let seedAnchored = sx === 0 || sx === width - 1 || sy === 0 || sy === height - 1
+        if (!seedAnchored) seedAnchored = isFastAnchored(seedCx, seedCy)
+        if (!seedAnchored) {
+          for (let dp = 0; dp < 4; dp++) {
+            const px = sx + BFS_DX[dp], py = sy + BFS_DY[dp]
+            if (px < 0 || px >= width || py < 0 || py >= height) {
+              seedAnchored = true
+              break
+            }
+            if (getSupportType(tiles[py * width + px]) === SupportType.ANCHORED) {
+              seedAnchored = true
+              break
+            }
+          }
+        }
+        if (seedAnchored) {
+          vis[sidx] = CONFIRMED
+          continue
+        }
+
+        let head = 0, tail = 0, compLen = 0, anchored = false
+        vis[sidx] = VISITED
+        queue[tail++] = sidx
+        comp[compLen++] = sidx
+
+        bfs: while (head < tail) {
+          const cidx = queue[head++]
+          const cx = cidx % width
+          const cy = (cidx / width) | 0
+          for (let d2 = 0; d2 < 4; d2++) {
+            const nx = cx + BFS_DX[d2], ny = cy + BFS_DY[d2]
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+              anchored = true
+              break bfs
+            }
+            const nidx = ny * width + nx
+            if (vis[nidx] >= VISITED) continue
+            const st = getSupportType(tiles[nidx])
+            if (st === SupportType.ANCHORED) {
+              anchored = true
+              break bfs
+            }
+            if (st >= SupportType.STRUCTURAL) {
+              const nCx = nx / CHUNK_SIZE | 0
+              const nCy = ny / CHUNK_SIZE | 0
+              if (isFastAnchored(nCx, nCy)) {
+                anchored = true
+                break bfs
+              }
+              vis[nidx] = VISITED
+              queue[tail++] = nidx
+              comp[compLen++] = nidx
+            }
+          }
+        }
+
+        for (let k = 0; k < compLen; k++) vis[comp[k]] = CONFIRMED
+        if (!anchored) {
+          for (let k = 0; k < compLen; k++) {
+            const idx = comp[k]
+            const x = idx % width
+            const y = (idx / width) | 0
+            islandTiles.push({ x, y })
+          }
+        }
+      }
+    }
+
+    return islandTiles
+  }
+
+  // Converts floating structural tiles to their collapse types and activates them.
+  collapseIslands(islands: XY[], activeSet: TileSet, dirtyChunks: Set<number>): void {
+    const tiles = this.sim.tiles
+    const { width } = this
+
+    for (const { x, y } of islands) {
+      const idx = y * width + x
+      const raw = tiles[idx]
+      const t = matterType(raw)
+      const collapseType = STRUCTURAL_COLLAPSE_TO[t]
+      if (collapseType !== undefined) {
+        tiles[idx] = collapseType
+        this.sim.markDirty(x, y)
+        dirtyChunks.add(this.chunkIdxForTile(idx))
+        this.sim.activate(idx, activeSet)
+      } else if (getSupport(raw) === SupportType.STRUCTURAL) {
+        tiles[idx] = setSupport(raw, SupportType.NONE)
+        this.sim.markDirty(x, y)
+        dirtyChunks.add(this.chunkIdxForTile(idx))
+        this.sim.activate(idx, activeSet)
+      }
+    }
+  }
+
+  private initPermanentChunks(): void {
+    const { width, height, chunksWide, chunksHigh } = this
+    const tiles = this.sim.tiles
+    for (let cy = 0; cy < chunksHigh; cy++) {
+      for (let cx = 0; cx < chunksWide; cx++) {
+        const id = cy * chunksWide + cx
+        if (cx === 0 || cx === chunksWide - 1 || cy === 0 || cy === chunksHigh - 1) {
+          this.permanentChunkIds.add(id)
+          continue
+        }
+        const x0 = cx * CHUNK_SIZE, y0 = cy * CHUNK_SIZE
+        const x1 = Math.min(x0 + CHUNK_SIZE, width)
+        const y1 = Math.min(y0 + CHUNK_SIZE, height)
+        outer: for (let y = y0; y < y1; y++) {
+          for (let x = x0; x < x1; x++) {
+            if (matterType(tiles[y * width + x]) === PERMANENT) {
+              this.permanentChunkIds.add(id)
+              break outer
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private initChunkState(): void {
+    const { chunksWide, chunksHigh, chunkGrid } = this
+    for (let cy = 0; cy < chunksHigh; cy++) {
+      for (let cx = 0; cx < chunksWide; cx++) {
+        const idx = cy * chunksWide + cx
+        const { solidCount, structuralCount } = this.countSolidInChunk(cx, cy)
+        chunkGrid.setSolidCount(idx, solidCount)
+        chunkGrid.setStructuralCount(idx, structuralCount)
+      }
+    }
+    this.computeAnchored()
+  }
+
+  // Counts both "collidable" tiles (any matter that contributes to the collision body,
+  // including non-structural settled material like sand/rock-when-settled) and
+  // "structural" tiles (getSupportType() >= STRUCTURAL) separately — a chunk can be 100%
+  // collidable while only partly structural, and isFastAnchored's shortcut requires the
+  // latter (see isFullyStructural doc comment on ChunkGrid).
+  private countSolidInChunk(cx: number, cy: number): { solidCount: number, structuralCount: number } {
+    const _profT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
+    const { width, height } = this
+    const tiles = this.sim.tiles
+    const x0 = cx * CHUNK_SIZE, y0 = cy * CHUNK_SIZE
+    const x1 = Math.min(x0 + CHUNK_SIZE, width)
+    const y1 = Math.min(y0 + CHUNK_SIZE, height)
+    let solidCount = 0
+    let structuralCount = 0
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
+        const raw = tiles[y * width + x]
+        if (convertsToCollisionBody(raw)) solidCount++
+        if (getSupportType(raw) >= SupportType.STRUCTURAL) structuralCount++
+      }
+    }
+    if (ENABLE_MATTER_SIM_PROFILING) {
+      this._profCountSolidCalls++
+      this._profCountSolidTilesScanned += (x1 - x0) * (y1 - y0)
+      this._profCountSolidDur += performance.now() - _profT0
+    }
+    return { solidCount, structuralCount }
+  }
+
+  private computeAnchored(): void {
+    const { chunksWide, chunksHigh, chunkGrid, _anchoredQueue: queue } = this
+
+    const numChunks = chunksWide * chunksHigh
+    for (let i = 0; i < numChunks; i++) chunkGrid.setAnchored(i, false)
+
+    let head = 0, tail = 0
+    for (const id of this.permanentChunkIds) {
+      chunkGrid.setAnchored(id, true)
+      this._anchorParent[id] = -1
+      queue[tail++] = id
+    }
+
+    while (head < tail) {
+      const id = queue[head++]
+      // A chunk can only be trusted as a waypoint to propagate "anchored" further if it's the
+      // permanent root, or if it's fully structural — hasSolidBorder only proves that ONE border
+      // pixel is structural on both sides, not that this pixel connects internally to whatever
+      // entry point made `id` anchored in the first place. A PARTIAL chunk (holes from digging)
+      // can have two structurally disjoint masses that each just touch a different border,
+      // which would otherwise bridge two genuinely disconnected structures into one false chain.
+      if (!this.permanentChunkIds.has(id) && !chunkGrid.isFullyStructural(id)) continue
+      const cx = id % chunksWide
+      const cy = id / chunksWide | 0
+      for (let d = 0; d < 4; d++) {
+        const nx = cx + BFS_DX[d], ny = cy + BFS_DY[d]
+        if (nx < 0 || nx >= chunksWide || ny < 0 || ny >= chunksHigh) continue
+        const nid = ny * chunksWide + nx
+        if (chunkGrid.isAnchored(nid)) continue
+        if (this.hasSolidBorder(cx, cy, BFS_DX[d], BFS_DY[d])) {
+          chunkGrid.setAnchored(nid, true)
+          this._anchorParent[nid] = id
+          queue[tail++] = nid
+        }
+      }
+    }
+  }
+
+  private hasSolidBorder(cx: number, cy: number, dx: number, dy: number): boolean {
+    const { width, height } = this
+    const tiles = this.sim.tiles
+    const x0 = cx * CHUNK_SIZE, y0 = cy * CHUNK_SIZE
+    const xEnd = Math.min(x0 + CHUNK_SIZE, width)
+    const yEnd = Math.min(y0 + CHUNK_SIZE, height)
+
+    if (dx === 1) {
+      for (let y = y0; y < yEnd; y++) {
+        if (isChunkStructural(tiles[y * width + xEnd - 1]) && isChunkStructural(tiles[y * width + xEnd])) return true
+      }
+    } else if (dx === -1) {
+      for (let y = y0; y < yEnd; y++) {
+        if (isChunkStructural(tiles[y * width + x0]) && isChunkStructural(tiles[y * width + x0 - 1])) return true
+      }
+    } else if (dy === 1) {
+      for (let x = x0; x < xEnd; x++) {
+        if (isChunkStructural(tiles[(yEnd - 1) * width + x]) && isChunkStructural(tiles[yEnd * width + x])) return true
+      }
+    } else {
+      for (let x = x0; x < xEnd; x++) {
+        if (isChunkStructural(tiles[y0 * width + x]) && isChunkStructural(tiles[(y0 - 1) * width + x])) return true
+      }
+    }
+    return false
+  }
+}

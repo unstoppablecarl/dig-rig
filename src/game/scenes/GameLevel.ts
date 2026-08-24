@@ -1,28 +1,49 @@
 import { GameObjects, Geom, Input, Scene, Textures } from 'phaser'
 import { loadPixelSpriteSheets } from '../../assets/asset-loader.ts'
 import { PLAYER_SPRITE_SHEET_ASSETS } from '../../assets/player/player-sprite-sheet-assets.ts'
-import { INPUT_ACTIONS } from '../../input.ts'
-import { DRAW_WORLD_BORDER_DEBUG } from '../config.ts'
+import { INPUT_ACTIONS, KEY_EVENT_GUARD } from '../../input.ts'
+import { type BrushUIState, useBrushUIState } from '../../store/brushUIState.ts'
+import { type UIState, useUIState } from '../../store/uiState.ts'
+import { useWeaponUIState, type WeaponUIState } from '../../store/weaponUIState.ts'
+import { type InstantWeaponUIState, useInstantWeaponUIState } from '../../store/weaponUIState/InstantWeaponUIState.ts'
+import { DRAW_WORLD_BORDER_DEBUG, FPS_UPDATE_INTERVAL_MS } from '../config.ts'
+import {
+  MATTER_RENDER_CONFIG_DEFAULTS,
+  type MatterRenderConfig,
+  mergeMatterRenderConfig,
+  type PartialMatterRenderConfig,
+} from '../config/colors.ts'
 import { getDeltaT } from '../helpers/_helpers.ts'
+import { PhysicsBodyManager } from '../lib/Collision/PhysicsBodyManager.ts'
 import { TerrainChunkBodyManager } from '../lib/Collision/TerrainChunkBodyManager.ts'
-import { WeaponManagerInput } from '../lib/Input/InputControllers/WeaponManagerInput.ts'
+import { installBenchmarkHook } from '../lib/Debug/BenchmarkHook.ts'
+import type { EntitySpawner } from '../lib/Entities/_Entity.types.ts'
+import { EntityFactory } from '../lib/Entities/EntityFactory.ts'
+import { EntityManager } from '../lib/Entities/EntityManager.ts'
+import { GAME_LEVEL_LOADED } from '../lib/events.ts'
+import { WeaponManagerInput } from '../lib/Input/InputController/WeaponManagerInput.ts'
 import { InputManager } from '../lib/Input/InputManager.ts'
 import { makePlayerActions, type PlayerActions } from '../lib/Input/PlayerActions.ts'
-import { MatterManager } from '../lib/Matter/MatterManager.ts'
-import { VFXParticleManager } from '../lib/VFXParticles/VFXParticleManager.ts'
-import { TerrainBlobParticleManager } from '../lib/Tilemap/TerrainBlobParticleManager.ts'
+import { MatterManager } from '../lib/Matter/Tank/MatterManager.ts'
+import { DataManager } from '../lib/MatterEngine/DataManager.ts'
+import { MatterEngine } from '../lib/MatterEngine/MatterEngine.ts'
 import { Player } from '../lib/Player/Player.ts'
 import { ProjectileManager } from '../lib/Projectiles/ProjectileManager.ts'
+import { makePreviewProjectileRenderer, ProjectileRenderer } from '../lib/Projectiles/ProjectileRenderer.ts'
 import { Tilemap } from '../lib/Tilemap/Tilemap.ts'
-import { TilemapRenderer, type TilemapRendererConfig } from '../lib/Tilemap/TilemapRenderer.ts'
+import { TilemapBuilder } from '../lib/Tilemap/TilemapBuilder.ts'
+import { TilemapRenderer } from '../lib/Tilemap/TilemapRenderer.ts'
+import type { TilemapRendererConfig } from '../lib/Tilemap/TilemapRendererConfig'
 import { CameraController } from '../lib/UI/CameraController.ts'
+import { VFXParticleManager } from '../lib/VFXParticles/VFXParticleManager.ts'
 import { BgScene } from './Layers/BgScene.ts'
 import { UIScene } from './Layers/UIScene.ts'
-import type { LevelEntryWithId, LevelId } from './Levels'
-import Group = GameObjects.Group
+import type { LevelId, LevelInit } from './Levels'
 import Layer = GameObjects.Layer
 import Rectangle = Geom.Rectangle
 import MouseManager = Input.Mouse.MouseManager
+import WebGLRenderer = Phaser.Renderer.WebGL.WebGLRenderer
+import WebGLTextureWrapper = Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper
 import CanvasTexture = Phaser.Textures.CanvasTexture
 import NEAREST = Textures.FilterMode.NEAREST
 
@@ -43,7 +64,8 @@ export abstract class GameLevel extends Scene {
   public displayName = 'Level Name Not Loaded'
   public layers: Layers
   public cameraController: CameraController
-  public entities: Group
+  public entityManager: EntityManager
+  public entityFactory: EntityFactory
   public matterManager: MatterManager
   public vfxParticleManager: VFXParticleManager
   public player: Player
@@ -55,15 +77,38 @@ export abstract class GameLevel extends Scene {
   public worldBounds: Geom.Rectangle
   public inputManager: InputManager
   public playerActions: PlayerActions
-  public terrainBlobParticleManager: TerrainBlobParticleManager
+  public matterEngine: MatterEngine
+  public uiState: UIState
+  public weaponUIState: WeaponUIState
+  public instantWeaponUIState: InstantWeaponUIState
+  public brushUIState: BrushUIState
+  public previewProjectileRenderer: ProjectileRenderer
+  public matterRenderConfig: MatterRenderConfig
+  public physicsBodyManager: PhysicsBodyManager
+  public io: DataManager
+
   public ui: UIScene
   protected id: LevelId
 
+  private nextFpsUpdate = 0
+  private lastFpsUpdateTime = 0
+  private lastSimStepCount = 0
+
   protected makeTilemapRenderer(tilemap: Tilemap): TilemapRenderer {
-    return new TilemapRenderer(this, this.getTerrainTexture(tilemap), this.tilemapRendererConfig())
+    this.matterRenderConfig = mergeMatterRenderConfig(MATTER_RENDER_CONFIG_DEFAULTS, this.makeMatterRenderConfig())
+    return new TilemapRenderer(
+      this,
+      this.getTerrainTexture(tilemap),
+      this.tilemapRendererConfig(),
+      this.matterRenderConfig,
+    )
   }
 
   protected tilemapRendererConfig(): Partial<TilemapRendererConfig> {
+    return {}
+  }
+
+  protected makeMatterRenderConfig(): PartialMatterRenderConfig {
     return {}
   }
 
@@ -72,7 +117,7 @@ export abstract class GameLevel extends Scene {
   startLevel() {
   }
 
-  abstract makeTileMap(): Tilemap
+  abstract makeTileMap(): TilemapBuilder
 
   abstract makePlayer(): Player
 
@@ -91,9 +136,18 @@ export abstract class GameLevel extends Scene {
     }
   }
 
-  init(entry: LevelEntryWithId) {
+  init(entry: LevelInit) {
     this.id = entry.id
     this.displayName = entry.displayName
+    this.uiState = useUIState()
+    this.uiState.levelId = this.id
+
+    this.brushUIState = useBrushUIState()
+    this.weaponUIState = useWeaponUIState()
+    this.instantWeaponUIState = useInstantWeaponUIState()
+    this.entityFactory = new EntityFactory(this)
+    this.entityFactory.register(this.registerEntities().map(({ SPAWNER }) => SPAWNER))
+
     this.ui = this.registerSubScene(UIScene)
     this.registerSubScene(BgScene)
 
@@ -101,12 +155,15 @@ export abstract class GameLevel extends Scene {
     mouse.disableContextMenu()
   }
 
+  abstract registerEntities(): { SPAWNER: EntitySpawner<any> }[];
+
   preload() {
     const { width, height } = this.scale
     const cx = width / 2
     const cy = height / 2
     const barW = 320
     const barH = 24
+
 
     const title = this.add.text(cx, cy - 60,
       `Loading ${this.displayName}...`,
@@ -136,6 +193,7 @@ export abstract class GameLevel extends Scene {
       fill.destroy()
       pct.destroy()
     })
+    this.entityFactory.preload()
   }
 
   preloadPlayer() {
@@ -160,13 +218,18 @@ export abstract class GameLevel extends Scene {
     this.preCreateLevel()
 
     this.startLevel()
+    this.terrainChunkBodyManager.trackAllDynamic()
 
     this.createUI()
+
+    if (import.meta.env.DEV) installBenchmarkHook(this)
+
+    this.game.events.emit(GAME_LEVEL_LOADED, this.game, this)
   }
 
   private createUI() {
     this.scene
-      .launch(UIScene.ID, { gameScene: this })
+      .launch(UIScene.ID, { gameScene: this, levelId: this.id })
       .bringToTop(UIScene.ID)
       .launch(BgScene.ID, { gameScene: this })
       .sendToBack(BgScene.ID)
@@ -178,29 +241,34 @@ export abstract class GameLevel extends Scene {
 
   private preCreateLevel() {
     this.layers = this.makeLayers()
+    this.previewProjectileRenderer = makePreviewProjectileRenderer(this)
 
     this.matterManager = new MatterManager(this)
-    this.tilemap = this.makeTileMap()
+    const tilemapBuilder = this.makeTileMap()
+    this.tilemap = tilemapBuilder.getTilemap()
+    this.tilemap.initChunkSolidCounts()
 
     this.worldBounds = new Rectangle(0, 0,
       this.tilemap.width,
       this.tilemap.height,
     )
 
-    this.terrainBlobParticleManager = new TerrainBlobParticleManager(this)
     this.tilemapRenderer = this.makeTilemapRenderer(this.tilemap)
+    this.io = DataManager.make(this.tilemap)
+    this.matterEngine = new MatterEngine(this)
+    this.io = this.matterEngine.data
     this.terrainChunkBodyManager = new TerrainChunkBodyManager(this)
     this.projectiles = new ProjectileManager(this)
-    this.playerActions = makePlayerActions(this, INPUT_ACTIONS)
+    this.playerActions = makePlayerActions(this, INPUT_ACTIONS, KEY_EVENT_GUARD)
     this.playerWeaponManager = new WeaponManagerInput(this)
     this.vfxParticleManager = new VFXParticleManager(this)
     this.inputManager = new InputManager(this)
-
-    this.entities = this.add.group({
-      runChildUpdate: true,
-    })
+    this.physicsBodyManager = new PhysicsBodyManager(this)
+    this.entityManager = new EntityManager(this)
 
     this.player = this.makePlayer()
+    this.weaponUIState.activeMatterTank = this.player.matterTank
+    tilemapBuilder.applyReservedDestroyCharges(this.io.matterTankManager)
 
     this.matter.world.setBounds(
       0, 0,
@@ -219,14 +287,30 @@ export abstract class GameLevel extends Scene {
     }
   }
 
-  update(_time: number, delta: number) {
+  update(time: number, delta: number) {
     const dt = getDeltaT(delta)
 
+    if (time > this.nextFpsUpdate) {
+      this.uiState.fps = Math.floor(this.game.loop.actualFps)
+
+      const stepCount = this.io.simStats.stepCount
+      const elapsedMs = time - this.lastFpsUpdateTime
+      if (this.lastFpsUpdateTime > 0 && elapsedMs > 0) {
+        this.uiState.simFps = Math.round((stepCount - this.lastSimStepCount) / (elapsedMs / 1000))
+      }
+      this.lastSimStepCount = stepCount
+      this.lastFpsUpdateTime = time
+
+      this.nextFpsUpdate = time + FPS_UPDATE_INTERVAL_MS
+    }
+
+    this.matterEngine.update()
     this.cameraController.update()
     this.player.update()
     this.projectiles.update(dt)
     this.terrainChunkBodyManager.update()
-    this.terrainBlobParticleManager.update(dt)
+    this.physicsBodyManager.update(time, delta)
+    this.entityManager.update(time, delta)
 
     this.tilemapRenderer.render()
   }
@@ -238,6 +322,26 @@ export abstract class GameLevel extends Scene {
     effectTexture.source[0].setFilter(NEAREST)
 
     return effectTexture
+  }
+
+  initGLTexture(key: string, width: number, height: number, integer = false): [Phaser.Textures.Texture, WebGLTextureWrapper] {
+    if (this.textures.exists(key)) this.textures.remove(key)
+    const renderer = this.renderer as WebGLRenderer
+    const gl = renderer.gl
+    const wrapper = renderer.createTexture2D(
+      0, gl.NEAREST, gl.NEAREST, gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
+      gl.RGBA, undefined, width, height, false, true, false,
+    )
+    if (integer) {
+      // Phaser's createTexture2D uses the same value for internalFormat and format,
+      // which is wrong for integer textures. Re-initialize with correct formats.
+      const gl2 = gl as WebGL2RenderingContext
+      gl2.bindTexture(gl2.TEXTURE_2D, wrapper.webGLTexture)
+      gl2.texImage2D(gl2.TEXTURE_2D, 0, gl2.RGBA8UI, width, height, 0, gl2.RGBA_INTEGER, gl2.UNSIGNED_BYTE, null)
+      gl2.bindTexture(gl2.TEXTURE_2D, null)
+    }
+    const texture = this.textures.addGLTexture(key, wrapper)!
+    return [texture, wrapper]
   }
 
   private registerSubScene<T extends { ID: string, new(): E }, E>(Def: T): E {

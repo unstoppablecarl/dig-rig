@@ -1,15 +1,13 @@
 import { Display, GameObjects, Math as PMath } from 'phaser'
 import { DRAW_PARTICLE_DEBUG } from '../../config.ts'
-import { makeSimplexNoise } from '../../helpers/noise.ts'
+import { makeCachedSimplexNoise } from '../../helpers/noise.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
 import type { ParticleTarget, Position } from '../../types.ts'
 import Color = Display.Color
-import Interpolate = Display.Color.Interpolate
 
 import Particle = GameObjects.Particles.Particle
 import ParticleEmitter = GameObjects.Particles.ParticleEmitter
 import DegToRad = PMath.DegToRad
-import Bezier = PMath.Interpolation.Bezier
 import Vector2 = PMath.Vector2
 
 export const PARTICLE_SIZE = 16
@@ -31,60 +29,86 @@ const DYNAMIC_FINAL_HOMING_DISTANCE = 150
 const DYNAMIC_FINAL_HOMING_TRANSITION_SPEED = 5
 
 const DRAG_COEFFICIENT = 2.5
-
 const WIND_STRENGTH = 800
-const NOISE_SCALE = 0.1
-const NOISE_TIME_SCALE = 0.01
-
 const ATTRACTION_STRENGTH = 500
-
 const ATTRACTION_RAMP_DISTANCE = 60
-const ATTRACTION_RAMP_POWER = 1.5
 
 const STATIC_TARGET_SNAP = 1
 const DYNAMIC_TARGET_SNAP = 2
 
-//seconds
 const FADE_TIME = 1
 
-const SCALE_INTERPOLATION = [1, 3, 1].map(v => PARTICLE_BASE_SCALE * v)
-
-const noise = makeSimplexNoise(NOISE_SCALE, NOISE_TIME_SCALE)
+const {
+  WIND_LUT_X,
+  WIND_LUT_Y,
+  WIND_LUT_MASK,
+  WIND_LUT_PERIOD,
+} = makeCachedSimplexNoise(LIFESPAN_MS, 256)
 
 export class VFXMatterParticle extends Particle {
   private target: Position | ParticleTarget | null = null
-  private colorFrom: Color
-  private colorTo: Color
+
+  // Cached color components for inline lerp — avoids Interpolate.ColorWithColor per frame
+  private _r0 = 0
+  private _g0 = 0
+  private _b0 = 0
+  private _rD = 0
+  private _gD = 0
+  private _bD = 0
 
   private initialDistance: number
   private fading: boolean
   private noiseTime: number
   private staticTarget: boolean
   private homingTransitionProgress: number
+  private localWindPhase: number
 
-  // trying to only re-use Vector2 objects
-  // to avoid GC pressure
   private toTarget = new Vector2()
   private nextVelocity = new Vector2()
   private tempVec2 = new Vector2()
-  private noiseVec2 = new Vector2()
   private localWindScale: number
   private localScale: number
 
-  constructor(emitter: ParticleEmitter) {
+  private quadraticMidPointScale: number
+
+  constructor(
+    emitter: ParticleEmitter,
+    quadraticMidPointScale = 3,
+  ) {
     super(emitter)
+    this.quadraticMidPointScale = PARTICLE_BASE_SCALE * quadraticMidPointScale
   }
+
+  public init(
+    target: Position,
+    staticTarget: true,
+    colorFrom: Color,
+    colorTo: Color,
+  ): void
+
+  public init(
+    target: ParticleTarget,
+    staticTarget: false,
+    colorFrom: Color,
+    colorTo: Color,
+  ): void
 
   public init(
     target: Position | ParticleTarget,
     staticTarget: boolean,
     colorFrom: Color,
     colorTo: Color,
-  ) {
+  ): void {
     this.target = target
-    this.colorFrom = colorFrom
-    this.colorTo = colorTo
     this.staticTarget = staticTarget
+
+    this._r0 = colorFrom.red
+    this._g0 = colorFrom.green
+    this._b0 = colorFrom.blue
+    this._rD = colorTo.red - colorFrom.red
+    this._gD = colorTo.green - colorFrom.green
+    this._bD = colorTo.blue - colorFrom.blue
+
     this.scaleX = this.scaleY = 0
     this.initialDistance = 0
     this.fading = false
@@ -104,7 +128,6 @@ export class VFXMatterParticle extends Particle {
       angle += PMath.FloatBetween(-STATIC_ANGLE_VARIANCE, STATIC_ANGLE_VARIANCE)
       initialSpeed = PMath.FloatBetween(STATIC_TARGET_INIT_SPEED_MIN, STATIC_TARGET_INIT_SPEED_MAX)
     } else {
-      // random angle
       angle = Math.random() * 2 * Math.PI
       initialSpeed = PMath.FloatBetween(DYNAMIC_INIT_SPEED_MIN, DYNAMIC_INIT_SPEED_MAX)
     }
@@ -114,6 +137,8 @@ export class VFXMatterParticle extends Particle {
 
     this.localWindScale = PMath.FloatBetween(0.5, 1.5) * WIND_STRENGTH
     this.localScale = PMath.FloatBetween(0.5, 1.5)
+    // Cheap spatial phase variation: each particle walks the LUT at a different offset
+    this.localWindPhase = ((this.x * 7 + this.y * 13) | 0) & WIND_LUT_MASK
   }
 
   public update(delta: number, step: number): boolean {
@@ -163,12 +188,12 @@ export class VFXMatterParticle extends Particle {
       newVelocity = this.getVelocityForDynamicTarget(step, distance, this.lifeT)
     }
 
+    const lutIdx = ((this.noiseTime / WIND_LUT_PERIOD | 0) + this.localWindPhase) & WIND_LUT_MASK
+    const windScale = this.localWindScale * step
     const dragFactor = 1 - DRAG_COEFFICIENT * step
-    const windForce = noise(this, this.noiseTime, this.noiseVec2).scale(this.localWindScale)
 
-    newVelocity
-      .add(windForce.scale(step))
-      .scale(dragFactor)
+    newVelocity.x = (newVelocity.x + WIND_LUT_X[lutIdx] * windScale) * dragFactor
+    newVelocity.y = (newVelocity.y + WIND_LUT_Y[lutIdx] * windScale) * dragFactor
 
     this.velocityX = newVelocity.x
     this.velocityY = newVelocity.y
@@ -176,15 +201,22 @@ export class VFXMatterParticle extends Particle {
     this.x += this.velocityX * step
     this.y += this.velocityY * step
 
+    // Inline quadratic Bezier
     const distanceProgress = 1 - Math.min(1, distance / this.initialDistance)
-    this.scaleX = this.scaleY = Bezier(SCALE_INTERPOLATION, distanceProgress) * this.localScale
+    const k = 1 - distanceProgress
+    const scale = (
+      k * k * PARTICLE_BASE_SCALE +
+      2 * k * distanceProgress * this.quadraticMidPointScale +
+      distanceProgress * distanceProgress * PARTICLE_BASE_SCALE
+    ) * this.localScale
 
-    this.tint = Interpolate.ColorWithColor(
-      this.colorFrom,
-      this.colorTo,
-      1,
-      distanceProgress,
-    ).color
+    this.scaleX = this.scaleY = scale
+
+    // Inline color lerp
+    const r = (this._r0 + this._rD * distanceProgress) | 0
+    const g = (this._g0 + this._gD * distanceProgress) | 0
+    const b = (this._b0 + this._bD * distanceProgress) | 0
+    this.tint = (r << 16) | (g << 8) | b
 
     if (DRAW_PARTICLE_DEBUG && this.target) {
       (this.emitter.scene as GameLevel).vfxParticleManager
@@ -207,7 +239,6 @@ export class VFXMatterParticle extends Particle {
     toTarget: Vector2,
     distance: number,
   ) {
-
     if (distance > ARRIVAL_DISTANCE) {
       this.nextVelocity
         .set(this.velocityX, this.velocityY)
@@ -230,7 +261,6 @@ export class VFXMatterParticle extends Particle {
     distance: number,
     lifeT: number,
   ): Vector2 {
-
     const predictedTargetPosition = getPredictedTargetPursuitPosition(this.target as ParticleTarget, distance)
     const toPredictedTarget = predictedTargetPosition.subtract(this)
     const predictedDistance = toPredictedTarget.length()
@@ -271,17 +301,11 @@ export class VFXMatterParticle extends Particle {
     this.target = null
 
     // @ts-expect-error: destroy
-    this.colorFrom = null
-    // @ts-expect-error: destroy
-    this.colorTo = null
-    // @ts-expect-error: destroy
     this.toTarget = null
     // @ts-expect-error: destroy
     this.nextVelocity = null
     // @ts-expect-error: destroy
     this.tempVec2 = null
-    // @ts-expect-error: destroy
-    this.noiseVec2 = null
   }
 }
 
@@ -291,7 +315,10 @@ const attractStatic = (() => {
 
   return (toTarget: Vector2, predictedDistance: number) => {
     const directionToPredictedTarget = v1.copy(toTarget).normalize()
-    const distanceMultiplier = Math.min(1, Math.pow(predictedDistance / ATTRACTION_RAMP_DISTANCE, ATTRACTION_RAMP_POWER))
+    // x * sqrt(x), avoids Math.pow
+    // same as: const distanceMultiplier = Math.min(1, Math.pow(predictedDistance / ATTRACTION_RAMP_DISTANCE, ATTRACTION_RAMP_POWER))
+    const ratio = Math.min(1, predictedDistance / ATTRACTION_RAMP_DISTANCE)
+    const distanceMultiplier = ratio * Math.sqrt(ratio)
     const strength = ATTRACTION_STRENGTH * distanceMultiplier
 
     return directionToPredictedTarget.scale(strength)

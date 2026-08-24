@@ -9,10 +9,10 @@ export function makePatternTerrainTexture(scene: GameLevel, patternRenderer: Pat
   const texture = scene.textures.createCanvas('terrain_baked', width, height)!
   const buf = new ImageData(CHUNK_SIZE, CHUNK_SIZE)
   const pixels = new Uint32Array(buf.data.buffer)
-  const chunkManager = scene.tilemap.chunkManager
+  const chunkMap = scene.tilemap.chunkMap
 
-  for (let cy = 0; cy < chunkManager.height; cy++) {
-    for (let cx = 0; cx < chunkManager.width; cx++) {
+  for (let cy = 0; cy < chunkMap.chunksHigh; cy++) {
+    for (let cx = 0; cx < chunkMap.chunksWide; cx++) {
       const offX = cx * CHUNK_SIZE
       const offY = cy * CHUNK_SIZE
       for (let y = 0; y < CHUNK_SIZE; y++) {

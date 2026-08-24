@@ -1,8 +1,8 @@
-import { CHUNK_SIZE } from '../../config.ts'
+import { CHUNK_SIZE, ENABLE_CHUNK_BODY_DOUBLE_REBUILD_CHECK } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { type Chunk, ChunkType } from '../Tilemap/Chunk.ts'
-import type { ChunkManager } from '../Tilemap/ChunkManager.ts'
+import { ChunkGrid, ChunkType } from '../Tilemap/ChunkGrid.ts'
+import { Chunk, type ChunkMap } from '../Tilemap/ChunkMap.ts'
 import { MASK_TERRAIN } from './BodyCategories.ts'
 
 const FRICTION = 0.5
@@ -12,29 +12,56 @@ type Rect = { x: number, y: number, w: number, h: number }
 
 export class TerrainChunkBodyManager extends SceneBound {
 
-  private chunkBodies = new Map<Chunk, MatterJS.BodyType[]>()
-  // chunks with collision bodies currently active
+  // One compound body per active chunk (all rects merged into a single Matter body).
+  private chunkBodies = new Map<Chunk, MatterJS.BodyType>()
   private activeChunks = new Set<Chunk>()
+
+  // Dynamic bodies to track — register with track() after construction.
+  private trackedBodies: MatterJS.BodyType[] = []
 
   private updateRadius: number = 100
 
   private visitedTiles = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE)
   private rectangles: Array<Rect> = []
-  private chunkManager: ChunkManager
+  private chunkMap: ChunkMap
+  private chunkGrid: ChunkGrid
   private chunksNeeded = new Set<Chunk>()
+  private _lastCollGen: Uint8Array
 
   constructor(
     public scene: GameLevel,
     updateRadius: number = 100,
   ) {
     super(scene)
-    this.chunkManager = scene.tilemap.chunkManager
+    this.chunkMap = scene.tilemap.chunkMap
+    this.chunkGrid = scene.tilemap.chunkGrid
     this.updateRadius = updateRadius
+    const { chunksWide, chunksHigh } = this.chunkGrid
+    this._lastCollGen = new Uint8Array(chunksWide * chunksHigh)
+  }
+
+  trackAllDynamic() {
+    for (const body of this.scene.matter.world.getAllBodies()) {
+      if (!body.isStatic) this.track(body)
+    }
+  }
+
+  track(body: MatterJS.BodyType) {
+    if (!this.trackedBodies.includes(body)) {
+      this.trackedBodies.push(body)
+    }
+  }
+
+  untrack(body: MatterJS.BodyType) {
+    if (this.destroyed) return
+    const idx = this.trackedBodies.indexOf(body)
+    if (idx !== -1) {
+      this.trackedBodies.splice(idx, 1)
+    }
   }
 
   update() {
-    const dynamicBodies = this.scene.matter.world.getAllBodies()
-      .filter((body: MatterJS.BodyType) => !body.isStatic)
+    const dynamicBodies = this.trackedBodies
 
     if (dynamicBodies.length === 0) {
       this.clearAllCollision()
@@ -56,7 +83,7 @@ export class TerrainChunkBodyManager extends SceneBound {
 
       for (let cy = minCY; cy <= maxCY; cy++) {
         for (let cx = minCX; cx <= maxCX; cx++) {
-          const c = this.chunkManager.getChunk(cx, cy)
+          const c = this.chunkMap.get(cx, cy)
           if (c) {
             chunksNeeded.add(c)
           }
@@ -73,8 +100,8 @@ export class TerrainChunkBodyManager extends SceneBound {
 
     // add/update collision bodies for chunks
     for (const chunk of chunksNeeded) {
-
-      if (chunk.type === ChunkType.EMPTY) {
+      const chunkType = this.chunkGrid.getType(chunk.id)
+      if (chunkType === ChunkType.EMPTY) {
         if (this.activeChunks.has(chunk)) {
           this.clearChunkBodies(chunk)
         }
@@ -82,84 +109,126 @@ export class TerrainChunkBodyManager extends SceneBound {
       }
 
       // create collision body if chunk is not active yet
+      const collGen = this.chunkGrid.getCollGen(chunk.id)
       if (!this.activeChunks.has(chunk)) {
         this.createChunkBodies(chunk)
-        chunk.collisionDirty = false
+        this._lastCollGen[chunk.id] = collGen
       }
-
       // update collision body if chunk is dirty AND it has not been synced yet
-      else if (chunk.collisionDirty) {
+      else if (collGen !== this._lastCollGen[chunk.id]) {
+        if (ENABLE_CHUNK_BODY_DOUBLE_REBUILD_CHECK) {
+          console.log(`[TerrainChunkBodyManager] chunk ${chunk.id} collGen ${this._lastCollGen[chunk.id]} -> ${collGen}, rebuilding`)
+        }
         this.updateChunkCollision(chunk)
-        chunk.collisionDirty = false
+        this._lastCollGen[chunk.id] = collGen
       }
     }
   }
 
-  private createChunkBodies(chunk: Chunk) {
+  // hash of the last rectangle set built per chunk, to detect
+  // whether a collGen-triggered rebuild actually changed the collision shape
+  // or was wasted work (collGen bumped without any collidable tile changing).
+  // Remove once the "water still triggers terrain regen" report is resolved.
+  private _lastRectHash = ENABLE_CHUNK_BODY_DOUBLE_REBUILD_CHECK ? new Map<number, string>() : undefined
+
+  private computeRectangles(chunk: Chunk): Rect[] {
     const startTX = chunk.cx * CHUNK_SIZE
     const startTY = chunk.cy * CHUNK_SIZE
     const endTX = Math.min(startTX + CHUNK_SIZE, this.scene.tilemap.width)
     const endTY = Math.min(startTY + CHUNK_SIZE, this.scene.tilemap.height)
 
-    const rectangles = this.findTileRectanglesInChunk(startTX, startTY, endTX, endTY)
+    // Fast path: fully solid chunk → single rectangle, skip the sweep
+    if (this.chunkGrid.getType(chunk.id) === ChunkType.FULL) {
+      return [{
+        x: startTX,
+        y: startTY,
+        w: endTX - startTX,
+        h: endTY - startTY,
+      }]
+    }
+    return this.findTileRectanglesInChunk(startTX, startTY, endTX, endTY)
+  }
 
-    // empty chunks should have already been skipped but double check
-    if (rectangles.length === 0) {
-      return
+  private createChunkBodies(chunk: Chunk) {
+    const rectangles = this.computeRectangles(chunk)
+
+    if (ENABLE_CHUNK_BODY_DOUBLE_REBUILD_CHECK) {
+      const hash = rectangles.map(r => `${r.x},${r.y},${r.w},${r.h}`).join('|')
+      const prev = this._lastRectHash!.get(chunk.id)
+      if (prev !== undefined) {
+        console.log(
+          prev === hash
+            ? `[TerrainChunkBodyManager] chunk ${chunk.id} rebuilt — shape UNCHANGED (wasted rebuild)`
+            : `[TerrainChunkBodyManager] chunk ${chunk.id} rebuilt — shape changed (${prev.split('|').length} -> ${rectangles.length} rects)`,
+        )
+      }
+      this._lastRectHash!.set(chunk.id, hash)
     }
 
-    const bodies: MatterJS.BodyType[] = []
+    if (rectangles.length === 0) return
 
-    for (const rect of rectangles) {
-      const worldX = rect.x + (rect.w) / 2
-      const worldY = rect.y + (rect.h) / 2
-      const width = rect.w
-      const height = rect.h
+    const collisionFilter = { category: MASK_TERRAIN, mask: 0xFFFFFFFF }
 
-      const body = this.scene.matter.add.rectangle(
-        worldX,
-        worldY,
-        width,
-        height,
-        {
-          isStatic: true,
-          friction: FRICTION,
-          restitution: RESTITUTION,
-          label: `terrain_chunk_${chunk.id}`,
-          collisionFilter: {
-            category: MASK_TERRAIN,
-          },
-        },
-      )
+    // Create one part-body per merged rectangle (not added to the world individually)
+    const parts = rectangles.map(r =>
+      this.scene.matter.bodies.rectangle(
+        r.x + r.w / 2,
+        r.y + r.h / 2,
+        r.w,
+        r.h,
+      ) as unknown as MatterJS.Body,
+    )
 
-      bodies.push(body)
+    // Merge all parts into a single compound body — one entry in Matter's broad phase
+    const compound = this.scene.matter.body.create({
+      parts,
+      isStatic: true,
+      friction: FRICTION,
+      restitution: RESTITUTION,
+      label: `terrain_chunk_${chunk.id}`,
+    })
+
+    // Propagate collision filter to every part (including the parent compound at index 0)
+    for (const part of compound.parts) {
+      part.collisionFilter = collisionFilter
     }
 
-    this.chunkBodies.set(chunk, bodies)
+    this.scene.matter.world.add(compound)
+    this.chunkBodies.set(chunk, compound)
     this.activeChunks.add(chunk)
   }
 
   private clearChunkBodies(chunk: Chunk) {
-    const bodies = this.chunkBodies.get(chunk)
-    if (!bodies) return
-
-    for (const body of bodies) {
-      this.scene.matter?.world?.remove(body)
-    }
-
+    const body = this.chunkBodies.get(chunk)
+    if (!body) return
+    this.scene.matter?.world?.remove(body)
     this.chunkBodies.delete(chunk)
     this.activeChunks.delete(chunk)
+    if (ENABLE_CHUNK_BODY_DOUBLE_REBUILD_CHECK) {
+      this._lastRectHash!.delete(chunk.id)
+    }
   }
 
   private updateChunkCollision(chunk: Chunk) {
-    this.clearChunkBodies(chunk)
+    // Save the old compound before touching the maps
+    const old = this.chunkBodies.get(chunk)
 
-    if (chunk.type !== ChunkType.EMPTY) {
+    // Clear tracking so createChunkBodies can register the new body cleanly
+    this.chunkBodies.delete(chunk)
+    this.activeChunks.delete(chunk)
+
+    if (this.chunkGrid.getType(chunk.id) !== ChunkType.EMPTY) {
+      // new body added to world first — no gap frame
       this.createChunkBodies(chunk)
+    }
+
+    // Remove old body after new one is live
+    if (old) {
+      this.scene.matter?.world?.remove(old)
     }
   }
 
-  // group adjacent solid tiles into rectangles within a chunk's bounds
+  // Groups adjacent solid tiles into merged rectangles using a greedy row-sweep.
   private findTileRectanglesInChunk(
     minTX: number,
     minTY: number,
@@ -176,25 +245,21 @@ export class TerrainChunkBodyManager extends SceneBound {
     for (let ty = minTY; ty < maxTY; ty++) {
       for (let tx = minTX; tx < maxTX; tx++) {
         if (visited[idx(tx, ty)]) continue
-        if (!tilemap.isSolid(tx, ty)) continue
+        if (!tilemap.isCollidable(tx, ty)) continue
 
-        // find width of horizontal run (stay within chunk bounds)
         let width = 1
         while (
           tx + width < maxTX &&
-          tilemap.isSolid(tx + width, ty) &&
+          tilemap.isCollidable(tx + width, ty) &&
           !visited[idx(tx + width, ty)]
-          ) {
-          width++
-        }
+          ) width++
 
-        // find height of rectangle (stay within chunk bounds)
         let height = 1
         let canExpand = true
         while (canExpand && ty + height < maxTY) {
           for (let dx = 0; dx < width; dx++) {
             if (
-              !tilemap.isSolid(tx + dx, ty + height) ||
+              !tilemap.isCollidable(tx + dx, ty + height) ||
               visited[idx(tx + dx, ty + height)]
             ) {
               canExpand = false
@@ -204,12 +269,9 @@ export class TerrainChunkBodyManager extends SceneBound {
           if (canExpand) height++
         }
 
-        // mark tiles as visited
-        for (let dy = 0; dy < height; dy++) {
-          for (let dx = 0; dx < width; dx++) {
+        for (let dy = 0; dy < height; dy++)
+          for (let dx = 0; dx < width; dx++)
             visited[idx(tx + dx, ty + dy)] = 1
-          }
-        }
 
         rectangles.push({ x: tx, y: ty, w: width, h: height })
       }
@@ -219,8 +281,8 @@ export class TerrainChunkBodyManager extends SceneBound {
   }
 
   private clearAllCollision() {
-    for (const chunkKey of this.activeChunks) {
-      this.clearChunkBodies(chunkKey)
+    for (const chunk of this.activeChunks) {
+      this.clearChunkBodies(chunk)
     }
   }
 
@@ -235,8 +297,12 @@ export class TerrainChunkBodyManager extends SceneBound {
     // @ts-expect-error: destroy
     this.rectangles = null
     // @ts-expect-error: destroy
-    this.chunkManager = null
+    this.chunkMap = null
+    // @ts-expect-error: destroy
+    this.chunkGrid = null
     // @ts-expect-error: destroy
     this.chunksNeeded = null
+    // @ts-expect-error: destroy
+    this.trackedBodies = null
   }
 }

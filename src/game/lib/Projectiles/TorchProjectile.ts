@@ -1,20 +1,21 @@
-import { FireMode } from '../Player/_FireMode-types'
 import { BaseProjectile } from './BaseProjectile.ts'
+import { tilesToRadius } from './projectile-radius.ts'
 
 export class TorchProjectile extends BaseProjectile {
 
-  radius = 20
+  setTilesToModify(count: number) {
+    const changed = super.setTilesToModify(count)
+    if (changed) {
+      this.radius = tilesToRadius(count)
+    }
+
+    return changed
+  }
 
   update() {
     if (!this.fired) return
 
-    if (this.charge() > 0) {
-      if (this.mode === FireMode.CREATE) {
-        this.createTiles(this.charge())
-      } else if (this.mode === FireMode.DESTROY) {
-        this.destroyTiles(this.charge())
-      }
-    }
+    this.sync(this.charge())
 
     if (!this.charge()) {
       this.destroy()

@@ -1,0 +1,70 @@
+import type { WeaponDef } from './_weapon.types.ts'
+
+import { BasicWeapon } from './Weapons/BasicWeapon.ts'
+import { FlamethrowerWeapon } from './Weapons/FlamethrowerWeapon.ts'
+import { FloodFillWeapon } from './Weapons/FloodFillWeapon.ts'
+import { InstantWeapon } from './Weapons/InstantWeapon.ts'
+import { RapidWeapon } from './Weapons/RapidWeapon.ts'
+import { TorchWeapon } from './Weapons/TorchWeapon.ts'
+import { TunnelWeapon } from './Weapons/TunnelWeapon.ts'
+
+export enum PlayerWeapon {
+  BASIC = 'BASIC',
+  RAPID = 'RAPID',
+  INSTANT = 'INSTANT',
+  TORCH = 'TORCH',
+  TUNNEL = 'TUNNEL',
+  FLOOD_FILL = 'FLOOD_FILL',
+  FLAMETHROWER = 'FLAMETHROWER',
+}
+
+export const WEAPONS = {
+  [PlayerWeapon.BASIC]: {
+    id: PlayerWeapon.BASIC,
+    displayName: 'Basic',
+    constructor: BasicWeapon,
+    slot: 1,
+  },
+  [PlayerWeapon.RAPID]: {
+    id: PlayerWeapon.RAPID,
+    displayName: 'Rapid',
+    constructor: RapidWeapon,
+    slot: 2,
+  },
+  [PlayerWeapon.INSTANT]: {
+    id: PlayerWeapon.INSTANT,
+    displayName: 'Instant',
+    constructor: InstantWeapon,
+    slot: 3,
+  },
+  [PlayerWeapon.TORCH]: {
+    id: PlayerWeapon.TORCH,
+    displayName: 'Torch',
+    constructor: TorchWeapon,
+    slot: 4,
+  },
+  [PlayerWeapon.TUNNEL]: {
+    id: PlayerWeapon.TUNNEL,
+    displayName: 'Tunnel',
+    constructor: TunnelWeapon,
+    slot: 5,
+  },
+  [PlayerWeapon.FLOOD_FILL]: {
+    id: PlayerWeapon.FLOOD_FILL,
+    displayName: 'Flood Fill',
+    constructor: FloodFillWeapon,
+    slot: 6,
+  },
+  [PlayerWeapon.FLAMETHROWER]: {
+    id: PlayerWeapon.FLAMETHROWER,
+    displayName: 'Flamethrower',
+    constructor: FlamethrowerWeapon,
+    slot: 7,
+  },
+} as const satisfies Record<PlayerWeapon, WeaponDef>
+
+export type WeaponSlot = typeof WEAPONS[PlayerWeapon]['slot']
+
+export const SLOT_TO_WEAPON = Object.fromEntries(Object.values(WEAPONS).map((val) => {
+  return [val.slot, val]
+}))

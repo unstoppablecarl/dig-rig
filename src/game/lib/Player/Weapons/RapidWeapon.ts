@@ -1,25 +1,39 @@
+import { FireMode } from '../../../config.ts'
+import { throttle } from '../../../helpers/_helpers.ts'
+import { SceneBound } from '../../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../../scenes/GameLevel.ts'
-import type { Weapon } from '../../Input/InputControllers/WeaponManagerInput.ts'
-import { WeaponRapidFireInput } from '../../Input/InputControllers/WeaponManagerInput/WeaponRapidFireInput.ts'
+import type { Position } from '../../../types.ts'
+import { WeaponRapidFireInput } from '../../Input/InputController/WeaponInputControllers/WeaponRapidFireInput.ts'
+import type { FireGroupWeapon } from '../../Input/InputController/WeaponManagerInput.ts'
 import { Projectile } from '../../Projectiles/Projectile.ts'
-import { FireMode } from '../_FireMode-types'
+import type { ProjectileEffect } from '../../Projectiles/ProjectileEffect/_ProjectileEffect.types.ts'
 
-const RAPID_CHARGE = 100
-const RAPID_VELOCITY = 300
+const RAPID_VELOCITY = 200
 
-export class RapidWeapon extends WeaponRapidFireInput implements Weapon {
-  readonly displayName = 'Rapid'
-
+export class RapidWeapon extends WeaponRapidFireInput implements FireGroupWeapon {
   rateOfFireMs = 100
 
-  constructor(
-    public scene: GameLevel,
-    readonly slot: number,
-  ) {
+  constructor(scene: GameLevel) {
     super(scene)
   }
 
-  fire(mode: FireMode) {
-    this.scene.projectiles.fireForPlayer(Projectile, RAPID_CHARGE, mode, RAPID_VELOCITY)
+  _startPos: Position = { x: 0, y: 0 }
+
+  update(_time: number, delta: number) {
+    super.update(_time, delta)
+
+    const player = this.scene.player
+    const startPos = player.getProjectilePosition(0, this._startPos)
+
+    this.scene.previewProjectileRenderer.setPosition(startPos)
+  }
+
+  setEnabled(value: boolean) {
+    super.setEnabled(value)
+    this.scene.previewProjectileRenderer.setVisible(value)
+  }
+
+  fire(effect: ProjectileEffect) {
+    this.scene.projectiles.fireForPlayer(Projectile, this.clampCharge(effect), effect, RAPID_VELOCITY)
   }
 }

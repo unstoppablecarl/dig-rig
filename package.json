@@ -1,5 +1,5 @@
 {
-    "name": "template-vite-ts",
+    "name": "dig-rig",
     "description": "A Phaser 3 TypeScript template using Vite.",
     "version": "1.4.0",
     "type": "module",
@@ -16,26 +16,32 @@
     },
     "homepage": "https://github.com/phaserjs/template-vite-ts#readme",
     "scripts": {
-        "dev": "vite --config vite/config.dev.mjs",
-        "typecheck": "tsc --noEmit",
-        "build": "tsc --noEmit && vite build --config vite/config.prod.mjs",
-        "check-circ": "tsx _scripts/check-circular.ts"
+        "dev": "vite --config vite/vite.config.dev.ts",
+        "typecheck": "vue-tsc --noEmit",
+        "build": "vue-tsc --noEmit && vite build --config vite/vite.config.prod.ts",
+        "check-circ": "tsx _scripts/check-circular.ts",
+        "bench:sim": "node _scripts/bench-sim.mjs"
     },
     "devDependencies": {
-        "@tweakpane/core": "^2.0.5",
         "@types/matter-js": "^0.20.2",
         "@types/node": "^25.9.0",
+        "@vitejs/plugin-vue": "^6.0.7",
+        "@vue/tsconfig": "^0.9.1",
+        "playwright": "^1.61.1",
         "sass": "^1.99.0",
         "typescript": "~6.0.3",
-        "vite": "^8.0.13"
+        "vite": "^8.0.13",
+        "vue-tsc": "^3.3.3"
     },
     "dependencies": {
-        "@tweakpane/plugin-essentials": "^0.2.1",
-        "phaser": "4.1.0",
+        "phaser": "4.2.0",
         "phaser-matter-collision-plugin": "^1.0.0",
+        "pinia": "^3.0.4",
+        "pinia-simple-persist": "^0.1.0",
         "pixel-data-js": "^0.40.1",
         "simplex-noise": "^4.0.3",
         "terser": "^5.47.1",
-        "tweakpane": "^4.0.5"
+        "vue": "^3.5.35",
+        "vue-pane": "^0.13.0"
     }
 }

@@ -28,6 +28,38 @@ export class EventsBinder {
     return this
   }
 
+  addInputHoldRepeat(
+    key: { onDown(cb: () => void): () => void; onUp(cb: () => void): () => void },
+    cb: () => void,
+    initialDelayMs = 350,
+    repeatMs = 80,
+  ): this {
+    this._inputBindings.push(
+      () => {
+        let delayId: ReturnType<typeof setTimeout> | null = null
+        let intervalId: ReturnType<typeof setInterval> | null = null
+        const start = () => {
+          cb()
+          delayId = setTimeout(() => {
+            intervalId = setInterval(cb, repeatMs)
+          }, initialDelayMs)
+        }
+        const stop = () => {
+          if (delayId !== null) {
+            clearTimeout(delayId)
+            delayId = null
+          }
+          if (intervalId !== null) {
+            clearInterval(intervalId)
+            intervalId = null
+          }
+        }
+        return [key.onDown(start), key.onUp(stop), stop]
+      },
+    )
+    return this
+  }
+
   add<T extends AnyEmitter>(emitter: T, event: Parameters<T['on']>[0], handler: Function, context?: any): this {
     this._bindings.push({ emitter, event, handler, context })
     return this

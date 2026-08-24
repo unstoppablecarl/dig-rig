@@ -1,4 +1,3 @@
-
 // Returns color as 0xRRGGBB. makePatternTerrainTexture expects this format.
 export type PatternRenderer = {
   (

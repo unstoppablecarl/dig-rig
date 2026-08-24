@@ -3,13 +3,20 @@ import { Animations, GameObjects, Math as PMath, Physics, Time } from 'phaser'
 import type { EventData } from 'phaser-matter-collision-plugin/src/collision-types.ts'
 import { CollidingObject } from 'phaser-matter-collision-plugin/src/valid-collision-object.ts'
 import { makePlayerSprite, PlayerSpriteSheetAssets } from '../../../assets/player/player-sprite-sheet-assets.ts'
-import { GRAVITY, PLAYER_JUMP_POWER, PLAYER_MATTER_TANK_SIZE, PLAYER_MOVE_SPEED } from '../../config.ts'
+import {
+  DEFAULT_PLAYER_MATTER_TANK_SIZE,
+  DEFAULT_PLAYER_STARTING_MATTER,
+  GRAVITY,
+  PLAYER_JUMP_POWER,
+  PLAYER_MOVE_SPEED,
+} from '../../config.ts'
 import { clampVelocity, PositionOffset } from '../../helpers/_helpers.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import type { MatterExchanger, ParticleTarget, Position } from '../../types.ts'
+import type { Position } from '../../types.ts'
+import type { PhysicsBodyType } from '../Collision/_Collision.types.ts'
 import { MASK_PLAYER, MASK_TERRAIN } from '../Collision/BodyCategories.ts'
-import { MatterTank } from '../Matter/MatterTank.ts'
+import { MatterTank } from '../Matter/Tank/MatterTank.ts'
 import { EventsBinder } from '../Util/EventsBinder.ts'
 import Animation = Animations.Animation
 import AnimationFrame = Animations.AnimationFrame
@@ -48,9 +55,19 @@ enum Facing {
   RIGHT
 }
 
-export class Player extends SceneBound implements MatterExchanger, ParticleTarget {
+const PLAYER_RADIUS_X = PLAYER_WIDTH * 0.5
+const PLAYER_RADIUS_Y = PLAYER_HEIGHT * 0.5
+const PLAYER_CREATE_VEL_EXTEND = 8
+
+const UNSTUCK_CHECK_INTERVAL_FRAMES = 15
+const UNSTUCK_MAX_SEARCH_RADIUS = 48
+// Inset from the full half-extents so corner samples land inside the body
+// rather than exactly on its edge.
+const UNSTUCK_SAMPLE_INSET = 0.9
+
+export class Player extends SceneBound {
   public sprite: Sprite
-  public container: PlayerContainer
+  public container: PhysicsBodyType
   public maxVelocity = 300
   public matterTank: MatterTank
   public isTouching = {
@@ -73,18 +90,21 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
   private jumpCooldownTimer: Time.TimerEvent | undefined
   private _mouseWorld = { x: 0, y: 0 }
   private binder: EventsBinder
+  private _unstuckFrameCounter = 0
 
   constructor(
     public scene: GameLevel,
     x = 0,
     y = 0,
+    startingMatter = DEFAULT_PLAYER_STARTING_MATTER,
+    maxMatter = DEFAULT_PLAYER_MATTER_TANK_SIZE,
   ) {
     super(scene)
 
     this.matterTank = scene.matterManager.makePlayerMatterTank(
-      PLAYER_MATTER_TANK_SIZE,
-      400,
-      500,
+      this,
+      startingMatter,
+      maxMatter,
     )
 
     this.binder = new EventsBinder()
@@ -319,6 +339,16 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
   public update() {
     this.updateFacing()
     this.updatePosition()
+    this.checkUnstuck()
+    const vel = this.container.body?.velocity
+    const vx = vel?.x ?? 0
+    const vy = vel?.y ?? 0
+    const pb = this.scene.io.playerBounds
+
+    pb.left = this.x - PLAYER_RADIUS_X + Math.max(Math.min(vx, 0), -PLAYER_CREATE_VEL_EXTEND)
+    pb.right = this.x + PLAYER_RADIUS_X + Math.min(Math.max(vx, 0), PLAYER_CREATE_VEL_EXTEND)
+    pb.top = this.y - PLAYER_RADIUS_Y + Math.max(Math.min(vy, 0), -PLAYER_CREATE_VEL_EXTEND)
+    pb.bottom = this.y + PLAYER_RADIUS_Y + Math.min(Math.max(vy, 0), PLAYER_CREATE_VEL_EXTEND)
   }
 
   private updatePosition() {
@@ -381,6 +411,64 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     }
     this.x = this.container.x
     this.y = this.container.y
+  }
+
+  // Safety net for the player ending up embedded in solid terrain — the CA
+  // sim itself refuses to settle falling powder on top of the player (see
+  // MatterSim.playerBounds), but that doesn't cover every way solid geometry
+  // can appear where the player is standing (e.g. a rigid debris body from a
+  // structural collapse). If we detect it anyway, teleport to the nearest
+  // clear spot rather than leaving the player to fight the Matter solver.
+  private checkUnstuck() {
+    if (++this._unstuckFrameCounter < UNSTUCK_CHECK_INTERVAL_FRAMES) return
+    this._unstuckFrameCounter = 0
+
+    if (!this.isBuried(this.x, this.y)) return
+
+    const clearing = this.findNearestClearing(this.x, this.y)
+    if (!clearing) return
+
+    this.setPosition(clearing.x, clearing.y)
+    this.container.setVelocityX(0)
+    this.container.setVelocityY(0)
+  }
+
+  // Center plus at least 3 of 4 corners solid = genuinely enclosed on (nearly)
+  // all sides, not just standing on ground or brushing a single wall (which
+  // only solidifies tiles on one side of the sample set).
+  private isBuried(cx: number, cy: number): boolean {
+    const tilemap = this.scene.tilemap
+    if (!tilemap.isCollidable(cx, cy)) return false
+
+    const hx = PLAYER_RADIUS_X * UNSTUCK_SAMPLE_INSET
+    const hy = PLAYER_RADIUS_Y * UNSTUCK_SAMPLE_INSET
+    let solidCorners = 0
+    if (tilemap.isCollidable(cx - hx, cy - hy)) solidCorners++
+    if (tilemap.isCollidable(cx + hx, cy - hy)) solidCorners++
+    if (tilemap.isCollidable(cx - hx, cy + hy)) solidCorners++
+    if (tilemap.isCollidable(cx + hx, cy + hy)) solidCorners++
+    return solidCorners >= 3
+  }
+
+  // Expanding-ring search (perimeter only, not a filled square) for the
+  // nearest position where isBuried is false — reusing that same predicate
+  // keeps detection and resolution consistent by construction.
+  private findNearestClearing(cx: number, cy: number): Position | null {
+    if (!this.isBuried(cx, cy)) return { x: cx, y: cy }
+
+    for (let radius = 1; radius <= UNSTUCK_MAX_SEARCH_RADIUS; radius++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const x1 = cx + dx
+        if (!this.isBuried(x1, cy - radius)) return { x: x1, y: cy - radius }
+        if (!this.isBuried(x1, cy + radius)) return { x: x1, y: cy + radius }
+      }
+      for (let dy = -radius + 1; dy <= radius - 1; dy++) {
+        const y1 = cy + dy
+        if (!this.isBuried(cx - radius, y1)) return { x: cx - radius, y: y1 }
+        if (!this.isBuried(cx + radius, y1)) return { x: cx + radius, y: y1 }
+      }
+    }
+    return null
   }
 
   private updateFacing() {
@@ -476,21 +564,6 @@ export class Player extends SceneBound implements MatterExchanger, ParticleTarge
     this.jumpCooldownTimer = null
   }
 }
-
-// fixing phaser ts limitations
-export type PlayerContainer = GameObjects.Container &
-  Physics.Matter.Components.Bounce &
-  Physics.Matter.Components.Collision &
-  Physics.Matter.Components.Force &
-  Physics.Matter.Components.Friction &
-  Physics.Matter.Components.Gravity &
-  Physics.Matter.Components.Mass &
-  Physics.Matter.Components.Sensor &
-  Physics.Matter.Components.SetBody &
-  Physics.Matter.Components.Sleep &
-  Physics.Matter.Components.Static &
-  Physics.Matter.Components.Transform &
-  Physics.Matter.Components.Velocity
 
 type PlayerBodySensor = MatterJS.BodyType & { isPlayerBodySensor: true }
 type PlayerBody = MatterJS.BodyType & { isPlayerBody: true }

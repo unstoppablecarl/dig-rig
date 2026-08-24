@@ -1,14 +1,8 @@
 import { GameObjects, Physics } from 'phaser'
+import { FireMode, type MatterTankFireMode } from '../lib/Player/_FireMode-types.ts'
 import type { ParticleTarget, Position } from '../types.ts'
 import GameObject = GameObjects.GameObject
 import Velocity = Physics.Matter.Components.Velocity
-
-export function clampMaxInt(value: number, max: number) {
-  let m = value
-  m = Math.min(m, max)
-  m = Math.max(m, 0)
-  return Math.floor(m)
-}
 
 export function getCollisionSteps(vx: number, vy: number, dt: number, scale = 1) {
 
@@ -158,3 +152,10 @@ export function makeBitmaskIncrementer() {
     return result
   }
 }
+
+export const isMatterTankFireMode = (mode: FireMode): mode is MatterTankFireMode => mode === FireMode.CREATE || mode === FireMode.DESTROY
+
+export const TWO_PI = Math.PI * 2
+export const HALF_PI = Math.PI / 2
+export const QUARTER_PI = Math.PI / 4
+export const EIGHTEENTH_PI = Math.PI / 18

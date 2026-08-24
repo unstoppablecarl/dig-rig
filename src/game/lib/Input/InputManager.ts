@@ -1,19 +1,23 @@
 import { Input } from 'phaser'
+import { type WatchStopHandle } from 'vue'
+import { BROWSER_DISABLED_KEYS } from '../../../input.ts'
+import { ENABLE_BRUSH_MODE_DEBUG, ENABLE_SPAWN_OBJ_MODE_DEBUG } from '../../config.ts'
 import { SceneBound } from '../../helpers/SceneBound.ts'
 import type { GameLevel } from '../../scenes/GameLevel.ts'
-import { BrushInput } from './InputControllers/BrushInput.ts'
-import { FireGroupInput } from './InputControllers/FireGroupInput.ts'
-import type { InputController } from './InputControllers/InputController.ts'
-import { ZoomInput } from './InputControllers/ZoomInput.ts'
-
-export enum InputMode {
-  WEAPON,
-  BRUSH
-}
+import { InputMode } from './_input.types.ts'
+import { BrushInput } from './InputController/BrushInput.ts'
+import type { InputController } from './InputController/InputController.ts'
+import { SpawnObjInput } from './InputController/SpawnObjInput.ts'
+import { ToggleInputModeController } from './InputController/ToggleInputModeController.ts'
+import { ZoomInput } from './InputController/ZoomInput.ts'
+import { PlayerAction } from './PlayerActions.ts'
+import GAMEOBJECT_POINTER_WHEEL = Input.Events.GAMEOBJECT_POINTER_WHEEL
+import Pointer = Phaser.Input.Pointer
 
 export class InputManager extends SceneBound {
   private modeControllers: Record<InputMode, InputController[]>
-  private _mode: InputMode
+  private mode: InputMode
+  private readonly stopWatcher: WatchStopHandle
 
   constructor(
     public scene: GameLevel,
@@ -22,47 +26,83 @@ export class InputManager extends SceneBound {
 
     const zoomInput = new ZoomInput(scene)
     const brushInput = new BrushInput(scene)
-    const fireGroupInput = new FireGroupInput(scene)
+    const spawnObjInput = new SpawnObjInput(scene)
     const playerWeaponManager = scene.playerWeaponManager
 
+    const debugModes: InputController[] = []
+    if (ENABLE_BRUSH_MODE_DEBUG) {
+      debugModes.push(new ToggleInputModeController(scene, PlayerAction.BRUSH_MODE_TOGGLE, InputMode.BRUSH))
+    }
+    if (ENABLE_SPAWN_OBJ_MODE_DEBUG) {
+      debugModes.push(new ToggleInputModeController(scene, PlayerAction.SPAWN_OBJ_MODE_TOGGLE, InputMode.SPAWN_OBJ))
+    }
+
     this.modeControllers = {
+      // order matters for mouse wheel bindings
       [InputMode.WEAPON]: [
         zoomInput,
         playerWeaponManager,
-        fireGroupInput,
+        ...debugModes,
       ],
       [InputMode.BRUSH]: [
+        zoomInput,
         brushInput,
+        ...debugModes,
+      ],
+      [InputMode.SPAWN_OBJ]: [
+        zoomInput,
+        spawnObjInput,
+        ...debugModes,
       ],
     }
 
-    this.setMode(InputMode.WEAPON)
+    scene.input.on(GAMEOBJECT_POINTER_WHEEL, this.handleMouseWheel, this)
 
-    // prevent default browser actions for arrow keys and space
-    scene.input.keyboard!.addCapture([
-      Input.Keyboard.KeyCodes.UP,
-      Input.Keyboard.KeyCodes.DOWN,
-      Input.Keyboard.KeyCodes.LEFT,
-      Input.Keyboard.KeyCodes.RIGHT,
-      Input.Keyboard.KeyCodes.SPACE,
-    ])
+    this.stopWatcher = scene.uiState.watchInputMode((mode) => this.setMode(mode))
+
+    // prevent default browser actions
+    scene.input.keyboard!.addCapture(BROWSER_DISABLED_KEYS)
   }
 
-  get mode() {
-    return this._mode
+  private handleMouseWheel(pointer: Pointer, _objs: any, deltaX: number, deltaY: number) {
+    if (!this.modeControllers) return
+    const event = pointer.event as WheelEvent
+
+    let delta = 0
+    if (deltaY !== 0) {
+      delta = deltaY
+    } else {
+      // Shift+wheel makes browsers report the motion as deltaX instead of deltaY
+      // (the native "scroll horizontally" convention for single-axis mouse wheels).
+      // Only fall back to deltaX when Shift is held, so a plain horizontal trackpad
+      // swipe (deltaY === 0, no Shift) still correctly produces no delta.
+      delta = event.shiftKey ? deltaX : 0
+    }
+
+    // find first valid wheel input
+    for (const c of this.modeControllers[this.mode]) {
+      if (c.onMouseWheel?.(delta, event, pointer)) break
+    }
+  }
+
+  get inputMode() {
+    return this.mode
   }
 
   setMode(mode: InputMode) {
-    if (this._mode === mode) return
-    if (this._mode !== undefined) {
-      for (const c of this.modeControllers[this._mode]) c.setInputEnabled(false)
+    if (this.mode === mode) return
+    if (this.mode !== undefined) {
+      for (const c of this.modeControllers[this.mode]) c.setInputEnabled(false)
     }
-    this._mode = mode
+    this.mode = mode
     for (const c of this.modeControllers[mode]) c.setInputEnabled(true)
+    this.scene.uiState.inputMode = this.mode
   }
 
   protected onDestroy() {
-    const all = new Set(Object.values(this.modeControllers).flat())
+    this.stopWatcher()
+    const all = new Set([...Object.values(this.modeControllers).flat()])
+    this.scene.input.off(GAMEOBJECT_POINTER_WHEEL, this.handleMouseWheel, this)
     for (const c of all) c.destroy()
     // @ts-expect-error: destroy
     this.modeControllers = null

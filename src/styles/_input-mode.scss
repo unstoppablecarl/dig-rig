@@ -1,0 +1,61 @@
+$padding: 8px 10px;
+
+.current-input-mode {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  padding: 0 2px;
+  background: rgba(0, 0, 0, 0.88);
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  border-right: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 0 6px 0 0;
+  min-width: 200px;
+  color: rgba(255, 255, 255, 0.77);
+  pointer-events: none;
+}
+
+.imu {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.imu-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: $padding;
+
+  strong {
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.imu-label {
+  text-transform: uppercase;
+}
+
+.imu-slot {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.imu-section {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: $padding;
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.45);
+
+  kbd {
+    font-size: 10px;
+    padding: 1px 4px;
+    line-height: 15px;
+    margin-top: 2px
+  }
+}

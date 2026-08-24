@@ -1,0 +1,84 @@
+import { random } from '../../../helpers/random'
+import { FILL_MAX } from '../_Liquid.constants.ts'
+import {
+  FIRE,
+  ICE,
+  LAVA,
+  type MatterDef,
+  SALT,
+  SALT_WATER,
+  setSettled,
+  STEAM,
+  SupportType,
+  WATER,
+} from '../_Matter.types.ts'
+import { MatterTypeSet } from '../data/MatterTypeSet'
+
+const MELT_SLOW = new MatterTypeSet(SALT, SALT_WATER)
+const MELT_FAST = new MatterTypeSet(FIRE, LAVA)
+
+export const ICE_DEF = {
+  id: ICE,
+  name: 'Ice',
+  immutableSupport: SupportType.AFFIXED as const,
+  settles: true as const,
+  alwaysCollides: true as const,
+  lavaBurnable: true as const,
+  action(sim, tx, ty, idx): void {
+
+    // Melt from water
+    if (random() < 1 && sim.bordering(tx, ty, idx, WATER) !== -1) {
+      sim.notifySolidConsumed()
+      sim.notifyLiquidCreated()
+      sim.fill[idx] = FILL_MAX
+      sim.tiles[idx] = WATER
+      sim.markDirty(tx, ty)
+      sim.next.add(idx)
+      return
+    }
+
+    // Melt from steam
+    if (random() < 70 && sim.bordering(tx, ty, idx, STEAM) !== -1) {
+      sim.notifySolidConsumed()
+      sim.notifyLiquidCreated()
+      sim.fill[idx] = FILL_MAX
+      sim.tiles[idx] = WATER
+      sim.markDirty(tx, ty)
+      sim.next.add(idx)
+      return
+    }
+
+    // Melt from salt / salt-water
+    if (random() < 10) {
+      if (sim.borderingAny(tx, ty, idx, MELT_SLOW) !== -1) {
+        sim.fill[idx] = FILL_MAX
+        sim.tiles[idx] = WATER
+        sim.markDirty(tx, ty)
+        sim.next.add(idx)
+        return
+      }
+    }
+
+    // Melt from fire / lava
+    if (random() < 50) {
+      if (sim.borderingAny(tx, ty, idx, MELT_FAST) !== -1) {
+        sim.fill[idx] = FILL_MAX
+        sim.tiles[idx] = WATER
+        sim.markDirty(tx, ty)
+        sim.next.add(idx)
+        return
+      }
+    }
+
+    sim.tiles[idx] = setSettled(sim.tiles[idx], true)
+    sim.markDirty(tx, ty)
+  },
+} satisfies MatterDef
+
+export default ICE_DEF
+
+declare module '../matter.ts' {
+  export interface MatterMetaRegistry {
+    [ICE]: typeof ICE_DEF;
+  }
+}

@@ -1,21 +1,27 @@
-import { Driller } from '../../lib/Entities/Driller.ts'
+import { Crate } from '../../lib/Entities/defs/Crate.ts'
+import { Driller } from '../../lib/Entities/defs/Driller.ts'
+import { PERMANENT, SOLID } from '../../lib/Matter/_Matter.types.ts'
 import { Player } from '../../lib/Player/Player.ts'
 import { ScaleLevelTexture } from '../../lib/Textures/ScaleLevelTexture.ts'
-import { MatterType } from '../../lib/Matter/_Matter-types.ts'
 import { Tilemap } from '../../lib/Tilemap/Tilemap.ts'
+import { TilemapBuilder } from '../../lib/Tilemap/TilemapBuilder.ts'
 import { GameLevel } from '../GameLevel.ts'
 import CanvasTexture = Phaser.Textures.CanvasTexture
 
 export default class TestLevel extends GameLevel {
+  registerEntities() {
+    return [
+      Driller,
+      Crate,
+    ]
+  }
+
   private scaleLevelTexture: ScaleLevelTexture
 
   preload() {
     super.preload()
     this.scaleLevelTexture = new ScaleLevelTexture(this)
     this.scaleLevelTexture.preload()
-    this.load.setPath('assets')
-    this.loadPixelImage('crate', 'crate.png')
-    this.loadPixelImage('enemy', 'enemy.png')
 
     this.preloadPlayer()
   }
@@ -25,20 +31,20 @@ export default class TestLevel extends GameLevel {
   }
 
   makeTileMap() {
-    const tilemap = new Tilemap(
+    const builder = TilemapBuilder.make(
       this,
       2000,
       1000,
     )
 
     let ref = 600
-    tilemap.setRect(0, ref - 100, tilemap.width, 500, MatterType.SOLID)
-    tilemap.setRect(200, ref - 160, 160, 60, MatterType.SOLID)
-    tilemap.setRect(230, ref - 200, 60, 60, MatterType.SOLID)
-    tilemap.setRect(450, ref - 220, 60, 60, MatterType.SOLID)
-    tilemap.setBorder(2, MatterType.PERMANENT)
+    builder.setRect(0, ref - 100, builder.width, 500, SOLID)
+    builder.setRect(200, ref - 160, 160, 60, SOLID)
+    builder.setRect(230, ref - 200, 60, 60, SOLID)
+    builder.setRect(450, ref - 220, 60, 60, SOLID)
+    builder.setBorder(2, PERMANENT)
 
-    return tilemap
+    return builder
   }
 
   makePlayer() {
@@ -46,33 +52,10 @@ export default class TestLevel extends GameLevel {
   }
 
   startLevel() {
-
-    const driller = new Driller(this)
-    driller.x = 150
-    driller.y = 350
-
-    this.entities.add(driller)
-    this.makeTestCrate(90, 50)
-    this.makeTestCrate(100, 0)
-
-    this.makeTestCrate(80, 100)
-    this.makeTestCrate(120, 100)
-  }
-
-  makeTestCrate(x: number, y: number) {
-    const crate = this.matter.add.rectangle(x, y, 20, 20, {
-      friction: 10000,
-      frictionStatic: 10000,
-      restitution: 0,
-      density: 0.001,
-    })
-
-
-    const sprite = this.add.sprite(x, y, 'crate')
-
-    this.layers.physicsObjects.add(sprite)
-    this.matter.add.gameObject(sprite, crate)
-
-    return crate
+    this.entityFactory.spawn(Driller, 150, 350)
+    this.entityFactory.spawn(Crate, 90, 50)
+    this.entityFactory.spawn(Crate, 100, 0)
+    this.entityFactory.spawn(Crate, 80, 100)
+    this.entityFactory.spawn(Crate, 120, 100)
   }
 }
