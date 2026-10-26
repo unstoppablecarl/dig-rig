@@ -51,6 +51,11 @@ export class EntityFactory extends SceneBound<GameLevel> {
     return this.byId.get(id)
   }
 
+  // First registered spawner in registration order, or undefined if the level registered none.
+  first(): EntitySpawner | undefined {
+    return this.byId.values().next().value
+  }
+
   getOptions() {
     return [...this.entities.values()].map(ent => ({
       value: ent.id,
