@@ -42,12 +42,24 @@ export class SpawnObjInput extends InputController {
 
   _worldPoint = new Vector2()
 
+  // spawnId is persisted globally, but each level registers its own entity set (see
+  // GameLevel.registerEntities) — e.g. the default Crate isn't registered in LiquidPoolsTestLevel.
+  // Fall back to the level's first registered spawner (or none) without overwriting the
+  // persisted choice, so returning to a level that has it still selects it.
+  private resolveSpawner() {
+    const factory = this.scene.entityFactory
+    return factory.get(this.state.spawnId) ?? factory.first()
+  }
+
   protected spawnObj(p: Pointer) {
+    const spawner = this.resolveSpawner()
+    if (!spawner) return
+
     const { x, y } = this.scene.cameras.main.getWorldPoint(p.x, p.y, this._worldPoint)
     const tx = Math.floor(x)
     const ty = Math.floor(y)
 
-    this.scene.entityFactory.spawnById(this.state.spawnId, tx, ty)
+    this.scene.entityFactory.spawnById(spawner.id, tx, ty)
   }
 
   update() {
@@ -58,7 +70,15 @@ export class SpawnObjInput extends InputController {
     const zoom = this.scene.cameras.main.zoom
     this.graphics.setPosition(p.x, p.y)
 
-    const size = this.scene.entityFactory.get(this.state.spawnId)!.size!
+    const obj = this.resolveSpawner()
+    if (!obj) {
+      // Nothing spawnable in this level — no outline. Reset the cache so one is redrawn if
+      // that changes.
+      if (this._drawnZoom !== -1) this.graphics.clear()
+      this._drawnZoom = -1
+      return
+    }
+    const size = obj.size!
 
     const w = size.w
     const h = size.h
