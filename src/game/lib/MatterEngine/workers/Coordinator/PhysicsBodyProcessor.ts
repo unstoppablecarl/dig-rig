@@ -79,7 +79,19 @@ export class PhysicsBodyProcessor {
     const height = this.height
     const chunkGrid = this.chunkGrid
 
-    const { x: dx, y: dy } = this.data.getDelta(slotIdx, this.rasterizeDelta)
+    // Only a sync we haven't consumed yet carries movement — otherwise the delta in the buffer
+    // is one we already swept (the body is at rest and has stopped syncing), and re-applying it
+    // every tick kept re-displacing liquid along that old path forever. Seq is loaded before
+    // the delta (see PhysicsBodiesData.syncFromBody for the publish order).
+    const syncSeq = this.data.getSyncSeq(slotIdx)
+    const isFreshSync = syncSeq !== this.data.getConsumedSeq(slotIdx)
+    let dx = 0
+    let dy = 0
+    if (isFreshSync) {
+      const delta = this.data.getDelta(slotIdx, this.rasterizeDelta)
+      dx = delta.x
+      dy = delta.y
+    }
     const verts = this.data.getPoints(slotIdx, this.rasterizeVerts)
 
     const dxSq = dx * dx
@@ -162,9 +174,11 @@ export class PhysicsBodyProcessor {
       }
 
 
-      let i = -1
+      // Counts liquid tiles only (not every footprint point), so the first liquid tile touched
+      // always splashes — sampling over all points could skip every liquid tile on the entry
+      // frame, and wasSubmerged then suppresses the splash for the rest of the descent.
+      let liquidI = -1
       for (const idx of points) {
-        i++
         const raw = tiles[idx]
         const type = matterType(raw)
 
@@ -175,15 +189,18 @@ export class PhysicsBodyProcessor {
 
         if (typeIsLiquid) {
           touchesLiquidThisFrame = true
-        }
-
-        if (i % SPLASH_STEP === 0) {
-          if (typeIsLiquid) {
-            if (!wasSubmerged && dist >= LIQUID_SPLASH_MIN_BODY_SPEED) {
-              this.particleSim.spawn(ParticleType.LIQUID_SPLASH, tx + 0.5, ty + 0.5, getOwner(raw), dx, dy, type)
-            }
-            this.sim.doFillDisplace(tx, ty, idx, displacedIndices, activeSet)
+          liquidI++
+          // Only the splash VFX is thinned out — displacement must run on every liquid tile,
+          // or the skipped ones stay inside the footprint as column-aligned stripes.
+          if (liquidI % SPLASH_STEP === 0 && !wasSubmerged && dist >= LIQUID_SPLASH_MIN_BODY_SPEED) {
+            // A fast body's sweep reaches several rows deep on the entry frame — spray from the
+            // surface of this column, not from wherever under it the sweep happened to touch.
+            let surfaceIdx = idx
+            while (surfaceIdx >= width && matterType(tiles[surfaceIdx - width]) === type) surfaceIdx -= width
+            const surfaceTy = (surfaceIdx / width) | 0
+            this.particleSim.spawn(ParticleType.LIQUID_SPLASH, tx + 0.5, surfaceTy + 0.5, getOwner(tiles[surfaceIdx]), dx, dy, type)
           }
+          this.sim.doFillDisplace(tx, ty, idx, displacedIndices, activeSet)
         }
 
         const isLastStep = step === steps
@@ -257,17 +274,37 @@ export class PhysicsBodyProcessor {
     prevTiles.length = 0
     for (const idx of newFootprint) prevTiles.push(idx)
 
-    if (touchesLiquidThisFrame) {
+    // Liquid inside the footprint alone isn't enough to tell "still submerged": the body
+    // displaces everything it overlaps, so a body sinking (or resting) in a pool regularly has
+    // frames where its footprint holds no liquid at all — clearing the flag there made the next
+    // contact re-splash from deep underwater. Liquid bordering the footprint keeps an
+    // already-submerged body submerged, but can't make it submerged: a body hovering one tile
+    // above the surface borders it too, and that would eat the real entry's splash.
+    if (touchesLiquidThisFrame || (wasSubmerged && this.bordersLiquid(newFootprint))) {
       this.submergedSlots.add(slotIdx)
     } else {
       this.submergedSlots.delete(slotIdx)
     }
 
-    // Signal the main thread that this slot's accumulated delta has been
-    // consumed — it resets its position anchor on seeing this change, so the
-    // *next* delta correctly represents distance since now, not since its
-    // last render frame. See PhysicsBodiesData.markConsumed / PhysicsBody.ts.
-    this.data.markConsumed(slotIdx)
+    // Tell the main thread which sync was consumed — it re-anchors to the position it reported
+    // with that sync, so its next delta starts exactly where this sweep ended. See
+    // PhysicsBodiesData.consumedSeq / PhysicsBody.ts.
+    if (isFreshSync) this.data.markConsumed(slotIdx, syncSeq)
+  }
+
+  // Whether any tile 4-adjacent to the footprint is liquid.
+  private bordersLiquid(footprint: Set<number>): boolean {
+    const tiles = this.tiles
+    const width = this.width
+    const size = tiles.length
+    for (const idx of footprint) {
+      const tx = idx % width
+      if (tx > 0 && isLiquid(matterType(tiles[idx - 1]))) return true
+      if (tx < width - 1 && isLiquid(matterType(tiles[idx + 1]))) return true
+      if (idx >= width && isLiquid(matterType(tiles[idx - width]))) return true
+      if (idx + width < size && isLiquid(matterType(tiles[idx + width]))) return true
+    }
+    return false
   }
 
   getPrevTiles(slotIdx: number) {

@@ -1,6 +1,11 @@
 // must be power of 2
 export const CHUNK_SIZE = 64 as const
 export const GRAVITY: number = 1
+// Per-tick downward acceleration for matter particles, in tiles/tick² (see MatterSim.doMatterParticleCollision).
+export const PARTICLE_GRAVITY = 0.1
+// Free-falling liquid becomes matter particles (accelerating fall) — false = the CA's flat
+// one-row-per-tick fall (see MatterSim.tryStartLiquidFall).
+export const ENABLE_LIQUID_PARTICLES = true
 export const PLAYER_JUMP_POWER = -7
 export const PLAYER_MOVE_SPEED = 3.5
 export const DEFAULT_PLAYER_STARTING_MATTER = 400

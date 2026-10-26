@@ -20,16 +20,19 @@ const SCHEMA = {
   deltaX: Float32Array,
   deltaY: Float32Array,
 
-  // Monotonic counter, coordinator-only writer (Atomics.add), bumped once
-  // per slot each time PhysicsBodyProcessor.rasterize() finishes consuming
-  // that slot's accumulated delta. The main thread (PhysicsBody.ts) reads
-  // this with Atomics.load and, when it sees a change, resets its position
-  // anchor to "now" — that's what makes deltaX/deltaY represent cumulative
-  // displacement since the coordinator last looked, rather than just the
-  // most recent main-thread frame's motion (which would silently lose
-  // whatever happened during any frames the coordinator was too far behind
-  // to see individually). See PhysicsBody.ts for the read side.
-  consumedGen: Uint8Array,
+  // Wrapping counter, main-thread-only writer, bumped (Atomics.store, after
+  // verts/delta are written) on every syncFromBody. Lets the coordinator tell
+  // a fresh sync from one it already consumed — a body at rest stops syncing,
+  // and without this its last delta stayed in the buffer and got re-swept
+  // (re-displacing liquid along the old path) every coordinator tick.
+  syncSeq: Uint8Array,
+
+  // Coordinator-only writer: the syncSeq of the last sync rasterize() consumed.
+  // The main thread (PhysicsBody.ts) re-anchors to the position it reported
+  // with THAT sync, so deltaX/deltaY are always cumulative displacement since
+  // exactly what the coordinator last swept — no gap and no overlap, however
+  // many main-thread frames pass between coordinator ticks.
+  consumedSeq: Uint8Array,
 } as const satisfies Schema
 
 export type PhysicsBodiesSchema = typeof SCHEMA
@@ -62,7 +65,8 @@ export class PhysicsBodiesData {
 
   readonly deltaX: Float32Array
   readonly deltaY: Float32Array
-  readonly consumedGen: Uint8Array
+  readonly syncSeq: Uint8Array
+  readonly consumedSeq: Uint8Array
 
   private readonly _freeSlots: number[] = Array.from({ length: MAX_PHYSICS_BODIES }, (_, i) => i)
 
@@ -88,7 +92,8 @@ export class PhysicsBodiesData {
 
     this.deltaX = views.deltaX
     this.deltaY = views.deltaY
-    this.consumedGen = views.consumedGen
+    this.syncSeq = views.syncSeq
+    this.consumedSeq = views.consumedSeq
   }
 
   acquire(): number {
@@ -109,7 +114,8 @@ export class PhysicsBodiesData {
     this.status[b.slotIdx] = PhysicsBodyStatus.PENDING
   }
 
-  syncFromBody(idx: number, dx: number, dy: number, [v1, v2, v3, v4]: RectVerts) {
+  // Main-thread-only. Returns the new syncSeq for this sync.
+  syncFromBody(idx: number, dx: number, dy: number, [v1, v2, v3, v4]: RectVerts): number {
     this.v1x[idx] = v1.x
     this.v1y[idx] = v1.y
 
@@ -126,6 +132,15 @@ export class PhysicsBodiesData {
     this.deltaY[idx] = dy
 
     this.status[idx] = PhysicsBodyStatus.ACTIVE
+
+    // Published last, so a coordinator that sees the new seq also sees the data above.
+    const seq = (Atomics.load(this.syncSeq, idx) + 1) & 0xFF
+    Atomics.store(this.syncSeq, idx, seq)
+    return seq
+  }
+
+  getSyncSeq(idx: number): number {
+    return Atomics.load(this.syncSeq, idx)
   }
 
   destroy(idx: number) {
@@ -139,17 +154,14 @@ export class PhysicsBodiesData {
     return out
   }
 
-  // Coordinator-only: call once rasterize() has finished consuming this
-  // slot's accumulated delta for this step. Atomic because it's the one
-  // field in this schema with a genuine cross-thread writer/reader pair
-  // (main thread reads it to decide when to reset its position anchor).
-  markConsumed(slotIdx: number): void {
-    Atomics.add(this.consumedGen, slotIdx, 1)
+  // Coordinator-only: call once rasterize() has finished consuming the sync
+  // with this seq (see consumedSeq).
+  markConsumed(slotIdx: number, seq: number): void {
+    Atomics.store(this.consumedSeq, slotIdx, seq)
   }
 
-  // Main-thread-only: read the current consumed generation for a slot.
-  getConsumedGen(slotIdx: number): number {
-    return Atomics.load(this.consumedGen, slotIdx)
+  getConsumedSeq(slotIdx: number): number {
+    return Atomics.load(this.consumedSeq, slotIdx)
   }
 
   getPoints(slotIdx: number, out: RectVerts) {

@@ -1,6 +1,7 @@
 import { Math as PMath } from 'phaser'
 import { HALF_PI } from '../../../helpers/_helpers.ts'
 import { colorToPixelRGBA, rgbaToColor } from '../../../helpers/color-converters.ts'
+import { PARTICLE_GRAVITY } from '../../../config.ts'
 import { randomRange } from '../../../helpers/random.ts'
 import { ACID, CRYO, LAVA, NAPALM, OIL, SALT_WATER, WATER } from '../../Matter/_Matter.types.ts'
 import type { LiquidTypes } from '../../Matter/matter.ts'
@@ -47,6 +48,8 @@ export const LIQUID_SPLASH = {
     const idx = ty * sim.width + tx
 
     if (sim.fill[idx] <= SPLASH_TOTAL_FILL) return
+    // No tile above to launch from (see acquire below).
+    if (ty === 0) return
 
     const speed = Math.hypot(vx!, vy!) * SPLASH_VELOCITY_MULTIPLIER
     // Which side to lean the spray cone toward (bow-wave asymmetry) — falls back to a random
@@ -58,7 +61,12 @@ export const LIQUID_SPLASH = {
     // SPLASH_TOTAL_FILL above is exactly count * unit, so spawning fewer than
     // SPLASH_PARTICLE_COUNT droplets here would destroy fill instead of conserving it.
     for (let i = 0; i < SPLASH_PARTICLE_COUNT; i++) {
-      const p = pool.acquire(particleType, x, y, ownerId)
+      // Particle positions are tile-centered (drawTile/doLiquidCollision round, so integer
+      // coords = a tile's center) while x/y here are floor-based (tx + 0.5 = center of tx).
+      // Passing x/y straight through rounded the droplet one tile right of and BELOW the source
+      // tile — inside the liquid, where a slow droplet never got out and just sank through the
+      // pool. Launch from the center of the tile directly above the source instead.
+      const p = pool.acquire(particleType, tx, ty - 1, ownerId)
       if (!p) break
 
       sim.fill[idx] -= SPLASH_FILL_UNIT
@@ -81,7 +89,8 @@ export const LIQUID_SPLASH = {
 
     p.x += p.xVelocity
     p.y += p.yVelocity
-    p.yVelocity += 0.3
+    // Same gravity as falling liquid tiles (matter particles), so droplets and water fall alike.
+    p.yVelocity += PARTICLE_GRAVITY
     sim.data.drawTile(p.x, p.y, SPLASH_COLORS[p.liquidType] ?? DEFAULT_SPLASH_COLOR)
 
     if (sim.outOfBounds(p)) {

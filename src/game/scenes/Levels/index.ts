@@ -50,6 +50,10 @@ export const LEVELS = {
     displayName: 'Test: Liquid Pools',
     load: () => import('./LiquidPoolsTestLevel.ts'),
   },
+  TEST_WATER_HILL: {
+    displayName: 'Test: Water Hill',
+    load: () => import('./WaterHillTestLevel.ts'),
+  },
   TEST_U_TUBE: {
     displayName: 'Test: U Tube',
     load: () => import('./UTubeTestLevel.ts'),

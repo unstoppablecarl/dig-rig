@@ -13,6 +13,9 @@ export const WATER_DEF = {
 
     sim.wakeSettledNeighborTypes(tx, ty, idx, WAKE_SETTLED)
 
+    // Free fall — falls as a particle (with acceleration) until it lands; see MatterSim.tryStartLiquidFall.
+    if (sim.tryStartLiquidFall(tx, ty, idx)) return
+
     // Water is denser than oil — sink through it
     if (sim.doDensityLiquid(tx, ty, idx, OIL, 25, 50)) return
     // Probability roll may have missed — stay active so we retry next frame

@@ -1,6 +1,7 @@
 import { ChunkGrid, type ChunkGridBuffers } from '../Tilemap/ChunkGrid.ts'
 import type { Tilemap } from '../Tilemap/Tilemap.ts'
 import { type BasicTilesBuffer, BasicTilesData } from './data/BasicTilesData.ts'
+import { type MatterParticleDataBuffers, MatterParticleData } from './data/MatterParticleData.ts'
 import { type MatterTankManagerBuffers, MatterTankManagerData } from './data/MatterTankManagerData.ts'
 import { ParticleDrawData, type ParticlesBuffers } from './data/ParticleDrawData.ts'
 import { ParticleSpawnData } from './data/ParticleSpawnData.ts'
@@ -38,6 +39,8 @@ export type DataManagerBuffers = {
   tileFront: TileFrontBuffers
   // One Int32 per map column — see MatterSim.lavaColumnTop.
   lavaColumnTop: SharedArrayBuffer
+  // Backing store for particle-flagged tiles — see MatterSim.matterParticles.
+  matterParticles: MatterParticleDataBuffers
   width: number
   height: number
 }
@@ -82,6 +85,7 @@ export class DataManager {
       fill: tilemap.buffers.fillLevels,
       matterTouched: tilemap.buffers.matterTouched,
       lavaColumnTop: new SharedArrayBuffer(width * Int32Array.BYTES_PER_ELEMENT),
+      matterParticles: MatterParticleData.makeBuffers(width, height),
       tileFront: TileFrontData.makeBuffers(tilemap),
       physicsBodies: PhysicsBodiesData.makeBuffers(),
       particleSpawns: ParticleSpawnData.makeBuffer(),

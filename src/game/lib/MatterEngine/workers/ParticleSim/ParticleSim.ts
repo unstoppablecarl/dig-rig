@@ -233,7 +233,16 @@ export class ParticleSim {
     const startY = Math.min(height - 1, Math.max(0, Math.round(y0)))
     let prevIdx = startY * width + startX
 
-    let prevTypeWasLiquid = matterType(this.tiles[prevIdx]) === type
+    // Merge on contact: already sitting in its own liquid (e.g. liquid flowed in under it) —
+    // merge right there. This used to instead let a droplet travel freely while it was inside
+    // liquid (so a splash could launch from within the pool), but a droplet that never cleared
+    // the surface then sank through the whole pool, drawn over it, until it hit the bottom.
+    // LIQUID_SPLASH now launches from above the surface, so that escape hatch isn't needed.
+    if (matterType(tiles[prevIdx]) === type) {
+      this.depositLiquid(prevIdx, type, fillUnits)
+      return true
+    }
+
     for (let step = 1; step <= steps; step++) {
       const t = step / steps
       const ox = Math.round(x0 + dx * t)
@@ -244,15 +253,17 @@ export class ParticleSim {
       }
       const idx = oy * width + ox
       if (idx === prevIdx) continue
-      if (!prevTypeWasLiquid && matterType(tiles[idx]) === type) {
+      const hitType = matterType(tiles[idx])
+      if (hitType === type) {
+        // Its own liquid — merge into the tile it touched.
+        this.depositLiquid(idx, type, fillUnits)
+        return true
+      }
+      // A different liquid (no mixing — land on top of it) or anything a body collides with.
+      if (isLiquid(hitType) || convertsToCollisionBody(tiles[idx])) {
         this.depositLiquid(prevIdx, type, fillUnits)
         return true
       }
-      if (convertsToCollisionBody(tiles[idx])) {
-        this.depositLiquid(prevIdx, type, fillUnits)
-        return true
-      }
-      prevTypeWasLiquid = matterType(tiles[idx]) === type
       prevIdx = idx
     }
 

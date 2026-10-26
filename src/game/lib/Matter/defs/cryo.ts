@@ -112,6 +112,9 @@ export const CRYO_DEF = {
       return
     }
 
+    // Free fall — falls as a particle (with acceleration) until it lands; see MatterSim.tryStartLiquidFall.
+    if (sim.tryStartLiquidFall(tx, ty, idx)) return
+
     const moved = sim.doPowderFall(tx, ty, idx)
     if (!moved) {
       // Random self-freeze if immobile (~0.5% = 1% × 50%)

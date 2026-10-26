@@ -18,6 +18,7 @@ import {
   LAVA_DROP,
   type MatterAction,
   type MatterDef,
+  type MatterParticleAction,
   matterType,
   MatterType,
   MatterTypeValues,
@@ -48,6 +49,10 @@ export interface MatterMetaRegistry {
 }
 
 export const MATTER_ACTIONS: MatterAction[] = []
+// Alternate per-tick action for particle-flagged tiles (see MatterDef.particleAction /
+// MatterSim.matterParticles). Liquids default to liquidParticleAction; other types without one
+// fall back to the shared MatterSim.doMatterParticleCollision in MatterSim.processSubset.
+export const MATTER_PARTICLE_ACTIONS: MatterParticleAction[] = []
 export const MATTER_NAMES = new Map<MatterType, string>()
 export type SettlingTypes = {
   [K in keyof MatterMetaRegistry]: MatterMetaRegistry[K] extends { settles: true } ? K : never;
@@ -147,11 +152,20 @@ export function matterFillContribution(raw: MatterValue, fillVal: number): numbe
 const noop = () => {
 }
 
+// Default particleAction for every `liquid: true` type: fall until anything is below, then land
+// back as unsettled liquid for the CA (see MatterSim.tryStartLiquidFall, which each liquid's
+// action calls to start the fall). Contact reactions (ignite, dissolve, freeze, ...) don't run in
+// flight — they resume on the tick after landing, from the type's normal action.
+const liquidParticleAction: MatterParticleAction = (sim, x, y, idx) => {
+  sim.doMatterParticleCollision(x, y, idx, true)
+}
+
 function registerMatterType(
   {
     id,
     name,
     action = noop,
+    particleAction,
     immutableSupport,
     lavaBurnable = false,
     lavaMeltable = false,
@@ -171,6 +185,8 @@ function registerMatterType(
   }: MatterDef) {
 
   MATTER_ACTIONS[id] = action
+  if (particleAction) MATTER_PARTICLE_ACTIONS[id] = particleAction
+  else if (liquid) MATTER_PARTICLE_ACTIONS[id] = liquidParticleAction
   MATTER_NAMES.set(id, name)
 
   if (immutableSupport !== undefined) {

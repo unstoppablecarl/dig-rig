@@ -1,3 +1,4 @@
+import type { MatterParticleData } from '../MatterEngine/data/MatterParticleData.ts'
 import type { MatterSim } from '../MatterEngine/workers/MatterSim/MatterSim.ts'
 import { type MatterTankId, NO_MATTER_TANK_ID } from './Tank/_MatterTank.types.ts'
 
@@ -216,11 +217,13 @@ export const MatterTypeKeyValues = Object.fromEntries(
 )
 
 export type MatterAction = (world: MatterSim, x: number, y: number, idx: number) => void
+export type MatterParticleAction = (world: MatterSim, x: number, y: number, idx: number, vx: number, vy: number, fracX: number, fracY: number, matterParticles: MatterParticleData) => void
 
 export type MatterDef = {
   id: MatterType
   name: string
   action?: MatterAction
+  particleAction?: MatterParticleAction
   // alwaysSupport — immutable support type enforced at read-time regardless of per-tile bits.
   immutableSupport?: SupportType.ANCHORED | SupportType.STRUCTURAL | SupportType.AFFIXED
   // whether lava ignites this type into FIRE on contact. Defaults to false.

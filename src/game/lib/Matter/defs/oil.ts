@@ -73,6 +73,9 @@ export const OIL_DEF = {
       }
     }
 
+    // Free fall — falls as a particle (with acceleration) until it lands; see MatterSim.tryStartLiquidFall.
+    if (sim.tryStartLiquidFall(tx, ty, idx)) return
+
     const moved = sim.tryFillFlow(tx, ty, idx)
     if (moved) {
       sim.reactivateAround(tx, ty)

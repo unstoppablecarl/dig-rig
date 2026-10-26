@@ -100,3 +100,12 @@ export const FILL_PRESSURE_DIVISOR = 4 as const
 //   Lower  → cheaper; wide pools may not fully equalize each frame.
 //   base = 64
 export const FILL_ROW_SCAN_MAX = 64 as const
+
+// LIQUID_FALL_START_SPEED — initial downward speed (tiles/tick) of a liquid tile that starts
+// free-falling as a matter particle (see MatterSim.tryStartLiquidFall); PARTICLE_GRAVITY
+// accelerates it from there.
+//   1 = the CA's old flat fall rate, so going over a ledge is never slower than before.
+//   Lower → more natural "drip" off ledges, but a slow particle sits in its cell for several
+//   ticks while neighbors keep flowing into it — water bunches up at the lip.
+//   base = 1
+export const LIQUID_FALL_START_SPEED = 1 as const

@@ -13,16 +13,24 @@ export type PhysicsBodyConstructor<T extends PhysicsBody> = new (...args: Physic
 
 export class PhysicsBody extends SceneBound<GameLevel> implements ManagerItem<PhysicsBodyManager> {
 
+  // Anchor: the position the coordinator last consumed. deltaX/deltaY are measured from here.
   private prevX = 0
   private prevY = 0
   private parent: PhysicsBodyManager | null = null
 
-  // Shadow of physicsBodies.consumedGen[slotIdx] — see PhysicsBodiesData for
-  // the full explanation. Starts at 0 to match the SharedArrayBuffer's
-  // zero-initialized value; the pre-existing "huge first delta from prevX=0"
-  // behavior on a body's very first update() is unaffected by this (that
-  // already happens before any generation check would matter).
-  private _lastConsumedGen = 0
+  // Position reported with each sync, indexed by its (wrapping, 8-bit) syncSeq — when the
+  // coordinator reports which sync it consumed (consumedSeq), re-anchor to exactly the position
+  // that sync described. Re-anchoring to the *current* position instead dropped any motion
+  // since the last sync (the body has already moved again by the time update() notices), so
+  // that stretch of the path was never swept.
+  private readonly syncedX = new Float64Array(256)
+  private readonly syncedY = new Float64Array(256)
+  private lastSyncedX = 0
+  private lastSyncedY = 0
+  private lastConsumedSeq = -1
+  // False until the first update() — the anchor starts at the body's own spawn position, not
+  // (0, 0), which made the first delta sweep (and displace liquid) all the way from the origin.
+  private anchored = false
 
   setManager(parent: PhysicsBodyManager) {
     this.parent = parent
@@ -40,35 +48,41 @@ export class PhysicsBody extends SceneBound<GameLevel> implements ManagerItem<Ph
 
   update(): void {
     const bridge = this.scene.io.physicsBodies
+    const x = this.gameObject.x
+    const y = this.gameObject.y
 
-    // If the coordinator has consumed our delta since we last checked, our
-    // anchor is now "spent" — reset it to the current position so the next
-    // delta starts counting from here, instead of re-reporting distance the
-    // coordinator already accounted for.
-    const gen = bridge.getConsumedGen(this.slotIdx)
-    if (gen !== this._lastConsumedGen) {
-      this._lastConsumedGen = gen
-      this.prevX = this.gameObject.x
-      this.prevY = this.gameObject.y
+    if (!this.anchored) {
+      this.anchored = true
+      this.prevX = x
+      this.prevY = y
+      // A reused slot still holds the previous body's consumedSeq.
+      this.lastConsumedSeq = bridge.getConsumedSeq(this.slotIdx)
+      // Sync once even at rest, so the coordinator stamps the body's footprint.
+      this.sync(x, y)
+      return
     }
 
-    const hasMovedX = this.prevX !== this.gameObject.x
-    const hasMovedY = this.prevY !== this.gameObject.y
-    const hasMoved = hasMovedX || hasMovedY
+    const consumed = bridge.getConsumedSeq(this.slotIdx)
+    if (consumed !== this.lastConsumedSeq) {
+      this.lastConsumedSeq = consumed
+      this.prevX = this.syncedX[consumed]
+      this.prevY = this.syncedY[consumed]
+    }
 
-    if (!hasMoved) return
+    // Nothing new since the last sync. The anchor is deliberately NOT moved forward here:
+    // until the coordinator confirms (via consumedSeq) what it has swept, dx/dy keep
+    // accumulating from the anchor, so a lagging coordinator still sees the whole path.
+    if (x === this.lastSyncedX && y === this.lastSyncedY) return
 
-    const dx = this.gameObject.x - this.prevX
-    const dy = this.gameObject.y - this.prevY
+    this.sync(x, y)
+  }
 
-    // NOTE: prevX/prevY are deliberately NOT reset here. Leaving the anchor
-    // fixed until the coordinator confirms (via the generation counter) that
-    // it has consumed this delta means dx/dy naturally accumulates across
-    // however many render frames pass before the coordinator gets to this
-    // slot again — under sim lag, that's the whole point: a single frame's
-    // motion would otherwise silently overwrite and lose everything the body
-    // moved through since the coordinator last looked.
-    bridge.syncFromBody(this.slotIdx, dx, dy, this.getPartVerts())
+  private sync(x: number, y: number) {
+    const seq = this.scene.io.physicsBodies.syncFromBody(this.slotIdx, x - this.prevX, y - this.prevY, this.getPartVerts())
+    this.syncedX[seq] = x
+    this.syncedY[seq] = y
+    this.lastSyncedX = x
+    this.lastSyncedY = y
   }
 
   getPartVerts() {

@@ -118,6 +118,8 @@ export class Coordinator {
   private _profMaxPreDispatchDur = 0
   private _profTotalPostDispatchDur = 0
   private _profMaxPostDispatchDur = 0
+  private _profTotalUpwardPressureDur = 0
+  private _profTotalHorizontalCascadeDur = 0
   private _profTotalParticleSimDur = 0
   private _profMaxParticleSimDur = 0
   private _profTotalPublishDur = 0
@@ -152,7 +154,7 @@ export class Coordinator {
     this._lavaEruptionNextCheckAt = Coordinator.LAVA_ERUPTION_CHECK_MIN_STEPS
 
     this.sim = new MatterSim()
-    this.sim.init(buffers.tiles, buffers.fill, buffers.matterTouched, buffers.chunkGrid, width, height, MatterSimScratchData.makeBuffers(), buffers.particleSpawns, buffers.lavaColumnTop, buffers.playerBounds)
+    this.sim.init(buffers.tiles, buffers.fill, buffers.matterTouched, buffers.chunkGrid, width, height, MatterSimScratchData.makeBuffers(), buffers.particleSpawns, buffers.lavaColumnTop, buffers.playerBounds, buffers.matterParticles)
     // Fresh buffer zero-inits to 0, misreading as a row-0 surface everywhere — reset to -1.
     this.sim.lavaColumnTop.fill(-1)
 
@@ -203,6 +205,7 @@ export class Coordinator {
       particleSpawnBuffer: buffers.particleSpawns,
       lavaColumnTopBuffer: buffers.lavaColumnTop,
       playerBoundsBuffer: buffers.playerBounds,
+      matterParticleBuffers: buffers.matterParticles,
       onReady: () => this.startLoop(),
     })
   }
@@ -371,16 +374,24 @@ export class Coordinator {
 
       const _profPostT0 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
 
+      // The passes below skip in-flight matter particles (MatterParticleData.isLive), which
+      // compares against the sim frame — this local sim never goes through process(), so it
+      // never picks the frame up otherwise.
+      this.sim.frame = frame
+
       // Bottom-up upward pressure cascade — runs after all worker rounds so
       // there are no concurrent writers to tiles/fill. Cascades overfull liquid
       // columns to their full height in one pass (fixes slow U-tube equalization).
       this.sim.doUpwardPressureProcessor(this.activeSet)
+      const _profUpT1 = ENABLE_MATTER_SIM_PROFILING ? performance.now() : 0
+      if (ENABLE_MATTER_SIM_PROFILING) this._profTotalUpwardPressureDur += _profUpT1 - _profPostT0
 
       // sweeps each active liquid row
       // in one pass so a disturbance can cross a whole wide pool in a
       // single tick instead of tryFillFlow's nearest-neighbor-only exchange
       // taking O(pool width) ticks.
       this.sim.doHorizontalCascadeProcessor(this.activeSet, frame)
+      if (ENABLE_MATTER_SIM_PROFILING) this._profTotalHorizontalCascadeDur += performance.now() - _profUpT1
 
       // These two passes run on this.sim directly, not through process(), so
       // their mass-tracking counters need their own read+reset here.
@@ -493,6 +504,8 @@ export class Coordinator {
             + `maxActiveSetSize=${this._profMaxActiveSet} `
             + `| preDispatch avg=${(this._profTotalPreDispatchDur / n).toFixed(2)}ms max=${this._profMaxPreDispatchDur.toFixed(2)}ms `
             + `postDispatch avg=${(this._profTotalPostDispatchDur / n).toFixed(2)}ms max=${this._profMaxPostDispatchDur.toFixed(2)}ms `
+            + `(upwardPressure avg=${(this._profTotalUpwardPressureDur / n).toFixed(2)}ms `
+            + `horizontalCascade avg=${(this._profTotalHorizontalCascadeDur / n).toFixed(2)}ms) `
             + `particleSim avg=${(this._profTotalParticleSimDur / n).toFixed(2)}ms max=${this._profMaxParticleSimDur.toFixed(2)}ms `
             + `publish avg=${(this._profTotalPublishDur / n).toFixed(2)}ms max=${this._profMaxPublishDur.toFixed(2)}ms`,
           )
@@ -507,6 +520,8 @@ export class Coordinator {
           this._profMaxPreDispatchDur = 0
           this._profTotalPostDispatchDur = 0
           this._profMaxPostDispatchDur = 0
+          this._profTotalUpwardPressureDur = 0
+          this._profTotalHorizontalCascadeDur = 0
           this._profTotalParticleSimDur = 0
           this._profMaxParticleSimDur = 0
           this._profTotalPublishDur = 0

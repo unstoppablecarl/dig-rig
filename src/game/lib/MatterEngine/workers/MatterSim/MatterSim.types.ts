@@ -1,4 +1,5 @@
 import type { ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
+import type { MatterParticleDataBuffers } from '../../data/MatterParticleData.ts'
 import type { SimScratchBuffers } from './MatterSimScratchData.ts'
 
 export enum SimInMsg {
@@ -20,7 +21,7 @@ export type SimInMsgInit = {
   // update this tick via a move written by an earlier round (same tick, only
   // rounds are sequential/awaited so no atomics needed). See MatterSim.touched.
   touchedBuffer: SharedArrayBuffer
-  chunkBuffers: ChunkGridBuffers
+  chunkGridBuffers: ChunkGridBuffers
   width: number
   height: number
   // Shared scratch buffers (see SimScratchData) — avoids structured-cloning
@@ -35,6 +36,8 @@ export type SimInMsgInit = {
   // Player world-space AABB, written every render frame by Player.ts —
   // see MatterSim.playerBounds for why powder settling reads it.
   playerBoundsBuffer: SharedArrayBuffer
+  // Backing store for particle-flagged tiles — see MatterSim.matterParticles.
+  matterParticleBuffers: MatterParticleDataBuffers
 }
 
 export type SimInMsgProcess = {

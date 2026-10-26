@@ -71,6 +71,9 @@ export const ACID_DEF = {
       return
     }
 
+    // Free fall — falls as a particle (with acceleration) until it lands; see MatterSim.tryStartLiquidFall.
+    if (sim.tryStartLiquidFall(tx, ty, idx)) return
+
     const moved = sim.tryFillFlow(tx, ty, idx)
     if (matterType(tiles[idx]) === EMPTY) return  // tryFillFlow donated all fill and destroyed tile
 

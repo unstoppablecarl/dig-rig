@@ -1,4 +1,10 @@
-import { CHUNK_SIZE, ENABLE_LIQUID_DRAIN_DEBUG, ENABLE_MATTER_SIM_PROFILING } from '../../../../config.ts'
+import {
+  CHUNK_SIZE,
+  ENABLE_LIQUID_DRAIN_DEBUG,
+  ENABLE_LIQUID_PARTICLES,
+  ENABLE_MATTER_SIM_PROFILING,
+  PARTICLE_GRAVITY,
+} from '../../../../config.ts'
 import { random } from '../../../../helpers/random.ts'
 import {
   FILL_COMPRESSION_FACTOR,
@@ -8,6 +14,7 @@ import {
   FILL_ROUND_TO_ZERO,
   FILL_ROW_SCAN_MAX,
   FILL_SETTLED_FACTOR,
+  LIQUID_FALL_START_SPEED,
 } from '../../../Matter/_Liquid.constants.ts'
 import {
   ACID,
@@ -41,6 +48,7 @@ import {
   isLavaMeltable,
   isLiquid,
   MATTER_ACTIONS,
+  MATTER_PARTICLE_ACTIONS,
   RESERVED_DESTROY_CHARGE,
   SINKS_THROUGH,
 } from '../../../Matter/matter.ts'
@@ -48,12 +56,38 @@ import type { MatterTankId } from '../../../Matter/Tank/_MatterTank.types.ts'
 import { ParticleType } from '../../../Particles/_particle-types.ts'
 import { ChunkGrid, type ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
 import type { Tile } from '../../../Tilemap/TileGrid.ts'
+import { MatterParticleData, type MatterParticleDataBuffers } from '../../data/MatterParticleData.ts'
 import { ParticleSpawnData } from '../../data/ParticleSpawnData.ts'
 import { PlayerBoundsData, type PlayerBoundsDataType } from '../../data/PlayerBoundsData.ts'
 import { MatterCreditTransferBuffer } from '../_helpers/MatterCreditTransferBuffer.ts'
 import { MatterReservationReleaseBuffer } from '../_helpers/MatterReservationReleaseBuffer.ts'
 import { type SimOutMsgDoneWire } from './MatterSim.types.ts'
 import { MatterSimScratchData, SIM_SCRATCH_CAPACITY, type SimScratchBuffers } from './MatterSimScratchData.ts'
+
+// Max tiles a matter particle may move in a single tick (see doMatterParticleCollision).
+// Derived from the checkerboard worker-pool dispatch (see SimWorkerPool.step()): within one
+// round, only same-parity chunks are ever active together, and the two nearest same-parity
+// chunks are always exactly 2 chunks apart with one whole idle chunk of the other parity
+// sitting between them as a buffer. If chunk A's rightmost tile (offset 63 into its own chunk)
+// moves right by d, and the flanking chunk C's leftmost tile (offset 0) moves left by d at the
+// same time, their reachable destinations inside that shared buffer chunk are `63 + d` and
+// `128 - d` — those must never overlap, or two worker threads could write the same shared-memory
+// tile at once (a real cross-thread data race, not just a same-tile double-update). That
+// requires `63 + d < 128 - d`, i.e. d <= 32 = CHUNK_SIZE / 2. Do not raise this without
+// re-deriving that inequality for whatever CHUNK_SIZE actually is at the time.
+//
+// Caveat: this only makes particle-vs-particle writes disjoint. Pre-existing moves already reach
+// further than this into the buffer chunk — tryFlowHorizontal moves liquid and reactivateAround
+// wakes tiles up to FILL_ROW_SCAN_MAX (= CHUNK_SIZE) away — so a particle and a flowing liquid
+// in neighboring same-group chunks can still touch the same buffer-chunk tile in one round.
+const MAX_PARTICLE_TILES_PER_TICK = CHUNK_SIZE >> 1
+
+// What occupies a cell a particle is trying to enter — see MatterSim.particleCellBlock.
+const enum ParticleCell {
+  FREE,
+  BLOCKED,  // non-solid: unsettled matter, liquid, gas, fire, ...
+  SOLID,    // isSolid, or off the map
+}
 
 // Copies an iterable of tile indices into a shared scratch view, clamped to
 // capacity (dropping and warning on overflow rather than throwing/corrupting
@@ -206,9 +240,18 @@ export class MatterSim {
   private _profTryMoveTime = 0
   private _profTryMoveSamples = 0
   private _profTryMoveCalls = 0
+  private _profParticleCalls = 0
+  private _profParticleTime = 0
+  private _profParticleSamples = 0
+  private _profParticleReactivateCalls = 0
   private static readonly PROF_SAMPLE_MASK = 63
 
   private particles: ParticleSpawnData
+
+  // Backing store for particle-flagged tiles (see MatterDef.particleAction and this class's
+  // spawnMatterParticle/settleMatterParticle/moveMatterParticle). Shared via SharedArrayBuffer
+  // across every pool worker + Coordinator's own MatterSim, same as `touched`.
+  matterParticles!: MatterParticleData
 
   // World-space AABB of the player, updated main-thread-side every render
   // frame. Read here so falling powder never solidifies (sets SETTLED_FLAG,
@@ -232,6 +275,7 @@ export class MatterSim {
     particlesBuffer: SharedArrayBuffer,
     lavaColumnTopBuffer: SharedArrayBuffer,
     playerBoundsBuffer: SharedArrayBuffer,
+    matterParticleBuffers: MatterParticleDataBuffers,
   ) {
     this.tiles = new Uint32Array(tilesBuffer)
     this.fill = new Uint32Array(fillBuffer)
@@ -248,6 +292,7 @@ export class MatterSim {
     this.particles = new ParticleSpawnData(particlesBuffer)
     this.lavaColumnTop = new Int32Array(lavaColumnTopBuffer)
     this.playerBounds = PlayerBoundsData.fromBuffer(playerBoundsBuffer)
+    this.matterParticles = new MatterParticleData(matterParticleBuffers)
   }
 
   // Open-interval AABB test, matching the convention used by
@@ -299,6 +344,9 @@ export class MatterSim {
         const avgTryMoveUs = this._profTryMoveSamples > 0
           ? (this._profTryMoveTime / this._profTryMoveSamples) * 1000
           : 0
+        const avgParticleUs = this._profParticleSamples > 0
+          ? (this._profParticleTime / this._profParticleSamples) * 1000
+          : 0
         console.log(
           `[PROFILE MatterSim] tryFillFlow=${this._profTryFillFlowCalls} `
           + `avg=${avgTryFillFlowUs.toFixed(2)}us (n=${this._profTryFillFlowSamples}) `
@@ -313,7 +361,9 @@ export class MatterSim {
           + `doPowderFall=${this._profDoPowderFallCalls} avg=${avgDoPowderFallUs.toFixed(2)}us (n=${this._profDoPowderFallSamples}) `
           + `tryMove=${this._profTryMoveCalls} `
           + `(${(this._profTryMoveCalls / (this._profDoPowderFallCalls || 1)).toFixed(2)}/call) `
-          + `avg=${avgTryMoveUs.toFixed(2)}us (n=${this._profTryMoveSamples})`,
+          + `avg=${avgTryMoveUs.toFixed(2)}us (n=${this._profTryMoveSamples}) `
+          + `particle=${this._profParticleCalls} avg=${avgParticleUs.toFixed(2)}us (n=${this._profParticleSamples}) `
+          + `particleReactivateAround=${this._profParticleReactivateCalls}`,
         )
         this._profWindowStart = now
         this._profTryFillFlowCalls = 0
@@ -331,6 +381,10 @@ export class MatterSim {
         this._profTryMoveCalls = 0
         this._profTryMoveTime = 0
         this._profTryMoveSamples = 0
+        this._profParticleCalls = 0
+        this._profParticleTime = 0
+        this._profParticleSamples = 0
+        this._profParticleReactivateCalls = 0
       }
     }
 
@@ -391,6 +445,29 @@ export class MatterSim {
 
       const raw = this.tiles[idx]
       const tile = matterType(raw)
+
+      // Particle-flagged tiles are dispatched in the exact same per-round index order as
+      // every other matter tile (see matterParticles's own comment) — just routed to the
+      // type's particleAction instead of its normal action.
+      if (this.matterParticles.active[idx]) {
+        if (!this.matterParticles.isLive(idx, tile, this.frame)) {
+          // Stale flag: the tile was overwritten (swapped, consumed, dug, emptied, ...) by
+          // something that doesn't know about particles — drop it and run the occupant's
+          // normal action instead of handing it a dead particle's velocity.
+          this.matterParticles.release(idx)
+        } else {
+          const action = MATTER_PARTICLE_ACTIONS[tile]
+          if (action) {
+            const mp = this.matterParticles
+            action(this, tx, ty, idx, mp.vx[idx], mp.vy[idx], mp.fracX[idx], mp.fracY[idx], mp)
+          } else {
+            this.doMatterParticleCollision(tx, ty, idx)
+          }
+
+          continue
+        }
+      }
+
       if (import.meta.env.DEV) {
         if (!MATTER_ACTIONS[tile]) {
           throw new Error(`MatterSim: no action registered for type ${tile} — ensure matter.ts is imported before MatterSim is used`)
@@ -399,6 +476,40 @@ export class MatterSim {
 
       MATTER_ACTIONS[tile](this, tx, ty, idx)
     }
+  }
+
+  // dest mirrors reactivateAround's convention: defaults to this.next (pool-worker per-round
+  // accumulation), but callers running the coordinator-local sim outside a round (e.g.
+  // PhysicsBodyProcessor) must pass the tick's real activeSet instead, or the new particle
+  // never gets scheduled until something else happens to wake it.
+  spawnMatterParticle(idx: number, vx: number, vy: number, dest: TileSet = this.next) {
+    this.matterParticles.acquire(idx, matterType(this.tiles[idx]), vx, vy, this.frame)
+    dest.add(idx)
+  }
+
+  // For a liquid type's action: if this tile is free-falling, hand it to the particle sim so it
+  // falls with real acceleration instead of the CA's flat one row per tick, and advance it right
+  // away so the handoff doesn't cost a tick. Returns true if it did — the caller should return.
+  // Pair with doMatterParticleCollision(..., landsAsLiquid = true) as that type's particleAction.
+  //
+  // Free-falling = the cell below is empty, OR is a live particle of the same liquid (a falling
+  // chunk's lower rows) — in that case inherit its speed, so the whole column falls together
+  // instead of peeling off one row at a time, each restarting from LIQUID_FALL_START_SPEED.
+  tryStartLiquidFall(tx: number, ty: number, idx: number): boolean {
+    if (!ENABLE_LIQUID_PARTICLES || ty + 1 >= this.height) return false
+    const belowIdx = idx + this.width
+    const belowType = matterType(this.tiles[belowIdx])
+    let vy: number
+    if (belowType === EMPTY) {
+      vy = LIQUID_FALL_START_SPEED
+    } else if (belowType === matterType(this.tiles[idx]) && this.isLiveParticleAt(tx, ty + 1)) {
+      vy = Math.max(LIQUID_FALL_START_SPEED, this.matterParticles.vy[belowIdx])
+    } else {
+      return false
+    }
+    this.spawnMatterParticle(idx, 0, vy)
+    this.doMatterParticleCollision(tx, ty, idx, true)
+    return true
   }
 
   markDirty(tx: number, ty: number) {
@@ -1254,9 +1365,9 @@ export class MatterSim {
         const dL = tx > 0 ? tx - 1 : tx
         const dR = tx < width - 1 ? tx + 1 : tx
         if (
-          isSolid(tiles[row + tx]) &&
-          isSolid(tiles[row + dL]) &&
-          isSolid(tiles[row + dR])
+          isBlocked(tiles[row + tx]) &&
+          isBlocked(tiles[row + dL]) &&
+          isBlocked(tiles[row + dR])
         ) {
           this.tiles[idx] = setSettled(raw, true)
           this.markDirty(tx, ty)
@@ -1790,71 +1901,113 @@ export class MatterSim {
     return moved
   }
 
-  // Sorts the active set by y descending and pushes excess fill upward
-  // in-place — processing bottom-to-top means a newly overfull cell at y-1
-  // is already next in the sorted list, so a full column cascades in one
-  // pass. Must run after all worker rounds finish (no concurrent writers).
+  // Pushes excess fill upward in-place, bottom-to-top — a cell pushed overfull
+  // by the one below it is handled right away, so a full column cascades in
+  // one pass. Must run after all worker rounds finish (no concurrent writers).
   doUpwardPressureProcessor(activeSet: TileSet): void {
     const { tiles, fill, width } = this
 
-    // Bail before the sort when nothing in activeSet is liquid. Can't
-    // pre-filter the list itself: a cell starting EMPTY can be converted to
-    // liquid mid-pass (the `upType === EMPTY` branch below) and must stay
-    // eligible to cascade further up later in this same sorted iteration.
-    let hasLiquid = false
+    // Only an overfull liquid cell (fill > FILL_MAX) can push anything up, so sort just those
+    // instead of the whole activeSet — that full sort was ~2/3 of this pass's cost on a big
+    // active set, and worse once matter particles made activeSet's order effectively random.
+    //
+    // Equivalent to the old "sort all of activeSet by y descending, process each": an iteration
+    // only ever changes idx itself and upIdx, so a cell's state at its turn depends only on the
+    // cell directly below it. A cell that starts at or under FILL_MAX can only become overfull
+    // by a push from below — and it's handled right then, walking up the column (see below),
+    // which gives it the same inputs it would have had at its own turn in the full sort.
+    const candidates = this._upwardPressureCandidates
+    candidates.length = 0
     for (const idx of activeSet) {
-      if (idx >= width && isLiquid(matterType(tiles[idx]))) {
-        hasLiquid = true
-        break
+      if (idx >= width && fill[idx] > FILL_MAX && isLiquid(matterType(tiles[idx])) && !this.isLiveParticleIdx(idx)) {
+        candidates.push(idx)
       }
     }
-    if (!hasLiquid) return
+    const n = candidates.length
+    if (n === 0) return
 
-    // Sort once by y descending so bottom cells are processed first.
-    const sorted = Array.from(activeSet).sort((a, b) => b - a)
+    // Bottom row first. Only bottom-up order WITHIN each column matters (an iteration touches
+    // only its own column), and rows never interact within one row's worth of processing — so a
+    // counting sort by row (O(n + height)) gives the same result as a full descending sort, which
+    // was still most of this pass's cost on a deep compressed pool where nearly every cell is a
+    // candidate.
+    const height = this.height
+    const rowStart = this._upwardRowStart.length === height ? this._upwardRowStart : (this._upwardRowStart = new Int32Array(height))
+    rowStart.fill(0)
+    for (let i = 0; i < n; i++) rowStart[(candidates[i] / width) | 0]++
+    let pos = 0
+    for (let y = height - 1; y >= 0; y--) {
+      const count = rowStart[y]
+      rowStart[y] = pos
+      pos += count
+    }
+    if (this._upwardSorted.length < n) this._upwardSorted = new Int32Array(n * 2)
+    const sorted = this._upwardSorted
+    for (let i = 0; i < n; i++) {
+      const idx = candidates[i]
+      sorted[rowStart[(idx / width) | 0]++] = idx
+    }
 
-    for (const idx of sorted) {
-      if (idx < width) continue  // top row — no cell above
-      const raw = tiles[idx]
-      if (!isLiquid(matterType(raw))) continue
-      const m = fill[idx]
-      if (m <= FILL_MAX) continue
+    for (let c = 0; c < n; c++) {
+      let idx = sorted[c]
+      while (idx >= width) {
+        const raw = tiles[idx]
+        if (!isLiquid(matterType(raw))) break
+        const m = fill[idx]
+        if (m <= FILL_MAX) break
 
-      const upIdx = idx - width
-      const upType = matterType(tiles[upIdx])
-      const type = matterType(raw)
-      const upValid = upType === EMPTY || upType === type
-      if (!upValid) continue
+        const upIdx = idx - width
+        const upType = matterType(tiles[upIdx])
+        const type = matterType(raw)
+        // A live particle above is in flight — not part of this column's pressure.
+        const upValid = (upType === EMPTY || upType === type) && !this.isLiveParticleIdx(upIdx)
+        if (!upValid) break
 
-      const want = MatterSim.deadbandWant(m - MatterSim.getStableState(m + fill[upIdx]))
-      if (want <= 0) continue
-      const uncappedFlow = Math.min(want, m - FILL_MAX)
-      // Throttled to a fraction of the imbalance per tick rather than all at
-      // once — a column builds pressure invisibly below FILL_MAX, then this
-      // loop's bottom-to-top order lets a full-column solve propagate in one
-      // tick, reading as "nothing, then everything". Capping the amount (not
-      // how far it propagates) keeps U-tube arms equalizing across their
-      // full height in one pass while spreading a big correction over
-      // several ticks. Math.max(1, ...) guarantees forward progress.
-      const flow = Math.min(uncappedFlow, Math.max(1, Math.round(uncappedFlow * MatterSim.UPWARD_PRESSURE_RELIEF_RATE)))
+        const want = MatterSim.deadbandWant(m - MatterSim.getStableState(m + fill[upIdx]))
+        if (want <= 0) break
+        const uncappedFlow = Math.min(want, m - FILL_MAX)
+        // Throttled to a fraction of the imbalance per tick rather than all at
+        // once — a column builds pressure invisibly below FILL_MAX, then this
+        // loop's bottom-to-top order lets a full-column solve propagate in one
+        // tick, reading as "nothing, then everything". Capping the amount (not
+        // how far it propagates) keeps U-tube arms equalizing across their
+        // full height in one pass while spreading a big correction over
+        // several ticks. Math.max(1, ...) guarantees forward progress.
+        const flow = Math.min(uncappedFlow, Math.max(1, Math.round(uncappedFlow * MatterSim.UPWARD_PRESSURE_RELIEF_RATE)))
 
-      fill[idx] -= flow
-      fill[upIdx] += flow
+        // Read before the push/add below. upIdx was in activeSet at the start of the pass iff it
+        // is now (nothing earlier in the pass can have added it — only this push does). An
+        // already-overfull upIdx is its own candidate and gets its turn later in sorted order.
+        const upWasActive = activeSet.has(upIdx)
+        const upIsCandidate = isLiquid(upType) && fill[upIdx] > FILL_MAX
 
-      if (upType === EMPTY) {
-        tiles[upIdx] = setSettled(raw, false)
-      } else {
-        tiles[upIdx] = setSettled(tiles[upIdx], false)
+        fill[idx] -= flow
+        fill[upIdx] += flow
+
+        if (upType === EMPTY) {
+          tiles[upIdx] = setSettled(raw, false)
+        } else {
+          tiles[upIdx] = setSettled(tiles[upIdx], false)
+        }
+        const tx = idx % width
+        const ty = (idx / width) | 0
+        this.markRenderDirty(tx, ty - 1)
+        this.markRenderDirty(tx, ty)
+        activeSet.add(upIdx)
+        activeSet.add(idx)
+
+        // Continue up the column only where the old full-sort pass would have processed upIdx
+        // with this push already applied (see header comment).
+        if (!upWasActive || upIsCandidate) break
+        idx = upIdx
       }
-
-      const tx = idx % width
-      const ty = (idx / width) | 0
-      this.markRenderDirty(tx, ty - 1)
-      this.markRenderDirty(tx, ty)
-      activeSet.add(upIdx)
-      activeSet.add(idx)
     }
   }
+
+  private readonly _upwardPressureCandidates: number[] = []
+  private _upwardRowStart = new Int32Array(0)
+  private _upwardSorted = new Int32Array(0)
+
 
   // True if (x, y) isn't resting on solid ground — its own neighbor below
   // is empty or same-type liquid, i.e. it could still fall further on its
@@ -2051,8 +2204,12 @@ export class MatterSim {
 
     const rowMinX = new Map<number, number>()
     const rowMaxX = new Map<number, number>()
+    // In-flight matter particles (isLiveParticleIdx) are left out of leveling entirely — as rows to
+    // scan, as run members, and as transfer targets. Shedding fill sideways out of (or into) a
+    // falling particle is meaningless, and a falling chunk's many short particle fragments each
+    // paid for their own computeRunHasDrain walk.
     const noteRow = (idx: number) => {
-      if (!isLiquid(matterType(tiles[idx]))) return
+      if (!isLiquid(matterType(tiles[idx])) || this.isLiveParticleIdx(idx)) return
       const ty = (idx / width) | 0
       const tx = idx % width
       const curMin = rowMinX.get(ty)
@@ -2123,7 +2280,7 @@ export class MatterSim {
         const idx = rowStart + tx
         const raw = tiles[idx]
         const type = matterType(raw)
-        if (!isLiquid(type)) {
+        if (!isLiquid(type) || this.isLiveParticleIdx(idx)) {
           inRun = false
           continue
         }
@@ -2293,7 +2450,7 @@ export class MatterSim {
         if (ax >= 0 && ax < width) {
           const aIdx = idx + dir
           const aType = matterType(tiles[aIdx])
-          if (aType === type || aType === EMPTY) {
+          if ((aType === type || aType === EMPTY) && !this.isLiveParticleIdx(aIdx)) {
             let f = 0
             const aEmptyDrain = aType === EMPTY && this.drainReachableFrom(ax, ty, dir, type)
             if (aEmptyDrain) {
@@ -2345,7 +2502,7 @@ export class MatterSim {
         if (bx >= 0 && bx < width) {
           const bIdx = idx - dir
           const bType = matterType(tiles[bIdx])
-          if (bType === type || bType === EMPTY) {
+          if ((bType === type || bType === EMPTY) && !this.isLiveParticleIdx(bIdx)) {
             let f = 0
             if (bType === EMPTY && this.drainReachableFrom(bx, ty, -dir, type)) {
               // See the mirrored 'a' branch above — capped by headroom.
@@ -2422,9 +2579,230 @@ export class MatterSim {
       )
     }
   }
+
+  // Advances the particle at `idx` by up to MAX_PARTICLE_TILES_PER_TICK tiles this tick, walked
+  // cell-by-cell along the path (Bresenham) so every intermediate tile gets the same
+  // blocked/solid check a single-tile move would — a multi-tile jump could otherwise tunnel
+  // through a thin wall. Then either settles it back into ordinary matter or leaves it airborne
+  // for next tick. Returns the idx it settled at, or null if it's still a particle.
+  //
+  // The cap is NOT arbitrary — see MAX_PARTICLE_TILES_PER_TICK's own comment for the derivation
+  // against the checkerboard worker-pool dispatch. Velocity is clamped to the same cap, and only
+  // the sub-tile part of fracX/fracY is ever carried to the next tick, so a tick's travel never
+  // exceeds the cap and a blocked particle can't bank up a backlog of distance to spend later.
+  //
+  // Settles (converts back to normal matter) only once it's blocked AND resting on something
+  // solid directly below (isSolid, or the map floor) — hitting a wall or ceiling mid-flight just
+  // kills the velocity on that axis so it falls/slides instead of sticking in mid-air. A non-solid
+  // obstruction (unsettled matter, liquid, gas, fire, ...) just blocks it the same way — what a
+  // particle should do on contact with those (sink, splash, ignite, ...) is type-specific and
+  // belongs in that type's own particleAction, not this shared primitive.
+  //
+  // landsAsLiquid: for liquid particles (see liquidParticleAction). Lands on ANY obstruction
+  // directly below (not just solid ones — falling water should pool on unsettled sand or merge
+  // into other liquid, not hover over it), and lands as ordinary unsettled liquid queued for the
+  // CA, which takes over from there (flows, merges, equalizes, settles on its own terms).
+  //
+  // Either way, being blocked by another live particle never counts as landing and doesn't kill
+  // velocity — that particle is about to move too (e.g. the next drop down in a falling stream),
+  // and stopping dead behind it would make every stream decelerate from the front.
+  doMatterParticleCollision(x: number, y: number, idx: number, landsAsLiquid = false): null | number {
+    if (ENABLE_MATTER_SIM_PROFILING) {
+      this._profParticleCalls++
+      if ((this._profParticleCalls & MatterSim.PROF_SAMPLE_MASK) === 0) {
+        const t0 = performance.now()
+        const result = this._doMatterParticleCollisionImpl(x, y, idx, landsAsLiquid)
+        this._profParticleTime += performance.now() - t0
+        this._profParticleSamples++
+        return result
+      }
+    }
+    return this._doMatterParticleCollisionImpl(x, y, idx, landsAsLiquid)
+  }
+
+  private _doMatterParticleCollisionImpl(x: number, y: number, idx: number, landsAsLiquid: boolean): null | number {
+    const width = this.width
+    const tiles = this.tiles
+    const mp = this.matterParticles
+    // Before any move — mp.move carries it to the destination (see MatterParticleData.isLive).
+    mp.touch(idx, this.frame)
+
+    let vx = Math.max(-MAX_PARTICLE_TILES_PER_TICK, Math.min(MAX_PARTICLE_TILES_PER_TICK, mp.vx[idx]))
+    let vy = Math.max(-MAX_PARTICLE_TILES_PER_TICK, Math.min(MAX_PARTICLE_TILES_PER_TICK, mp.vy[idx]))
+    const fracX = mp.fracX[idx] + vx
+    const fracY = mp.fracY[idx] + vy
+
+    // Defensive — a particleAction may have written an out-of-range frac.
+    const totalDx = Math.max(-MAX_PARTICLE_TILES_PER_TICK, Math.min(MAX_PARTICLE_TILES_PER_TICK, Math.trunc(fracX)))
+    const totalDy = Math.max(-MAX_PARTICLE_TILES_PER_TICK, Math.min(MAX_PARTICLE_TILES_PER_TICK, Math.trunc(fracY)))
+
+    if (totalDx === 0 && totalDy === 0) {
+      mp.setVelocity(idx, vx, vy + PARTICLE_GRAVITY)
+      mp.setFrac(idx, fracX, fracY)
+      this.next.add(idx)
+      return null
+    }
+
+    // Bresenham walk toward (x + totalDx, y + totalDy), one grid cell per step, stopping at
+    // the first blocked cell.
+    const absDx = Math.abs(totalDx)
+    const absDy = Math.abs(totalDy)
+    const sx = totalDx > 0 ? 1 : -1
+    const sy = totalDy > 0 ? 1 : -1
+    let err = absDx - absDy
+    let remDx = absDx
+    let remDy = absDy
+
+    let curTx = x
+    let curTy = y
+    let blocked = false
+    let hitX = false
+    let hitY = false
+    let blockTx = 0
+    let blockTy = 0
+
+    while (remDx > 0 || remDy > 0) {
+      const e2 = 2 * err
+      let stepX = 0
+      let stepY = 0
+      if (e2 > -absDy) { err -= absDy; stepX = sx; remDx-- }
+      if (e2 < absDx) { err += absDx; stepY = sy; remDy-- }
+
+      const ntx = curTx + stepX
+      const nty = curTy + stepY
+
+      if (stepX !== 0 && stepY !== 0) {
+        // Diagonal step — also blocked if both orthogonal neighbors are, so it can't squeeze
+        // between two cells that only touch at a corner. Which orthogonal(s) are blocked
+        // decides which velocity axis the hit kills.
+        const bx = this.particleCellBlock(ntx, curTy) !== ParticleCell.FREE
+        const by = this.particleCellBlock(curTx, nty) !== ParticleCell.FREE
+        if ((bx && by) || this.particleCellBlock(ntx, nty) !== ParticleCell.FREE) {
+          blocked = true
+          blockTx = ntx
+          blockTy = nty
+          // Pure corner hit (both orthogonals free) — kill both.
+          hitX = bx || !by
+          hitY = by || !bx
+          break
+        }
+      } else if (this.particleCellBlock(ntx, nty) !== ParticleCell.FREE) {
+        blocked = true
+        blockTx = ntx
+        blockTy = nty
+        hitX = stepX !== 0
+        hitY = stepY !== 0
+        break
+      }
+
+      curTx = ntx
+      curTy = nty
+    }
+
+    const movedDx = curTx - x
+    const movedDy = curTy - y
+    let curIdx = idx
+
+    if (movedDx !== 0 || movedDy !== 0) {
+      curIdx = curTy * width + curTx
+      tiles[curIdx] = tiles[idx]
+      tiles[idx] = EMPTY
+      this.fill[curIdx] = this.fill[idx]
+      this.fill[idx] = 0
+      mp.move(idx, curIdx)
+      this.touched[curIdx] = this.frame + 1
+      // Render-only: an in-flight particle is never settled, so neither the vacated cell nor
+      // the destination is collidable before or after — no collision rebuild needed.
+      this.markRenderDirty(x, y)
+      this.markRenderDirty(curTx, curTy)
+      // Same as tryMove — whatever was resting on/beside the vacated cell can now flow into it.
+      if (ENABLE_MATTER_SIM_PROFILING) this._profParticleReactivateCalls++
+      this.reactivateAround(x, y)
+    }
+
+    // Only the sub-tile part carries over (see header comment).
+    const remFracX = fracX % 1
+    const remFracY = fracY % 1
+
+    if (!blocked) {
+      // Consumed the whole tick's budget without hitting anything — still airborne.
+      mp.setVelocity(curIdx, vx, vy + PARTICLE_GRAVITY)
+      mp.setFrac(curIdx, remFracX, remFracY)
+      this.next.add(curIdx)
+      return null
+    }
+
+    const below = this.particleCellBlock(curTx, curTy + 1)
+
+    if (landsAsLiquid && below !== ParticleCell.FREE && !this.isLiveParticleAt(curTx, curTy + 1)) {
+      mp.release(curIdx)
+      tiles[curIdx] = setSettled(tiles[curIdx], false)
+      this.markRenderDirtyRaw(curIdx)
+      this.next.add(curIdx)
+      return curIdx
+    }
+
+    if (!landsAsLiquid && below === ParticleCell.SOLID) {
+      const raw = tiles[curIdx]
+      // Same invariant _doPowderFallImpl enforces: never settle (and become collidable)
+      // on/inside the player — an instant penetration the Matter.js solver can't resolve.
+      if (collidesWhenSettled(matterType(raw)) && this.isInPlayerBounds(curTx, curTy)) {
+        mp.setVelocity(curIdx, 0, 0)
+        mp.setFrac(curIdx, 0, 0)
+        this.next.add(curIdx)
+        return null
+      }
+
+      mp.release(curIdx)
+      tiles[curIdx] = setSettled(raw, true)
+      this.markDirtyRaw(curIdx)
+      this.vfxJustSettled.push(curIdx)
+      return curIdx
+    }
+
+    // Checked only after landing, so two particles that block each other while both resting on
+    // something (e.g. sliding into each other along a floor) still land instead of holding forever.
+    if (this.isLiveParticleAt(blockTx, blockTy)) {
+      // Queued behind another particle — hold this tick, keep speed (see header comment).
+      mp.setVelocity(curIdx, vx, vy + PARTICLE_GRAVITY)
+      mp.setFrac(curIdx, remFracX, remFracY)
+      this.next.add(curIdx)
+      return null
+    }
+
+    // Blocked mid-air (wall, ceiling, or a non-solid obstruction) — kill velocity on the
+    // blocked axis and stay a particle; gravity takes it from there next tick.
+    if (hitX) vx = 0
+    if (hitY) vy = 0
+    mp.setVelocity(curIdx, vx, vy + PARTICLE_GRAVITY)
+    mp.setFrac(curIdx, hitX ? 0 : remFracX, hitY ? 0 : remFracY)
+    this.next.add(curIdx)
+    return null
+  }
+
+  // isLiveParticleAt by tile index, with a cheap early-out on the (common) unflagged case.
+  private isLiveParticleIdx(idx: number): boolean {
+    const mp = this.matterParticles
+    return mp.active[idx] === 1 && mp.isLive(idx, matterType(this.tiles[idx]), this.frame)
+  }
+
+  // True if (tx, ty) is in bounds and holds a particle that's still valid (see processSubset's
+  // stale-flag check).
+  private isLiveParticleAt(tx: number, ty: number): boolean {
+    if (tx < 0 || tx >= this.width || ty < 0 || ty >= this.height) return false
+    const i = ty * this.width + tx
+    return this.matterParticles.isLive(i, matterType(this.tiles[i]), this.frame)
+  }
+
+  private particleCellBlock(tx: number, ty: number): ParticleCell {
+    if (tx < 0 || tx >= this.width || ty < 0 || ty >= this.height) return ParticleCell.SOLID
+    const raw = this.tiles[ty * this.width + tx]
+    if (matterType(raw) === EMPTY) return ParticleCell.FREE
+    return isBlocked(raw) ? ParticleCell.SOLID : ParticleCell.BLOCKED
+  }
 }
 
-function isSolid(value: number) {
+function isBlocked(value: number) {
   return getSupportType(value) > SupportType.NONE || isSettled(value)
 }
 

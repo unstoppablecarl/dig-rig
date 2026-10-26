@@ -38,13 +38,14 @@ self.onmessage = (e: MessageEvent<SimInMessage>) => {
       msg.tilesBuffer,
       msg.fillBuffer,
       msg.touchedBuffer,
-      msg.chunkBuffers,
+      msg.chunkGridBuffers,
       msg.width,
       msg.height,
       msg.scratchBuffers,
       msg.particleSpawnBuffer,
       msg.lavaColumnTopBuffer,
       msg.playerBoundsBuffer,
+      msg.matterParticleBuffers,
     )
     postMessage({ type: SimOutMsg.READY })
     return

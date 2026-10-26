@@ -2,6 +2,7 @@
 import { CHUNK_SIZE, ENABLE_COLUMN_DISPATCH, ENABLE_MATTER_SIM_PROFILING, ENABLE_RANDOM_ROW_DIRECTION } from '../../../../config.ts'
 import type { TileSet } from '../../../Matter/data/SparseTileSet.ts'
 import type { ChunkGridBuffers } from '../../../Tilemap/ChunkGrid.ts'
+import type { MatterParticleDataBuffers } from '../../data/MatterParticleData.ts'
 import { type SimOutMessage, SimOutMsg, type SimOutMsgDone } from '../MatterSim/MatterSim.types.ts'
 import { MatterSimController } from '../MatterSim/MatterSimController.ts'
 
@@ -150,6 +151,7 @@ export class SimWorkerPool {
       particleSpawnBuffer,
       lavaColumnTopBuffer,
       playerBoundsBuffer,
+      matterParticleBuffers,
       width,
       height,
       onReady,
@@ -162,6 +164,7 @@ export class SimWorkerPool {
       particleSpawnBuffer: SharedArrayBuffer,
       lavaColumnTopBuffer: SharedArrayBuffer,
       playerBoundsBuffer: SharedArrayBuffer,
+      matterParticleBuffers: MatterParticleDataBuffers,
       width: number
       height: number
       onReady: () => void,
@@ -183,15 +186,16 @@ export class SimWorkerPool {
     this.columnTouched = new Uint8Array(this.chunksWide)
 
     const simConfig = {
-      tilesBuffer: tilesBuffer,
-      fillBuffer: fillBuffer,
-      touchedBuffer: touchedBuffer,
-      chunkBuffers: chunkGridBuffers,
+      tilesBuffer,
+      fillBuffer,
+      touchedBuffer,
+      chunkGridBuffers,
       particleSpawnBuffer,
       lavaColumnTopBuffer,
       playerBoundsBuffer,
-      width: width,
-      height: height,
+      matterParticleBuffers,
+      width,
+      height,
     }
     for (let i = 0; i < poolSize; i++) {
       this.pool.push(new MatterSimController(simConfig, (e) => this._onMessage(i, e.data)))
